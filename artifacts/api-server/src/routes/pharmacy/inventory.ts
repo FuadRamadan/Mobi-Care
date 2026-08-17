@@ -16,8 +16,11 @@ router.get("/", async (req: AuthRequest, res) => {
     .select({
       id: pharmacyInventoryTable.id,
       drugId: pharmacyInventoryTable.drugId,
+      brand: pharmacyInventoryTable.brand,
+      countryOfOrigin: pharmacyInventoryTable.countryOfOrigin,
       priceLeones: pharmacyInventoryTable.priceLeones,
       stockQuantity: pharmacyInventoryTable.stockQuantity,
+      lowStockAlertAt: pharmacyInventoryTable.lowStockAlertAt,
       availableForDelivery: pharmacyInventoryTable.availableForDelivery,
       availableForCollection: pharmacyInventoryTable.availableForCollection,
       isActive: pharmacyInventoryTable.isActive,
@@ -42,8 +45,11 @@ router.post("/", async (req: AuthRequest, res) => {
 
   const body = z.object({
     drugId: z.string().uuid(),
+    brand: z.string().max(100).optional(),
+    countryOfOrigin: z.string().max(100).optional(),
     priceLeones: z.number().int().positive(),
     stockQuantity: z.number().int().min(0).default(0),
+    lowStockAlertAt: z.number().int().min(0).default(10),
     availableForDelivery: z.boolean().default(true),
     availableForCollection: z.boolean().default(true),
   }).safeParse(req.body);
@@ -102,8 +108,11 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
 
   const body = z.object({
+    brand: z.string().max(100).optional(),
+    countryOfOrigin: z.string().max(100).optional(),
     priceLeones: z.number().int().positive().optional(),
     stockQuantity: z.number().int().min(0).optional(),
+    lowStockAlertAt: z.number().int().min(0).optional(),
     availableForDelivery: z.boolean().optional(),
     availableForCollection: z.boolean().optional(),
     isActive: z.boolean().optional(),

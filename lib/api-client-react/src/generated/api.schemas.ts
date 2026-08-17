@@ -138,8 +138,13 @@ export interface DrugSummary {
 export interface InventoryItem {
   id: string;
   drugId: string;
+  /** @nullable */
+  brand?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   priceLeones: number;
   stockQuantity: number;
+  lowStockAlertAt?: number;
   availableForDelivery: boolean;
   availableForCollection: boolean;
   isActive: boolean;
@@ -149,19 +154,27 @@ export interface InventoryItem {
 
 export interface InventoryInput {
   drugId: string;
+  brand?: string;
+  countryOfOrigin?: string;
   /** @minimum 1 */
   priceLeones: number;
   /** @minimum 0 */
   stockQuantity?: number;
+  /** @minimum 0 */
+  lowStockAlertAt?: number;
   availableForDelivery?: boolean;
   availableForCollection?: boolean;
 }
 
 export interface InventoryUpdate {
+  brand?: string;
+  countryOfOrigin?: string;
   /** @minimum 1 */
   priceLeones?: number;
   /** @minimum 0 */
   stockQuantity?: number;
+  /** @minimum 0 */
+  lowStockAlertAt?: number;
   availableForDelivery?: boolean;
   availableForCollection?: boolean;
   isActive?: boolean;

@@ -10,8 +10,13 @@ import type { DrugSummary } from './drugSummary';
 export interface InventoryItem {
   id: string;
   drugId: string;
+  /** @nullable */
+  brand?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   priceLeones: number;
   stockQuantity: number;
+  lowStockAlertAt?: number;
   availableForDelivery: boolean;
   availableForCollection: boolean;
   isActive: boolean;

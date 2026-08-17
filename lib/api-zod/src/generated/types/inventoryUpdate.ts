@@ -7,10 +7,14 @@
  */
 
 export interface InventoryUpdate {
+  brand?: string;
+  countryOfOrigin?: string;
   /** @minimum 1 */
   priceLeones?: number;
   /** @minimum 0 */
   stockQuantity?: number;
+  /** @minimum 0 */
+  lowStockAlertAt?: number;
   availableForDelivery?: boolean;
   availableForCollection?: boolean;
   isActive?: boolean;

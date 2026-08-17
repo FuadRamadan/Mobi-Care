@@ -749,13 +749,17 @@ components:
       properties:
         id:
           type: string
-
         drugId:
           type: string
-
+        brand:
+          type: ["string", "null"]
+        countryOfOrigin:
+          type: ["string", "null"]
         priceLeones:
           type: number
         stockQuantity:
+          type: number
+        lowStockAlertAt:
           type: number
         availableForDelivery:
           type: boolean
@@ -765,7 +769,6 @@ components:
           type: boolean
         updatedAt:
           type: string
-
         drug:
           $ref: "#/components/schemas/DrugSummary"
 
@@ -775,11 +778,17 @@ components:
       properties:
         drugId:
           type: string
-
+        brand:
+          type: string
+        countryOfOrigin:
+          type: string
         priceLeones:
           type: number
           minimum: 1
         stockQuantity:
+          type: number
+          minimum: 0
+        lowStockAlertAt:
           type: number
           minimum: 0
         availableForDelivery:
@@ -790,10 +799,17 @@ components:
     InventoryUpdate:
       type: object
       properties:
+        brand:
+          type: string
+        countryOfOrigin:
+          type: string
         priceLeones:
           type: number
           minimum: 1
         stockQuantity:
+          type: number
+          minimum: 0
+        lowStockAlertAt:
           type: number
           minimum: 0
         availableForDelivery:

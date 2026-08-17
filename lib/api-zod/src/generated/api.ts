@@ -218,8 +218,11 @@ export const MarkOrderPickedUpResponse = zod.object({
 export const ListInventoryResponseItem = zod.object({
   "id": zod.string(),
   "drugId": zod.string(),
+  "brand": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
   "priceLeones": zod.number(),
   "stockQuantity": zod.number(),
+  "lowStockAlertAt": zod.number().optional(),
   "availableForDelivery": zod.boolean(),
   "availableForCollection": zod.boolean(),
   "isActive": zod.boolean(),
@@ -240,12 +243,17 @@ export const ListInventoryResponse = zod.array(ListInventoryResponseItem)
 
 export const addInventoryItemBodyStockQuantityMin = 0;
 
+export const addInventoryItemBodyLowStockAlertAtMin = 0;
+
 
 
 export const AddInventoryItemBody = zod.object({
   "drugId": zod.string(),
+  "brand": zod.string().optional(),
+  "countryOfOrigin": zod.string().optional(),
   "priceLeones": zod.number().min(1),
   "stockQuantity": zod.number().min(addInventoryItemBodyStockQuantityMin).optional(),
+  "lowStockAlertAt": zod.number().min(addInventoryItemBodyLowStockAlertAtMin).optional(),
   "availableForDelivery": zod.boolean().optional(),
   "availableForCollection": zod.boolean().optional()
 })
@@ -253,8 +261,11 @@ export const AddInventoryItemBody = zod.object({
 export const AddInventoryItemResponse = zod.object({
   "id": zod.string(),
   "drugId": zod.string(),
+  "brand": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
   "priceLeones": zod.number(),
   "stockQuantity": zod.number(),
+  "lowStockAlertAt": zod.number().optional(),
   "availableForDelivery": zod.boolean(),
   "availableForCollection": zod.boolean(),
   "isActive": zod.boolean(),
@@ -278,11 +289,16 @@ export const UpdateInventoryItemParams = zod.object({
 
 export const updateInventoryItemBodyStockQuantityMin = 0;
 
+export const updateInventoryItemBodyLowStockAlertAtMin = 0;
+
 
 
 export const UpdateInventoryItemBody = zod.object({
+  "brand": zod.string().optional(),
+  "countryOfOrigin": zod.string().optional(),
   "priceLeones": zod.number().min(1).optional(),
   "stockQuantity": zod.number().min(updateInventoryItemBodyStockQuantityMin).optional(),
+  "lowStockAlertAt": zod.number().min(updateInventoryItemBodyLowStockAlertAtMin).optional(),
   "availableForDelivery": zod.boolean().optional(),
   "availableForCollection": zod.boolean().optional(),
   "isActive": zod.boolean().optional()
@@ -291,8 +307,11 @@ export const UpdateInventoryItemBody = zod.object({
 export const UpdateInventoryItemResponse = zod.object({
   "id": zod.string(),
   "drugId": zod.string(),
+  "brand": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
   "priceLeones": zod.number(),
   "stockQuantity": zod.number(),
+  "lowStockAlertAt": zod.number().optional(),
   "availableForDelivery": zod.boolean(),
   "availableForCollection": zod.boolean(),
   "isActive": zod.boolean(),
