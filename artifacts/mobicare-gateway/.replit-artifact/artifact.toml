@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "MobiCare Gateway"
+description = "The unified front door for MobiCare, a medicine-delivery and pharmacy platform for Sierra Leone. A lightweight, mobile-first landing site that explains MobiCare and routes patients, partner pharmacies, and HQ staff to their existing portals via links."
+version = "1.0.0"
+id = "artifacts/mobicare-gateway"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18380
+
+[services.development]
+run = "pnpm --filter @workspace/mobicare-gateway run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mobicare-gateway", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mobicare-gateway/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18380"
+BASE_PATH = "/"

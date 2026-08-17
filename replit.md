@@ -1,6 +1,6 @@
-# [Project name]
+# MobiCare Gateway
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+The unified front door for MobiCare, a medicine-delivery and pharmacy platform for Sierra Leone — a lightweight, mobile-first site that explains MobiCare and routes patients, partner pharmacies, and HQ staff to their existing external portals via links.
 
 ## Run & Operate
 
@@ -22,7 +22,9 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/mobicare-gateway/` — the gateway site (frontend-only, no backend calls)
+- `artifacts/mobicare-gateway/src/config/portals.ts` — the ONE place to set the real portal URLs (patient app, pharmacy portal, HQ dashboard) and the partner contact email; placeholders until the user supplies real URLs
+- Pages: `/` landing, `/patient`, `/pharmacy`, `/hq` (wouter routes in `src/App.tsx`)
 
 ## Architecture decisions
 
@@ -30,7 +32,10 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Landing page presenting the three portal entry points (HQ visually de-emphasized), "how it works", trust/honesty highlights, and the three medicine tiers
+- `/patient` pitch + CTA to the patient app (installable PWA note); `/pharmacy` partner pitch (no self-registration, HQ issues credentials, partner contact path); `/hq` minimal login link
+- Non-negotiable honesty points appear on landing/patient/pharmacy pages: payment only marked paid after provider confirmation; "a licensed pharmacist reviews yours"; controlled medicines are collection-only with in-person ID check; three medicine tiers described accurately
+- Brand: greens #1A8F6E/#0B3D2E, terracotta #D85A30, Orange Money #FF6600 only in payment contexts; currency `Le 1,955` style; warm plain-spoken tone
 
 ## User preferences
 
