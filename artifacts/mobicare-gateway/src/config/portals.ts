@@ -10,7 +10,9 @@ export const PORTALS = {
   },
   pharmacy: {
     name: 'Pharmacy portal',
-    loginUrl: 'https://pharmacy.mobicare.sl', // TODO: replace with real pharmacy portal URL
+    // Served from the same domain under path-based routing, so a
+    // root-relative link works in both development and production.
+    loginUrl: '/pharmacy-portal/',
   },
   hq: {
     name: 'MobiCare HQ dashboard',
