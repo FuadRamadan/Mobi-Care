@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
-import { Menu, X, Pill } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Navbar() {
@@ -15,11 +15,14 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
-          <div className="bg-primary/10 p-1.5 rounded-lg">
-            <Pill className="h-6 w-6 text-primary" strokeWidth={2.5} />
+        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+          <div className="bg-[#0B3D2E] rounded-xl px-3 py-1 flex items-center">
+            <img
+              src="/mobicare-logo.jpeg"
+              alt="MobiCare"
+              className="h-11 w-auto"
+            />
           </div>
-          <span className="font-display font-bold text-xl tracking-tight text-dark-green">MobiCare</span>
         </Link>
 
         {/* Desktop Nav */}
