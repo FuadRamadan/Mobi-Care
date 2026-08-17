@@ -118,7 +118,7 @@ export default function Inventory() {
                 <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Drug</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Brand / Origin</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3">Tier</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 text-right">Price</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 text-right">Le</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground py-3 text-right">Stock</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
