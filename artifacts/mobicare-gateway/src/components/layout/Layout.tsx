@@ -17,7 +17,13 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="relative flex flex-col min-h-screen">
+      {/* Pharmacy-themed soft background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center opacity-40"
+        style={{ backgroundImage: "url('/pharmacy-bg.jpg')" }}
+      />
       <Navbar />
       <main className="flex-1 flex flex-col w-full">
         {children}

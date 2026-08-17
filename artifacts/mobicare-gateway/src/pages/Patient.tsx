@@ -5,8 +5,8 @@ import { PORTALS } from "@/config/portals";
 
 export default function Patient() {
   return (
-    <div className="flex-1 w-full bg-background pb-20">
-      <section className="pt-16 pb-12 px-4 bg-secondary">
+    <div className="flex-1 w-full pb-20">
+      <section className="pt-16 pb-12 px-4 bg-secondary/70">
         <div className="container mx-auto max-w-4xl">
           <div className="flex items-center gap-3 mb-6 text-primary">
             <Pill className="w-8 h-8" />

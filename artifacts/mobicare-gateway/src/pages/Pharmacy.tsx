@@ -5,7 +5,7 @@ import { PORTALS, PARTNER_CONTACT_EMAIL } from "@/config/portals";
 
 export default function Pharmacy() {
   return (
-    <div className="flex-1 w-full bg-background pb-20">
+    <div className="flex-1 w-full pb-20">
       <section className="pt-16 pb-12 px-4 bg-dark-green text-white">
         <div className="container mx-auto max-w-4xl">
           <div className="flex items-center gap-3 mb-6 text-primary">

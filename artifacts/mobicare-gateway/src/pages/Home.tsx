@@ -13,7 +13,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex-1 w-full bg-background">
+    <div className="flex-1 w-full">
       {/* Hero Section */}
       <section className="pt-20 pb-16 md:pt-32 md:pb-24 px-4 overflow-hidden relative">
         <div className="absolute inset-0 bg-secondary/50 -z-10 rounded-b-[3rem] md:rounded-b-[5rem] scale-x-105" />
@@ -63,7 +63,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 px-4 bg-background">
+      <section className="py-20 px-4 bg-background/60">
         <div className="container mx-auto max-w-5xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-display font-bold text-dark-green mb-4">How it works</h2>
@@ -79,7 +79,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center text-center bg-background"
+                className="flex flex-col items-center text-center"
               >
                 <div className="w-16 h-16 rounded-full bg-secondary text-primary flex items-center justify-center mb-4 shadow-sm border border-border">
                   <step.icon className="w-7 h-7" />
@@ -106,7 +106,7 @@ export default function Home() {
       </section>
       
       {/* Visual De-emphasized HQ Link placed near footer */}
-      <div className="py-12 bg-background flex justify-center">
+      <div className="py-12 bg-background/60 flex justify-center">
         <Link href="/hq" className="text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/50 bg-card px-4 py-2 rounded-full">
           Staff Portal Access
         </Link>
