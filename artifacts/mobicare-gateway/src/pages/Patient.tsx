@@ -47,25 +47,9 @@ export default function Patient() {
                 <Search className="w-5 h-5" />
               </div>
               <h3 className="font-display font-semibold text-xl text-dark-green">Compare Prices</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Don't guess what medicine costs. See transparent pricing from multiple licensed pharmacies before you choose where to buy.
               </p>
-              
-              <div className="mt-auto p-4 bg-background/50 rounded-xl border border-border/60">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-dark-green">Paracetamol 500mg</span>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">City Pharmacy</span>
-                    <span className="font-semibold text-muted-foreground">Le 15,500</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-primary font-medium">HealthPlus</span>
-                    <span className="font-bold text-primary">Le 14,200</span>
-                  </div>
-                </div>
-              </div>
             </motion.div>
             
             <motion.div 
