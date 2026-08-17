@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: MobiCare Pharmacy Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: orders
+    description: Pharmacy orders
+  - name: inventory
+    description: Pharmacy inventory
+  - name: catalogue
+    description: Drug catalogue
+  - name: prescriptions
+    description: Prescription management
+  - name: notifications
+    description: Pharmacy notifications
+  - name: analytics
+    description: Dashboard analytics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +37,981 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with identifier and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Token pair and user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshInput"
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password (authenticated)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Invalidate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshInput"
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── Orders ────────────────────────────────────────────────────────────────
+  /pharmacy/orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders for this pharmacy
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of orders with items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /pharmacy/orders/{id}/status:
+    patch:
+      operationId: updateOrderStatus
+      tags: [orders]
+      summary: Advance order status (confirmed / packaging / ready)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          description: Invalid status transition
+
+  /pharmacy/orders/{id}/collected:
+    post:
+      operationId: markOrderCollected
+      tags: [orders]
+      summary: Mark order collected (in-person ID checked)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollectedConfirmation"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /pharmacy/orders/{id}/picked-up:
+    post:
+      operationId: markOrderPickedUp
+      tags: [orders]
+      summary: Mark order picked up by courier
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # ── Inventory ─────────────────────────────────────────────────────────────
+  /pharmacy/inventory:
+    get:
+      operationId: listInventory
+      tags: [inventory]
+      summary: List this pharmacy's inventory listings
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Inventory listings with drug info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryItem"
+
+    post:
+      operationId: addInventoryItem
+      tags: [inventory]
+      summary: Add a drug listing to inventory
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryInput"
+      responses:
+        "201":
+          description: Created listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+
+  /pharmacy/inventory/{id}:
+    patch:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update price, stock, or availability
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryUpdate"
+      responses:
+        "200":
+          description: Updated listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+
+    delete:
+      operationId: deleteInventoryItem
+      tags: [inventory]
+      summary: Remove a drug listing
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── Catalogue ─────────────────────────────────────────────────────────────
+  /pharmacy/catalogue:
+    get:
+      operationId: listCatalogue
+      tags: [catalogue]
+      summary: List approved drugs in the master catalogue
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Catalogue drugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrugCatalogueItem"
+
+    post:
+      operationId: proposeDrug
+      tags: [catalogue]
+      summary: Propose a new drug (held for HQ approval)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DrugProposal"
+      responses:
+        "202":
+          description: Proposal submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugCatalogueItem"
+
+  # ── Prescriptions ─────────────────────────────────────────────────────────
+  /pharmacy/prescriptions:
+    get:
+      operationId: listPrescriptions
+      tags: [prescriptions]
+      summary: List prescriptions for this pharmacy
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Prescriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prescription"
+
+  /pharmacy/prescriptions/{id}:
+    get:
+      operationId: getPrescription
+      tags: [prescriptions]
+      summary: Get a single prescription
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      responses:
+        "200":
+          description: Prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
+  /pharmacy/prescriptions/{id}/approve:
+    post:
+      operationId: approvePrescription
+      tags: [prescriptions]
+      summary: Approve prescription (subset of drugs)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionApproval"
+      responses:
+        "200":
+          description: Approved prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
+  /pharmacy/prescriptions/{id}/reject:
+    post:
+      operationId: rejectPrescription
+      tags: [prescriptions]
+      summary: Reject prescription with a reason from a fixed enum
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionRejection"
+      responses:
+        "200":
+          description: Rejected prescription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
+  /pharmacy/prescriptions/{id}/image-url:
+    post:
+      operationId: getPrescriptionImageUrl
+      tags: [prescriptions]
+      summary: Mint a short-lived signed URL for the prescription image
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUrlRequest"
+      responses:
+        "200":
+          description: Signed image URL (15 min TTL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageUrlResponse"
+
+  # ── Notifications ─────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List all notifications
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadCount
+      tags: [notifications]
+      summary: Get unread notification count
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /notifications/mark-read:
+    post:
+      operationId: markNotificationsRead
+      tags: [notifications]
+      summary: Mark notifications as read
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadInput"
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── Analytics ─────────────────────────────────────────────────────────────
+  /pharmacy/analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [analytics]
+      summary: Dashboard overview — order counts, revenue, pending work
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverview"
+
+  /pharmacy/analytics/orders-by-day:
+    get:
+      operationId: getOrdersByDay
+      tags: [analytics]
+      summary: Orders and revenue grouped by day (last 30 days)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Daily order data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyOrderStat"
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    # ── Auth schemas ───────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: Username or phone number
+        password:
+          type: string
+
+    RefreshInput:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    PharmacyUser:
+      type: object
+      required: [id, name, username, controlledSubstanceAuthorized]
+      properties:
+        id:
+          type: string
+
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: ["string", "null"]
+        controlledSubstanceAuthorized:
+          type: boolean
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/PharmacyUser"
+
+    # ── Order schemas ──────────────────────────────────────────────────────
+    OrderStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [confirmed, packaging, ready]
+
+    CollectedConfirmation:
+      type: object
+      required: [idChecked]
+      properties:
+        idChecked:
+          type: boolean
+
+    OrderItem:
+      type: object
+      required: [id, orderId, drugId, drugName, quantity, unitPriceLeones]
+      properties:
+        id:
+          type: string
+
+        orderId:
+          type: string
+
+        drugId:
+          type: string
+
+        drugName:
+          type: string
+        quantity:
+          type: number
+        unitPriceLeones:
+          type: number
+        prescriptionId:
+          type: ["string", "null"]
+
+
+    Order:
+      type: object
+      required: [id, pharmacyId, patientName, patientPhone, status, fulfillmentType, idChecked, totalLeones, createdAt, updatedAt, items]
+      properties:
+        id:
+          type: string
+
+        pharmacyId:
+          type: string
+
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        status:
+          type: string
+          enum: [awaiting_payment, paid, confirmed, packaging, ready, assigned, picked_up, delivering, delivered, collected, cancelled]
+        fulfillmentType:
+          type: string
+          enum: [delivery, collection]
+        idChecked:
+          type: boolean
+        totalLeones:
+          type: number
+        prescriptionId:
+          type: ["string", "null"]
+
+        createdAt:
+          type: string
+
+        updatedAt:
+          type: string
+
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    # ── Inventory schemas ──────────────────────────────────────────────────
+    DrugSummary:
+      type: object
+      required: [name, tier, unit]
+      properties:
+        name:
+          type: string
+        genericName:
+          type: ["string", "null"]
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        unit:
+          type: string
+
+    InventoryItem:
+      type: object
+      required: [id, drugId, priceLeones, stockQuantity, availableForDelivery, availableForCollection, isActive, updatedAt, drug]
+      properties:
+        id:
+          type: string
+
+        drugId:
+          type: string
+
+        priceLeones:
+          type: number
+        stockQuantity:
+          type: number
+        availableForDelivery:
+          type: boolean
+        availableForCollection:
+          type: boolean
+        isActive:
+          type: boolean
+        updatedAt:
+          type: string
+
+        drug:
+          $ref: "#/components/schemas/DrugSummary"
+
+    InventoryInput:
+      type: object
+      required: [drugId, priceLeones]
+      properties:
+        drugId:
+          type: string
+
+        priceLeones:
+          type: number
+          minimum: 1
+        stockQuantity:
+          type: number
+          minimum: 0
+        availableForDelivery:
+          type: boolean
+        availableForCollection:
+          type: boolean
+
+    InventoryUpdate:
+      type: object
+      properties:
+        priceLeones:
+          type: number
+          minimum: 1
+        stockQuantity:
+          type: number
+          minimum: 0
+        availableForDelivery:
+          type: boolean
+        availableForCollection:
+          type: boolean
+        isActive:
+          type: boolean
+
+    # ── Catalogue schemas ──────────────────────────────────────────────────
+    DrugCatalogueItem:
+      type: object
+      required: [id, name, tier, unit, isApproved, createdAt]
+      properties:
+        id:
+          type: string
+
+        name:
+          type: string
+        genericName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        unit:
+          type: string
+        isApproved:
+          type: boolean
+        createdAt:
+          type: string
+
+
+    DrugProposal:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        genericName:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+
+    # ── Prescription schemas ───────────────────────────────────────────────
+    Prescription:
+      type: object
+      required: [id, pharmacyId, patientName, patientPhone, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+
+        pharmacyId:
+          type: string
+
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        approvedDrugIds:
+          type: ["array", "null"]
+          items:
+            type: string
+  
+        rejectReason:
+          type: ["string", "null"]
+          enum:
+            - illegible_image
+            - expired_prescription
+            - invalid_prescription
+            - drug_unavailable
+            - controlled_substance_not_authorized
+            - patient_mismatch
+            - quantity_exceeded
+            - "null"
+        rejectNote:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+
+        orderId:
+          type: ["string", "null"]
+
+        createdAt:
+          type: string
+
+        updatedAt:
+          type: string
+
+
+    PrescriptionApproval:
+      type: object
+      required: [approvedDrugIds]
+      properties:
+        approvedDrugIds:
+          type: array
+          items:
+            type: string
+  
+          minItems: 1
+
+    PrescriptionRejection:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          enum:
+            - illegible_image
+            - expired_prescription
+            - invalid_prescription
+            - drug_unavailable
+            - controlled_substance_not_authorized
+            - patient_mismatch
+            - quantity_exceeded
+        note:
+          type: string
+
+    ImageUrlRequest:
+      type: object
+      properties:
+        variant:
+          type: string
+          enum: [preview, full]
+
+    ImageUrlResponse:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url:
+          type: string
+        expiresAt:
+          type: string
+
+        note:
+          type: ["string", "null"]
+
+    # ── Notification schemas ───────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, pharmacyId, title, body, createdAt]
+      properties:
+        id:
+          type: string
+
+        pharmacyId:
+          type: string
+
+        title:
+          type: string
+        body:
+          type: string
+        type:
+          type: ["string", "null"]
+        referenceId:
+          type: ["string", "null"]
+
+        readAt:
+          type: ["string", "null"]
+
+        createdAt:
+          type: string
+
+
+    UnreadCount:
+      type: object
+      required: [unreadCount]
+      properties:
+        unreadCount:
+          type: number
+
+    MarkReadInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+  
+
+    # ── Analytics schemas ──────────────────────────────────────────────────
+    AnalyticsOverview:
+      type: object
+      required: [totalOrders, pendingOrders, revenueLeones, pendingPrescriptions, lowStockItems, ordersByStatus]
+      properties:
+        totalOrders:
+          type: number
+        pendingOrders:
+          type: number
+          description: Orders needing pharmacy action (paid, confirmed, packaging)
+        revenueLeones:
+          type: number
+          description: Total revenue from completed orders
+        pendingPrescriptions:
+          type: number
+        lowStockItems:
+          type: number
+          description: Inventory items with stockQuantity <= 5
+        ordersByStatus:
+          type: object
+          additionalProperties:
+            type: number
+
+    DailyOrderStat:
+      type: object
+      required: [date, orders, revenueLeones]
+      properties:
+        date:
+          type: string
+
+        orders:
+          type: number
+        revenueLeones:
+          type: number

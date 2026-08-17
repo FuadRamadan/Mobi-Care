@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/pharmacy-portal/"
+title = "MobiCare Pharmacy Portal"
+description = "The pharmacy-facing management portal for MobiCare. Authenticated pharmacy staff log in (HQ issues credentials — no self-registration), then manage their medicine inventory, review and process incoming patient orders through a full status lifecycle, set prices visible to patients, maintain their pharmacy profile, and view order and sales analytics. Connects to the MobiCare pharmacy API backend."
+version = "1.0.0"
+id = "artifacts/pharmacy-portal"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/pharmacy-portal/" ]
+localPort = 24513
+
+[services.development]
+run = "pnpm --filter @workspace/pharmacy-portal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pharmacy-portal", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/pharmacy-portal/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24513"
+BASE_PATH = "/pharmacy-portal/"

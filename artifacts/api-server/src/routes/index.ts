@@ -1,8 +1,21 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
+import { Router } from "express";
+import healthRouter from "./health.js";
+import authRouter from "./auth.js";
+import pharmacyRouter from "./pharmacy/index.js";
+import notificationsRouter from "./pharmacy/notifications.js";
+import prescriptionImagesRouter from "./prescriptionImages.js";
+import { pharmacy } from "../middlewares/auth.js";
 
-const router: IRouter = Router();
+const router = Router();
 
-router.use(healthRouter);
+router.use("/healthz", healthRouter);
+router.use("/auth", authRouter);
+router.use("/pharmacy", pharmacyRouter);
+
+// /notifications is not prefixed with /pharmacy in the frontend API contract
+// but still requires pharmacy auth
+router.use("/notifications", ...pharmacy, notificationsRouter);
+
+router.use("/prescription-images", prescriptionImagesRouter);
 
 export default router;

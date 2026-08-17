@@ -1,0 +1,2 @@
+- [Pharmacy backend](pharmacy-backend.md) — Express 5 + Drizzle + PostgreSQL API; schema pushed; all routes typechecked and smoke-tested.
+- [Pharmacy portal frontend](pharmacy-portal-frontend.md) — React/Vite portal wired to the API via generated hooks; auth, CSS, and logo quirks documented.
