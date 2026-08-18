@@ -259,10 +259,10 @@ export default function About() {
           {/* Meet Our Team */}
           <div className="border-t pt-16 mb-16">
             <h2 className="text-2xl font-display font-bold text-dark-green mb-2">Meet Our Team</h2>
-            <p className="text-muted-foreground text-sm mb-12">The people behind MobiCare.</p>
+            <p className="text-muted-foreground text-sm mb-12"></p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {[
-                { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "CEO & Founder (Medical Doctor)", color: "bg-primary/10 text-primary", photo: "/team-abdullah.jpg" },
+                { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "CEO & Founder", color: "bg-primary/10 text-primary", photo: "/team-abdullah.jpg" },
                 { initials: "FS", name: "Fuad Ramadan Sesay", role: "CIO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
                 { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700", photo: "/team-alhaji.jpg" },
                 { initials: "AZ", name: "Pharm Alpha Aziz Jalloh", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700", photo: "/team-alpha.jpg" },
