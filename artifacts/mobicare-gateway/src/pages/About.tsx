@@ -19,7 +19,7 @@ const values = [
     icon: Smartphone,
     title: "Mobile Money Native",
     description:
-      "We integrate directly with Orange Money so payments are simple, safe, and trackable — no bank account required.",
+      "We integrate directly with mobile money services.",
   },
   {
     icon: Users,
