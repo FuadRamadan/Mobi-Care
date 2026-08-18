@@ -14,7 +14,7 @@ export default function Footer() {
               <span className="font-display font-bold text-2xl tracking-tight text-white">MobiCare</span>
             </Link>
             <p className="text-secondary/70 max-w-sm text-sm leading-relaxed">
-              Your trusted connection to pharmacies across Sierra Leone. Plain-spoken, honest, and built for your mobile phone.
+              Your trusted connection to pharmacies across Sierra Leone.
             </p>
           </div>
           
