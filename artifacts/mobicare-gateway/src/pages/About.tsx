@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Heart, ShieldCheck, Smartphone, Users } from "lucide-react";
+import { Heart, ShieldCheck, Smartphone, Users, Search, FileCheck, ShoppingBag, Truck } from "lucide-react";
 import PolicyHighlights from "@/components/PolicyHighlights";
 
 const values = [
@@ -140,6 +140,42 @@ export default function About() {
               <p>
                 He is joined by <span className="font-semibold text-dark-green">Fuad Ramada Sesay</span> and <span className="font-semibold text-dark-green">Alhaji Samura</span>, both running the technology and infrastructure, and <span className="font-semibold text-dark-green">Aziz</span> and <span className="font-semibold text-dark-green">Mamie Saio</span>, registered pharmacists in Sierra Leone leading pharmacy operations and partnerships.
               </p>
+            </div>
+          </motion.div>
+
+          {/* How It Works */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">How It Works</p>
+            <h2 className="font-display font-bold text-2xl md:text-3xl text-dark-green mb-10">Simple steps to get what you need.</h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 relative">
+              <div className="hidden md:block absolute top-8 left-0 right-0 h-0.5 bg-border -z-10" />
+              {[
+                { icon: Search,      title: "Search",  desc: "Find the exact medicine you need." },
+                { icon: FileCheck,   title: "Compare", desc: "Check prices across local pharmacies." },
+                { icon: ShoppingBag, title: "Order",   desc: "Choose delivery or pickup." },
+                { icon: Smartphone,  title: "Pay",     desc: "Securely via Orange Money." },
+                { icon: Truck,       title: "Track",   desc: "Follow your order to your door." },
+              ].map((step, i) => (
+                <motion.div
+                  key={step.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div className="w-16 h-16 rounded-full bg-secondary text-primary flex items-center justify-center mb-4 shadow-sm border border-border">
+                    <step.icon className="w-7 h-7" />
+                  </div>
+                  <h3 className="font-display font-bold text-dark-green mb-1">{step.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed px-2">{step.desc}</p>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 

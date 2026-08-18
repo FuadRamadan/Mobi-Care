@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag, Truck, Smartphone, FileCheck } from "lucide-react";
 import PolicyHighlights from "@/components/PolicyHighlights";
 
 // ─── Floating medical element SVGs ───────────────────────────────────────────
@@ -220,14 +219,6 @@ function FloatingMedical() {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const steps = [
-    { icon: Search,      title: "Search",  desc: "Find the exact medicine you need." },
-    { icon: FileCheck,   title: "Compare", desc: "Check prices across local pharmacies." },
-    { icon: ShoppingBag, title: "Order",   desc: "Choose delivery or pickup." },
-    { icon: Smartphone,  title: "Pay",     desc: "Securely via Orange Money." },
-    { icon: Truck,       title: "Track",   desc: "Follow your order to your door." },
-  ];
-
   return (
     <div className="flex-1 w-full">
       {/* ── Hero ── */}
@@ -298,36 +289,6 @@ export default function Home() {
               </p>
             </Link>
           </motion.div>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section className="py-20 px-4 bg-background/60">
-        <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-display font-bold text-dark-green mb-4">How it works</h2>
-            <p className="text-muted-foreground">Simple steps to get what you need.</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 relative">
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 -z-10" />
-            {steps.map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="w-16 h-16 rounded-full bg-secondary text-primary flex items-center justify-center mb-4 shadow-sm border border-border">
-                  <step.icon className="w-7 h-7" />
-                </div>
-                <h3 className="font-display font-bold text-dark-green mb-1">{step.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed px-2">{step.desc}</p>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
