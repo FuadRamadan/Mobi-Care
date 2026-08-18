@@ -216,6 +216,35 @@ export default function About() {
             ))}
           </div>
 
+          {/* Meet Our Team */}
+          <div className="border-t pt-16 mb-16">
+            <h2 className="text-2xl font-display font-bold text-dark-green mb-2">Meet Our Team</h2>
+            <p className="text-muted-foreground text-sm mb-12">The people behind MobiCare.</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "Founder & Medical Doctor", color: "bg-primary/10 text-primary" },
+                { initials: "FS", name: "Fuad Ramada Sesay", role: "Technology & Infrastructure", color: "bg-blue-100 text-blue-700" },
+                { initials: "AS", name: "Alhaji Samura", role: "Technology & Infrastructure", color: "bg-purple-100 text-purple-700" },
+                { initials: "AZ", name: "Aziz & Mamie Saio", role: "Pharmacy Operations & Partnerships", color: "bg-green-100 text-green-700" },
+              ].map((member, i) => (
+                <motion.div
+                  key={member.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div className={`w-24 h-24 rounded-full ${member.color} flex items-center justify-center text-2xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
+                    {member.initials}
+                  </div>
+                  <h3 className="font-display font-semibold text-dark-green text-sm leading-snug mb-1">{member.name}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{member.role}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
           {/* Policy promises */}
           <div className="border-t pt-16">
             <h2 className="text-2xl font-display font-bold text-dark-green mb-8">Our Promises to You</h2>
