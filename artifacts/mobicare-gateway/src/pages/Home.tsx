@@ -326,21 +326,21 @@ export default function Home() {
       </section>
 
       {/* ── Contact Us ── */}
-      <section className="py-20 px-4 bg-secondary/40">
+      <section className="py-20 px-4 bg-dark-green">
         <div className="container mx-auto max-w-4xl text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Contact Us</p>
-          <h2 className="font-display font-bold text-2xl md:text-3xl text-dark-green mb-10">Get in touch</h2>
+          <h2 className="font-display font-bold text-2xl md:text-3xl text-white mb-10">Get in touch</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-card border rounded-2xl p-6 flex flex-col items-center gap-2"
+              className="bg-white/10 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-2"
             >
               <Mail className="w-7 h-7 text-primary" />
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Email</p>
-              <a href="mailto:mobicaresl00@gmail.com" className="text-sm font-medium text-dark-green hover:text-primary transition-colors break-all">
+              <p className="text-xs text-white/60 uppercase tracking-widest font-semibold">Email</p>
+              <a href="mailto:mobicaresl00@gmail.com" className="text-sm font-medium text-white hover:text-primary transition-colors break-all">
                 mobicaresl00@gmail.com
               </a>
             </motion.div>
@@ -350,11 +350,11 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="bg-card border rounded-2xl p-6 flex flex-col items-center gap-2"
+              className="bg-white/10 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-2"
             >
               <Phone className="w-7 h-7 text-primary" />
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Phone</p>
-              <a href="tel:+23275726975" className="text-sm font-medium text-dark-green hover:text-primary transition-colors">
+              <p className="text-xs text-white/60 uppercase tracking-widest font-semibold">Phone</p>
+              <a href="tel:+23275726975" className="text-sm font-medium text-white hover:text-primary transition-colors">
                 +232 75 726 975
               </a>
             </motion.div>
@@ -364,11 +364,11 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="bg-card border rounded-2xl p-6 flex flex-col items-center gap-2"
+              className="bg-white/10 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-2"
             >
               <span className="text-2xl">📍</span>
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Address</p>
-              <p className="text-sm font-medium text-dark-green">84 Sixth Road, Malama Lumley</p>
+              <p className="text-xs text-white/60 uppercase tracking-widest font-semibold">Address</p>
+              <p className="text-sm font-medium text-white">84 Sixth Road, Malama Lumley</p>
             </motion.div>
           </div>
 
