@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PORTALS } from "@/config/portals";
 
 export default function Navbar() {
   const [location] = useLocation();
@@ -39,12 +40,12 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/patient"
+          <a
+            href={PORTALS.patient.loginUrl}
             className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm"
           >
             Get Medicines
-          </Link>
+          </a>
 
         </nav>
 
@@ -78,13 +79,12 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="pt-2">
-              <Link
-                href="/patient"
-                onClick={() => setIsOpen(false)}
+              <a
+                href={PORTALS.patient.loginUrl}
                 className="flex items-center justify-center w-full bg-primary text-primary-foreground px-4 py-3 rounded-xl font-medium"
               >
                 Get Medicines
-              </Link>
+              </a>
             </div>
           </nav>
         </div>
