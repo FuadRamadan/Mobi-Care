@@ -134,7 +134,7 @@ export default function About() {
               viewport={{ once: true }}
               className="bg-red-50 border border-red-100 rounded-2xl p-8"
             >
-              <p className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-4">1. Challenges of Access to Essential Medicines</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-4">Challenges of Access to Essential Medicines</p>
               <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                 Sierra Leone's own health facility data tells the story plainly: the average facility stocks only six of the twenty essential medicines it should have, and not one facility surveyed had them all.
               </p>
@@ -165,7 +165,7 @@ export default function About() {
               transition={{ delay: 0.1 }}
               className="bg-primary/5 border border-primary/20 rounded-2xl p-8"
             >
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">2. Our Solutions</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Solutions</p>
               <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                 Using technology at MobiCare, we make every medicine in the country findable in real time, so that no patient loses their life searching for a drug that already exists.
               </p>
