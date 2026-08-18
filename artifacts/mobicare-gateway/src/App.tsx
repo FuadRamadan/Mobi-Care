@@ -10,7 +10,16 @@ import About from '@/pages/About';
 import Patient from '@/pages/Patient';
 import Pharmacy from '@/pages/Pharmacy';
 import Layout from '@/components/layout/Layout';
+import '@/lib/portalToken';
 import { HqAuthProvider } from '@/hq/auth';
+import { PatientAuthProvider } from '@/patient/auth';
+import { CartProvider } from '@/patient/cart';
+import PatientLogin from '@/pages/app/Login';
+import AppLayout from '@/pages/app/AppLayout';
+import PatientSearch from '@/pages/app/Search';
+import Checkout from '@/pages/app/Checkout';
+import PatientOrders from '@/pages/app/Orders';
+import OrderDetail from '@/pages/app/OrderDetail';
 import HqLogin from '@/pages/hq/Login';
 import HqDashboard from '@/pages/hq/Dashboard';
 import HqOrders from '@/pages/hq/Orders';
@@ -54,6 +63,20 @@ function Router() {
           <Route path="/hq/flags" component={HqFlags} />
           <Route path="/hq/settlements" component={HqSettlements} />
           <Route path="/hq/audit" component={HqAudit} />
+          {/* Patient app — same site, own shell (Layout renders bare for /app*) */}
+          <Route path="/app" component={PatientLogin} />
+          <Route path="/app/search">
+            <AppLayout><PatientSearch /></AppLayout>
+          </Route>
+          <Route path="/app/checkout">
+            <AppLayout><Checkout /></AppLayout>
+          </Route>
+          <Route path="/app/orders">
+            <AppLayout><PatientOrders /></AppLayout>
+          </Route>
+          <Route path="/app/orders/:id">
+            <AppLayout><OrderDetail /></AppLayout>
+          </Route>
           <Route component={NotFound} />
         </Switch>
       </Layout>
@@ -71,9 +94,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <HqAuthProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
-          </WouterRouter>
+          <PatientAuthProvider>
+            <CartProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                <Router />
+              </WouterRouter>
+            </CartProvider>
+          </PatientAuthProvider>
         </HqAuthProvider>
         <Toaster />
       </TooltipProvider>

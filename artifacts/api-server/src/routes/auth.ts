@@ -7,6 +7,8 @@ import {
   refreshTokensTable,
   hqStaffTable,
   hqRefreshTokensTable,
+  patientsTable,
+  patientRefreshTokensTable,
 } from "@workspace/db/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import {
@@ -124,7 +126,97 @@ router.post("/login", async (req, res) => {
     }
   }
 
+  // ── Patient account? (phone is the login identifier) ──
+  const [patientAcc] = await db
+    .select()
+    .from(patientsTable)
+    .where(eq(patientsTable.phone, identifier))
+    .limit(1);
+
+  if (patientAcc && patientAcc.isActive) {
+    const valid = await bcrypt.compare(password, patientAcc.passwordHash);
+    if (valid) {
+      const { raw, hash } = generateRefreshToken();
+      await db.insert(patientRefreshTokensTable).values({
+        patientId: patientAcc.id,
+        tokenHash: hash,
+        expiresAt: refreshTokenExpiresAt(),
+      });
+
+      const accessToken = signAccessToken({ sub: patientAcc.id, role: "patient", name: patientAcc.name });
+      res.json({
+        accessToken,
+        refreshToken: raw,
+        user: {
+          id: patientAcc.id,
+          role: "patient",
+          name: patientAcc.name,
+          username: patientAcc.phone,
+          phone: patientAcc.phone,
+        },
+      });
+      return;
+    }
+  }
+
   res.status(401).json({ error: "Invalid credentials" });
+});
+
+// ── Patient registration ──────────────────────────────────────────────────────
+// Only patients may self-register. Pharmacies are onboarded by HQ; HQ staff
+// come from the bootstrap script.
+router.post("/register", async (req, res) => {
+  const body = z.object({
+    name: z.string().min(2),
+    phone: z.string().min(5),
+    password: z.string().min(8),
+  }).safeParse(req.body);
+
+  if (!body.success) {
+    res.status(400).json({ error: "name (min 2), phone (min 5) and password (min 8 chars) are required" });
+    return;
+  }
+
+  const [existing] = await db
+    .select({ id: patientsTable.id })
+    .from(patientsTable)
+    .where(eq(patientsTable.phone, body.data.phone))
+    .limit(1);
+  if (existing) {
+    res.status(409).json({ error: "An account with this phone number already exists" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(body.data.password, 12);
+  const [created] = await db
+    .insert(patientsTable)
+    .values({ name: body.data.name, phone: body.data.phone, passwordHash })
+    .onConflictDoNothing({ target: patientsTable.phone })
+    .returning();
+  if (!created) {
+    res.status(409).json({ error: "An account with this phone number already exists" });
+    return;
+  }
+
+  const { raw, hash } = generateRefreshToken();
+  await db.insert(patientRefreshTokensTable).values({
+    patientId: created.id,
+    tokenHash: hash,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  const accessToken = signAccessToken({ sub: created.id, role: "patient", name: created.name });
+  res.status(201).json({
+    accessToken,
+    refreshToken: raw,
+    user: {
+      id: created.id,
+      role: "patient",
+      name: created.name,
+      username: created.phone,
+      phone: created.phone,
+    },
+  });
 });
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
@@ -227,6 +319,48 @@ router.post("/refresh", async (req, res) => {
     return;
   }
 
+  // ── Patient token? ──
+  const [ptStored] = await db
+    .select()
+    .from(patientRefreshTokensTable)
+    .where(
+      and(
+        eq(patientRefreshTokensTable.tokenHash, hash),
+        isNull(patientRefreshTokensTable.revokedAt),
+        gt(patientRefreshTokensTable.expiresAt, now)
+      )
+    )
+    .limit(1);
+
+  if (ptStored) {
+    await db
+      .update(patientRefreshTokensTable)
+      .set({ revokedAt: now })
+      .where(eq(patientRefreshTokensTable.id, ptStored.id));
+
+    const [patientAcc] = await db
+      .select()
+      .from(patientsTable)
+      .where(eq(patientsTable.id, ptStored.patientId))
+      .limit(1);
+
+    if (!patientAcc || !patientAcc.isActive) {
+      res.status(401).json({ error: "Account inactive" });
+      return;
+    }
+
+    const { raw, hash: newHash } = generateRefreshToken();
+    await db.insert(patientRefreshTokensTable).values({
+      patientId: patientAcc.id,
+      tokenHash: newHash,
+      expiresAt: refreshTokenExpiresAt(),
+    });
+
+    const accessToken = signAccessToken({ sub: patientAcc.id, role: "patient", name: patientAcc.name });
+    res.json({ accessToken, refreshToken: raw });
+    return;
+  }
+
   res.status(401).json({ error: "Invalid or expired refresh token" });
 });
 
@@ -273,6 +407,41 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
         and(
           eq(hqRefreshTokensTable.hqStaffId, accountId),
           isNull(hqRefreshTokensTable.revokedAt)
+        )
+      );
+
+    res.json({ message: "Password changed successfully" });
+    return;
+  }
+
+  if (role === "patient") {
+    const [record] = await db
+      .select()
+      .from(patientsTable)
+      .where(eq(patientsTable.id, accountId))
+      .limit(1);
+
+    if (!record) { res.status(404).json({ error: "Not found" }); return; }
+
+    const valid = await bcrypt.compare(body.data.currentPassword, record.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: "Current password is incorrect" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
+    await db
+      .update(patientsTable)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(patientsTable.id, accountId));
+
+    await db
+      .update(patientRefreshTokensTable)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(patientRefreshTokensTable.patientId, accountId),
+          isNull(patientRefreshTokensTable.revokedAt)
         )
       );
 
@@ -330,6 +499,11 @@ router.post("/logout", async (req, res) => {
     .update(hqRefreshTokensTable)
     .set({ revokedAt: now })
     .where(eq(hqRefreshTokensTable.tokenHash, hash));
+
+  await db
+    .update(patientRefreshTokensTable)
+    .set({ revokedAt: now })
+    .where(eq(patientRefreshTokensTable.tokenHash, hash));
 
   res.json({ message: "Logged out" });
 });

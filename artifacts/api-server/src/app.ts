@@ -35,6 +35,10 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+// Patient prescription uploads carry a base64 image — allow a larger body
+// on that path only (mounted before the default parser; already-parsed
+// bodies are skipped by the second parser).
+app.use("/api/patient/uploads", express.json({ limit: "8mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

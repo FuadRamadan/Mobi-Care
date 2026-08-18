@@ -43,6 +43,14 @@ export const ordersTable = pgTable("orders", {
   patientName: text("patient_name").notNull(),
   patientPhone: text("patient_phone").notNull(),
 
+  // Set when the order was placed by a registered patient account on the
+  // unified site (null for legacy/HQ-created orders). Used for patient-scoped
+  // "my orders" queries.
+  patientId: uuid("patient_id"),
+
+  // Delivery address (delivery orders placed by patients).
+  deliveryAddress: text("delivery_address"),
+
   status: orderStatusEnum("status").notNull().default("awaiting_payment"),
   fulfillmentType: fulfillmentTypeEnum("fulfillment_type").notNull(),
 

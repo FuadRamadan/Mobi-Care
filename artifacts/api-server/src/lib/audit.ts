@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { auditLogTable } from "@workspace/db/schema";
 
 export interface AuditEntry {
-  actorType: "hq" | "pharmacy" | "system";
+  actorType: "hq" | "pharmacy" | "patient" | "system";
   actorId?: string | null;
   actorName?: string | null;
   action: string;      // e.g. "order.assign_courier"

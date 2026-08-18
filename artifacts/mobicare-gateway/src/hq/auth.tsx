@@ -6,14 +6,13 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { setAuthTokenGetter, useLogin } from '@workspace/api-client-react';
-
-const ACCESS_KEY = 'mc_hq_access';
-const REFRESH_KEY = 'mc_hq_refresh';
-const USER_KEY = 'mc_hq_user';
-
-// Wire the generated API client to the stored HQ access token (module init).
-setAuthTokenGetter(() => localStorage.getItem(ACCESS_KEY));
+import { useLogin } from '@workspace/api-client-react';
+import {
+  HQ_ACCESS_KEY as ACCESS_KEY,
+  HQ_REFRESH_KEY as REFRESH_KEY,
+  HQ_USER_KEY as USER_KEY,
+  tokenSecondsLeft,
+} from '@/lib/portalToken';
 
 export interface HqUser {
   id: string;
@@ -35,18 +34,6 @@ function readStoredUser(): HqUser | null {
     return raw && localStorage.getItem(ACCESS_KEY) ? (JSON.parse(raw) as HqUser) : null;
   } catch {
     return null;
-  }
-}
-
-/** Seconds until the stored access token expires (NaN if absent/unreadable). */
-function accessTokenSecondsLeft(): number {
-  const token = localStorage.getItem(ACCESS_KEY);
-  if (!token) return NaN;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')));
-    return payload.exp - Date.now() / 1000;
-  } catch {
-    return NaN;
   }
 }
 
@@ -89,7 +76,7 @@ export function HqAuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function ensureFresh() {
-      const secondsLeft = accessTokenSecondsLeft();
+      const secondsLeft = tokenSecondsLeft(ACCESS_KEY);
       if (Number.isNaN(secondsLeft)) return logout();
       if (secondsLeft > 120) return;
       const refreshToken = localStorage.getItem(REFRESH_KEY);

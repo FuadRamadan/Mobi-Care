@@ -6,7 +6,8 @@
 export const PORTALS = {
   patient: {
     name: 'Patient app',
-    loginUrl: 'https://app.mobicare.sl', // TODO: replace with real patient app URL
+    // The patient experience is part of this same site.
+    loginUrl: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/app`,
   },
   pharmacy: {
     name: 'Pharmacy portal',

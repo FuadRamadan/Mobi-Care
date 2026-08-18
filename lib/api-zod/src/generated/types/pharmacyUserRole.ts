@@ -12,4 +12,5 @@ export type PharmacyUserRole = typeof PharmacyUserRole[keyof typeof PharmacyUser
 export const PharmacyUserRole = {
   pharmacy: 'pharmacy',
   hq: 'hq',
+  patient: 'patient',
 } as const;

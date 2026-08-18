@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import { ordersTable, orderItemsTable, drugCatalogueTable } from "@workspace/db/schema";
+import { ordersTable, orderItemsTable, drugCatalogueTable, prescriptionsTable } from "@workspace/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
@@ -18,6 +18,31 @@ const ALLOWED_TRANSITIONS: Record<string, PharmacyStatus[]> = {
   confirmed: ["packaging"],
   packaging: ["ready"],
 };
+
+/**
+ * Returns a 409 payload when the linked prescription blocks fulfilment,
+ * or null when it is approved.
+ */
+async function prescriptionGateError(
+  prescriptionId: string
+): Promise<{ error: string; code: string } | null> {
+  const [rx] = await db
+    .select({ status: prescriptionsTable.status })
+    .from(prescriptionsTable)
+    .where(eq(prescriptionsTable.id, prescriptionId))
+    .limit(1);
+  if (!rx || rx.status === "approved") return rx ? null : { error: "Linked prescription not found", code: "PRESCRIPTION_NOT_FOUND" };
+  if (rx.status === "rejected") {
+    return {
+      error: "The prescription for this order was rejected — the order cannot be fulfilled",
+      code: "PRESCRIPTION_REJECTED",
+    };
+  }
+  return {
+    error: "The prescription for this order is still awaiting pharmacist review",
+    code: "PRESCRIPTION_PENDING",
+  };
+}
 
 // ── List orders ───────────────────────────────────────────────────────────────
 router.get("/", async (req: AuthRequest, res) => {
@@ -101,6 +126,17 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
     return;
   }
 
+  // Prescription gate: an order carrying prescription-bound items may not
+  // advance into fulfilment until a licensed pharmacist approves the linked
+  // prescription. Enforced server-side on every pharmacy transition.
+  if (order.prescriptionId) {
+    const rxError = await prescriptionGateError(order.prescriptionId);
+    if (rxError) {
+      res.status(409).json(rxError);
+      return;
+    }
+  }
+
   const [updated] = await db
     .update(ordersTable)
     .set({ status: body.data.status, updatedAt: new Date() })
@@ -146,6 +182,17 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
   if (order.fulfillmentType !== "collection") {
     res.status(409).json({ error: "Only collection orders can be marked as collected" });
     return;
+  }
+
+  // Defense-in-depth: never hand over prescription-bound medicines unless the
+  // linked prescription is approved (the 'confirmed' gate should already have
+  // enforced this, but dispensing is the last, most safety-critical step).
+  if (order.prescriptionId) {
+    const rxError = await prescriptionGateError(order.prescriptionId);
+    if (rxError) {
+      res.status(409).json(rxError);
+      return;
+    }
   }
 
   const [updated] = await db

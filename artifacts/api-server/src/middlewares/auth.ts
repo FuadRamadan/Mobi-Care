@@ -69,3 +69,23 @@ export function requireHqRole(
 
 /** Convenience: combine both middleware in one array */
 export const hq = [requireAuth, requireHqRole] as const;
+
+/**
+ * After requireAuth: reject if the token role is not 'patient'.
+ * Every /patient/* route is behind this — patients can only ever act on
+ * resources scoped to their own id (enforced again inside each handler).
+ */
+export function requirePatientRole(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  if (req.pharmacy?.role !== "patient") {
+    res.status(403).json({ error: "Patient role required" });
+    return;
+  }
+  next();
+}
+
+/** Convenience: combine both middleware in one array */
+export const patient = [requireAuth, requirePatientRole] as const;

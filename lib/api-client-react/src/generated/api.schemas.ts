@@ -35,6 +35,7 @@ export type PharmacyUserRole = typeof PharmacyUserRole[keyof typeof PharmacyUser
 export const PharmacyUserRole = {
   pharmacy: 'pharmacy',
   hq: 'hq',
+  patient: 'patient',
 } as const;
 
 export interface PharmacyUser {
@@ -128,6 +129,126 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+}
+
+export interface PatientRegisterInput {
+  /** @minLength 2 */
+  name: string;
+  /** @minLength 5 */
+  phone: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface DrugOffer {
+  inventoryId: string;
+  pharmacyId: string;
+  pharmacyName: string;
+  /** @nullable */
+  pharmacyAddress?: string | null;
+  /** @nullable */
+  brand?: string | null;
+  priceLeones: number;
+  inStock: boolean;
+  availableForDelivery: boolean;
+  availableForCollection: boolean;
+}
+
+export type DrugSearchResultTier = typeof DrugSearchResultTier[keyof typeof DrugSearchResultTier];
+
+
+export const DrugSearchResultTier = {
+  NUMBER_1: '1',
+  NUMBER_2: '2',
+  NUMBER_3: '3',
+} as const;
+
+export interface DrugSearchResult {
+  drugId: string;
+  name: string;
+  /** @nullable */
+  genericName?: string | null;
+  /** @nullable */
+  description?: string | null;
+  tier: DrugSearchResultTier;
+  unit: string;
+  /** @nullable */
+  maxUnitsPerOrder?: number | null;
+  prescriptionRequired: boolean;
+  collectionOnly: boolean;
+  offers: DrugOffer[];
+}
+
+export interface PatientOrderItemInput {
+  drugId: string;
+  /** @minimum 1 */
+  quantity: number;
+}
+
+export type PatientOrderInputFulfillmentType = typeof PatientOrderInputFulfillmentType[keyof typeof PatientOrderInputFulfillmentType];
+
+
+export const PatientOrderInputFulfillmentType = {
+  delivery: 'delivery',
+  collection: 'collection',
+} as const;
+
+export interface PatientOrderInput {
+  pharmacyId: string;
+  fulfillmentType: PatientOrderInputFulfillmentType;
+  deliveryAddress?: string;
+  prescriptionImageKey?: string;
+  items: PatientOrderItemInput[];
+}
+
+export interface OrderPharmacyInfo {
+  id: string;
+  name: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  phone?: string | null;
+}
+
+export interface OrderCourierInfo {
+  id: string;
+  name: string;
+  /** @nullable */
+  phone?: string | null;
+}
+
+export type OrderPrescriptionInfoStatus = typeof OrderPrescriptionInfoStatus[keyof typeof OrderPrescriptionInfoStatus];
+
+
+export const OrderPrescriptionInfoStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface OrderPrescriptionInfo {
+  id: string;
+  status: OrderPrescriptionInfoStatus;
+  /** @nullable */
+  rejectReason?: string | null;
+}
+
+export type PatientOrder = Order & ({
+  /** @nullable */
+  deliveryAddress?: string | null;
+  paymentMethod?: string;
+  pharmacy?: OrderPharmacyInfo | null;
+  courier?: OrderCourierInfo | null;
+  prescription?: OrderPrescriptionInfo | null;
+});
+
+export interface PrescriptionUploadInput {
+  /** Base64 data URL (PNG, JPEG, or WebP, max 5 MB) */
+  image: string;
+}
+
+export interface PrescriptionUploadResponse {
+  imageKey: string;
 }
 
 export type DrugSummaryTier = typeof DrugSummaryTier[keyof typeof DrugSummaryTier];
@@ -741,6 +862,10 @@ status?: string;
 
 export type ListPrescriptionsParams = {
 status?: string;
+};
+
+export type PatientSearchDrugsParams = {
+q: string;
 };
 
 export type ListHqOrdersParams = {

@@ -11,3 +11,4 @@ export * from "./couriers";
 export * from "./settlements";
 export * from "./flags";
 export * from "./auditLog";
+export * from "./patients";

@@ -25,6 +25,8 @@ tags:
     description: Dashboard analytics
   - name: hq
     description: MobiCare HQ oversight (HQ role required)
+  - name: patient
+    description: Patient experience (patient role required)
 
 paths:
   /healthz:
@@ -479,6 +481,154 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImageUrlResponse"
+
+  # ── Patient experience ─────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: registerPatient
+      tags: [auth]
+      summary: Register a patient account (self-service)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientRegisterInput"
+      responses:
+        "201":
+          description: Account created — token pair and user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Phone already registered
+
+  /patient/search:
+    get:
+      operationId: patientSearchDrugs
+      tags: [patient]
+      summary: Search medicines across all pharmacies with price comparison
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Drugs with per-pharmacy price offers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrugSearchResult"
+
+  /patient/orders:
+    get:
+      operationId: patientListOrders
+      tags: [patient]
+      summary: List the authenticated patient's own orders
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Patient orders with items, pharmacy, courier, prescription status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientOrder"
+    post:
+      operationId: patientCreateOrder
+      tags: [patient]
+      summary: Place an order (delivery or collection)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientOrderInput"
+      responses:
+        "201":
+          description: Created order (awaiting payment)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientOrder"
+        "409":
+          description: Stock, tier, or availability conflict
+
+  /patient/orders/{id}:
+    get:
+      operationId: patientGetOrder
+      tags: [patient]
+      summary: Get one of the patient's own orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order with items, pharmacy, courier, prescription status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientOrder"
+
+  /patient/orders/{id}/pay:
+    post:
+      operationId: patientPayOrder
+      tags: [patient]
+      summary: Record mobile-money payment (no live gateway yet)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order moved to paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientOrder"
+        "409":
+          description: Order is not awaiting payment
+
+  /patient/uploads/prescription:
+    post:
+      operationId: patientUploadPrescription
+      tags: [patient]
+      summary: Upload a prescription image (base64 data URL)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionUploadInput"
+      responses:
+        "201":
+          description: Stored — opaque image key to attach to an order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrescriptionUploadResponse"
 
   # ── Notifications ─────────────────────────────────────────────────────────
   /notifications:
@@ -1110,7 +1260,7 @@ components:
 
         role:
           type: string
-          enum: [pharmacy, hq]
+          enum: [pharmacy, hq, patient]
         name:
           type: string
         username:
@@ -1220,6 +1370,173 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
+
+    # ── Patient schemas ────────────────────────────────────────────────────
+    PatientRegisterInput:
+      type: object
+      required: [name, phone, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          minLength: 5
+        password:
+          type: string
+          minLength: 8
+
+    DrugOffer:
+      type: object
+      required: [inventoryId, pharmacyId, pharmacyName, priceLeones, inStock, availableForDelivery, availableForCollection]
+      properties:
+        inventoryId:
+          type: string
+        pharmacyId:
+          type: string
+        pharmacyName:
+          type: string
+        pharmacyAddress:
+          type: ["string", "null"]
+        brand:
+          type: ["string", "null"]
+        priceLeones:
+          type: number
+        inStock:
+          type: boolean
+        availableForDelivery:
+          type: boolean
+        availableForCollection:
+          type: boolean
+
+    DrugSearchResult:
+      type: object
+      required: [drugId, name, tier, unit, prescriptionRequired, collectionOnly, offers]
+      properties:
+        drugId:
+          type: string
+        name:
+          type: string
+        genericName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        unit:
+          type: string
+        maxUnitsPerOrder:
+          type: ["number", "null"]
+        prescriptionRequired:
+          type: boolean
+        collectionOnly:
+          type: boolean
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugOffer"
+
+    PatientOrderItemInput:
+      type: object
+      required: [drugId, quantity]
+      properties:
+        drugId:
+          type: string
+        quantity:
+          type: number
+          minimum: 1
+
+    PatientOrderInput:
+      type: object
+      required: [pharmacyId, fulfillmentType, items]
+      properties:
+        pharmacyId:
+          type: string
+        fulfillmentType:
+          type: string
+          enum: [delivery, collection]
+        deliveryAddress:
+          type: string
+        prescriptionImageKey:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatientOrderItemInput"
+
+    OrderPharmacyInfo:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+
+    OrderCourierInfo:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+
+    OrderPrescriptionInfo:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        rejectReason:
+          type: ["string", "null"]
+
+    PatientOrder:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            deliveryAddress:
+              type: ["string", "null"]
+            paymentMethod:
+              type: string
+            pharmacy:
+              oneOf:
+                - $ref: "#/components/schemas/OrderPharmacyInfo"
+                - type: "null"
+            courier:
+              oneOf:
+                - $ref: "#/components/schemas/OrderCourierInfo"
+                - type: "null"
+            prescription:
+              oneOf:
+                - $ref: "#/components/schemas/OrderPrescriptionInfo"
+                - type: "null"
+
+    PrescriptionUploadInput:
+      type: object
+      required: [image]
+      properties:
+        image:
+          type: string
+          description: Base64 data URL (PNG, JPEG, or WebP, max 5 MB)
+
+    PrescriptionUploadResponse:
+      type: object
+      required: [imageKey]
+      properties:
+        imageKey:
+          type: string
 
     # ── Inventory schemas ──────────────────────────────────────────────────
     DrugSummary:

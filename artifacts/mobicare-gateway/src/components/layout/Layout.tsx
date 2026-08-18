@@ -10,9 +10,10 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const isHQ = location === "/hq" || location.startsWith("/hq/");
+  const isPatientApp = location === "/app" || location.startsWith("/app/");
 
-  // If HQ page, we might want to hide the standard nav/footer to keep it minimal
-  if (isHQ) {
+  // HQ and patient app pages bring their own shells — no marketing nav/footer.
+  if (isHQ || isPatientApp) {
     return <main className="flex-1 flex flex-col min-h-screen bg-background">{children}</main>;
   }
 
