@@ -79,9 +79,14 @@ export default function CartScreen() {
             allowsEditing: true,
           });
           if (!result.canceled && result.assets[0]) {
-            setPrescriptionUri(result.assets[0].uri);
-            const mime = result.assets[0].mimeType ?? 'image/jpeg';
-            setPrescriptionBase64(`data:${mime};base64,${result.assets[0].base64}`);
+            const asset = result.assets[0];
+            if (asset.base64) {
+              setPrescriptionUri(asset.uri);
+              const mime = asset.mimeType ?? 'image/jpeg';
+              setPrescriptionBase64(`data:${mime};base64,${asset.base64}`);
+            } else {
+              Alert.alert('Upload failed', 'Could not read image data. Please try again.');
+            }
           }
         },
       },
@@ -95,9 +100,14 @@ export default function CartScreen() {
             allowsEditing: true,
           });
           if (!result.canceled && result.assets[0]) {
-            setPrescriptionUri(result.assets[0].uri);
-            const mime = result.assets[0].mimeType ?? 'image/jpeg';
-            setPrescriptionBase64(`data:${mime};base64,${result.assets[0].base64}`);
+            const asset = result.assets[0];
+            if (asset.base64) {
+              setPrescriptionUri(asset.uri);
+              const mime = asset.mimeType ?? 'image/jpeg';
+              setPrescriptionBase64(`data:${mime};base64,${asset.base64}`);
+            } else {
+              Alert.alert('Upload failed', 'Could not read image data. Please try again.');
+            }
           }
         },
       },

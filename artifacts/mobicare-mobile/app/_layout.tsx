@@ -56,7 +56,7 @@ function RootLayoutNav() {
       if (typeof url === 'string' && url.startsWith('/')) {
         router.push(url as never);
       }
-    });
+    }).catch(() => {});
     return () => sub.remove();
   }, []);
 

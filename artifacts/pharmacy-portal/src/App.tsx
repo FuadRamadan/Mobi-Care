@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -50,8 +50,8 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={() => {
-          const [loc, setLoc] = useLocation();
-          if (loc === '/') setLoc('/dashboard');
+          const [, setLoc] = useLocation();
+          useEffect(() => { setLoc('/dashboard'); }, [setLoc]);
           return null;
         }} />
         <Route path="/login" component={Login} />

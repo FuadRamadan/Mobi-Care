@@ -20,8 +20,10 @@ type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
 
 function formatLeones(n: number) { return `Le ${n.toLocaleString()}`; }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+function formatDate(iso: string | null | undefined) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── Timeline ─────────────────────────────────────────────────────────────────

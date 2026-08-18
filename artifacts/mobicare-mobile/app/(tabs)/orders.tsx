@@ -37,8 +37,10 @@ function statusLabel(status: string): string {
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(iso: string | null | undefined) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatLeones(n: number) {
@@ -86,7 +88,7 @@ export default function OrdersScreen() {
   const isWeb = Platform.OS === 'web';
   const topPad = isWeb ? insets.top + 67 : insets.top;
 
-  const { data: orders, isFetching, refetch } = usePatientListOrders({
+  const { data: orders, isFetching, isError, refetch } = usePatientListOrders({
     query: { queryKey: getPatientListOrdersQueryKey(), refetchInterval: 15_000 },
   });
 
@@ -115,8 +117,8 @@ export default function OrdersScreen() {
           !isFetching ? (
             <View style={s.empty}>
               <Ionicons name="receipt-outline" size={56} color={colors.border} />
-              <Text style={s.emptyTitle}>No orders yet</Text>
-              <Text style={s.emptyBody}>Your orders will appear here after you checkout.</Text>
+              <Text style={s.emptyTitle}>{isError ? 'Could not load orders' : 'No orders yet'}</Text>
+              <Text style={s.emptyBody}>{isError ? 'Check your connection and pull down to retry.' : 'Your orders will appear here after you checkout.'}</Text>
             </View>
           ) : null
         }
