@@ -263,7 +263,7 @@ export default function About() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {[
                 { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "CEO & Founder (Medical Doctor)", color: "bg-primary/10 text-primary", photo: "/team-abdullah.jpg" },
-                { initials: "FS", name: "Fuad Ramadan Sesay", role: "CTO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
+                { initials: "FS", name: "Fuad Ramadan Sesay", role: "CIO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
                 { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700", photo: "/team-alhaji.jpg" },
                 { initials: "AZ", name: "Pharm Alpha Aziz Jalloh", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700", photo: "/team-alpha.jpg" },
                 { initials: "MS", name: "Pharm Mamie Saio Johnson", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
