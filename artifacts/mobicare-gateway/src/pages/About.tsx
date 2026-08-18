@@ -117,7 +117,7 @@ export default function About() {
             <h2 className="font-display font-bold text-2xl md:text-3xl text-dark-green mb-6">The Problem</h2>
             <div className="space-y-5 text-muted-foreground leading-relaxed">
               <p>
-                Only 33% of the sub-Saharan African population has regular access to essential medicines (WHO, 2017). But most of the time, these medications are not missing from the countries — they are missing from view. No shared data of what is where.
+                Only 33% of the sub-Saharan African population has regular access to essential medicines (WHO, 2017). But most of the time, these medications are not missing from the countries, they are missing from view. No shared data of what is where.
               </p>
               <p>
                 For patients, this means traveling from pharmacy to pharmacy, often while unwell, with no assurance but hope. In an emergency, that search costs hours. Sometimes it costs a life.
