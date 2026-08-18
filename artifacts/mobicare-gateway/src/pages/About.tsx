@@ -125,26 +125,66 @@ export default function About() {
             </div>
           </motion.div>
 
-          {/* Who We Are */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16"
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">Who We Are</p>
-            <div className="space-y-5 text-muted-foreground leading-relaxed">
-              <p>
-                MobiCare is built by <span className="font-semibold text-dark-green">MediTrace Health Systems Limited</span>, a health technology company registered in Sierra Leone.
+          {/* Challenges & Solutions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+            {/* Challenges */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-red-50 border border-red-100 rounded-2xl p-8"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-4">1. Challenges of Access to Essential Medicines</p>
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                Sierra Leone's own health facility data tells the story plainly: the average facility stocks only six of the twenty essential medicines it should have, and not one facility surveyed had them all.
               </p>
-              <p>
-                MobiCare was founded by <span className="font-semibold text-dark-green">Dr. Abdullah Osman Koroma</span>, a licensed medical doctor practicing in Freetown. The idea did not begin in a boardroom. It began at a hospital bedside, watching a family run out of time.
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                But the challenge does not stop at the facility. It extends across the entire chain between a medicine arriving in the country and reaching the patient who needs it.
               </p>
-              <p>
-                He is joined by <span className="font-semibold text-dark-green">Fuad Ramada Sesay</span> and <span className="font-semibold text-dark-green">Alhaji Samura</span>, both running the technology and infrastructure, and <span className="font-semibold text-dark-green">Aziz</span> and <span className="font-semibold text-dark-green">Mamie Saio</span>, registered pharmacists in Sierra Leone leading pharmacy operations and partnerships.
+              <div className="space-y-5">
+                {[
+                  { title: "No Visibility of Stock", body: "Pharmacies hold their inventory in separate, unconnected records. Neither patients nor health workers can see what is available, or where, until they physically ask." },
+                  { title: "The Manual Search", body: "Patients and families travel from pharmacy to pharmacy, often while unwell, asking the same question and receiving no answer. In an emergency, that search costs hours that patients do not have." },
+                  { title: "Price Opacity", body: "The same medicine can cost very different amounts at different pharmacies, and patients have no way to compare before travelling. Many overpay simply because they cannot see the alternatives." },
+                  { title: "Distance and Access", body: "Reaching a pharmacy requires physical travel, which excludes those who are furthest away, least mobile, or too unwell to make the journey. Access to medicine should not depend on proximity." },
+                  { title: "Unregulated Alternatives", body: "When the formal system fails them, patients turn to informal sellers with no professional oversight, no prescription review, and no guarantee that what they receive is safe or genuine." },
+                ].map((item) => (
+                  <div key={item.title}>
+                    <h4 className="font-semibold text-dark-green text-sm mb-1">{item.title}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Solutions */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-primary/5 border border-primary/20 rounded-2xl p-8"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">2. Our Solutions</p>
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                Using technology at MobiCare, we make every medicine in the country findable in real time, so that no patient loses their life searching for a drug that already exists.
               </p>
-            </div>
-          </motion.div>
+              <div className="space-y-5">
+                {[
+                  { title: "Real-Time Stock Visibility", body: "We aggregate live inventory across our entire partner pharmacy network, so patients and health workers can see exactly what is available and where, before they travel." },
+                  { title: "One Search, Every Pharmacy", body: "A patient searches once and sees every pharmacy holding that medicine, ranked by price and distance. Hours of searching become seconds." },
+                  { title: "Transparent Pricing", body: "We show the real price at every pharmacy, side by side, so patients can choose with full information and no hidden markup." },
+                  { title: "Delivery to the Patient", body: "Medicine reaches the patient rather than the patient reaching the medicine, so that distance, mobility, and illness stop being barriers to treatment." },
+                  { title: "Professional Oversight", body: "Every prescription medicine is reviewed by a licensed pharmacist before it is approved, bringing patients back into a safe, regulated system rather than an informal one." },
+                ].map((item) => (
+                  <div key={item.title}>
+                    <h4 className="font-semibold text-dark-green text-sm mb-1">{item.title}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
 
           {/* How It Works */}
           <motion.div
