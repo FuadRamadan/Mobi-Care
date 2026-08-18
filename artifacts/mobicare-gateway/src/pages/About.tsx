@@ -226,7 +226,7 @@ export default function About() {
                 { initials: "FS", name: "Fuad Ramada Sesay", role: "CTO", color: "bg-blue-100 text-blue-700" },
                 { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700" },
                 { initials: "AZ", name: "Pharm Alpha Aziz Jalloh", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700" },
-                { initials: "MS", name: "Mamie Saio", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
+                { initials: "MS", name: "Pharm Mamie Saio Johnson", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
               ].map((member, i) => (
                 <motion.div
                   key={member.name}
