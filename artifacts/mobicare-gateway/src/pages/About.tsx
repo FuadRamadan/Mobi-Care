@@ -122,6 +122,27 @@ export default function About() {
             </div>
           </motion.div>
 
+          {/* Who We Are */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">Who We Are</p>
+            <div className="space-y-5 text-muted-foreground leading-relaxed">
+              <p>
+                MobiCare is built by <span className="font-semibold text-dark-green">MediTrace Health Systems Limited</span>, a health technology company registered in Sierra Leone.
+              </p>
+              <p>
+                MobiCare was founded by <span className="font-semibold text-dark-green">Dr. Abdullah Osman Koroma</span>, a licensed medical doctor practicing in Freetown. The idea did not begin in a boardroom. It began at a hospital bedside, watching a family run out of time.
+              </p>
+              <p>
+                He is joined by <span className="font-semibold text-dark-green">Fuad Ramada Sesay</span> and <span className="font-semibold text-dark-green">Alhaji Samura</span>, both running the technology and infrastructure, and <span className="font-semibold text-dark-green">Aziz</span> and <span className="font-semibold text-dark-green">Mamie Saio</span>, registered pharmacists in Sierra Leone leading pharmacy operations and partnerships.
+              </p>
+            </div>
+          </motion.div>
+
           {/* Values */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-20">
             {values.map((v, i) => (
