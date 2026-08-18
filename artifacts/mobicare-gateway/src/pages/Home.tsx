@@ -23,8 +23,8 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-dark-green mb-6 tracking-tight leading-tight"
           >
-            Medicine you can trust, <br className="hidden md:block"/>
-            <span className="text-primary">reaching people across Sierra Leone.</span>
+            Your trusted connection to pharmacies <br className="hidden md:block"/>
+            <span className="text-primary">across Sierra Leone.</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
