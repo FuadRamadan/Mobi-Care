@@ -143,6 +143,20 @@ export default function About() {
             </div>
           </motion.div>
 
+          {/* Recognition */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-amber-50 border border-amber-200 rounded-2xl p-8 md:p-10 mb-16 flex items-start gap-5"
+          >
+            <div className="text-3xl">🏆</div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-2">Recognition</p>
+              <p className="font-display font-bold text-lg text-dark-green">National Grand Prize winner, Orange Social Venture Prize 2026.</p>
+            </div>
+          </motion.div>
+
           {/* How It Works */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
