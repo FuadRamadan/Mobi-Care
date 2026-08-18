@@ -65,6 +65,19 @@ export default function About() {
       {/* Mission */}
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-4xl">
+          {/* Origin Story */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-card border-l-4 border-primary rounded-2xl p-8 md:p-12 mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Origin Story</p>
+            <p className="text-lg md:text-xl text-dark-green leading-relaxed">
+              In 2024, a patient at Connaught Hospital died because his family could not find Human Albumin in time. The drug existed elsewhere in Freetown. Nobody knew.
+            </p>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -87,19 +100,6 @@ export default function About() {
             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Vision</p>
             <p className="text-2xl md:text-3xl font-display font-bold text-dark-green leading-snug">
               "No one has to die searching for a medicine that already exists."
-            </p>
-          </motion.div>
-
-          {/* Origin Story */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-card border-l-4 border-primary rounded-2xl p-8 md:p-12 mb-16"
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Origin Story</p>
-            <p className="text-lg md:text-xl text-dark-green leading-relaxed">
-              In 2024, a patient at Connaught Hospital died because his family could not find Human Albumin in time. The drug existed elsewhere in Freetown. Nobody knew.
             </p>
           </motion.div>
 
