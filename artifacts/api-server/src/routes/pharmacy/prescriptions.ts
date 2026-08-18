@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { prescriptionsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
+import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
 
 const router = Router();
@@ -126,6 +127,16 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
     .where(eq(prescriptionsTable.id, id))
     .returning();
 
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "prescription.approve",
+    entityType: "prescription",
+    entityId: id,
+    details: { approvedDrugIds: body.data.approvedDrugIds },
+  });
+
   const { imageKey: _k, ...safe } = updated;
   res.json(safe);
 });
@@ -172,6 +183,16 @@ router.post("/:id/reject", async (req: AuthRequest, res) => {
     })
     .where(eq(prescriptionsTable.id, id))
     .returning();
+
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "prescription.reject",
+    entityType: "prescription",
+    entityId: id,
+    details: { reason: body.data.reason },
+  });
 
   const { imageKey: _k, ...safe } = updated;
   res.json(safe);

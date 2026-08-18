@@ -29,13 +29,25 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export type PharmacyUserRole = typeof PharmacyUserRole[keyof typeof PharmacyUserRole];
+
+
+export const PharmacyUserRole = {
+  pharmacy: 'pharmacy',
+  hq: 'hq',
+} as const;
+
 export interface PharmacyUser {
   id: string;
+  role: PharmacyUserRole;
   name: string;
   username: string;
   /** @nullable */
   phone?: string | null;
-  controlledSubstanceAuthorized: boolean;
+  /** Present for pharmacy accounts only */
+  controlledSubstanceAuthorized?: boolean;
+  /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
+  mustChangePassword?: boolean;
 }
 
 export interface TokenPair {
@@ -340,11 +352,428 @@ export interface DailyOrderStat {
   revenueLeones: number;
 }
 
+export type HqDashboardTotals = {
+  orders: number;
+  ordersToday: number;
+  pharmacies: number;
+  activePharmacies: number;
+  couriers: number;
+  activeCouriers: number;
+  openFlags: number;
+  heldDrugs: number;
+  pendingSettlements: number;
+  awaitingDispatch: number;
+  confirmedRevenueLeones: number;
+};
+
+export type HqDashboardOrdersByStatusItem = {
+  status: string;
+  count: number;
+};
+
+export type HqDashboardRecentOrdersItem = {
+  id: string;
+  status: string;
+  fulfillmentType: string;
+  totalLeones: number;
+  patientName: string;
+  /** @nullable */
+  pharmacyName?: string | null;
+  createdAt: string;
+};
+
+export interface HqDashboard {
+  totals: HqDashboardTotals;
+  ordersByStatus: HqDashboardOrdersByStatusItem[];
+  recentOrders: HqDashboardRecentOrdersItem[];
+}
+
+export interface HqCourierSummary {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export type HqOrderStatus = typeof HqOrderStatus[keyof typeof HqOrderStatus];
+
+
+export const HqOrderStatus = {
+  awaiting_payment: 'awaiting_payment',
+  paid: 'paid',
+  confirmed: 'confirmed',
+  packaging: 'packaging',
+  ready: 'ready',
+  assigned: 'assigned',
+  picked_up: 'picked_up',
+  delivering: 'delivering',
+  delivered: 'delivered',
+  collected: 'collected',
+  cancelled: 'cancelled',
+} as const;
+
+export type HqOrderFulfillmentType = typeof HqOrderFulfillmentType[keyof typeof HqOrderFulfillmentType];
+
+
+export const HqOrderFulfillmentType = {
+  delivery: 'delivery',
+  collection: 'collection',
+} as const;
+
+export interface HqOrder {
+  id: string;
+  pharmacyId: string;
+  /** @nullable */
+  pharmacyName?: string | null;
+  patientName: string;
+  patientPhone: string;
+  status: HqOrderStatus;
+  fulfillmentType: HqOrderFulfillmentType;
+  idChecked: boolean;
+  totalLeones: number;
+  /** @nullable */
+  prescriptionId?: string | null;
+  /** @nullable */
+  courierId?: string | null;
+  courier?: HqCourierSummary | null;
+  cashCollected: boolean;
+  /** @nullable */
+  cashCollectedAt?: string | null;
+  paymentMethod: string;
+  createdAt: string;
+  updatedAt: string;
+  items: OrderItem[];
+}
+
+export interface AssignCourierInput {
+  courierId: string;
+}
+
+export type CourierStatusUpdateStatus = typeof CourierStatusUpdateStatus[keyof typeof CourierStatusUpdateStatus];
+
+
+export const CourierStatusUpdateStatus = {
+  delivering: 'delivering',
+  delivered: 'delivered',
+} as const;
+
+export interface CourierStatusUpdate {
+  status: CourierStatusUpdateStatus;
+}
+
+export interface HqPharmacy {
+  id: string;
+  name: string;
+  username: string;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  locationLat?: string | null;
+  /** @nullable */
+  locationLng?: string | null;
+  isActive: boolean;
+  controlledSubstanceAuthorized: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PharmacyOnboardInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 3 */
+  username: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface PharmacyOnboardResponse {
+  pharmacy: HqPharmacy;
+  /** Shown once — store it securely and hand it to the pharmacy */
+  tempPassword: string;
+}
+
+export interface HqPharmacyUpdate {
+  isActive?: boolean;
+  controlledSubstanceAuthorized?: boolean;
+  name?: string;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  address?: string | null;
+}
+
+export type HqDrugTier = typeof HqDrugTier[keyof typeof HqDrugTier];
+
+
+export const HqDrugTier = {
+  NUMBER_1: '1',
+  NUMBER_2: '2',
+  NUMBER_3: '3',
+} as const;
+
+export interface HqDrug {
+  id: string;
+  name: string;
+  /** @nullable */
+  genericName?: string | null;
+  /** @nullable */
+  description?: string | null;
+  tier: HqDrugTier;
+  unit: string;
+  isApproved: boolean;
+  /** @nullable */
+  maxUnitsPerOrder?: number | null;
+  /** @nullable */
+  proposedByPharmacyId?: string | null;
+  createdAt: string;
+}
+
+export type HqDrugInputTier = typeof HqDrugInputTier[keyof typeof HqDrugInputTier];
+
+
+export const HqDrugInputTier = {
+  NUMBER_1: '1',
+  NUMBER_2: '2',
+  NUMBER_3: '3',
+} as const;
+
+export interface HqDrugInput {
+  /** @minLength 1 */
+  name: string;
+  genericName?: string;
+  description?: string;
+  tier: HqDrugInputTier;
+  unit?: string;
+  /** @nullable */
+  maxUnitsPerOrder?: number | null;
+}
+
+export type HqDrugUpdateTier = typeof HqDrugUpdateTier[keyof typeof HqDrugUpdateTier];
+
+
+export const HqDrugUpdateTier = {
+  NUMBER_1: '1',
+  NUMBER_2: '2',
+  NUMBER_3: '3',
+} as const;
+
+export interface HqDrugUpdate {
+  tier?: HqDrugUpdateTier;
+  /** @nullable */
+  maxUnitsPerOrder?: number | null;
+  isApproved?: boolean;
+  name?: string;
+  /** @nullable */
+  genericName?: string | null;
+  /** @nullable */
+  description?: string | null;
+  unit?: string;
+}
+
+export interface Courier {
+  id: string;
+  name: string;
+  phone: string;
+  vehicleType: string;
+  isActive: boolean;
+  activeDeliveries?: number;
+  createdAt: string;
+}
+
+export type CourierInputVehicleType = typeof CourierInputVehicleType[keyof typeof CourierInputVehicleType];
+
+
+export const CourierInputVehicleType = {
+  motorbike: 'motorbike',
+  bicycle: 'bicycle',
+  car: 'car',
+  van: 'van',
+} as const;
+
+export interface CourierInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 5 */
+  phone: string;
+  vehicleType?: CourierInputVehicleType;
+}
+
+export type CourierUpdateVehicleType = typeof CourierUpdateVehicleType[keyof typeof CourierUpdateVehicleType];
+
+
+export const CourierUpdateVehicleType = {
+  motorbike: 'motorbike',
+  bicycle: 'bicycle',
+  car: 'car',
+  van: 'van',
+} as const;
+
+export interface CourierUpdate {
+  name?: string;
+  phone?: string;
+  vehicleType?: CourierUpdateVehicleType;
+  isActive?: boolean;
+}
+
+export type HqFlagType = typeof HqFlagType[keyof typeof HqFlagType];
+
+
+export const HqFlagType = {
+  velocity: 'velocity',
+  duplicate: 'duplicate',
+  payment_anomaly: 'payment_anomaly',
+} as const;
+
+export type HqFlagStatus = typeof HqFlagStatus[keyof typeof HqFlagStatus];
+
+
+export const HqFlagStatus = {
+  open: 'open',
+  reviewed: 'reviewed',
+} as const;
+
+export interface HqFlag {
+  id: string;
+  orderId: string;
+  type: HqFlagType;
+  reason: string;
+  details?: unknown;
+  status: HqFlagStatus;
+  /** @nullable */
+  reviewNote?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  orderStatus?: string | null;
+  /** @nullable */
+  orderTotalLeones?: number | null;
+  /** @nullable */
+  patientName?: string | null;
+  /** @nullable */
+  patientPhone?: string | null;
+  /** @nullable */
+  pharmacyName?: string | null;
+}
+
+export interface FlagReviewInput {
+  /** @minLength 1 */
+  note: string;
+}
+
+export type SettlementStatus = typeof SettlementStatus[keyof typeof SettlementStatus];
+
+
+export const SettlementStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export interface Settlement {
+  id: string;
+  /** @nullable */
+  pharmacyId?: string | null;
+  /** @nullable */
+  pharmacyName?: string | null;
+  /** @nullable */
+  courierId?: string | null;
+  /** @nullable */
+  courierName?: string | null;
+  amountLeones: number;
+  periodStart: string;
+  periodEnd: string;
+  /** @nullable */
+  orderCount?: number | null;
+  /** @nullable */
+  deliveryCount?: number | null;
+  status: SettlementStatus;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  reference?: string | null;
+  createdAt: string;
+}
+
+export interface SettlementsResponse {
+  pharmacy: Settlement[];
+  courier: Settlement[];
+}
+
+export interface GenerateSettlementsInput {
+  /** ISO date-time (inclusive) */
+  periodStart: string;
+  /** ISO date-time (exclusive) */
+  periodEnd: string;
+}
+
+export type MarkPaidInputKind = typeof MarkPaidInputKind[keyof typeof MarkPaidInputKind];
+
+
+export const MarkPaidInputKind = {
+  pharmacy: 'pharmacy',
+  courier: 'courier',
+} as const;
+
+export interface MarkPaidInput {
+  kind: MarkPaidInputKind;
+  reference?: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  actorType: string;
+  /** @nullable */
+  actorId?: string | null;
+  /** @nullable */
+  actorName?: string | null;
+  action: string;
+  entityType: string;
+  /** @nullable */
+  entityId?: string | null;
+  details?: unknown;
+  createdAt: string;
+}
+
 export type ListOrdersParams = {
 status?: string;
 };
 
 export type ListPrescriptionsParams = {
 status?: string;
+};
+
+export type ListHqOrdersParams = {
+status?: string;
+};
+
+export type ListHqDrugsParams = {
+status?: ListHqDrugsStatus;
+};
+
+export type ListHqDrugsStatus = typeof ListHqDrugsStatus[keyof typeof ListHqDrugsStatus];
+
+
+export const ListHqDrugsStatus = {
+  held: 'held',
+  approved: 'approved',
+} as const;
+
+export type ListFlagsParams = {
+status?: ListFlagsStatus;
+};
+
+export type ListFlagsStatus = typeof ListFlagsStatus[keyof typeof ListFlagsStatus];
+
+
+export const ListFlagsStatus = {
+  open: 'open',
+  reviewed: 'reviewed',
+} as const;
+
+export type ListAuditLogParams = {
+entityType?: string;
+entityId?: string;
+limit?: number;
 };
 

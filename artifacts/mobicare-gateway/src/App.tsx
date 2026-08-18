@@ -9,8 +9,18 @@ import Home from '@/pages/Home';
 import About from '@/pages/About';
 import Patient from '@/pages/Patient';
 import Pharmacy from '@/pages/Pharmacy';
-import HQ from '@/pages/HQ';
 import Layout from '@/components/layout/Layout';
+import { HqAuthProvider } from '@/hq/auth';
+import HqLogin from '@/pages/hq/Login';
+import HqDashboard from '@/pages/hq/Dashboard';
+import HqOrders from '@/pages/hq/Orders';
+import HqDispatch from '@/pages/hq/Dispatch';
+import HqPharmacies from '@/pages/hq/Pharmacies';
+import HqCatalogue from '@/pages/hq/Catalogue';
+import HqCouriers from '@/pages/hq/Couriers';
+import HqFlags from '@/pages/hq/Flags';
+import HqSettlements from '@/pages/hq/Settlements';
+import HqAudit from '@/pages/hq/Audit';
 
 const queryClient = new QueryClient();
 
@@ -33,7 +43,17 @@ function Router() {
           <Route path="/about" component={About} />
           <Route path="/patient" component={Patient} />
           <Route path="/pharmacy" component={Pharmacy} />
-          <Route path="/hq" component={HQ} />
+          {/* HQ section — same site, own layout (Layout renders bare for /hq*) */}
+          <Route path="/hq" component={HqLogin} />
+          <Route path="/hq/dashboard" component={HqDashboard} />
+          <Route path="/hq/orders" component={HqOrders} />
+          <Route path="/hq/dispatch" component={HqDispatch} />
+          <Route path="/hq/pharmacies" component={HqPharmacies} />
+          <Route path="/hq/catalogue" component={HqCatalogue} />
+          <Route path="/hq/couriers" component={HqCouriers} />
+          <Route path="/hq/flags" component={HqFlags} />
+          <Route path="/hq/settlements" component={HqSettlements} />
+          <Route path="/hq/audit" component={HqAudit} />
           <Route component={NotFound} />
         </Switch>
       </Layout>
@@ -50,9 +70,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
+        <HqAuthProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+        </HqAuthProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

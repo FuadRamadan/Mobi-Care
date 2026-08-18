@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-  const isHQ = location === "/hq";
+  const isHQ = location === "/hq" || location.startsWith("/hq/");
 
   // If HQ page, we might want to hide the standard nav/footer to keep it minimal
   if (isHQ) {

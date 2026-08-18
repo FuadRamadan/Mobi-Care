@@ -23,6 +23,8 @@ tags:
     description: Pharmacy notifications
   - name: analytics
     description: Dashboard analytics
+  - name: hq
+    description: MobiCare HQ oversight (HQ role required)
 
 paths:
   /healthz:
@@ -565,6 +567,490 @@ paths:
                 items:
                   $ref: "#/components/schemas/DailyOrderStat"
 
+  # ── HQ ────────────────────────────────────────────────────────────────────
+  /hq/dashboard:
+    get:
+      operationId: getHqDashboard
+      tags: [hq]
+      summary: HQ command centre — aggregates, live feed, revenue
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqDashboard"
+
+  /hq/orders:
+    get:
+      operationId: listHqOrders
+      tags: [hq]
+      summary: All orders across all pharmacies
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqOrder"
+
+  /hq/orders/dispatch:
+    get:
+      operationId: listDispatchOrders
+      tags: [hq]
+      summary: Delivery orders in the dispatch pipeline
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dispatch orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqOrder"
+
+  /hq/orders/{id}/assign-courier:
+    post:
+      operationId: assignCourier
+      tags: [hq]
+      summary: Assign a courier to a ready delivery order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignCourierInput"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqOrder"
+        "409":
+          description: Invalid state
+
+  /hq/orders/{id}/courier-status:
+    patch:
+      operationId: updateCourierStatus
+      tags: [hq]
+      summary: Advance courier status (delivering / delivered)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierStatusUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqOrder"
+        "409":
+          description: Invalid transition
+
+  /hq/orders/{id}/cash-collected:
+    post:
+      operationId: markCashCollected
+      tags: [hq]
+      summary: Reconcile cash-on-delivery for a delivered order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqOrder"
+        "409":
+          description: Invalid state
+
+  /hq/pharmacies:
+    get:
+      operationId: listHqPharmacies
+      tags: [hq]
+      summary: All pharmacies
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Pharmacies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqPharmacy"
+    post:
+      operationId: onboardPharmacy
+      tags: [hq]
+      summary: Onboard a pharmacy (returns one-time temp password)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PharmacyOnboardInput"
+      responses:
+        "201":
+          description: Created pharmacy with temp password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyOnboardResponse"
+        "409":
+          description: Username taken
+
+  /hq/pharmacies/{id}:
+    patch:
+      operationId: updateHqPharmacy
+      tags: [hq]
+      summary: Licence verification, Tier-1 gate, online/offline status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HqPharmacyUpdate"
+      responses:
+        "200":
+          description: Updated pharmacy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqPharmacy"
+
+  /hq/drugs:
+    get:
+      operationId: listHqDrugs
+      tags: [hq]
+      summary: Master catalogue (filter by held/approved)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [held, approved]
+      responses:
+        "200":
+          description: Drugs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqDrug"
+    post:
+      operationId: createHqDrug
+      tags: [hq]
+      summary: Add a drug to the master catalogue
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HqDrugInput"
+      responses:
+        "201":
+          description: Created drug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqDrug"
+
+  /hq/drugs/{id}:
+    patch:
+      operationId: updateHqDrug
+      tags: [hq]
+      summary: Change tier / cap, or release a held drug
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HqDrugUpdate"
+      responses:
+        "200":
+          description: Updated drug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqDrug"
+
+  /hq/couriers:
+    get:
+      operationId: listCouriers
+      tags: [hq]
+      summary: Courier fleet with live delivery load
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Couriers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Courier"
+    post:
+      operationId: createCourier
+      tags: [hq]
+      summary: Add a courier
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierInput"
+      responses:
+        "201":
+          description: Created courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Courier"
+
+  /hq/couriers/{id}:
+    patch:
+      operationId: updateCourier
+      tags: [hq]
+      summary: Edit or activate/deactivate a courier
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourierUpdate"
+      responses:
+        "200":
+          description: Updated courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Courier"
+
+  /hq/flags:
+    get:
+      operationId: listFlags
+      tags: [hq]
+      summary: Fraud/anomaly flags queue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, reviewed]
+      responses:
+        "200":
+          description: Flags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqFlag"
+
+  /hq/flags/{id}/review:
+    post:
+      operationId: reviewFlag
+      tags: [hq]
+      summary: Mark a flag reviewed with a note
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlagReviewInput"
+      responses:
+        "200":
+          description: Reviewed flag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqFlag"
+
+  /hq/settlements:
+    get:
+      operationId: listSettlements
+      tags: [hq]
+      summary: Pharmacy and courier settlements
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Settlements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettlementsResponse"
+
+  /hq/settlements/generate:
+    post:
+      operationId: generateSettlements
+      tags: [hq]
+      summary: Generate pending settlements for a period
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateSettlementsInput"
+      responses:
+        "201":
+          description: Settlements generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /hq/settlements/{id}/mark-paid:
+    post:
+      operationId: markSettlementPaid
+      tags: [hq]
+      summary: Mark a settlement as paid
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkPaidInput"
+      responses:
+        "200":
+          description: Paid settlement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settlement"
+        "409":
+          description: Already paid
+
+  /hq/audit:
+    get:
+      operationId: listAuditLog
+      tags: [hq]
+      summary: Append-only audit log (read-only, filterable by entity)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Audit entries, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntry"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -617,11 +1103,14 @@ components:
 
     PharmacyUser:
       type: object
-      required: [id, name, username, controlledSubstanceAuthorized]
+      required: [id, role, name, username]
       properties:
         id:
           type: string
 
+        role:
+          type: string
+          enum: [pharmacy, hq]
         name:
           type: string
         username:
@@ -630,6 +1119,10 @@ components:
           type: ["string", "null"]
         controlledSubstanceAuthorized:
           type: boolean
+          description: Present for pharmacy accounts only
+        mustChangePassword:
+          type: boolean
+          description: Pharmacy accounts onboarded with a temp password must change it before using the portal API
 
     TokenPair:
       type: object
@@ -1031,3 +1524,446 @@ components:
           type: number
         revenueLeones:
           type: number
+
+    # ── HQ schemas ─────────────────────────────────────────────────────────
+    HqDashboard:
+      type: object
+      required: [totals, ordersByStatus, recentOrders]
+      properties:
+        totals:
+          type: object
+          required: [orders, ordersToday, pharmacies, activePharmacies, couriers, activeCouriers, openFlags, heldDrugs, pendingSettlements, awaitingDispatch, confirmedRevenueLeones]
+          properties:
+            orders:
+              type: number
+            ordersToday:
+              type: number
+            pharmacies:
+              type: number
+            activePharmacies:
+              type: number
+            couriers:
+              type: number
+            activeCouriers:
+              type: number
+            openFlags:
+              type: number
+            heldDrugs:
+              type: number
+            pendingSettlements:
+              type: number
+            awaitingDispatch:
+              type: number
+            confirmedRevenueLeones:
+              type: number
+        ordersByStatus:
+          type: array
+          items:
+            type: object
+            required: [status, count]
+            properties:
+              status:
+                type: string
+              count:
+                type: number
+        recentOrders:
+          type: array
+          items:
+            type: object
+            required: [id, status, fulfillmentType, totalLeones, patientName, createdAt]
+            properties:
+              id:
+                type: string
+              status:
+                type: string
+              fulfillmentType:
+                type: string
+              totalLeones:
+                type: number
+              patientName:
+                type: string
+              pharmacyName:
+                type: ["string", "null"]
+              createdAt:
+                type: string
+
+    HqCourierSummary:
+      type: object
+      required: [id, name, phone]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+
+    HqOrder:
+      type: object
+      required: [id, pharmacyId, patientName, patientPhone, status, fulfillmentType, idChecked, totalLeones, cashCollected, paymentMethod, createdAt, updatedAt, items]
+      properties:
+        id:
+          type: string
+        pharmacyId:
+          type: string
+        pharmacyName:
+          type: ["string", "null"]
+        patientName:
+          type: string
+        patientPhone:
+          type: string
+        status:
+          type: string
+          enum: [awaiting_payment, paid, confirmed, packaging, ready, assigned, picked_up, delivering, delivered, collected, cancelled]
+        fulfillmentType:
+          type: string
+          enum: [delivery, collection]
+        idChecked:
+          type: boolean
+        totalLeones:
+          type: number
+        prescriptionId:
+          type: ["string", "null"]
+        courierId:
+          type: ["string", "null"]
+        courier:
+          oneOf:
+            - $ref: "#/components/schemas/HqCourierSummary"
+            - type: "null"
+        cashCollected:
+          type: boolean
+        cashCollectedAt:
+          type: ["string", "null"]
+        paymentMethod:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    AssignCourierInput:
+      type: object
+      required: [courierId]
+      properties:
+        courierId:
+          type: string
+
+    CourierStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [delivering, delivered]
+
+    HqPharmacy:
+      type: object
+      required: [id, name, username, isActive, controlledSubstanceAuthorized, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        locationLat:
+          type: ["string", "null"]
+        locationLng:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        controlledSubstanceAuthorized:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PharmacyOnboardInput:
+      type: object
+      required: [name, username]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        username:
+          type: string
+          minLength: 3
+        phone:
+          type: string
+        address:
+          type: string
+
+    PharmacyOnboardResponse:
+      type: object
+      required: [pharmacy, tempPassword]
+      properties:
+        pharmacy:
+          $ref: "#/components/schemas/HqPharmacy"
+        tempPassword:
+          type: string
+          description: Shown once — store it securely and hand it to the pharmacy
+
+    HqPharmacyUpdate:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+        controlledSubstanceAuthorized:
+          type: boolean
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+
+    HqDrug:
+      type: object
+      required: [id, name, tier, unit, isApproved, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        genericName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        unit:
+          type: string
+        isApproved:
+          type: boolean
+        maxUnitsPerOrder:
+          type: ["number", "null"]
+        proposedByPharmacyId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    HqDrugInput:
+      type: object
+      required: [name, tier]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        genericName:
+          type: string
+        description:
+          type: string
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        unit:
+          type: string
+        maxUnitsPerOrder:
+          type: ["number", "null"]
+
+    HqDrugUpdate:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum: ["1", "2", "3"]
+        maxUnitsPerOrder:
+          type: ["number", "null"]
+        isApproved:
+          type: boolean
+        name:
+          type: string
+        genericName:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        unit:
+          type: string
+
+    Courier:
+      type: object
+      required: [id, name, phone, vehicleType, isActive, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        vehicleType:
+          type: string
+        isActive:
+          type: boolean
+        activeDeliveries:
+          type: number
+        createdAt:
+          type: string
+
+    CourierInput:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 5
+        vehicleType:
+          type: string
+          enum: [motorbike, bicycle, car, van]
+
+    CourierUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        vehicleType:
+          type: string
+          enum: [motorbike, bicycle, car, van]
+        isActive:
+          type: boolean
+
+    HqFlag:
+      type: object
+      required: [id, orderId, type, reason, status, createdAt]
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        type:
+          type: string
+          enum: [velocity, duplicate, payment_anomaly]
+        reason:
+          type: string
+        details: {}
+        status:
+          type: string
+          enum: [open, reviewed]
+        reviewNote:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        orderStatus:
+          type: ["string", "null"]
+        orderTotalLeones:
+          type: ["number", "null"]
+        patientName:
+          type: ["string", "null"]
+        patientPhone:
+          type: ["string", "null"]
+        pharmacyName:
+          type: ["string", "null"]
+
+    FlagReviewInput:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+          minLength: 1
+
+    Settlement:
+      type: object
+      required: [id, amountLeones, periodStart, periodEnd, status, createdAt]
+      properties:
+        id:
+          type: string
+        pharmacyId:
+          type: ["string", "null"]
+        pharmacyName:
+          type: ["string", "null"]
+        courierId:
+          type: ["string", "null"]
+        courierName:
+          type: ["string", "null"]
+        amountLeones:
+          type: number
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+        orderCount:
+          type: ["number", "null"]
+        deliveryCount:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [pending, paid]
+        paidAt:
+          type: ["string", "null"]
+        reference:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SettlementsResponse:
+      type: object
+      required: [pharmacy, courier]
+      properties:
+        pharmacy:
+          type: array
+          items:
+            $ref: "#/components/schemas/Settlement"
+        courier:
+          type: array
+          items:
+            $ref: "#/components/schemas/Settlement"
+
+    GenerateSettlementsInput:
+      type: object
+      required: [periodStart, periodEnd]
+      properties:
+        periodStart:
+          type: string
+          description: ISO date-time (inclusive)
+        periodEnd:
+          type: string
+          description: ISO date-time (exclusive)
+
+    MarkPaidInput:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [pharmacy, courier]
+        reference:
+          type: string
+
+    AuditEntry:
+      type: object
+      required: [id, actorType, action, entityType, createdAt]
+      properties:
+        id:
+          type: string
+        actorType:
+          type: string
+        actorId:
+          type: ["string", "null"]
+        actorName:
+          type: ["string", "null"]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        details: {}
+        createdAt:
+          type: string

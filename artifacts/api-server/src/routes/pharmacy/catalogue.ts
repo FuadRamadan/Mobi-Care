@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { drugCatalogueTable, pharmaciesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
+import { writeAudit } from "../../lib/audit.js";
 
 const router = Router();
 
@@ -45,6 +46,16 @@ router.post("/", async (req: AuthRequest, res) => {
       proposedByPharmacyId: pharmacyId,
     })
     .returning();
+
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "drug.propose",
+    entityType: "drug",
+    entityId: inserted!.id,
+    details: { name: inserted!.name },
+  });
 
   res.status(202).json({
     ...inserted,

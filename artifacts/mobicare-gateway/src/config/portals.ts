@@ -16,7 +16,8 @@ export const PORTALS = {
   },
   hq: {
     name: 'MobiCare HQ dashboard',
-    loginUrl: 'https://hq.mobicare.sl', // TODO: replace with real HQ dashboard URL
+    // The HQ dashboard is part of this same site.
+    loginUrl: '/hq',
   },
 } as const;
 

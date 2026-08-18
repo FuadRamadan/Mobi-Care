@@ -5,12 +5,17 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { PharmacyUserRole } from './pharmacyUserRole';
 
 export interface PharmacyUser {
   id: string;
+  role: PharmacyUserRole;
   name: string;
   username: string;
   /** @nullable */
   phone?: string | null;
-  controlledSubstanceAuthorized: boolean;
+  /** Present for pharmacy accounts only */
+  controlledSubstanceAuthorized?: boolean;
+  /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
+  mustChangePassword?: boolean;
 }

@@ -9,9 +9,11 @@ export const ACCESS_TOKEN_TTL = "15m";
 export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface PharmacyTokenPayload {
-  sub: string;       // pharmacy id
-  role: "pharmacy";
+  sub: string;       // pharmacy id or hq staff id
+  role: "pharmacy" | "hq";
   name: string;
+  /** Pharmacy onboarded with a temp password must change it before using the API */
+  mustChangePassword?: boolean;
 }
 
 export function signAccessToken(payload: PharmacyTokenPayload): string {

@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { pharmacyInventoryTable, drugCatalogueTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
+import { writeAudit } from "../../lib/audit.js";
 import { pharmaciesTable } from "@workspace/db/schema";
 
 const router = Router();
@@ -99,6 +100,16 @@ router.post("/", async (req: AuthRequest, res) => {
     return;
   }
 
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "inventory.add",
+    entityType: "inventory",
+    entityId: inserted.id,
+    details: { drugId: inserted.drugId, priceLeones: inserted.priceLeones },
+  });
+
   res.status(201).json(inserted);
 });
 
@@ -132,6 +143,17 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     .returning();
 
   if (!updated) { res.status(404).json({ error: "Listing not found" }); return; }
+
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "inventory.update",
+    entityType: "inventory",
+    entityId: id,
+    details: { changes: body.data },
+  });
+
   res.json(updated);
 });
 
@@ -148,6 +170,17 @@ router.delete("/:id", async (req: AuthRequest, res) => {
     .returning();
 
   if (!deleted) { res.status(404).json({ error: "Listing not found" }); return; }
+
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "inventory.delete",
+    entityType: "inventory",
+    entityId: id,
+    details: { drugId: deleted.drugId },
+  });
+
   res.json({ message: "Listing removed" });
 });
 

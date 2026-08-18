@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { AuthRequest } from "../../middlewares/auth.js";
 import { db } from "@workspace/db";
 import {
   ordersTable as orders,
@@ -10,7 +11,7 @@ import { eq, and, gte, sql, count, sum } from "drizzle-orm";
 const router = Router();
 
 // GET /analytics/overview
-router.get("/overview", async (req, res) => {
+router.get("/overview", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
 
   const [ordersResult, inventoryResult, prescriptionsResult] =
@@ -74,7 +75,7 @@ router.get("/overview", async (req, res) => {
 });
 
 // GET /analytics/orders-by-day
-router.get("/orders-by-day", async (req, res) => {
+router.get("/orders-by-day", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

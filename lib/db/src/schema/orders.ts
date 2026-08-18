@@ -55,6 +55,15 @@ export const ordersTable = pgTable("orders", {
   // Optional: reference to a prescription that was reviewed for this order.
   prescriptionId: uuid("prescription_id"),
 
+  // ── Dispatch fields (HQ-driven, delivery path) ──────────────────────────────
+  // Courier assigned by HQ for delivery orders (null until assigned).
+  courierId: uuid("courier_id"),
+  // Cash-on-delivery reconciliation: courier handed cash to HQ.
+  cashCollected: boolean("cash_collected").notNull().default(false),
+  cashCollectedAt: timestamp("cash_collected_at", { withTimezone: true }),
+  // Payment method snapshot (e.g. "orange_money", "cash_on_delivery").
+  paymentMethod: text("payment_method").notNull().default("orange_money"),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

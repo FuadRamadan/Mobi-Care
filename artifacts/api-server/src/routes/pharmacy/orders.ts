@@ -4,6 +4,8 @@ import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, drugCatalogueTable } from "@workspace/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
+import { writeAudit } from "../../lib/audit.js";
+import { checkOrderFlags } from "../../lib/flags.js";
 
 const router = Router();
 
@@ -105,6 +107,17 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
     .where(eq(ordersTable.id, id))
     .returning();
 
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "order.status_update",
+    entityType: "order",
+    entityId: id,
+    details: { from: order.status, to: body.data.status },
+  });
+  await checkOrderFlags(updated!);
+
   res.json(updated);
 });
 
@@ -141,6 +154,16 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
     .where(eq(ordersTable.id, id))
     .returning();
 
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "order.collected",
+    entityType: "order",
+    entityId: id,
+    details: { idChecked: true },
+  });
+
   res.json(updated);
 });
 
@@ -156,8 +179,8 @@ router.post("/:id/picked-up", async (req: AuthRequest, res) => {
     .limit(1);
 
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
-  if (order.status !== "ready") {
-    res.status(409).json({ error: "Order must be in 'ready' status to mark as picked up" });
+  if (order.status !== "assigned") {
+    res.status(409).json({ error: "A courier must be assigned before marking pick-up (order must be 'assigned')" });
     return;
   }
   if (order.fulfillmentType !== "delivery") {
@@ -165,11 +188,26 @@ router.post("/:id/picked-up", async (req: AuthRequest, res) => {
     return;
   }
 
+  // Conditional update — the WHERE re-checks status so concurrent
+  // transitions can't clobber each other.
   const [updated] = await db
     .update(ordersTable)
     .set({ status: "picked_up", updatedAt: new Date() })
-    .where(eq(ordersTable.id, id))
+    .where(and(eq(ordersTable.id, id), eq(ordersTable.status, "assigned")))
     .returning();
+  if (!updated) {
+    res.status(409).json({ error: "Order status changed concurrently — refresh and retry" });
+    return;
+  }
+
+  await writeAudit({
+    actorType: "pharmacy",
+    actorId: pharmacyId,
+    actorName: req.pharmacy!.name,
+    action: "order.picked_up",
+    entityType: "order",
+    entityId: id,
+  });
 
   res.json(updated);
 });

@@ -13,6 +13,9 @@ export const pharmaciesTable = pgTable("pharmacies", {
   isActive: boolean("is_active").notNull().default(true),
   // Controlled-substance authorisation issued by HQ
   controlledSubstanceAuthorized: boolean("controlled_substance_authorized").notNull().default(false),
+  // Set when HQ onboards a pharmacy with a one-time temp password; cleared on
+  // first password change. While true, pharmacy API access is blocked.
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

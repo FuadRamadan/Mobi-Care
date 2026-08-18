@@ -25,8 +25,12 @@ export const drugCatalogueTable = pgTable("drug_catalogue", {
   description: text("description"),
   tier: drugTierEnum("tier").notNull().default("3"),
   unit: text("unit").notNull().default("tablets"), // e.g. tablets, ml, capsules
-  // Whether HQ has approved this entry. Pharmacy-proposed drugs start as false.
+  // Whether HQ has approved this entry. Pharmacy-proposed drugs start as false
+  // ("held" awaiting a tier assignment from HQ).
   isApproved: boolean("is_approved").notNull().default(true),
+  // Tier 1 (controlled) drugs MUST have a units-per-order cap — enforced
+  // server-side in the HQ catalogue routes, not just in the frontend form.
+  maxUnitsPerOrder: integer("max_units_per_order"),
   // Which pharmacy proposed this drug (null = HQ-seeded)
   proposedByPharmacyId: uuid("proposed_by_pharmacy_id").references(
     () => pharmaciesTable.id,

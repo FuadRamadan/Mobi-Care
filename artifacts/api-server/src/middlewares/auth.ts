@@ -37,8 +37,35 @@ export function requirePharmacyRole(
     res.status(403).json({ error: "Pharmacy role required" });
     return;
   }
+  if (req.pharmacy.mustChangePassword) {
+    res.status(403).json({
+      error: "Temporary password must be changed before using the portal",
+      code: "PASSWORD_CHANGE_REQUIRED",
+    });
+    return;
+  }
   next();
 }
 
 /** Convenience: combine both middleware in one array */
 export const pharmacy = [requireAuth, requirePharmacyRole] as const;
+
+/**
+ * After requireAuth: reject if the token role is not 'hq'.
+ * Every /hq/* route is behind this — the real security boundary is here,
+ * not the frontend's login role check.
+ */
+export function requireHqRole(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  if (req.pharmacy?.role !== "hq") {
+    res.status(403).json({ error: "HQ role required" });
+    return;
+  }
+  next();
+}
+
+/** Convenience: combine both middleware in one array */
+export const hq = [requireAuth, requireHqRole] as const;
