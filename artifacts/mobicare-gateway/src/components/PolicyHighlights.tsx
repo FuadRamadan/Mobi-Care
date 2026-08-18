@@ -1,4 +1,4 @@
-import { ShieldCheck, UserCheck, AlertCircle, Phone } from "lucide-react";
+import { ShieldCheck, UserCheck, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +17,12 @@ export default function PolicyHighlights({ className, showTiers = true }: Props)
           viewport={{ once: true }}
           className="bg-card p-6 rounded-2xl border shadow-sm border-border"
         >
-          <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mb-4 text-orange-money">
-            <Phone className="w-6 h-6" />
+          <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4 text-primary">
+            <UserCheck className="w-6 h-6" />
           </div>
-          <h3 className="font-display font-semibold text-lg text-dark-green mb-2">Honest Payments</h3>
+          <h3 className="font-display font-semibold text-lg text-dark-green mb-2">Real Pharmacists</h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            MobiCare never marks an order as paid until the payment provider confirms it. When you pay by mobile money, we wait for the network to verify. No instant guarantees, just truth.
+            We never approve a prescription required order without a licensed pharmacist review. No shortcut, no algorithm deciding.
           </p>
         </motion.div>
 
