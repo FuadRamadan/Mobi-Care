@@ -340,7 +340,7 @@ export default function Home() {
               We believe healthcare needs trust above all else. Here is exactly how we handle your money, prescriptions, and safety.
             </p>
           </div>
-          <PolicyHighlights />
+          <PolicyHighlights showTiers={false} />
         </div>
       </section>
 

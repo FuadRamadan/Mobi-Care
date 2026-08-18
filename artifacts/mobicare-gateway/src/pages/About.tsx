@@ -100,7 +100,7 @@ export default function About() {
           {/* Policy promises */}
           <div className="border-t pt-16">
             <h2 className="text-2xl font-display font-bold text-dark-green mb-8">Our Promises to You</h2>
-            <PolicyHighlights />
+            <PolicyHighlights showTiers={false} />
           </div>
         </div>
       </section>
