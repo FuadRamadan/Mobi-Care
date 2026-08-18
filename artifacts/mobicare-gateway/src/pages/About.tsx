@@ -263,7 +263,7 @@ export default function About() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {[
                 { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "Founder & Medical Doctor", color: "bg-primary/10 text-primary" },
-                { initials: "FS", name: "Fuad Ramadan Sesay", role: "CTO", color: "bg-blue-100 text-blue-700" },
+                { initials: "FS", name: "Fuad Ramadan Sesay", role: "CTO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
                 { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700" },
                 { initials: "AZ", name: "Pharm Alpha Aziz Jalloh", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700" },
                 { initials: "MS", name: "Pharm Mamie Saio Johnson", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
@@ -276,9 +276,17 @@ export default function About() {
                   transition={{ delay: i * 0.1 }}
                   className="flex flex-col items-center text-center"
                 >
-                  <div className={`w-24 h-24 rounded-full ${member.color} flex items-center justify-center text-2xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
-                    {member.initials}
-                  </div>
+                  {member.photo ? (
+                    <img
+                      src={member.photo}
+                      alt={member.name}
+                      className="w-24 h-24 rounded-full object-cover object-top mb-4 border-2 border-white shadow-md"
+                    />
+                  ) : (
+                    <div className={`w-24 h-24 rounded-full ${member.color} flex items-center justify-center text-2xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
+                      {member.initials}
+                    </div>
+                  )}
                   <h3 className="font-display font-semibold text-dark-green text-sm leading-snug mb-1">{member.name}</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">{member.role}</p>
                 </motion.div>
