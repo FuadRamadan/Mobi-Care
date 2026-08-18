@@ -32,7 +32,7 @@ export default function Home() {
             transition={{ delay: 0.1 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12"
           >
-            A plain-spoken, honest pharmacy platform built for your mobile phone. Search, compare, and order with confidence.
+            Find the medicines you need from trusted pharmacies, all in one place with MobiCare.
           </motion.p>
 
           {/* Portals entry */}
