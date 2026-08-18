@@ -73,7 +73,7 @@ export default function About() {
           >
             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Mission</p>
             <p className="text-2xl md:text-3xl font-display font-bold text-dark-green leading-snug">
-              "To make safe, affordable medicine accessible to every person in Sierra Leone — not just those who live near a pharmacy."
+              "To close the gap between the medicine that exists and the patients who needs it."
             </p>
           </motion.div>
 
