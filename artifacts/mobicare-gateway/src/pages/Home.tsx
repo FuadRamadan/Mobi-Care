@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { Mail, Phone } from "lucide-react";
 import PolicyHighlights from "@/components/PolicyHighlights";
 
 // ─── Floating medical element SVGs ───────────────────────────────────────────
@@ -333,7 +334,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="bg-card border rounded-2xl p-6 flex flex-col items-center gap-2"
             >
-              <span className="text-2xl">✉️</span>
+              <Mail className="w-7 h-7 text-primary" />
               <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Email</p>
               <a href="mailto:mobicaresl00@gmail.com" className="text-sm font-medium text-dark-green hover:text-primary transition-colors break-all">
                 mobicaresl00@gmail.com
@@ -347,7 +348,7 @@ export default function Home() {
               transition={{ delay: 0.1 }}
               className="bg-card border rounded-2xl p-6 flex flex-col items-center gap-2"
             >
-              <span className="text-2xl">📞</span>
+              <Phone className="w-7 h-7 text-primary" />
               <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Phone</p>
               <a href="tel:+23275726975" className="text-sm font-medium text-dark-green hover:text-primary transition-colors">
                 +232 75 726 975
