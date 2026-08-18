@@ -8,7 +8,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const links = [
-    { href: "/patient", label: "For Patients" },
+    { href: "/about", label: "About Us" },
     { href: "/pharmacy", label: "For Pharmacies" },
   ];
 
@@ -45,6 +45,7 @@ export default function Navbar() {
           >
             Get Medicines
           </Link>
+
         </nav>
 
         {/* Mobile Toggle */}

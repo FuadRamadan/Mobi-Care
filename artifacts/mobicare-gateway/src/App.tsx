@@ -6,7 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
-import Patient from '@/pages/Patient';
+import About from '@/pages/About';
 import Pharmacy from '@/pages/Pharmacy';
 import HQ from '@/pages/HQ';
 import Layout from '@/components/layout/Layout';
@@ -29,7 +29,7 @@ function Router() {
       <Layout>
         <Switch>
           <Route path="/" component={Home} />
-          <Route path="/patient" component={Patient} />
+          <Route path="/about" component={About} />
           <Route path="/pharmacy" component={Pharmacy} />
           <Route path="/hq" component={HQ} />
           <Route component={NotFound} />
