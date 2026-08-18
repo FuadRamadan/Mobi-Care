@@ -7,7 +7,7 @@ const values = [
     icon: Heart,
     title: "Built for Africa",
     description:
-      "MobiCare is designed from the ground up for the realities of healthcare access in Sierra Leone — mobile-first, offline-aware, and priced for everyone.",
+      "MobiCare is designed from the ground up for the realities of healthcare access across Africa — mobile-first, offline-aware, and priced for everyone.",
   },
   {
     icon: ShieldCheck,
