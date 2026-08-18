@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/mobicare-mobile/"
+title = "MobiCare Mobile"
+description = "Native mobile app for MobiCare patients on Android and iOS. Lets patients register or log in by phone number, search medicines with cross-pharmacy price comparison, manage a cart, capture prescription photos with the native camera, pay via Orange Money, and track order status in real time — all using the same MobiCare API as the web patient portal."
+version = "1.0.0"
+id = "artifacts/mobicare-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/mobicare-mobile/" ]
+localPort = 21501
+
+[services.development]
+run = "pnpm --filter @workspace/mobicare-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mobicare-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/mobicare-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "21501"
+BASE_PATH = "/mobicare-mobile/"

@@ -2,3 +2,4 @@
 - [Pharmacy portal frontend](pharmacy-portal-frontend.md) — React/Vite portal wired to the API via generated hooks; auth, CSS, and logo quirks documented.
 - [HQ oversight layer](hq-layer.md) — shared login with role, `/api/hq/*` guard pattern, bootstrap script quirk, unwrapped API client responses.
 - [Patient experience layer](patient-experience.md) — /app section on the gateway; path-aware SPA token getter, single-use prescription-upload ledger, tier rules, queryKey quirk.
+- [Expo mobile API patterns](expo-mobile-api-patterns.md) — Orval hook call patterns: query options nested in `{ query: ... }`, path params as positional strings, body mutations wrapped in `{ data: ... }`.
