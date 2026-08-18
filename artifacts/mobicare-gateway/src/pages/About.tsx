@@ -78,30 +78,33 @@ export default function About() {
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-card border rounded-2xl p-8 md:p-12 mb-16"
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Mission</p>
-            <p className="text-2xl md:text-3xl font-display font-bold text-dark-green leading-snug">
-              "To close the gap between the medicine that exists and the patients who needs it."
-            </p>
-          </motion.div>
+          {/* Mission & Vision side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="bg-card border rounded-2xl p-8 flex flex-col"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Mission</p>
+              <p className="text-xl md:text-2xl font-display font-bold text-dark-green leading-snug">
+                "To close the gap between the medicine that exists and the patients who needs it."
+              </p>
+            </motion.div>
 
-          {/* Vision */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-primary/5 border border-primary/20 rounded-2xl p-8 md:p-12 mb-16"
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Vision</p>
-            <p className="text-2xl md:text-3xl font-display font-bold text-dark-green leading-snug">
-              "No one has to die searching for a medicine that already exists."
-            </p>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-primary/5 border border-primary/20 rounded-2xl p-8 flex flex-col"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Vision</p>
+              <p className="text-xl md:text-2xl font-display font-bold text-dark-green leading-snug">
+                "No one has to die searching for a medicine that already exists."
+              </p>
+            </motion.div>
+          </div>
 
           {/* What We Do */}
           <motion.div
