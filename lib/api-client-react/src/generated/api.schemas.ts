@@ -453,6 +453,11 @@ export interface MarkReadInput {
   ids?: string[];
 }
 
+export interface PushTokenInput {
+  /** Expo push token for the device, or null to disable push */
+  expoPushToken: string | null;
+}
+
 export type AnalyticsOverviewOrdersByStatus = {[key: string]: number};
 
 export interface AnalyticsOverview {

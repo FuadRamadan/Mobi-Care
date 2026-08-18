@@ -9,8 +9,10 @@
  * status transition response back to the caller.
  */
 import { db } from "@workspace/db";
-import { patientNotificationsTable } from "@workspace/db/schema";
+import { patientNotificationsTable, patientsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { sendSms } from "./sms.js";
+import { sendExpoPush } from "./push.js";
 
 export interface NotificationPayload {
   patientId: string;
@@ -45,6 +47,25 @@ export async function createPatientNotification(
     await sendSms(payload.patientPhone, `MobiCare: ${payload.body}`);
   } catch (err) {
     console.error("[patientNotifications] SMS send failed:", err);
+  }
+
+  // Push notification (fire-and-forget; deep-links into the order detail screen)
+  try {
+    const [patient] = await db
+      .select({ expoPushToken: patientsTable.expoPushToken })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, payload.patientId))
+      .limit(1);
+    if (patient?.expoPushToken) {
+      await sendExpoPush({
+        to: patient.expoPushToken,
+        title: payload.title,
+        body: payload.body,
+        data: payload.referenceId ? { url: `/order/${payload.referenceId}` } : {},
+      });
+    }
+  } catch (err) {
+    console.error("[patientNotifications] Push send failed:", err);
   }
 }
 

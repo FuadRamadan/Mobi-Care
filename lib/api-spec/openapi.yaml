@@ -663,6 +663,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/UnreadCount"
 
+  /patient/notifications/push-token:
+    put:
+      operationId: updatePatientPushToken
+      tags: [patient]
+      summary: Register or clear the patient's Expo push token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "200":
+          description: Push token updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   /patient/notifications/mark-read:
     post:
       operationId: markPatientNotificationsRead
@@ -1859,6 +1880,15 @@ components:
           type: array
           items:
             type: string
+
+    PushTokenInput:
+      type: object
+      required: [expoPushToken]
+      properties:
+        expoPushToken:
+          type: string
+          nullable: true
+          description: Expo push token for the device, or null to disable push
   
 
     # ── Analytics schemas ──────────────────────────────────────────────────

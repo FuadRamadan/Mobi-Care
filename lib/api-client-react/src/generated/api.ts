@@ -75,6 +75,7 @@ import type {
   PrescriptionRejection,
   PrescriptionUploadInput,
   PrescriptionUploadResponse,
+  PushTokenInput,
   RefreshInput,
   Settlement,
   SettlementsResponse,
@@ -2260,6 +2261,77 @@ export function useGetPatientUnreadCount<TData = Awaited<ReturnType<typeof getPa
 
 
 
+
+export const getUpdatePatientPushTokenUrl = () => {
+
+
+
+
+  return `/api/patient/notifications/push-token`
+}
+
+/**
+ * @summary Register or clear the patient's Expo push token
+ */
+export const updatePatientPushToken = async (pushTokenInput: PushTokenInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getUpdatePatientPushTokenUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushTokenInput)
+  }
+);}
+
+
+
+
+
+export const getUpdatePatientPushTokenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePatientPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext> => {
+
+const mutationKey = ['updatePatientPushToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePatientPushToken>>, {data: BodyType<PushTokenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePatientPushToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePatientPushTokenMutationResult = NonNullable<Awaited<ReturnType<typeof updatePatientPushToken>>>
+    export type UpdatePatientPushTokenMutationBody = BodyType<PushTokenInput>
+    export type UpdatePatientPushTokenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register or clear the patient's Expo push token
+ */
+export const useUpdatePatientPushToken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientPushToken>>, TError,{data: BodyType<PushTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePatientPushToken>>,
+        TError,
+        {data: BodyType<PushTokenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePatientPushTokenMutationOptions(options));
+    }
 
 export const getMarkPatientNotificationsReadUrl = () => {
 

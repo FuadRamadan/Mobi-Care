@@ -100,6 +100,7 @@ export * from './prescriptionRejectReason';
 export * from './prescriptionStatus';
 export * from './prescriptionUploadInput';
 export * from './prescriptionUploadResponse';
+export * from './pushTokenInput';
 export * from './refreshInput';
 export * from './settlement';
 export * from './settlementsResponse';

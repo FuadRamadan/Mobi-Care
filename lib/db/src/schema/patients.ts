@@ -10,6 +10,8 @@ export const patientsTable = pgTable("patients", {
   phone: text("phone").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  // Expo push token for the patient's most recent device (null = push not enabled)
+  expoPushToken: text("expo_push_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

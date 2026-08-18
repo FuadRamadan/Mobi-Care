@@ -812,6 +812,18 @@ export const GetPatientUnreadCountResponse = zod.object({
 
 
 /**
+ * @summary Register or clear the patient's Expo push token
+ */
+export const UpdatePatientPushTokenBody = zod.object({
+  "expoPushToken": zod.string().nullable().describe('Expo push token for the device, or null to disable push')
+})
+
+export const UpdatePatientPushTokenResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary Mark patient notifications as read (omit ids to mark all)
  */
 export const MarkPatientNotificationsReadBody = zod.object({

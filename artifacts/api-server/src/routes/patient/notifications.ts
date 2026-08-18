@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import { patientNotificationsTable } from "@workspace/db/schema";
+import { patientNotificationsTable, patientsTable } from "@workspace/db/schema";
 import { eq, and, isNull, desc, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 
@@ -36,6 +36,26 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
     );
 
   res.json({ unreadCount: rows.length });
+});
+
+// ── PUT /patient/notifications/push-token — register/clear device push token ─
+router.put("/push-token", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const body = z
+    .object({ expoPushToken: z.string().min(1).max(200).nullable() })
+    .safeParse(req.body);
+
+  if (!body.success) {
+    res.status(400).json({ error: "expoPushToken must be a non-empty string or null" });
+    return;
+  }
+
+  await db
+    .update(patientsTable)
+    .set({ expoPushToken: body.data.expoPushToken, updatedAt: new Date() })
+    .where(eq(patientsTable.id, patientId));
+
+  res.json({ message: "Push token updated" });
 });
 
 // ── POST /patient/notifications/mark-read ────────────────────────────────────

@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { login as apiLogin, logout as apiLogout, refreshToken as apiRefreshToken, registerPatient as apiRegisterPatient, setAuthTokenGetter } from '@workspace/api-client-react';
+import { login as apiLogin, logout as apiLogout, refreshToken as apiRefreshToken, registerPatient as apiRegisterPatient, setAuthTokenGetter, updatePatientPushToken } from '@workspace/api-client-react';
+import { registerForPushNotifications } from '@/lib/pushNotifications';
 
 /** Tokens go in platform-backed secure storage; display data goes in AsyncStorage. */
 const SEC_KEY_ACCESS = 'mc_mobile_access';
@@ -80,6 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setAuthTokenGetter(null);
   }, []);
 
+  /**
+   * Ask for notification permission, get the Expo push token, and register it
+   * on the backend. Fire-and-forget — push failures never block auth flows.
+   */
+  const syncPushToken = useCallback(() => {
+    (async () => {
+      try {
+        const token = await registerForPushNotifications();
+        if (token) await updatePatientPushToken({ expoPushToken: token });
+      } catch {
+        // best effort — push is optional
+      }
+    })();
+  }, []);
+
   const applyTokens = useCallback(async (accessToken: string, refreshToken: string, userData: PatientUser) => {
     accessTokenRef.current = accessToken;
     refreshTokenRef.current = refreshToken;
@@ -93,6 +109,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearSession = useCallback(async (refreshTok?: string | null) => {
+    try {
+      // Stop push notifications for this device before the token is invalidated
+      if (accessTokenRef.current) await updatePatientPushToken({ expoPushToken: null });
+    } catch { /* best effort */ }
     try {
       if (refreshTok) await apiLogout({ refreshToken: refreshTok });
     } catch { /* best effort */ }
@@ -119,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           accessTokenRef.current = at;
           refreshTokenRef.current = rt;
           setUser(JSON.parse(userStr));
+          // Refresh the device push token registration for the restored session
+          syncPushToken();
         }
       } catch {
         // Storage read failed — start fresh
@@ -164,7 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone: result.user.phone ?? null,
       role: result.user.role,
     });
-  }, [applyTokens]);
+    syncPushToken();
+  }, [applyTokens, syncPushToken]);
 
   const register = useCallback(async (name: string, phone: string, password: string) => {
     const result = await apiRegisterPatient({ name, phone, password });
@@ -174,7 +197,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone: result.user.phone ?? null,
       role: result.user.role,
     });
-  }, [applyTokens]);
+    syncPushToken();
+  }, [applyTokens, syncPushToken]);
 
   const logout = useCallback(async () => {
     await clearSession(refreshTokenRef.current);
