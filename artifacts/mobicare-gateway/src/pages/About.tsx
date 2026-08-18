@@ -90,6 +90,19 @@ export default function About() {
             </p>
           </motion.div>
 
+          {/* Origin Story */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-card border-l-4 border-primary rounded-2xl p-8 md:p-12 mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Origin Story</p>
+            <p className="text-lg md:text-xl text-dark-green leading-relaxed">
+              In 2024, a patient at Connaught Hospital died because his family could not find Human Albumin in time. The drug existed elsewhere in Freetown. Nobody knew.
+            </p>
+          </motion.div>
+
           {/* Values */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-20">
             {values.map((v, i) => (
