@@ -1,9 +1,8 @@
 import { type ReactNode } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { Search, ShoppingBag, ClipboardList, LogOut } from 'lucide-react';
+import { Search, ShoppingBag, ClipboardList, LogOut, Bell } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
-import { Search, ShoppingBag, ClipboardList, LogOut, Pill, Bell } from 'lucide-react';
 import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
 
 /**
