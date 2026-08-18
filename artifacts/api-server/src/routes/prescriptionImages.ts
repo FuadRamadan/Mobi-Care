@@ -2,9 +2,11 @@
  * GET /api/prescription-images/:id
  *
  * Verifies the HMAC-signed URL token minted by POST /api/pharmacy/prescriptions/:id/image-url,
- * then streams the prescription image. `local:` keys are served from local
- * disk (dev/MVP storage); in production this would stream from an encrypted
- * object store (e.g. S3 SSE-KMS) — the key prefix makes the backend swappable.
+ * then streams the prescription image.
+ *
+ * Key prefix semantics:
+ *   "local:<filename>"           — served from local disk (dev / legacy records)
+ *   "cloud:/objects/uploads/…"   — streamed from Replit App Storage (GCS)
  */
 import { Router } from "express";
 import { z } from "zod";
@@ -13,6 +15,7 @@ import fs from "node:fs/promises";
 import { db, prescriptionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { verifyImageToken } from "../lib/signedUrl.js";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage.js";
 
 const router = Router();
 
@@ -23,6 +26,43 @@ const CONTENT_TYPES: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
 };
+
+const objectStorage = new ObjectStorageService();
+
+/**
+ * Parse a "cloud:/objects/uploads/<filename>" key and stream the GCS object.
+ * Re-uses ObjectStorageService.getObjectEntityFile() which validates the path
+ * and checks for existence, then streams via downloadObject().
+ */
+async function serveCloudImage(imageKey: string, res: import("express").Response): Promise<void> {
+  // imageKey = "cloud:/objects/uploads/<uuid>.<ext>"
+  const objectPath = imageKey.slice("cloud:".length); // "/objects/uploads/<uuid>.<ext>"
+
+  // Defense-in-depth: objectPath must be inside /objects/uploads/ and be a uuid.ext filename
+  const filename = objectPath.split("/").pop() ?? "";
+  if (!/^[0-9a-f-]{36}\.(png|jpe?g|webp)$/i.test(filename)) {
+    res.status(404).json({ error: "Image not found" });
+    return;
+  }
+
+  const objectFile = await objectStorage.getObjectEntityFile(objectPath);
+  const webResponse = await objectStorage.downloadObject(objectFile, 60);
+
+  res.setHeader("Content-Type", webResponse.headers.get("Content-Type") ?? "application/octet-stream");
+  res.setHeader("Cache-Control", webResponse.headers.get("Cache-Control") ?? "private, max-age=60");
+
+  const reader = webResponse.body!.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+    res.end();
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 router.get("/:id", async (req, res) => {
   const query = z.object({
@@ -55,30 +95,49 @@ router.get("/:id", async (req, res) => {
     return;
   }
 
-  if (!rx.imageKey.startsWith("local:")) {
-    res.status(501).json({
-      error: "Object storage not yet configured",
-      message: "Only local: image keys are servable in this phase.",
-    });
+  const { imageKey } = rx;
+
+  // ── Cloud storage (Replit App Storage / GCS) ──────────────────────────────
+  if (imageKey.startsWith("cloud:")) {
+    try {
+      await serveCloudImage(imageKey, res as any);
+    } catch (err) {
+      if (err instanceof ObjectNotFoundError) {
+        res.status(404).json({ error: "Image not found in cloud storage" });
+      } else {
+        console.error("Cloud image serve error:", err);
+        res.status(500).json({ error: "Failed to retrieve image" });
+      }
+    }
     return;
   }
 
-  // Defense-in-depth: the stored filename must be a plain uuid.ext — never
-  // allow path traversal even though keys are server-generated.
-  const filename = rx.imageKey.slice("local:".length);
-  if (!/^[0-9a-f-]{36}\.(png|jpe?g|webp)$/i.test(filename)) {
-    res.status(404).json({ error: "Image not found" });
+  // ── Local disk (legacy / dev fallback) ───────────────────────────────────
+  if (imageKey.startsWith("local:")) {
+    // Defense-in-depth: the stored filename must be a plain uuid.ext — never
+    // allow path traversal even though keys are server-generated.
+    const filename = imageKey.slice("local:".length);
+    if (!/^[0-9a-f-]{36}\.(png|jpe?g|webp)$/i.test(filename)) {
+      res.status(404).json({ error: "Image not found" });
+      return;
+    }
+
+    try {
+      const buf = await fs.readFile(path.join(UPLOAD_DIR, filename));
+      res.setHeader("Content-Type", CONTENT_TYPES[path.extname(filename).toLowerCase()] ?? "application/octet-stream");
+      res.setHeader("Cache-Control", "private, max-age=60");
+      res.send(buf);
+    } catch {
+      res.status(404).json({ error: "Image file not found" });
+    }
     return;
   }
 
-  try {
-    const buf = await fs.readFile(path.join(UPLOAD_DIR, filename));
-    res.setHeader("Content-Type", CONTENT_TYPES[path.extname(filename).toLowerCase()] ?? "application/octet-stream");
-    res.setHeader("Cache-Control", "private, max-age=60");
-    res.send(buf);
-  } catch {
-    res.status(404).json({ error: "Image file not found" });
-  }
+  // Unknown prefix
+  res.status(501).json({
+    error: "Unsupported image key format",
+    message: `imageKey prefix not recognized: ${imageKey.split(":")[0]}`,
+  });
 });
 
 export default router;
