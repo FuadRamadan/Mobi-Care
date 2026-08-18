@@ -11,6 +11,7 @@ import { eq, and, inArray, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
+import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
 
 const router = Router();
 
@@ -128,6 +129,21 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
   });
   await checkOrderFlags(updated!);
 
+  // Notify patient that a courier has been assigned
+  if (order.patientId) {
+    const notif = notificationForStatus("assigned", order.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: order.patientId,
+        patientPhone: order.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: order.id,
+      });
+    }
+  }
+
   res.json((await hydrateOrders([updated!]))[0]);
 });
 
@@ -185,6 +201,21 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
     entityId: id,
     details: { from: order.status, to: body.data.status },
   });
+
+  // Notify patient of delivery status change
+  if (order.patientId) {
+    const notif = notificationForStatus(body.data.status, order.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: order.patientId,
+        patientPhone: order.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: order.id,
+      });
+    }
+  }
 
   res.json((await hydrateOrders([updated!]))[0]);
 });

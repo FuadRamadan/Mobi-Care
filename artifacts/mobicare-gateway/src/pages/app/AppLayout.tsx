@@ -3,6 +3,8 @@ import { Link, Redirect, useLocation } from 'wouter';
 import { Search, ShoppingBag, ClipboardList, LogOut } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
+import { Search, ShoppingBag, ClipboardList, LogOut, Pill, Bell } from 'lucide-react';
+import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
 
 /**
  * Patient app shell — mobile-first (PWA style): sticky top bar + bottom nav.
@@ -12,12 +14,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const { itemCount } = useCart();
   const [location] = useLocation();
 
+  const { data: unreadData } = useGetPatientUnreadCount({
+    query: {
+      refetchInterval: 30_000,
+      queryKey: getGetPatientUnreadCountQueryKey(),
+      // Only fetch when a patient is logged in
+      enabled: !!user,
+    },
+  });
+  const unreadCount = unreadData?.unreadCount ?? 0;
+
   if (!user) return <Redirect to="/app" />;
 
   const tabs = [
     { href: '/app/search', label: 'Search', icon: Search, testId: 'nav-search' },
     { href: '/app/checkout', label: 'Cart', icon: ShoppingBag, badge: itemCount, testId: 'nav-cart' },
     { href: '/app/orders', label: 'Orders', icon: ClipboardList, testId: 'nav-orders' },
+    { href: '/app/notifications', label: 'Alerts', icon: Bell, badge: unreadCount, testId: 'nav-notifications' },
   ];
 
   return (
@@ -28,8 +41,25 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <img src="/mobicare-pin.png" alt="MobiCare" className="h-7 w-auto" />
             MobiCare
           </Link>
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 text-sm">
             <span className="opacity-80 hidden sm:inline" data-testid="text-patient-name">{user.name}</span>
+            {/* Notification bell shortcut */}
+            <Link
+              href="/app/notifications"
+              className="relative p-2 rounded-full hover:bg-white/10"
+              aria-label="Notifications"
+              data-testid="button-notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full text-[9px] min-w-3.5 h-3.5 px-0.5 flex items-center justify-center font-bold leading-none"
+                  data-testid="badge-notification-count"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <button
               onClick={logout}
               className="p-2 rounded-full hover:bg-white/10"
@@ -45,7 +75,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6 pb-24">{children}</main>
 
       <nav className="fixed bottom-0 inset-x-0 z-20 bg-card border-t">
-        <div className="max-w-3xl mx-auto grid grid-cols-3">
+        <div className="max-w-3xl mx-auto grid grid-cols-4">
           {tabs.map((t) => {
             const active = location === t.href || location.startsWith(t.href + '/');
             return (
@@ -62,9 +92,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   {t.badge ? (
                     <span
                       className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground rounded-full text-[10px] min-w-4 h-4 px-1 flex items-center justify-center"
-                      data-testid="badge-cart-count"
+                      data-testid={t.testId === 'nav-cart' ? 'badge-cart-count' : 'badge-alert-count'}
                     >
-                      {t.badge}
+                      {t.badge > 9 ? '9+' : t.badge}
                     </span>
                   ) : null}
                 </span>

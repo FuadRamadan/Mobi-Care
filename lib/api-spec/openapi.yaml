@@ -630,6 +630,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/PrescriptionUploadResponse"
 
+  # ── Patient notifications ─────────────────────────────────────────────────
+  /patient/notifications:
+    get:
+      operationId: listPatientNotifications
+      tags: [patient]
+      summary: List the authenticated patient's notifications (newest first)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Patient notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientNotification"
+
+  /patient/notifications/unread-count:
+    get:
+      operationId: getPatientUnreadCount
+      tags: [patient]
+      summary: Get unread notification count for the authenticated patient
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /patient/notifications/mark-read:
+    post:
+      operationId: markPatientNotificationsRead
+      tags: [patient]
+      summary: Mark patient notifications as read (omit ids to mark all)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadInput"
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   # ── Notifications ─────────────────────────────────────────────────────────
   /notifications:
     get:
@@ -2261,6 +2315,30 @@ components:
           type: string
           enum: [pharmacy, courier]
         reference:
+          type: string
+
+    PatientNotification:
+      type: object
+      required: [id, patientId, title, body, createdAt]
+      properties:
+        id:
+          type: string
+        patientId:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        type:
+          type: ["string", "null"]
+          description: e.g. "order_status", "prescription_rejected", "order_cancelled"
+        referenceId:
+          type: ["string", "null"]
+          description: Related order or entity id
+        readAt:
+          type: ["string", "null"]
+          description: ISO timestamp when the notification was read, or null if unread
+        createdAt:
           type: string
 
     AuditEntry:

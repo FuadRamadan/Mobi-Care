@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import { prescriptionsTable } from "@workspace/db/schema";
+import { prescriptionsTable, ordersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
+import { createPatientNotification } from "../../lib/patientNotifications.js";
 
 const router = Router();
 
@@ -193,6 +194,42 @@ router.post("/:id/reject", async (req: AuthRequest, res) => {
     entityId: id,
     details: { reason: body.data.reason },
   });
+
+  // Notify the patient about the prescription rejection — this is the most
+  // actionable notification: they need to know and may need to re-upload.
+  // Look up the linked order's patientId (null for legacy/HQ-created orders).
+  void (async () => {
+    try {
+      let patientId: string | null = null;
+      let orderId: string | undefined;
+
+      if (updated.orderId) {
+        const [linkedOrder] = await db
+          .select({ patientId: ordersTable.patientId, id: ordersTable.id })
+          .from(ordersTable)
+          .where(eq(ordersTable.id, updated.orderId))
+          .limit(1);
+        if (linkedOrder) {
+          patientId = linkedOrder.patientId ?? null;
+          orderId = linkedOrder.id;
+        }
+      }
+
+      if (patientId) {
+        const reasonLabel = body.data.reason.replaceAll("_", " ");
+        await createPatientNotification({
+          patientId,
+          patientPhone: updated.patientPhone,
+          title: "Prescription rejected ⚠️",
+          body: `Your prescription was rejected (${reasonLabel}). Please check your order for next steps or contact the pharmacy.`,
+          type: "prescription_rejected",
+          referenceId: orderId,
+        });
+      }
+    } catch (err) {
+      console.error("[prescriptions] rejection notification failed:", err);
+    }
+  })();
 
   const { imageKey: _k, ...safe } = updated;
   res.json(safe);

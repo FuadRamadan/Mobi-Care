@@ -788,6 +788,42 @@ export const PatientUploadPrescriptionResponse = zod.object({
 
 
 /**
+ * @summary List the authenticated patient's notifications (newest first)
+ */
+export const ListPatientNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "patientId": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "type": zod.string().nullish().describe('e.g. \"order_status\", \"prescription_rejected\", \"order_cancelled\"'),
+  "referenceId": zod.string().nullish().describe('Related order or entity id'),
+  "readAt": zod.string().nullish().describe('ISO timestamp when the notification was read, or null if unread'),
+  "createdAt": zod.string()
+})
+export const ListPatientNotificationsResponse = zod.array(ListPatientNotificationsResponseItem)
+
+
+/**
+ * @summary Get unread notification count for the authenticated patient
+ */
+export const GetPatientUnreadCountResponse = zod.object({
+  "unreadCount": zod.number()
+})
+
+
+/**
+ * @summary Mark patient notifications as read (omit ids to mark all)
+ */
+export const MarkPatientNotificationsReadBody = zod.object({
+  "ids": zod.array(zod.string()).optional()
+})
+
+export const MarkPatientNotificationsReadResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary List all notifications
  */
 export const ListNotificationsResponseItem = zod.object({

@@ -841,6 +841,29 @@ export interface MarkPaidInput {
   reference?: string;
 }
 
+export interface PatientNotification {
+  id: string;
+  patientId: string;
+  title: string;
+  body: string;
+  /**
+     * e.g. "order_status", "prescription_rejected", "order_cancelled"
+     * @nullable
+     */
+  type?: string | null;
+  /**
+     * Related order or entity id
+     * @nullable
+     */
+  referenceId?: string | null;
+  /**
+     * ISO timestamp when the notification was read, or null if unread
+     * @nullable
+     */
+  readAt?: string | null;
+  createdAt: string;
+}
+
 export interface AuditEntry {
   id: string;
   actorType: string;

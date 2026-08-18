@@ -3,6 +3,7 @@ import { patient } from "../../middlewares/auth.js";
 import searchRouter from "./search.js";
 import ordersRouter from "./orders.js";
 import uploadsRouter from "./uploads.js";
+import notificationsRouter from "./notifications.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use(...patient);
 router.use("/search", searchRouter);
 router.use("/orders", ordersRouter);
 router.use("/uploads", uploadsRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

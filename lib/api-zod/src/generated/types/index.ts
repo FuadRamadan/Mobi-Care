@@ -81,6 +81,7 @@ export * from './orderPrescriptionInfoStatus';
 export * from './orderStatus';
 export * from './orderStatusUpdate';
 export * from './orderStatusUpdateStatus';
+export * from './patientNotification';
 export * from './patientOrder';
 export * from './patientOrderInput';
 export * from './patientOrderInputFulfillmentType';

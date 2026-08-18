@@ -63,6 +63,7 @@ import type {
   Notification,
   Order,
   OrderStatusUpdate,
+  PatientNotification,
   PatientOrder,
   PatientOrderInput,
   PatientRegisterInput,
@@ -2104,6 +2105,231 @@ export const usePatientUploadPrescription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatientUploadPrescriptionMutationOptions(options));
+    }
+
+export const getListPatientNotificationsUrl = () => {
+
+
+
+
+  return `/api/patient/notifications`
+}
+
+/**
+ * @summary List the authenticated patient's notifications (newest first)
+ */
+export const listPatientNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<PatientNotification[]> => {
+
+  return customFetch<PatientNotification[]>(getListPatientNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPatientNotificationsQueryKey = () => {
+    return [
+    `/api/patient/notifications`
+    ] as const;
+    }
+
+
+export const getListPatientNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listPatientNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPatientNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPatientNotifications>>> = ({ signal }) => listPatientNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPatientNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPatientNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listPatientNotifications>>>
+export type ListPatientNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the authenticated patient's notifications (newest first)
+ */
+
+export function useListPatientNotifications<TData = Awaited<ReturnType<typeof listPatientNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPatientNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPatientUnreadCountUrl = () => {
+
+
+
+
+  return `/api/patient/notifications/unread-count`
+}
+
+/**
+ * @summary Get unread notification count for the authenticated patient
+ */
+export const getPatientUnreadCount = async ( options?: Parameters<typeof customFetch>[1]): Promise<UnreadCount> => {
+
+  return customFetch<UnreadCount>(getGetPatientUnreadCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPatientUnreadCountQueryKey = () => {
+    return [
+    `/api/patient/notifications/unread-count`
+    ] as const;
+    }
+
+
+export const getGetPatientUnreadCountQueryOptions = <TData = Awaited<ReturnType<typeof getPatientUnreadCount>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientUnreadCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPatientUnreadCountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPatientUnreadCount>>> = ({ signal }) => getPatientUnreadCount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPatientUnreadCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPatientUnreadCountQueryResult = NonNullable<Awaited<ReturnType<typeof getPatientUnreadCount>>>
+export type GetPatientUnreadCountQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get unread notification count for the authenticated patient
+ */
+
+export function useGetPatientUnreadCount<TData = Awaited<ReturnType<typeof getPatientUnreadCount>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientUnreadCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPatientUnreadCountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkPatientNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/patient/notifications/mark-read`
+}
+
+/**
+ * @summary Mark patient notifications as read (omit ids to mark all)
+ */
+export const markPatientNotificationsRead = async (markReadInput?: MarkReadInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getMarkPatientNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(markReadInput)
+  }
+);}
+
+
+
+
+
+export const getMarkPatientNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPatientNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markPatientNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext> => {
+
+const mutationKey = ['markPatientNotificationsRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markPatientNotificationsRead>>, {data?: BodyType<MarkReadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  markPatientNotificationsRead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkPatientNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markPatientNotificationsRead>>>
+    export type MarkPatientNotificationsReadMutationBody = BodyType<MarkReadInput> | undefined
+    export type MarkPatientNotificationsReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark patient notifications as read (omit ids to mark all)
+ */
+export const useMarkPatientNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markPatientNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markPatientNotificationsRead>>,
+        TError,
+        {data?: BodyType<MarkReadInput>},
+        TContext
+      > => {
+      return useMutation(getMarkPatientNotificationsReadMutationOptions(options));
     }
 
 export const getListNotificationsUrl = () => {

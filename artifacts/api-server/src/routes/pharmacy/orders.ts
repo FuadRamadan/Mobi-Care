@@ -6,6 +6,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
+import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
 
 const router = Router();
 
@@ -154,6 +155,21 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
   });
   await checkOrderFlags(updated!);
 
+  // Notify patient of status change (fire-and-forget; never blocks response)
+  if (order.patientId) {
+    const notif = notificationForStatus(body.data.status, order.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: order.patientId,
+        patientPhone: order.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: order.id,
+      });
+    }
+  }
+
   res.json(updated);
 });
 
@@ -211,6 +227,21 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
     details: { idChecked: true },
   });
 
+  // Notify patient that order was collected
+  if (order.patientId) {
+    const notif = notificationForStatus("collected", order.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: order.patientId,
+        patientPhone: order.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: order.id,
+      });
+    }
+  }
+
   res.json(updated);
 });
 
@@ -255,6 +286,21 @@ router.post("/:id/picked-up", async (req: AuthRequest, res) => {
     entityType: "order",
     entityId: id,
   });
+
+  // Notify patient that the rider has picked up their order
+  if (order.patientId) {
+    const notif = notificationForStatus("picked_up", order.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: order.patientId,
+        patientPhone: order.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: order.id,
+      });
+    }
+  }
 
   res.json(updated);
 });

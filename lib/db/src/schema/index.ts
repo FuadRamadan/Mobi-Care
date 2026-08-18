@@ -12,3 +12,4 @@ export * from "./settlements";
 export * from "./flags";
 export * from "./auditLog";
 export * from "./patients";
+export * from "./patientNotifications";

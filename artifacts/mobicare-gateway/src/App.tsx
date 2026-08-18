@@ -20,6 +20,7 @@ import PatientSearch from '@/pages/app/Search';
 import Checkout from '@/pages/app/Checkout';
 import PatientOrders from '@/pages/app/Orders';
 import OrderDetail from '@/pages/app/OrderDetail';
+import NotificationsPage from '@/pages/app/Notifications';
 import HqLogin from '@/pages/hq/Login';
 import HqDashboard from '@/pages/hq/Dashboard';
 import HqOrders from '@/pages/hq/Orders';
@@ -76,6 +77,9 @@ function Router() {
           </Route>
           <Route path="/app/orders/:id">
             <AppLayout><OrderDetail /></AppLayout>
+          </Route>
+          <Route path="/app/notifications">
+            <AppLayout><NotificationsPage /></AppLayout>
           </Route>
           <Route component={NotFound} />
         </Switch>
