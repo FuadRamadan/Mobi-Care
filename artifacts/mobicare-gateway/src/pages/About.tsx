@@ -57,7 +57,7 @@ export default function About() {
             transition={{ delay: 0.1 }}
             className="text-lg text-muted-foreground max-w-2xl leading-relaxed"
           >
-            MobiCare is a Sierra Leonean health-tech platform that bridges the gap between patients and licensed pharmacies. We make it easy to find, compare, and order medicines safely — from anywhere, on any phone.
+            MobiCare is a Sierra Leonean health-tech platform that bridges the gap between patients and licensed pharmacies. We make it easy to find, compare, and order medicines safely, from anywhere, on any phone.
           </motion.p>
         </div>
       </section>
