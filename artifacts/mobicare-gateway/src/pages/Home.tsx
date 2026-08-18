@@ -294,10 +294,10 @@ export default function Home() {
       </section>
 
       {/* ── Partners ── */}
-      <section className="py-20 px-4 bg-white border-y border-border">
+      <section className="py-10 px-4 bg-white border-y border-border">
         <div className="container mx-auto max-w-4xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-10">Our Partners</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">Our Partners</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
