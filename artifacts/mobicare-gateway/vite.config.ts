@@ -27,9 +27,27 @@ if (!basePath) {
   );
 }
 
+// Resolve the public-facing origin for absolute OG/social meta URLs.
+// Priority: VITE_PUBLIC_URL env var (set once deployed) → REPLIT_DEV_DOMAIN (dev preview).
+const publicUrl = process.env.VITE_PUBLIC_URL
+  ? process.env.VITE_PUBLIC_URL.replace(/\/$/, '')
+  : process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : '';
+
 export default defineConfig({
   base: basePath,
   plugins: [
+    // Inject absolute public URL into OG/social meta tags in index.html
+    {
+      name: 'inject-public-url',
+      transformIndexHtml: {
+        order: 'pre' as const,
+        handler(html: string) {
+          return html.replace(/__PUBLIC_URL__/g, publicUrl);
+        },
+      },
+    },
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
