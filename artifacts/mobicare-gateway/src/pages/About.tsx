@@ -260,7 +260,7 @@ export default function About() {
           <div className="border-t pt-16 mb-16">
             <h2 className="text-2xl font-display font-bold text-dark-green mb-2">Meet Our Team</h2>
             <p className="text-muted-foreground text-sm mb-12"></p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+            <div className="grid grid-cols-2 gap-10">
               {[
                 { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "CEO & Founder", color: "bg-primary/10 text-primary", photo: "/team-abdullah.jpg" },
                 { initials: "FS", name: "Fuad Ramadan Sesay", role: "CIO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
@@ -280,10 +280,10 @@ export default function About() {
                     <img
                       src={member.photo}
                       alt={member.name}
-                      className="w-36 h-36 rounded-full object-cover object-top mb-4 border-2 border-white shadow-md"
+                      className="w-48 h-48 rounded-full object-cover object-top mb-4 border-2 border-white shadow-md"
                     />
                   ) : (
-                    <div className={`w-36 h-36 rounded-full ${member.color} flex items-center justify-center text-3xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
+                    <div className={`w-48 h-48 rounded-full ${member.color} flex items-center justify-center text-4xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
                       {member.initials}
                     </div>
                   )}
