@@ -1,4 +1,4 @@
-import { ShieldCheck, UserCheck, AlertCircle } from "lucide-react";
+import { ShieldCheck, UserCheck, AlertCircle, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -34,11 +34,11 @@ export default function PolicyHighlights({ className, showTiers = true }: Props)
           className="bg-card p-6 rounded-2xl border shadow-sm border-border"
         >
           <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4 text-primary">
-            <UserCheck className="w-6 h-6" />
+            <Truck className="w-6 h-6" />
           </div>
-          <h3 className="font-display font-semibold text-lg text-dark-green mb-2">Real Pharmacists</h3>
+          <h3 className="font-display font-semibold text-lg text-dark-green mb-2">Fast, Honest Delivery</h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            MobiCare does not itself verify prescriptions — a licensed pharmacist reviews yours before any prescription-required medicine is approved for your order.
+            No inflated estimates, no silent delays. Just a real courier, on a real route, bringing real medicine to your door.
           </p>
         </motion.div>
       </div>
