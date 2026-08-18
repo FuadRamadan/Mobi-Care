@@ -19,7 +19,7 @@ const values = [
     icon: Smartphone,
     title: "Mobile Money Native",
     description:
-      "We integrate directly with mobile money services.",
+      "We integrate directly with Mobile Money services so payments are simple, safe, and trackable — no bank account required.",
   },
   {
     icon: Users,
