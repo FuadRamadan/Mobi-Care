@@ -292,16 +292,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Trust & Policies ── */}
+      {/* ── Partners ── */}
       <section className="py-20 px-4 bg-white border-y border-border">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-display font-bold text-dark-green mb-4">Honesty in every order</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We believe healthcare needs trust above all else. Here is exactly how we handle your money, prescriptions, and safety.
-            </p>
+        <div className="container mx-auto max-w-4xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-10">Our Partners</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="w-20 h-20 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-3xl">🟠</div>
+              <p className="font-display font-semibold text-dark-green">Orange Sierra Leone</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="w-20 h-20 rounded-2xl bg-secondary border border-border flex items-center justify-center text-3xl">💡</div>
+              <p className="font-display font-semibold text-dark-green">Innovation SL</p>
+            </motion.div>
           </div>
-          <PolicyHighlights showTiers={false} />
         </div>
       </section>
 
