@@ -77,6 +77,19 @@ export default function About() {
             </p>
           </motion.div>
 
+          {/* Vision */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-primary/5 border border-primary/20 rounded-2xl p-8 md:p-12 mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">Our Vision</p>
+            <p className="text-2xl md:text-3xl font-display font-bold text-dark-green leading-snug">
+              "No one has to die searching for a medicine that already exists."
+            </p>
+          </motion.div>
+
           {/* Values */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-20">
             {values.map((v, i) => (
