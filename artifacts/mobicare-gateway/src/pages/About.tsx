@@ -225,7 +225,7 @@ export default function About() {
                 { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "Founder & Medical Doctor", color: "bg-primary/10 text-primary" },
                 { initials: "FS", name: "Fuad Ramada Sesay", role: "Technology & Infrastructure", color: "bg-blue-100 text-blue-700" },
                 { initials: "AS", name: "Alhaji Samura", role: "Technology & Infrastructure", color: "bg-purple-100 text-purple-700" },
-                { initials: "AZ", name: "Aziz Saio", role: "Pharmacy Manager", color: "bg-green-100 text-green-700" },
+                { initials: "AZ", name: "Aziz Saio", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700" },
                 { initials: "MS", name: "Mamie Saio", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
               ].map((member, i) => (
                 <motion.div
