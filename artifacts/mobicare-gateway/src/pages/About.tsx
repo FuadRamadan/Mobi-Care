@@ -5,7 +5,7 @@ import PolicyHighlights from "@/components/PolicyHighlights";
 const values = [
   {
     icon: Heart,
-    title: "Built for Sierra Leone",
+    title: "Built for Africa",
     description:
       "MobiCare is designed from the ground up for the realities of healthcare access in Sierra Leone — mobile-first, offline-aware, and priced for everyone.",
   },
