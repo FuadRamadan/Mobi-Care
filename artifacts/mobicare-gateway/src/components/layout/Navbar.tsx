@@ -40,12 +40,12 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <a
-            href={PORTALS.patient.loginUrl}
+          <Link
+            href="/patient"
             className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm"
           >
             Get Medicines
-          </a>
+          </Link>
 
         </nav>
 
@@ -79,12 +79,13 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="pt-2">
-              <a
-                href={PORTALS.patient.loginUrl}
+              <Link
+                href="/patient"
+                onClick={() => setIsOpen(false)}
                 className="flex items-center justify-center w-full bg-primary text-primary-foreground px-4 py-3 rounded-xl font-medium"
               >
                 Get Medicines
-              </a>
+              </Link>
             </div>
           </nav>
         </div>

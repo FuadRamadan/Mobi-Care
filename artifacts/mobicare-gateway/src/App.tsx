@@ -7,6 +7,7 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
 import About from '@/pages/About';
+import Patient from '@/pages/Patient';
 import Pharmacy from '@/pages/Pharmacy';
 import HQ from '@/pages/HQ';
 import Layout from '@/components/layout/Layout';
@@ -30,6 +31,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/about" component={About} />
+          <Route path="/patient" component={Patient} />
           <Route path="/pharmacy" component={Pharmacy} />
           <Route path="/hq" component={HQ} />
           <Route component={NotFound} />
