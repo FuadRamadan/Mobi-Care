@@ -294,7 +294,7 @@ export default function Home() {
       </section>
 
       {/* ── Partners ── */}
-      <section className="py-10 px-4 bg-white border-y border-border">
+      <section className="py-10 px-4 bg-secondary/40">
         <div className="container mx-auto max-w-4xl text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">Our Partners</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12">
