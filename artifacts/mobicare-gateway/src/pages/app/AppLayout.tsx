@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { Search, ShoppingBag, ClipboardList, LogOut, Pill } from 'lucide-react';
+import { Search, ShoppingBag, ClipboardList, LogOut } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
 
@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-20 bg-dark-green text-white shadow-md">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 h-14">
           <Link href="/app/search" className="flex items-center gap-2 font-display font-bold">
-            <Pill className="w-5 h-5 text-primary-foreground" />
+            <img src="/mobicare-pin.png" alt="MobiCare" className="h-7 w-auto" />
             MobiCare
           </Link>
           <div className="flex items-center gap-3 text-sm">

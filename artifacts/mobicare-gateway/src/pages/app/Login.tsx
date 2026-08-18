@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Redirect, useLocation } from 'wouter';
-import { Pill } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -39,9 +38,7 @@ export default function PatientLogin() {
         <div className="absolute top-0 left-0 right-0 h-2 bg-primary" />
 
         <div className="flex justify-center mb-6">
-          <div className="bg-primary/10 p-3 rounded-2xl">
-            <Pill className="w-10 h-10 text-primary" strokeWidth={2} />
-          </div>
+          <img src="/mobicare-pin.png" alt="MobiCare" className="h-14 w-auto" />
         </div>
 
         <div className="text-center mb-6">

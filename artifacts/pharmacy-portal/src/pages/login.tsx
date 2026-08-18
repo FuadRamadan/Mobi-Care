@@ -43,9 +43,7 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
-            <div className="bg-[#0B3D2E] p-4 rounded-xl inline-block shadow-md mb-8">
-              <img src={`${import.meta.env.BASE_URL}mobicare-logo.jpeg`} alt="MobiCare Logo" className="h-12 w-auto object-contain rounded" />
-            </div>
+            <img src={`${import.meta.env.BASE_URL}mobicare-pin.png`} alt="MobiCare Logo" className="h-16 w-auto object-contain mb-8" />
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Pharmacy Portal
             </h2>

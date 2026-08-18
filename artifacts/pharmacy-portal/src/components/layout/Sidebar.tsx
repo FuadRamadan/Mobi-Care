@@ -56,13 +56,11 @@ export function Sidebar() {
     <div className="w-60 bg-sidebar text-sidebar-foreground min-h-[100dvh] flex flex-col border-r border-sidebar-border shadow-md z-10 relative">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4 flex items-center gap-3 border-b border-sidebar-border/40">
-        <div className="bg-[#0B3D2E] rounded-lg p-1.5 shrink-0">
-          <img
-            src={`${import.meta.env.BASE_URL}mobicare-logo.jpeg`}
-            alt="MobiCare"
-            className="h-7 w-auto object-contain rounded-sm"
-          />
-        </div>
+        <img
+          src={`${import.meta.env.BASE_URL}mobicare-pin.png`}
+          alt="MobiCare"
+          className="h-9 w-auto object-contain shrink-0"
+        />
         <div className="min-w-0">
           <p className="font-bold text-sm leading-tight truncate">MobiCare</p>
           <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/50 leading-tight">

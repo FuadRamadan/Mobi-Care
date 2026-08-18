@@ -16,14 +16,16 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
-          <div className="bg-[#0B3D2E] rounded px-3 py-1 flex items-center">
-            <img
-              src="/mobicare-logo.jpeg"
-              alt="MobiCare"
-              className="h-11 w-auto"
-            />
-          </div>
+        <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+          <img
+            src="/mobicare-pin.png"
+            alt="MobiCare"
+            className="h-9 w-auto"
+          />
+          <span className="font-display font-bold text-xl leading-none">
+            <span className="text-[#0B3D2E]">Mobi</span>
+            <span className="text-[#2E9E77]">Care</span>
+          </span>
         </Link>
 
         {/* Desktop Nav */}

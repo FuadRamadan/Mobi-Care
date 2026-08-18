@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { Shield, Pill, LogIn } from 'lucide-react';
+import { Pill, LogIn } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -36,9 +36,7 @@ export default function HqLogin() {
         <div className="absolute top-0 left-0 right-0 h-2 bg-dark-green" />
 
         <div className="flex justify-center mb-6">
-          <div className="bg-primary/10 p-3 rounded-2xl">
-            <Shield className="w-10 h-10 text-primary" strokeWidth={2} />
-          </div>
+          <img src="/mobicare-pin.png" alt="MobiCare" className="h-14 w-auto" />
         </div>
 
         <div className="text-center mb-8">

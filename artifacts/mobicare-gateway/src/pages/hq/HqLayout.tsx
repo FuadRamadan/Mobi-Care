@@ -11,7 +11,6 @@ import {
   Wallet,
   ScrollText,
   LogOut,
-  Shield,
 } from 'lucide-react';
 import { useHqAuth } from '@/hq/auth';
 import { cn } from '@/lib/utils';
@@ -42,8 +41,8 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     <div className="flex min-h-screen w-full bg-muted/30">
       {/* Sidebar */}
       <aside className="hidden md:flex w-60 shrink-0 flex-col bg-dark-green text-white">
-        <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
-          <Shield className="w-6 h-6" />
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+          <img src="/mobicare-pin.png" alt="MobiCare" className="h-8 w-auto" />
           <div>
             <div className="font-display font-bold leading-tight">MobiCare HQ</div>
             <div className="text-[11px] text-white/60">Oversight console</div>
