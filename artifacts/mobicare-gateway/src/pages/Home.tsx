@@ -305,12 +305,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Staff portal link ── */}
-      <div className="py-12 bg-background/60 flex justify-center">
-        <Link href="/hq" className="text-sm text-muted-foreground hover:text-foreground transition-colors border border-border/50 bg-card px-4 py-2 rounded-full">
-          Staff Portal Access
-        </Link>
-      </div>
+
     </div>
   );
 }
