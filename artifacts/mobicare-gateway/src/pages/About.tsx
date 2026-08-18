@@ -280,10 +280,10 @@ export default function About() {
                     <img
                       src={member.photo}
                       alt={member.name}
-                      className="w-24 h-24 rounded-full object-cover object-top mb-4 border-2 border-white shadow-md"
+                      className="w-36 h-36 rounded-full object-cover object-top mb-4 border-2 border-white shadow-md"
                     />
                   ) : (
-                    <div className={`w-24 h-24 rounded-full ${member.color} flex items-center justify-center text-2xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
+                    <div className={`w-36 h-36 rounded-full ${member.color} flex items-center justify-center text-3xl font-display font-bold mb-4 border-2 border-white shadow-md`}>
                       {member.initials}
                     </div>
                   )}
