@@ -103,6 +103,25 @@ export default function About() {
             </p>
           </motion.div>
 
+          {/* What We Do */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-6">What We Do</p>
+            <h2 className="font-display font-bold text-2xl md:text-3xl text-dark-green mb-6">The Problem</h2>
+            <div className="space-y-5 text-muted-foreground leading-relaxed">
+              <p>
+                Only 33% of the sub-Saharan African population has regular access to essential medicines (WHO, 2017). But most of the time, these medications are not missing from the countries — they are missing from view. No shared data of what is where.
+              </p>
+              <p>
+                For patients, this means traveling from pharmacy to pharmacy, often while unwell, with no assurance but hope. In an emergency, that search costs hours. Sometimes it costs a life.
+              </p>
+            </div>
+          </motion.div>
+
           {/* Values */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-20">
             {values.map((v, i) => (
