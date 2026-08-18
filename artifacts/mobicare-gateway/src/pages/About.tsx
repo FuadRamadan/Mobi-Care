@@ -223,7 +223,7 @@ export default function About() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {[
                 { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "Founder & Medical Doctor", color: "bg-primary/10 text-primary" },
-                { initials: "FS", name: "Fuad Ramada Sesay", role: "DevOps Engineer", color: "bg-blue-100 text-blue-700" },
+                { initials: "FS", name: "Fuad Ramada Sesay", role: "CTO", color: "bg-blue-100 text-blue-700" },
                 { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700" },
                 { initials: "AZ", name: "Aziz Saio", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700" },
                 { initials: "MS", name: "Mamie Saio", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
