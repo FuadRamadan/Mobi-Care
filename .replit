@@ -26,3 +26,6 @@ JWT_SECRET = "110b6aba21215c75cd892337efeea213c95900743f3cb79c0e27017408603a9987
 
 [nix]
 channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-08905a86-6f70-458f-b053-383025172b50"
