@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "zcguE5QisurhxhCKJfE_p"
+uri = "file://MobiCare_Project_Tracker.txt"
+type = "text"
+title = "MobiCare Project Tracker"
+description = "A downloadable plain-text summary of the platform, completed work, Orange Money status, and current reliability priorities."
+logical_id = "895794d9-4425-443c-a694-0a837d909ffc"
+content_hash = "sha256:b235040c7709fcd66ecfad511284b507f3e928c18354db7de19ca35d6f293f61"
+size = 4961
+mtime_ms = 1787161344179
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/895794d9-4425-443c-a694-0a837d909ffc/8e237060-716f-4640-ba51-b2c65682baf5"
+storage_version_token = "1787161348361021"
+content_type = "text/plain"

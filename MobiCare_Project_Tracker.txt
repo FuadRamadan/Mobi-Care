@@ -1,0 +1,152 @@
+MobiCare Project Tracker
+=========================
+
+Overview
+--------
+MobiCare is a Sierra Leonean health-tech platform that helps people find and
+order medicines from licensed pharmacies without travelling from pharmacy to
+pharmacy first.
+
+The platform serves:
+- Patients: search, prescription upload, ordering, delivery/collection tracking.
+- Partner pharmacies: inventory, prescription review, and fulfilment.
+- MobiCare HQ: pharmacy, medicine, courier, order, settlement, flag, and audit oversight.
+
+
+Platform Components
+-------------------
+1. API Server
+   Location: artifacts/api-server
+   Purpose: Express API for authentication, orders, pharmacies, inventory,
+   prescriptions, notifications, and HQ operations.
+
+2. MobiCare Gateway
+   Location: artifacts/mobicare-gateway
+   Purpose: public MobiCare website plus web portals for patients and HQ staff.
+
+3. Pharmacy Portal
+   Location: artifacts/pharmacy-portal
+   Purpose: web dashboard for pharmacy partners.
+
+4. MobiCare Mobile
+   Location: artifacts/mobicare-mobile
+   Purpose: Expo / React Native patient app.
+
+5. Shared Libraries
+   Locations: lib/db, lib/api-spec, lib/api-zod, lib/api-client-react
+   Purpose: database schema, API contract, validation schemas, and generated API hooks.
+
+
+Implemented Features
+--------------------
+
+Patient Experience
+- Patient registration, login, token refresh, and logout.
+- Medicine search from partner pharmacies.
+- Medicine availability and pharmacy comparison.
+- Cart and checkout for delivery or pharmacy collection.
+- Prescription image upload for medicines that require a prescription.
+- Order status tracking and timeline.
+- In-app notifications and push-notification registration.
+- Installable mobile-first web experience and Expo mobile application.
+
+Pharmacy Portal
+- Pharmacy staff login.
+- Inventory and medicine catalogue management.
+- Order queue and fulfilment status updates.
+- Prescription review.
+- Pharmacy notifications and operational analytics.
+
+HQ Operations
+- HQ login with role-based access.
+- Pharmacy, medicine, courier, order, flag, audit, and settlement oversight.
+- Staff dashboard views.
+
+Public Website
+- Landing, About, patient, pharmacy, and HQ pages.
+- MobiCare mission, vision, origin story, challenges and solutions, and how-it-works content.
+- Orange Sierra Leone and Innovation SL partner logos.
+- Contact information and social links.
+- Team profiles:
+  * Dr. Abdullah Osman Koroma — CEO & Founder
+  * Fuad Ramadan Sesay — CIO
+  * Alhaji Samura — DevOps Engineer
+  * Pharm Alpha Aziz Jalloh — Superintendent Pharmacist
+  * Pharm Mamie Saio Johnson — Pharmacy Manager
+- Team photos are available for Abdullah, Fuad, Alhaji, and Alpha.
+- Social preview and installable web-app assets are included.
+
+
+Technology
+----------
+- pnpm workspaces
+- TypeScript
+- Node.js and Express 5
+- PostgreSQL and Drizzle ORM
+- Zod validation
+- React 19, Vite, Wouter, TanStack Query, and Tailwind CSS
+- Expo, React Native, and Expo Router
+- OpenAPI-generated Zod schemas and React Query client
+- Object storage for prescription images
+
+
+How to Run
+----------
+Install dependencies:
+pnpm install
+
+Start the API server:
+pnpm --filter @workspace/api-server run dev
+
+Start the MobiCare Gateway:
+pnpm --filter @workspace/mobicare-gateway run dev
+
+Start the Pharmacy Portal:
+pnpm --filter @workspace/pharmacy-portal run dev
+
+Start the Expo patient app:
+pnpm --filter @workspace/mobicare-mobile run dev
+
+Quality checks:
+pnpm run typecheck
+pnpm run build
+
+
+Orange Money Payment Status
+---------------------------
+Orange Money is the selected payment direction for MobiCare.
+
+Current status:
+- Checkout currently records a development/demo payment intent.
+- A live Orange Money gateway is NOT connected yet.
+- Production payment confirmation must only happen after Orange verifies that
+  payment succeeded.
+
+Required before live Orange Money integration:
+1. Orange merchant onboarding.
+2. Orange sandbox/production API access, stored securely as environment secrets.
+3. Orange documentation for payment requests, callbacks, and signature validation.
+4. A server-side callback/webhook endpoint.
+5. Idempotent transaction records so retries or duplicate callbacks cannot charge
+   or mark an order as paid twice.
+6. Web and mobile checkout updates using Orange's approved payment flow.
+
+Do not store Orange credentials, merchant secrets, API keys, or callback
+signatures in source code or in this tracker.
+
+
+Current Reliability Work
+------------------------
+The following backend work has been identified and queued:
+- Add controlled API error handling for database and network failures.
+- Make pharmacy order status changes atomic so simultaneous actions cannot
+  both succeed.
+- Complete live Orange Money payment verification after Orange provides the
+  required partner integration details.
+
+
+Contact Information
+-------------------
+Email: mobicaresl00@gmail.com
+Phone: +232 75 726 975
+Address: 84 Sixth Road, Malama Lumley, Sierra Leone
