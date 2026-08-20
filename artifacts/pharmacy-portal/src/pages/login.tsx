@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Username or phone is required"),
@@ -43,6 +43,13 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to MobiCare
+            </a>
             <img src={`${import.meta.env.BASE_URL}mobicare-pin.png`} alt="MobiCare Logo" className="h-16 w-auto object-contain mb-8" />
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Pharmacy Portal

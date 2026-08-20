@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Redirect, useLocation } from 'wouter';
+import { ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,15 @@ export default function PatientLogin() {
     <div className="min-h-screen bg-secondary/40 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-card border rounded-3xl shadow-xl p-8 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-2 bg-primary" />
+
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to MobiCare
+        </button>
 
         <div className="flex justify-center mb-6">
           <img src="/mobicare-pin.png" alt="MobiCare" className="h-14 w-auto" />
