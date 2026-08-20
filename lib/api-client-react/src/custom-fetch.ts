@@ -364,7 +364,20 @@ export async function customFetch<T = unknown>(
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
-    throw new ApiError(response, errorData, requestInfo);
+    const error = new ApiError(response, errorData, requestInfo);
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      errorData &&
+      typeof errorData === "object" &&
+      "code" in errorData &&
+      errorData.code === "SESSION_INVALIDATED"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("mobicare:session-invalidated", { detail: errorData }),
+      );
+    }
+    throw error;
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;

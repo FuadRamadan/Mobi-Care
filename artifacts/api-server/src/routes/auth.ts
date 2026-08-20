@@ -10,7 +10,7 @@ import {
   patientsTable,
   patientRefreshTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq, and, isNull, gt, sql } from "drizzle-orm";
 import {
   signAccessToken,
   generateRefreshToken,
@@ -18,15 +18,19 @@ import {
   refreshTokenExpiresAt,
 } from "../lib/jwt.js";
 import { requireAuth, AuthRequest } from "../middlewares/auth.js";
+import {
+  getOrCreatePasswordPolicy,
+  validatePasswordAgainstPolicy,
+  isPasswordReused,
+  appendPasswordHistory,
+} from "../lib/passwordPolicy.js";
 
 const router = Router();
 
 // ── Login ─────────────────────────────────────────────────────────────────────
-// Tries pharmacy accounts first, then HQ staff. The role in the returned token
-// is what the server-side role middleware enforces on every protected route.
 router.post("/login", async (req, res) => {
   const body = z.object({
-    identifier: z.string().min(1), // username or phone
+    identifier: z.string().min(1),
     password: z.string().min(1),
   }).safeParse(req.body);
 
@@ -55,10 +59,43 @@ router.post("/login", async (req, res) => {
   if (pharmacy && pharmacy.isActive) {
     const valid = await bcrypt.compare(password, pharmacy.passwordHash);
     if (valid) {
+      // Check if temporary password has expired
+      if (
+        pharmacy.temporaryPasswordExpiresAt &&
+        pharmacy.mustChangePassword &&
+        new Date() > pharmacy.temporaryPasswordExpiresAt
+      ) {
+        res.status(401).json({
+          error: "Temporary password has expired. Please contact HQ for a new password reset.",
+          code: "TEMPORARY_PASSWORD_EXPIRED",
+        });
+        return;
+      }
+
+      // Check if normal password has exceeded max age
+      const policy = await getOrCreatePasswordPolicy();
+      const passwordAgeDays =
+        (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      const isExpiredByAge =
+        !pharmacy.mustChangePassword &&
+        passwordAgeDays > policy.maxPasswordAgeDays;
+
+      // If password has exceeded max age, mark mustChangePassword
+      let mustChangePassword = pharmacy.mustChangePassword;
+      if (isExpiredByAge) {
+        mustChangePassword = true;
+        await db
+          .update(pharmaciesTable)
+          .set({ mustChangePassword: true, updatedAt: new Date() })
+          .where(eq(pharmaciesTable.id, pharmacy.id));
+      }
+
       const { raw, hash } = generateRefreshToken();
       await db.insert(refreshTokensTable).values({
         pharmacyId: pharmacy.id,
         tokenHash: hash,
+        sessionVersion: pharmacy.sessionVersion,
         expiresAt: refreshTokenExpiresAt(),
       });
 
@@ -66,7 +103,8 @@ router.post("/login", async (req, res) => {
         sub: pharmacy.id,
         role: "pharmacy",
         name: pharmacy.name,
-        mustChangePassword: pharmacy.mustChangePassword || undefined,
+        mustChangePassword: mustChangePassword || undefined,
+        sessionVersion: pharmacy.sessionVersion,
       });
       res.json({
         accessToken,
@@ -78,7 +116,7 @@ router.post("/login", async (req, res) => {
           username: pharmacy.username,
           phone: pharmacy.phone,
           controlledSubstanceAuthorized: pharmacy.controlledSubstanceAuthorized,
-          mustChangePassword: pharmacy.mustChangePassword,
+          mustChangePassword,
         },
       });
       return;
@@ -163,8 +201,6 @@ router.post("/login", async (req, res) => {
 });
 
 // ── Patient registration ──────────────────────────────────────────────────────
-// Only patients may self-register. Pharmacies are onboarded by HQ; HQ staff
-// come from the bootstrap script.
 router.post("/register", async (req, res) => {
   const body = z.object({
     name: z.string().min(2),
@@ -231,9 +267,11 @@ router.post("/refresh", async (req, res) => {
   const now = new Date();
 
   // ── Pharmacy token? ──
+  // Atomically claim this one-time refresh credential. Concurrent requests
+  // using the same raw token cannot both pass rotation.
   const [stored] = await db
-    .select()
-    .from(refreshTokensTable)
+    .update(refreshTokensTable)
+    .set({ revokedAt: now })
     .where(
       and(
         eq(refreshTokensTable.tokenHash, hash),
@@ -241,14 +279,9 @@ router.post("/refresh", async (req, res) => {
         gt(refreshTokensTable.expiresAt, now)
       )
     )
-    .limit(1);
+    .returning();
 
   if (stored) {
-    await db
-      .update(refreshTokensTable)
-      .set({ revokedAt: now })
-      .where(eq(refreshTokensTable.id, stored.id));
-
     const [pharmacy] = await db
       .select()
       .from(pharmaciesTable)
@@ -259,11 +292,49 @@ router.post("/refresh", async (req, res) => {
       res.status(401).json({ error: "Account inactive" });
       return;
     }
+    if (stored.sessionVersion !== pharmacy.sessionVersion) {
+      res.status(401).json({
+        error: "Session has been invalidated. Please sign in again.",
+        code: "SESSION_INVALIDATED",
+      });
+      return;
+    }
+    if (
+      pharmacy.mustChangePassword &&
+      pharmacy.temporaryPasswordExpiresAt &&
+      pharmacy.temporaryPasswordExpiresAt.getTime() <= now.getTime()
+    ) {
+      res.status(401).json({
+        error: "Temporary password has expired. Please contact HQ for a new password reset.",
+        code: "TEMPORARY_PASSWORD_EXPIRED",
+      });
+      return;
+    }
+
+    // Preserve mustChangePassword policy state from the live row
+    // Check if password has exceeded max age (same logic as login)
+    const policy = await getOrCreatePasswordPolicy();
+    const passwordAgeDays =
+      (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
+      (1000 * 60 * 60 * 24);
+    const isExpiredByAge =
+      !pharmacy.mustChangePassword &&
+      passwordAgeDays > policy.maxPasswordAgeDays;
+
+    let mustChangePassword = pharmacy.mustChangePassword;
+    if (isExpiredByAge) {
+      mustChangePassword = true;
+      await db
+        .update(pharmaciesTable)
+        .set({ mustChangePassword: true, updatedAt: new Date() })
+        .where(eq(pharmaciesTable.id, pharmacy.id));
+    }
 
     const { raw, hash: newHash } = generateRefreshToken();
     await db.insert(refreshTokensTable).values({
       pharmacyId: pharmacy.id,
       tokenHash: newHash,
+      sessionVersion: pharmacy.sessionVersion,
       expiresAt: refreshTokenExpiresAt(),
     });
 
@@ -271,7 +342,8 @@ router.post("/refresh", async (req, res) => {
       sub: pharmacy.id,
       role: "pharmacy",
       name: pharmacy.name,
-      mustChangePassword: pharmacy.mustChangePassword || undefined,
+      mustChangePassword: mustChangePassword || undefined,
+      sessionVersion: pharmacy.sessionVersion,
     });
     res.json({ accessToken, refreshToken: raw });
     return;
@@ -372,7 +444,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   }).safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "currentPassword and newPassword (min 8 chars) required" });
+    res.status(400).json({ error: "currentPassword and newPassword are required" });
     return;
   }
 
@@ -449,6 +521,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
+  // ── Pharmacy password change (full policy enforcement) ──
   const [record] = await db
     .select()
     .from(pharmaciesTable)
@@ -463,23 +536,109 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
-  await db
-    .update(pharmaciesTable)
-    .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
-    .where(eq(pharmaciesTable.id, accountId));
+  // Load policy and validate the new password
+  const policy = await getOrCreatePasswordPolicy();
+  const { valid: policyValid, messages } = validatePasswordAgainstPolicy(body.data.newPassword, policy);
+  if (!policyValid) {
+    res.status(422).json({ error: "Password does not meet policy requirements", messages });
+    return;
+  }
 
-  await db
-    .update(refreshTokensTable)
-    .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(refreshTokensTable.pharmacyId, accountId),
-        isNull(refreshTokensTable.revokedAt)
+  // Check history (current + recent history)
+  const reused = await isPasswordReused(body.data.newPassword, record.passwordHash, accountId, policy);
+  if (reused) {
+    res.status(422).json({
+      error: `New password must differ from your current password and the last ${policy.passwordHistoryCount} previous passwords.`,
+      messages: [`Password has been used recently. Choose a different password.`],
+    });
+    return;
+  }
+
+  const newPasswordHash = await bcrypt.hash(body.data.newPassword, 12);
+  const now = new Date();
+  // Transaction: update pharmacy, append history, revoke all refresh tokens
+  const updatedCredential = await db.transaction(async (tx) => {
+    // Only the request that still owns the version it validated may replace
+    // credentials. Concurrent reset/change requests receive a conflict.
+    const [updated] = await tx
+      .update(pharmaciesTable)
+      .set({
+        passwordHash: newPasswordHash,
+        mustChangePassword: false,
+        temporaryPasswordExpiresAt: null,
+        passwordLastChangedAt: now,
+        sessionVersion: sql`${pharmaciesTable.sessionVersion} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(pharmaciesTable.id, accountId),
+          eq(pharmaciesTable.sessionVersion, record.sessionVersion),
+        ),
       )
-    );
+      .returning({ sessionVersion: pharmaciesTable.sessionVersion });
 
-  res.json({ message: "Password changed successfully" });
+    if (!updated) return null;
+
+    // Temporary credentials are never part of the user's password history.
+    // A normal or age-expired password is preserved before replacement.
+    if (!record.temporaryPasswordExpiresAt) {
+      await appendPasswordHistory(accountId, record.passwordHash, tx);
+    }
+
+    // Revoke all existing refresh tokens
+    await tx
+      .update(refreshTokensTable)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(refreshTokensTable.pharmacyId, accountId),
+          isNull(refreshTokensTable.revokedAt)
+        )
+      );
+
+    return updated;
+  });
+
+  if (!updatedCredential) {
+    res.status(409).json({
+      error: "Credentials changed during this request. Please sign in and try again.",
+      code: "CREDENTIALS_CHANGED",
+    });
+    return;
+  }
+
+  // Issue a fresh token pair so the frontend can continue without re-logging in
+  const { raw, hash: newTokenHash } = generateRefreshToken();
+  await db.insert(refreshTokensTable).values({
+    pharmacyId: accountId,
+    tokenHash: newTokenHash,
+    sessionVersion: updatedCredential.sessionVersion,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  const accessToken = signAccessToken({
+    sub: record.id,
+    role: "pharmacy",
+    name: record.name,
+    // mustChangePassword is now false — omit it
+    sessionVersion: updatedCredential.sessionVersion,
+  });
+
+  res.json({
+    accessToken,
+    refreshToken: raw,
+    user: {
+      id: record.id,
+      role: "pharmacy",
+      name: record.name,
+      username: record.username,
+      phone: record.phone,
+      controlledSubstanceAuthorized: record.controlledSubstanceAuthorized,
+      mustChangePassword: false,
+    },
+    message: "Password changed successfully",
+  });
 });
 
 // ── Logout ────────────────────────────────────────────────────────────────────

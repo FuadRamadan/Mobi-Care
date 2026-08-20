@@ -9,6 +9,7 @@ import flagsRouter from "./flags.js";
 import settlementsRouter from "./settlements.js";
 import auditRouter from "./audit.js";
 import notificationsRouter from "./notifications.js";
+import passwordPolicyRouter from "./passwordPolicy.js";
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/flags", flagsRouter);
 router.use("/settlements", settlementsRouter);
 router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/password-policy", passwordPolicyRouter);
 
 export default router;

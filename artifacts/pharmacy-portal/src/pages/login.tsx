@@ -27,7 +27,10 @@ export default function Login() {
   });
 
   if (isLoading) return null;
-  if (user) return <Redirect to="/dashboard" />;
+  if (user) {
+    if (user.mustChangePassword) return <Redirect to="/change-password" />;
+    return <Redirect to="/dashboard" />;
+  }
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     setError(null);

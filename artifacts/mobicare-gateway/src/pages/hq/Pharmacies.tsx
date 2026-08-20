@@ -3,6 +3,7 @@ import {
   useListHqPharmacies,
   useOnboardPharmacy,
   useUpdateHqPharmacy,
+  useResetPharmacyPassword,
   getListHqPharmaciesQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,9 +17,20 @@ import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Copy } from 'lucide-react';
+import { Copy, KeyRound, AlertTriangle } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function HqPharmacies() {
   const queryClient = useQueryClient();
@@ -30,14 +42,17 @@ export default function HqPharmacies() {
   const onError = (err: unknown) =>
     toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
 
-  const [open, setOpen] = useState(false);
+  const [openOnboard, setOpenOnboard] = useState(false);
   const [form, setForm] = useState({ name: '', username: '', phone: '', address: '' });
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [tempPasswordRes, setTempPasswordRes] = useState<{ tempPassword: string; temporaryPasswordExpiresAt: string } | null>(null);
+
+  const [resetTargetId, setResetTargetId] = useState<string | null>(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const onboard = useOnboardPharmacy({
     mutation: {
       onSuccess: (res) => {
-        setTempPassword(res.tempPassword);
+        setTempPasswordRes({ tempPassword: res.tempPassword, temporaryPasswordExpiresAt: res.temporaryPasswordExpiresAt });
         refresh();
       },
       onError,
@@ -45,55 +60,98 @@ export default function HqPharmacies() {
   });
   const update = useUpdateHqPharmacy({ mutation: { onSuccess: refresh, onError } });
 
+  const resetPassword = useResetPharmacyPassword({
+    mutation: {
+      onSuccess: (res) => {
+        setTempPasswordRes({ tempPassword: res.tempPassword, temporaryPasswordExpiresAt: res.temporaryPasswordExpiresAt });
+        refresh();
+        setResetConfirmOpen(false);
+      },
+      onError: (err) => {
+        onError(err);
+        setResetConfirmOpen(false);
+      },
+    },
+  });
+
+  const activeResetTarget = pharmacies.find(p => p.id === resetTargetId);
+
   return (
     <HqLayout title="Pharmacies">
       <div className="mb-4">
         <Dialog
-          open={open}
+          open={openOnboard || !!tempPasswordRes}
           onOpenChange={(v) => {
-            setOpen(v);
+            if (!v && tempPasswordRes) return;
             if (!v) {
-              setTempPassword(null);
+              setTempPasswordRes(null);
               setForm({ name: '', username: '', phone: '', address: '' });
+              setOpenOnboard(false);
+            } else {
+              setOpenOnboard(v);
             }
           }}
         >
           <DialogTrigger asChild>
             <Button data-testid="button-onboard-pharmacy">Onboard pharmacy</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent
+            className={tempPasswordRes ? '[&>button]:hidden' : undefined}
+            onEscapeKeyDown={(event) => {
+              if (tempPasswordRes) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (tempPasswordRes) event.preventDefault();
+            }}
+          >
             <DialogHeader>
-              <DialogTitle>Onboard a pharmacy</DialogTitle>
+              <DialogTitle>{tempPasswordRes ? 'Temporary Password Generated' : 'Onboard a pharmacy'}</DialogTitle>
               <DialogDescription>
-                A one-time temporary password is generated — share it securely with the pharmacy. It is shown only once.
+                {tempPasswordRes
+                  ? 'A one-time temporary password has been generated. Ensure you communicate it securely. It will not be shown again.'
+                  : 'Create a new pharmacy account. A one-time temporary password will be generated.'}
               </DialogDescription>
             </DialogHeader>
 
-            {tempPassword ? (
-              <div className="space-y-3">
-                <p className="text-sm">Pharmacy created. Temporary password:</p>
-                <div className="flex items-center gap-2">
-                  <code className="bg-muted px-3 py-2 rounded-lg font-mono text-lg" data-testid="text-temp-password">
-                    {tempPassword}
-                  </code>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(tempPassword);
-                      toast({ title: 'Copied to clipboard' });
-                    }}
-                  >
-                    <Copy className="w-4 h-4" />
+            {tempPasswordRes ? (
+              <div className="space-y-4 pt-2">
+                <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Temporary Password</p>
+                      <code className="font-mono text-xl tracking-tight font-bold text-foreground" data-testid="text-temp-password">
+                        {tempPasswordRes.tempPassword}
+                      </code>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(tempPasswordRes.tempPassword);
+                        toast({ title: 'Copied to clipboard' });
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded border border-amber-200 dark:border-amber-900/50">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p>
+                      This password expires on <strong>{format(new Date(tempPasswordRes.temporaryPasswordExpiresAt), 'PPP p')}</strong>.
+                      The pharmacy must log in and change their password before this time.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button onClick={() => { setTempPasswordRes(null); setOpenOnboard(false); }} variant="default">
+                    I have saved it securely
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  This password will not be shown again. The pharmacy should change it after first login.
-                </p>
               </div>
             ) : (
               <form
-                className="space-y-3"
+                className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault();
                   onboard.mutate({
@@ -131,6 +189,34 @@ export default function HqPharmacies() {
         </Dialog>
       </div>
 
+      <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Pharmacy Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the password for <strong>{activeResetTarget?.name}</strong>?
+              <br/><br/>
+              This will immediately invalidate their current password and disconnect active sessions. A new temporary password will be generated that you must relay to them securely.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetPassword.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resetPassword.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (resetTargetId) {
+                  resetPassword.mutate({ id: resetTargetId });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resetPassword.isPending ? 'Resetting...' : 'Yes, Reset Password'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : pharmacies.length === 0 ? (
@@ -146,6 +232,7 @@ export default function HqPharmacies() {
                 <TableHead>Online</TableHead>
                 <TableHead>Tier 1 authorised</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="w-16">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -179,6 +266,25 @@ export default function HqPharmacies() {
                     />
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{formatDate(p.createdAt)}</TableCell>
+                  <TableCell>
+                    {p.isActive ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5 h-8 w-full border-border/60 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30"
+                        onClick={() => {
+                          setResetTargetId(p.id);
+                          setResetConfirmOpen(true);
+                        }}
+                        data-testid={`button-reset-password-${p.id}`}
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        Reset
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground px-2">Inactive</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -10,6 +10,7 @@ import {
   Flag,
   Wallet,
   ScrollText,
+  ShieldCheck,
   LogOut,
   Bell,
   CheckCheck,
@@ -38,6 +39,7 @@ const NAV = [
   { href: '/hq/flags', label: 'Flags', icon: Flag },
   { href: '/hq/settlements', label: 'Settlements', icon: Wallet },
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
+  { href: '/hq/settings', label: 'Security & Settings', icon: ShieldCheck },
 ];
 
 export default function HqLayout({ children, title }: { children: ReactNode; title: string }) {
@@ -107,7 +109,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
             <div className="text-[11px] text-white/60">Oversight console</div>
           </div>
         </div>
-        <nav className="flex-1 py-4 space-y-0.5 px-2">
+        <nav className="flex-1 py-4 space-y-0.5 px-2 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -205,7 +207,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                   ) : (
                     notifications.slice(0, 8).map((notification) => (
                       <Link
-                        key={notification.id}
+                         key={notification.id}
                         href="/hq/orders"
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',

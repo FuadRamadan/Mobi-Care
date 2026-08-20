@@ -64,6 +64,9 @@ import type {
   Notification,
   Order,
   OrderStatusUpdate,
+  PasswordChangeResult,
+  PasswordPolicy,
+  PasswordPolicyUpdate,
   PatientNotification,
   PatientOrder,
   PatientOrderInput,
@@ -71,6 +74,7 @@ import type {
   PatientSearchDrugsParams,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
+  PharmacyResetPasswordResponse,
   Prescription,
   PrescriptionApproval,
   PrescriptionRejection,
@@ -339,11 +343,11 @@ export const getChangePasswordUrl = () => {
 }
 
 /**
- * @summary Change password (authenticated)
+ * @summary Change password (authenticated). For pharmacy accounts, returns a fresh token pair and user so the frontend can continue without re-logging in.
  */
-export const changePassword = async (changePasswordInput: ChangePasswordInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+export const changePassword = async (changePasswordInput: ChangePasswordInput, options?: Parameters<typeof customFetch>[1]): Promise<PasswordChangeResult> => {
 
-  return customFetch<MessageResponse>(getChangePasswordUrl(),
+  return customFetch<PasswordChangeResult>(getChangePasswordUrl(),
   {
     ...options,
     method: 'POST',
@@ -356,7 +360,7 @@ export const changePassword = async (changePasswordInput: ChangePasswordInput, o
 
 
 
-export const getChangePasswordMutationOptions = <TError = ErrorType<unknown>,
+export const getChangePasswordMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext> => {
 
@@ -385,12 +389,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>
     export type ChangePasswordMutationBody = BodyType<ChangePasswordInput>
-    export type ChangePasswordMutationError = ErrorType<unknown>
+    export type ChangePasswordMutationError = ErrorType<void>
 
     /**
- * @summary Change password (authenticated)
+ * @summary Change password (authenticated). For pharmacy accounts, returns a fresh token pair and user so the frontend can continue without re-logging in.
  */
-export const useChangePassword = <TError = ErrorType<unknown>,
+export const useChangePassword = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,{data: BodyType<ChangePasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof changePassword>>,
@@ -3680,6 +3684,225 @@ export const useUpdateHqPharmacy = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateHqPharmacyMutationOptions(options));
+    }
+
+export const getResetPharmacyPasswordUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/pharmacies/${id}/reset-password`
+}
+
+/**
+ * @summary Generate a new temporary password for an active pharmacy (returns plaintext once)
+ */
+export const resetPharmacyPassword = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyResetPasswordResponse> => {
+
+  return customFetch<PharmacyResetPasswordResponse>(getResetPharmacyPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResetPharmacyPasswordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPharmacyPassword>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetPharmacyPassword>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['resetPharmacyPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPharmacyPassword>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resetPharmacyPassword(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetPharmacyPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPharmacyPassword>>>
+
+    export type ResetPharmacyPasswordMutationError = ErrorType<void>
+
+    /**
+ * @summary Generate a new temporary password for an active pharmacy (returns plaintext once)
+ */
+export const useResetPharmacyPassword = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPharmacyPassword>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetPharmacyPassword>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getResetPharmacyPasswordMutationOptions(options));
+    }
+
+export const getGetPasswordPolicyUrl = () => {
+
+
+
+
+  return `/api/hq/password-policy`
+}
+
+/**
+ * @summary Get the current pharmacy password policy
+ */
+export const getPasswordPolicy = async ( options?: Parameters<typeof customFetch>[1]): Promise<PasswordPolicy> => {
+
+  return customFetch<PasswordPolicy>(getGetPasswordPolicyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPasswordPolicyQueryKey = () => {
+    return [
+    `/api/hq/password-policy`
+    ] as const;
+    }
+
+
+export const getGetPasswordPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getPasswordPolicy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPasswordPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPasswordPolicyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPasswordPolicy>>> = ({ signal }) => getPasswordPolicy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPasswordPolicy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPasswordPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getPasswordPolicy>>>
+export type GetPasswordPolicyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current pharmacy password policy
+ */
+
+export function useGetPasswordPolicy<TData = Awaited<ReturnType<typeof getPasswordPolicy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPasswordPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPasswordPolicyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePasswordPolicyUrl = () => {
+
+
+
+
+  return `/api/hq/password-policy`
+}
+
+/**
+ * @summary Update the pharmacy password policy
+ */
+export const updatePasswordPolicy = async (passwordPolicyUpdate: PasswordPolicyUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PasswordPolicy> => {
+
+  return customFetch<PasswordPolicy>(getUpdatePasswordPolicyUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(passwordPolicyUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePasswordPolicyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePasswordPolicy>>, TError,{data: BodyType<PasswordPolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePasswordPolicy>>, TError,{data: BodyType<PasswordPolicyUpdate>}, TContext> => {
+
+const mutationKey = ['updatePasswordPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePasswordPolicy>>, {data: BodyType<PasswordPolicyUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePasswordPolicy(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePasswordPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updatePasswordPolicy>>>
+    export type UpdatePasswordPolicyMutationBody = BodyType<PasswordPolicyUpdate>
+    export type UpdatePasswordPolicyMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the pharmacy password policy
+ */
+export const useUpdatePasswordPolicy = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePasswordPolicy>>, TError,{data: BodyType<PasswordPolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePasswordPolicy>>,
+        TError,
+        {data: BodyType<PasswordPolicyUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePasswordPolicyMutationOptions(options));
     }
 
 export const getListHqDrugsUrl = (params?: ListHqDrugsParams,) => {

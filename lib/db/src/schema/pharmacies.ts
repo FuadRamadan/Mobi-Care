@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -17,6 +17,11 @@ export const pharmaciesTable = pgTable("pharmacies", {
   // first password change. While true, pharmacy API access is blocked.
   mustChangePassword: boolean("must_change_password").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
+  // Password lifecycle tracking
+  passwordLastChangedAt: timestamp("password_last_changed_at", { withTimezone: true }).notNull().defaultNow(),
+  temporaryPasswordExpiresAt: timestamp("temporary_password_expires_at", { withTimezone: true }),
+  // Incremented on every credential reset; access tokens with a stale version are rejected
+  sessionVersion: integer("session_version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

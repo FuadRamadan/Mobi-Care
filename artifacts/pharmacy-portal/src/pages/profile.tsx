@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, User, Phone, KeyRound } from "lucide-react";
+import { ShieldCheck, User, Phone, KeyRound, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const passwordSchema = z.object({
@@ -22,8 +22,9 @@ const passwordSchema = z.object({
 });
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, completePasswordChange } = useAuth();
   const changePassword = useChangePassword();
+  const [error, setError] = useState<{ message: string; policyErrors?: string[] } | null>(null);
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -37,8 +38,9 @@ export default function Profile() {
   if (!user) return null;
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
+    setError(null);
     try {
-      await changePassword.mutateAsync({
+      const result = await changePassword.mutateAsync({
         data: {
           currentPassword: values.currentPassword,
           newPassword: values.newPassword
@@ -46,8 +48,19 @@ export default function Profile() {
       });
       toast.success("Password changed successfully");
       form.reset();
+      completePasswordChange(result);
     } catch (e: any) {
-      toast.error(e.message || "Failed to change password");
+      const data = e.data;
+      if (data?.messages && Array.isArray(data.messages)) {
+        setError({
+          message: data.error || "Password change failed.",
+          policyErrors: data.messages
+        });
+      } else {
+        setError({
+          message: data?.error || e.message || "Failed to change password. Please check your current password."
+        });
+      }
     }
   };
 
@@ -113,6 +126,21 @@ export default function Profile() {
             <CardContent className="pt-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+                  {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md flex gap-3 mb-4">
+                      <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-destructive font-medium">{error.message}</p>
+                        {error.policyErrors && error.policyErrors.length > 0 && (
+                          <ul className="mt-2 list-disc pl-4 text-xs text-destructive/90 space-y-1">
+                            {error.policyErrors.map((msg, i) => (
+                              <li key={i}>{msg}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="currentPassword"

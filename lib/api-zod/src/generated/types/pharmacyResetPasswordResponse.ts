@@ -7,10 +7,10 @@
  */
 import type { HqPharmacy } from './hqPharmacy';
 
-export interface PharmacyOnboardResponse {
-  pharmacy: HqPharmacy;
-  /** Shown once — store it securely and hand it to the pharmacy */
+export interface PharmacyResetPasswordResponse {
+  /** Shown once — hand it to the pharmacy immediately; it is not stored in plaintext */
   tempPassword: string;
   /** ISO timestamp when the temporary password expires */
   temporaryPasswordExpiresAt: string;
+  pharmacy: HqPharmacy;
 }

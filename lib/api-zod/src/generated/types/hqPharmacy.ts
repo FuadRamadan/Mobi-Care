@@ -20,6 +20,11 @@ export interface HqPharmacy {
   locationLng?: string | null;
   isActive: boolean;
   controlledSubstanceAuthorized: boolean;
+  mustChangePassword: boolean;
+  sessionVersion: number;
+  passwordLastChangedAt: string;
+  /** @nullable */
+  temporaryPasswordExpiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

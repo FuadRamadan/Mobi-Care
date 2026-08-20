@@ -51,6 +51,15 @@ export interface PharmacyUser {
   mustChangePassword?: boolean;
 }
 
+export interface PasswordChangeResult {
+  message: string;
+  /** Fresh access token (pharmacy accounts only) */
+  accessToken?: string;
+  /** Fresh refresh token (pharmacy accounts only) */
+  refreshToken?: string;
+  user?: PharmacyUser;
+}
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -614,6 +623,11 @@ export interface HqPharmacy {
   locationLng?: string | null;
   isActive: boolean;
   controlledSubstanceAuthorized: boolean;
+  mustChangePassword: boolean;
+  sessionVersion: number;
+  passwordLastChangedAt: string;
+  /** @nullable */
+  temporaryPasswordExpiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -631,6 +645,61 @@ export interface PharmacyOnboardResponse {
   pharmacy: HqPharmacy;
   /** Shown once — store it securely and hand it to the pharmacy */
   tempPassword: string;
+  /** ISO timestamp when the temporary password expires */
+  temporaryPasswordExpiresAt: string;
+}
+
+export interface PharmacyResetPasswordResponse {
+  /** Shown once — hand it to the pharmacy immediately; it is not stored in plaintext */
+  tempPassword: string;
+  /** ISO timestamp when the temporary password expires */
+  temporaryPasswordExpiresAt: string;
+  pharmacy: HqPharmacy;
+}
+
+export interface PasswordPolicy {
+  id: number;
+  /** Number of days before a password must be changed */
+  maxPasswordAgeDays: number;
+  /** Minimum number of characters required */
+  minPasswordLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSymbol: boolean;
+  /** Number of previous passwords that cannot be reused */
+  passwordHistoryCount: number;
+  /** Hours until a temporary password expires */
+  temporaryPasswordExpiryHours: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PasswordPolicyUpdate {
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  maxPasswordAgeDays?: number;
+  /**
+     * @minimum 8
+     * @maximum 128
+     */
+  minPasswordLength?: number;
+  requireUppercase?: boolean;
+  requireLowercase?: boolean;
+  requireNumber?: boolean;
+  requireSymbol?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 24
+     */
+  passwordHistoryCount?: number;
+  /**
+     * @minimum 1
+     * @maximum 168
+     */
+  temporaryPasswordExpiryHours?: number;
 }
 
 export interface HqPharmacyUpdate {

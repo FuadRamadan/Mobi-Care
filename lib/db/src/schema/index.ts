@@ -1,5 +1,7 @@
 export * from "./pharmacies";
 export * from "./refreshTokens";
+export * from "./pharmacyPasswordPolicy";
+export * from "./pharmacyPasswordHistory";
 export * from "./drugCatalogue";
 export * from "./pharmacyInventory";
 export * from "./orders";

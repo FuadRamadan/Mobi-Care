@@ -87,7 +87,7 @@ paths:
     post:
       operationId: changePassword
       tags: [auth]
-      summary: Change password (authenticated)
+      summary: Change password (authenticated). For pharmacy accounts, returns a fresh token pair and user so the frontend can continue without re-logging in.
       security:
         - BearerAuth: []
       requestBody:
@@ -98,11 +98,13 @@ paths:
               $ref: "#/components/schemas/ChangePasswordInput"
       responses:
         "200":
-          description: Password changed
+          description: Password changed — pharmacy accounts receive a fresh token pair; HQ/patient receive a message
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: "#/components/schemas/PasswordChangeResult"
+        "422":
+          description: Password does not meet policy requirements
 
   /auth/logout:
     post:
@@ -1047,6 +1049,70 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqPharmacy"
 
+  /hq/pharmacies/{id}/reset-password:
+    post:
+      operationId: resetPharmacyPassword
+      tags: [hq]
+      summary: Generate a new temporary password for an active pharmacy (returns plaintext once)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+      responses:
+        "400":
+          description: Invalid pharmacy id
+        "200":
+          description: Temporary password, expiry, and updated pharmacy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyResetPasswordResponse"
+        "404":
+          description: Pharmacy not found
+        "409":
+          description: Pharmacy is inactive
+
+  /hq/password-policy:
+    get:
+      operationId: getPasswordPolicy
+      tags: [hq]
+      summary: Get the current pharmacy password policy
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current password policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordPolicy"
+    patch:
+      operationId: updatePasswordPolicy
+      tags: [hq]
+      summary: Update the pharmacy password policy
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordPolicyUpdate"
+      responses:
+        "200":
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordPolicy"
+        "400":
+          description: Invalid policy values
+
   /hq/drugs:
     get:
       operationId: listHqDrugs
@@ -1378,6 +1444,21 @@ components:
         newPassword:
           type: string
           minLength: 8
+
+    PasswordChangeResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        accessToken:
+          type: string
+          description: Fresh access token (pharmacy accounts only)
+        refreshToken:
+          type: string
+          description: Fresh refresh token (pharmacy accounts only)
+        user:
+          $ref: "#/components/schemas/PharmacyUser"
 
     PharmacyUser:
       type: object
@@ -2137,7 +2218,7 @@ components:
 
     HqPharmacy:
       type: object
-      required: [id, name, username, isActive, controlledSubstanceAuthorized, createdAt, updatedAt]
+      required: [id, name, username, isActive, controlledSubstanceAuthorized, mustChangePassword, sessionVersion, passwordLastChangedAt, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2157,6 +2238,14 @@ components:
           type: boolean
         controlledSubstanceAuthorized:
           type: boolean
+        mustChangePassword:
+          type: boolean
+        sessionVersion:
+          type: number
+        passwordLastChangedAt:
+          type: string
+        temporaryPasswordExpiresAt:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -2179,13 +2268,88 @@ components:
 
     PharmacyOnboardResponse:
       type: object
-      required: [pharmacy, tempPassword]
+      required: [pharmacy, tempPassword, temporaryPasswordExpiresAt]
       properties:
         pharmacy:
           $ref: "#/components/schemas/HqPharmacy"
         tempPassword:
           type: string
           description: Shown once — store it securely and hand it to the pharmacy
+        temporaryPasswordExpiresAt:
+          type: string
+          description: ISO timestamp when the temporary password expires
+
+    PharmacyResetPasswordResponse:
+      type: object
+      required: [tempPassword, temporaryPasswordExpiresAt, pharmacy]
+      properties:
+        tempPassword:
+          type: string
+          description: Shown once — hand it to the pharmacy immediately; it is not stored in plaintext
+        temporaryPasswordExpiresAt:
+          type: string
+          description: ISO timestamp when the temporary password expires
+        pharmacy:
+          $ref: "#/components/schemas/HqPharmacy"
+
+    PasswordPolicy:
+      type: object
+      required: [id, maxPasswordAgeDays, minPasswordLength, requireUppercase, requireLowercase, requireNumber, requireSymbol, passwordHistoryCount, temporaryPasswordExpiryHours, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        maxPasswordAgeDays:
+          type: number
+          description: Number of days before a password must be changed
+        minPasswordLength:
+          type: number
+          description: Minimum number of characters required
+        requireUppercase:
+          type: boolean
+        requireLowercase:
+          type: boolean
+        requireNumber:
+          type: boolean
+        requireSymbol:
+          type: boolean
+        passwordHistoryCount:
+          type: number
+          description: Number of previous passwords that cannot be reused
+        temporaryPasswordExpiryHours:
+          type: number
+          description: Hours until a temporary password expires
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PasswordPolicyUpdate:
+      type: object
+      properties:
+        maxPasswordAgeDays:
+          type: number
+          minimum: 1
+          maximum: 365
+        minPasswordLength:
+          type: number
+          minimum: 8
+          maximum: 128
+        requireUppercase:
+          type: boolean
+        requireLowercase:
+          type: boolean
+        requireNumber:
+          type: boolean
+        requireSymbol:
+          type: boolean
+        passwordHistoryCount:
+          type: number
+          minimum: 0
+          maximum: 24
+        temporaryPasswordExpiryHours:
+          type: number
+          minimum: 1
+          maximum: 168
 
     HqPharmacyUpdate:
       type: object

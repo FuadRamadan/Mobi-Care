@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { PharmacyUser, useLogin, useLogout, useRefreshToken } from "@workspace/api-client-react";
+import { PharmacyUser, PasswordChangeResult, useLogin, useLogout, useRefreshToken } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ interface AuthContextType {
   user: PharmacyUser | null;
   login: ReturnType<typeof useLogin>["mutateAsync"];
   logout: () => void;
+  completePasswordChange: (res: PasswordChangeResult) => void;
   isLoading: boolean;
 }
 
@@ -47,6 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
   const refreshMutation = useRefreshToken();
+
+  useEffect(() => {
+    const handleInvalidatedSession = () => {
+      queryClient.clear();
+      localStorage.removeItem("mc_access");
+      localStorage.removeItem("mc_refresh");
+      setUser(null);
+      setLocation("/login");
+      toast.error("Your session was ended after a security update. Please sign in again.");
+    };
+
+    window.addEventListener("mobicare:session-invalidated", handleInvalidatedSession);
+    return () => {
+      window.removeEventListener("mobicare:session-invalidated", handleInvalidatedSession);
+    };
+  }, [queryClient, setLocation]);
 
   const handleLogout = useCallback(async () => {
     const refresh = localStorage.getItem("mc_refresh");
@@ -110,13 +127,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("mc_access", res.accessToken);
     localStorage.setItem("mc_refresh", res.refreshToken);
     setUser(res.user);
-    toast.success(`Welcome to ${res.user.name}`);
-    setLocation("/dashboard");
+    if (res.user.mustChangePassword) {
+      setLocation("/change-password");
+    } else {
+      toast.success(`Welcome to ${res.user.name}`);
+      setLocation("/dashboard");
+    }
     return res;
   };
 
+  const completePasswordChange = useCallback((res: PasswordChangeResult) => {
+    if (res.accessToken && res.refreshToken && res.user) {
+      localStorage.setItem("mc_access", res.accessToken);
+      localStorage.setItem("mc_refresh", res.refreshToken);
+      setUser(res.user);
+      queryClient.clear();
+      setLocation("/dashboard");
+    }
+  }, [queryClient, setLocation]);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout: handleLogout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout: handleLogout, completePasswordChange, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

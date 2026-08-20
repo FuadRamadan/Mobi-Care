@@ -14,6 +14,12 @@ export interface PharmacyTokenPayload {
   name: string;
   /** Pharmacy onboarded with a temp password must change it before using the API */
   mustChangePassword?: boolean;
+  /**
+   * Incremented on every credential reset. requireAuth compares this against
+   * the live pharmacy row and rejects stale tokens immediately.
+   * Only present in pharmacy tokens.
+   */
+  sessionVersion?: number;
 }
 
 export function signAccessToken(payload: PharmacyTokenPayload): string {

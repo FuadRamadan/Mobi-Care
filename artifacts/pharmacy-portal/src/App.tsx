@@ -9,13 +9,15 @@ import {
   Switch,
   useLocation,
   Router as WouterRouter,
+  Redirect,
 } from 'wouter';
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { Shell } from '@/components/layout/Shell';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 
 const Login = lazy(() => import('@/pages/login'));
+const ChangePassword = lazy(() => import('@/pages/change-password'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Orders = lazy(() => import('@/pages/orders'));
 const Inventory = lazy(() => import('@/pages/inventory'));
@@ -46,6 +48,27 @@ function RouteLoading() {
 }
 
 function ProtectedRoutes() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <RouteLoading />;
+  }
+
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  if (user.mustChangePassword) {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <Switch>
+          <Route path="/change-password" component={ChangePassword} />
+          <Route component={() => <Redirect to="/change-password" />} />
+        </Switch>
+      </Suspense>
+    );
+  }
+
   return (
     <Shell>
       <Suspense fallback={<RouteLoading />}>
