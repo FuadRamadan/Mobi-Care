@@ -305,7 +305,7 @@ export default function Home() {
               className="flex flex-col items-center gap-3"
             >
               <div className="w-28 h-28 rounded-2xl overflow-hidden border border-border shadow-sm flex items-center justify-center bg-white">
-                <img src="/orange-sl-logo.png" alt="Orange Sierra Leone" className="w-full h-full object-cover" />
+                <img src="/orange-sl-logo.png" alt="Orange Sierra Leone" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </div>
               <p className="font-display font-semibold text-dark-green">Orange Sierra Leone</p>
             </motion.div>
@@ -317,7 +317,7 @@ export default function Home() {
               className="flex flex-col items-center gap-3"
             >
               <div className="w-28 h-28 rounded-2xl overflow-hidden border border-border shadow-sm flex items-center justify-center bg-white p-3">
-                <img src="/innovation-sl-logo.jpg" alt="Innovation SL" className="w-full h-full object-contain" />
+                <img src="/innovation-sl-logo.jpg" alt="Innovation SL" loading="lazy" decoding="async" className="w-full h-full object-contain" />
               </div>
               <p className="font-display font-semibold text-dark-green">Innovation SL</p>
             </motion.div>

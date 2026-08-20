@@ -15,13 +15,7 @@ import {
 } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 
-function NativeTabLayout() {
-  const { itemCount } = useCart();
-  const { data: unread } = useGetPatientUnreadCount({
-    query: { queryKey: getGetPatientUnreadCountQueryKey(), refetchInterval: 30_000 },
-  });
-  const unreadCount = unread?.unreadCount ?? 0;
-
+function NativeTabLayout({ itemCount, unreadCount }: { itemCount: number; unreadCount: number }) {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index" role="search">
@@ -46,19 +40,13 @@ function NativeTabLayout() {
   );
 }
 
-function ClassicTabLayout() {
+function ClassicTabLayout({ itemCount, unreadCount }: { itemCount: number; unreadCount: number }) {
   const colors = useColors();
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
-  const { itemCount } = useCart();
-  const { data: unread } = useGetPatientUnreadCount({
-    query: { queryKey: getGetPatientUnreadCountQueryKey(), refetchInterval: 30_000 },
-  });
-  const unreadCount = unread?.unreadCount ?? 0;
-
   return (
     <Tabs
       screenOptions={{
@@ -149,10 +137,20 @@ function ClassicTabLayout() {
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { itemCount } = useCart();
+  const { data: unread } = useGetPatientUnreadCount({
+    query: {
+      queryKey: getGetPatientUnreadCountQueryKey(),
+      enabled: isAuthenticated,
+      refetchInterval: 30_000,
+    },
+  });
+  const unreadCount = unread?.unreadCount ?? 0;
+
   if (!isLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
+    return <NativeTabLayout itemCount={itemCount} unreadCount={unreadCount} />;
   }
-  return <ClassicTabLayout />;
+  return <ClassicTabLayout itemCount={itemCount} unreadCount={unreadCount} />;
 }

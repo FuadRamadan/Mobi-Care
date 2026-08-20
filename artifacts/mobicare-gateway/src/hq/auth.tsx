@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLogin } from '@workspace/api-client-react';
 import {
   HQ_ACCESS_KEY as ACCESS_KEY,
@@ -39,6 +40,7 @@ function readStoredUser(): HqUser | null {
 
 export function HqAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<HqUser | null>(readStoredUser);
+  const queryClient = useQueryClient();
   const loginMutation = useLogin();
 
   const login = useCallback(
@@ -52,21 +54,23 @@ export function HqAuthProvider({ children }: { children: ReactNode }) {
       if (u.role !== 'hq') {
         throw new Error('This login is for HQ staff only. Pharmacies should use the Pharmacy Portal.');
       }
+      queryClient.clear();
       localStorage.setItem(ACCESS_KEY, accessToken);
       localStorage.setItem(REFRESH_KEY, refreshToken);
       const hqUser: HqUser = { id: u.id, name: u.name, username: u.username };
       localStorage.setItem(USER_KEY, JSON.stringify(hqUser));
       setUser(hqUser);
     },
-    [loginMutation],
+    [loginMutation, queryClient],
   );
 
   const logout = useCallback(() => {
+    queryClient.clear();
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   // Keep the 15-minute access token fresh: check every minute and rotate via
   // /auth/refresh when it is close to (or past) expiry. On refresh failure,

@@ -280,6 +280,8 @@ export default function About() {
                     <img
                       src={member.photo}
                       alt={member.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-64 h-64 rounded-full object-cover object-top mb-6 border-4 border-white shadow-xl"
                     />
                   ) : (

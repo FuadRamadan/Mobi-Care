@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { useQueryClient } from '@tanstack/react-query';
 import { login as apiLogin, logout as apiLogout, refreshToken as apiRefreshToken, registerPatient as apiRegisterPatient, setAuthTokenGetter, updatePatientPushToken } from '@workspace/api-client-react';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
 
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const accessTokenRef = useRef<string | null>(null);
   const refreshTokenRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Register a stable token getter for the API client
   useEffect(() => {
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applyTokens = useCallback(async (accessToken: string, refreshToken: string, userData: PatientUser) => {
+    queryClient.clear();
     accessTokenRef.current = accessToken;
     refreshTokenRef.current = refreshToken;
     setUser(userData);
@@ -106,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       secureSet(SEC_KEY_REFRESH, refreshToken),
       AsyncStorage.setItem(ASYNC_KEY_USER, JSON.stringify(userData)),
     ]);
-  }, []);
+  }, [queryClient]);
 
   const clearSession = useCallback(async (refreshTok?: string | null) => {
     try {
@@ -116,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (refreshTok) await apiLogout({ refreshToken: refreshTok });
     } catch { /* best effort */ }
+    queryClient.clear();
     accessTokenRef.current = null;
     refreshTokenRef.current = null;
     setUser(null);
@@ -124,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       secureDelete(SEC_KEY_REFRESH),
       AsyncStorage.removeItem(ASYNC_KEY_USER),
     ]);
-  }, []);
+  }, [queryClient]);
 
   // Load stored session on mount
   useEffect(() => {
@@ -136,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem(ASYNC_KEY_USER),
         ]);
         if (at && rt && userStr) {
+          queryClient.clear();
           accessTokenRef.current = at;
           refreshTokenRef.current = rt;
           setUser(JSON.parse(userStr));
@@ -149,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     loadSession();
-  }, []);
+  }, [queryClient, syncPushToken]);
 
   // Proactive token refresh: check every 60s, refresh if ≤120s remaining
   useEffect(() => {

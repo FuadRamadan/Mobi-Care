@@ -5,3 +5,4 @@
 - [Expo mobile API patterns](expo-mobile-api-patterns.md) — Orval hook call patterns: query options nested in `{ query: ... }`, path params as positional strings, body mutations wrapped in `{ data: ... }`.
 - [Password reset hashing](password-reset-hashing.md) — CodeExecution must load bcryptjs from the API workspace’s exact module path, not the repository root.
 - [HQ notification ownership](hq-notification-ownership.md) — HQ alerts are per staff member; one person reading an alert must not clear it for colleagues.
+- [Authenticated query caching](authenticated-query-caching.md) — positive cache freshness requires clearing shared client data whenever the signed-in identity changes.

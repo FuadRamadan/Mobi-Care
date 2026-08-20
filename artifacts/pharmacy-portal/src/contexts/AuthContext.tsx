@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { PharmacyUser, useLogin, useLogout, useRefreshToken } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AuthContextType {
   user: PharmacyUser | null;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PharmacyUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -46,11 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // ignore errors on logout
       }
     }
+    queryClient.clear();
     localStorage.removeItem("mc_access");
     localStorage.removeItem("mc_refresh");
     setUser(null);
     setLocation("/login");
-  }, [logoutMutation, setLocation]);
+  }, [logoutMutation, queryClient, setLocation]);
 
   useEffect(() => {
     async function initAuth() {
@@ -74,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const decoded = decodeJwt(res.accessToken);
           setUser(decoded?.user || decoded);
         } catch (e) {
+          queryClient.clear();
           localStorage.removeItem("mc_access");
           localStorage.removeItem("mc_refresh");
           setUser(null);
@@ -83,10 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initAuth();
-  }, [refreshMutation]);
+  }, [queryClient, refreshMutation]);
 
   const login = async (...args: Parameters<typeof loginMutation.mutateAsync>) => {
     const res = await loginMutation.mutateAsync(...args);
+    queryClient.clear();
     localStorage.setItem("mc_access", res.accessToken);
     localStorage.setItem("mc_refresh", res.refreshToken);
     setUser(res.user);

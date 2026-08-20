@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useRegisterPatient } from '@workspace/api-client-react';
 import {
   PT_ACCESS_KEY as ACCESS_KEY,
@@ -40,18 +41,20 @@ function readStoredUser(): PatientUser | null {
 
 export function PatientAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PatientUser | null>(readStoredUser);
+  const queryClient = useQueryClient();
   const loginMutation = useLogin();
   const registerMutation = useRegisterPatient();
 
   const storeSession = useCallback(
     (accessToken: string, refreshToken: string, u: { id: string; name: string; phone?: string | null }) => {
+      queryClient.clear();
       localStorage.setItem(ACCESS_KEY, accessToken);
       localStorage.setItem(REFRESH_KEY, refreshToken);
       const ptUser: PatientUser = { id: u.id, name: u.name, phone: u.phone ?? '' };
       localStorage.setItem(USER_KEY, JSON.stringify(ptUser));
       setUser(ptUser);
     },
-    [],
+    [queryClient],
   );
 
   const login = useCallback(
@@ -86,11 +89,12 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    queryClient.clear();
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
-  }, []);
+  }, [queryClient]);
 
   // Rotate the 15-minute access token before expiry; log out if refresh fails.
   useEffect(() => {
