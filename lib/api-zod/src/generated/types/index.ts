@@ -46,6 +46,7 @@ export * from './hqDrugUpdateTier';
 export * from './hqFlag';
 export * from './hqFlagStatus';
 export * from './hqFlagType';
+export * from './hqNotification';
 export * from './hqOrder';
 export * from './hqOrderFulfillmentType';
 export * from './hqOrderStatus';

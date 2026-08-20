@@ -478,6 +478,20 @@ export interface DailyOrderStat {
   revenueLeones: number;
 }
 
+export interface HqNotification {
+  id: string;
+  hqStaffId: string;
+  title: string;
+  body: string;
+  /** @nullable */
+  type?: string | null;
+  /** @nullable */
+  referenceId?: string | null;
+  /** @nullable */
+  readAt?: string | null;
+  createdAt: string;
+}
+
 export type HqDashboardTotals = {
   orders: number;
   ordersToday: number;

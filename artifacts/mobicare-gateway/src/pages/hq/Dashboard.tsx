@@ -1,4 +1,4 @@
-import { useGetHqDashboard } from '@workspace/api-client-react';
+import { getGetHqDashboardQueryKey, useGetHqDashboard } from '@workspace/api-client-react';
 import {
   Package,
   Building2,
@@ -14,7 +14,9 @@ import { StatCard, StatusBadge, formatLeones, formatDate, EmptyState } from './s
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function HqDashboard() {
-  const { data: d, isLoading } = useGetHqDashboard();
+  const { data: d, isLoading } = useGetHqDashboard({
+    query: { queryKey: getGetHqDashboardQueryKey(), refetchInterval: 10_000 },
+  });
   const t = d?.totals;
 
   return (

@@ -7,6 +7,7 @@ export * from "./orderItems";
 export * from "./prescriptions";
 export * from "./notifications";
 export * from "./hqStaff";
+export * from "./hqNotifications";
 export * from "./couriers";
 export * from "./settlements";
 export * from "./flags";

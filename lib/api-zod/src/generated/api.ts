@@ -929,6 +929,42 @@ export const GetHqDashboardResponse = zod.object({
 
 
 /**
+ * @summary List notifications for the authenticated HQ staff member
+ */
+export const ListHqNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "hqStaffId": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "type": zod.string().nullish(),
+  "referenceId": zod.string().nullish(),
+  "readAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListHqNotificationsResponse = zod.array(ListHqNotificationsResponseItem)
+
+
+/**
+ * @summary Get the authenticated HQ staff member's unread notification count
+ */
+export const GetHqUnreadCountResponse = zod.object({
+  "unreadCount": zod.number()
+})
+
+
+/**
+ * @summary Mark HQ notifications as read (omit ids to mark all)
+ */
+export const MarkHqNotificationsReadBody = zod.object({
+  "ids": zod.array(zod.string()).optional()
+})
+
+export const MarkHqNotificationsReadResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary All orders across all pharmacies
  */
 export const ListHqOrdersQueryParams = zod.object({

@@ -17,6 +17,7 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { expireStaleOrders, paymentCutoff } from "../../lib/orderExpiry.js";
 import { checkOrderFlags } from "../../lib/flags.js";
+import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
 
 const router = Router();
 
@@ -345,6 +346,7 @@ router.post("/", async (req: AuthRequest, res) => {
     details: { pharmacyId: input.pharmacyId, totalLeones: total, fulfillmentType: input.fulfillmentType },
   });
   await checkOrderFlags(createdOrder);
+  await notifyHqOfNewOrder(createdOrder, pharmacy.name);
 
   res.status(201).json((await hydratePatientOrders([createdOrder]))[0]);
 });

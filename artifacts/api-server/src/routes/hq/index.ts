@@ -8,6 +8,7 @@ import couriersRouter from "./couriers.js";
 import flagsRouter from "./flags.js";
 import settlementsRouter from "./settlements.js";
 import auditRouter from "./audit.js";
+import notificationsRouter from "./notifications.js";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use("/couriers", couriersRouter);
 router.use("/flags", flagsRouter);
 router.use("/settlements", settlementsRouter);
 router.use("/audit", auditRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

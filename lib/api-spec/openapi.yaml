@@ -808,6 +808,59 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqDashboard"
 
+  /hq/notifications:
+    get:
+      operationId: listHqNotifications
+      tags: [hq]
+      summary: List notifications for the authenticated HQ staff member
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: HQ notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqNotification"
+
+  /hq/notifications/unread-count:
+    get:
+      operationId: getHqUnreadCount
+      tags: [hq]
+      summary: Get the authenticated HQ staff member's unread notification count
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /hq/notifications/mark-read:
+    post:
+      operationId: markHqNotificationsRead
+      tags: [hq]
+      summary: Mark HQ notifications as read (omit ids to mark all)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadInput"
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   /hq/orders:
     get:
       operationId: listHqOrders
@@ -1927,6 +1980,27 @@ components:
           type: number
 
     # ── HQ schemas ─────────────────────────────────────────────────────────
+    HqNotification:
+      type: object
+      required: [id, hqStaffId, title, body, createdAt]
+      properties:
+        id:
+          type: string
+        hqStaffId:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        type:
+          type: ["string", "null"]
+        referenceId:
+          type: ["string", "null"]
+        readAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
     HqDashboard:
       type: object
       required: [totals, ordersByStatus, recentOrders]

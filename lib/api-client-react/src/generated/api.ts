@@ -42,6 +42,7 @@ import type {
   HqDrugInput,
   HqDrugUpdate,
   HqFlag,
+  HqNotification,
   HqOrder,
   HqPharmacy,
   HqPharmacyUpdate,
@@ -2859,6 +2860,231 @@ export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboa
 
 
 
+
+export const getListHqNotificationsUrl = () => {
+
+
+
+
+  return `/api/hq/notifications`
+}
+
+/**
+ * @summary List notifications for the authenticated HQ staff member
+ */
+export const listHqNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<HqNotification[]> => {
+
+  return customFetch<HqNotification[]>(getListHqNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHqNotificationsQueryKey = () => {
+    return [
+    `/api/hq/notifications`
+    ] as const;
+    }
+
+
+export const getListHqNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listHqNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHqNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHqNotifications>>> = ({ signal }) => listHqNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHqNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHqNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listHqNotifications>>>
+export type ListHqNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List notifications for the authenticated HQ staff member
+ */
+
+export function useListHqNotifications<TData = Awaited<ReturnType<typeof listHqNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHqNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqUnreadCountUrl = () => {
+
+
+
+
+  return `/api/hq/notifications/unread-count`
+}
+
+/**
+ * @summary Get the authenticated HQ staff member's unread notification count
+ */
+export const getHqUnreadCount = async ( options?: Parameters<typeof customFetch>[1]): Promise<UnreadCount> => {
+
+  return customFetch<UnreadCount>(getGetHqUnreadCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqUnreadCountQueryKey = () => {
+    return [
+    `/api/hq/notifications/unread-count`
+    ] as const;
+    }
+
+
+export const getGetHqUnreadCountQueryOptions = <TData = Awaited<ReturnType<typeof getHqUnreadCount>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqUnreadCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqUnreadCountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqUnreadCount>>> = ({ signal }) => getHqUnreadCount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqUnreadCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqUnreadCountQueryResult = NonNullable<Awaited<ReturnType<typeof getHqUnreadCount>>>
+export type GetHqUnreadCountQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the authenticated HQ staff member's unread notification count
+ */
+
+export function useGetHqUnreadCount<TData = Awaited<ReturnType<typeof getHqUnreadCount>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqUnreadCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqUnreadCountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkHqNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/hq/notifications/mark-read`
+}
+
+/**
+ * @summary Mark HQ notifications as read (omit ids to mark all)
+ */
+export const markHqNotificationsRead = async (markReadInput?: MarkReadInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getMarkHqNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(markReadInput)
+  }
+);}
+
+
+
+
+
+export const getMarkHqNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markHqNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markHqNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext> => {
+
+const mutationKey = ['markHqNotificationsRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markHqNotificationsRead>>, {data?: BodyType<MarkReadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  markHqNotificationsRead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkHqNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markHqNotificationsRead>>>
+    export type MarkHqNotificationsReadMutationBody = BodyType<MarkReadInput> | undefined
+    export type MarkHqNotificationsReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark HQ notifications as read (omit ids to mark all)
+ */
+export const useMarkHqNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markHqNotificationsRead>>, TError,{data?: BodyType<MarkReadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markHqNotificationsRead>>,
+        TError,
+        {data?: BodyType<MarkReadInput>},
+        TContext
+      > => {
+      return useMutation(getMarkHqNotificationsReadMutationOptions(options));
+    }
 
 export const getListHqOrdersUrl = (params?: ListHqOrdersParams,) => {
   const normalizedParams = new URLSearchParams();
