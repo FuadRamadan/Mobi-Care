@@ -34,7 +34,7 @@ export default function Login() {
     try {
       await login({ data: values });
     } catch (e: any) {
-      setError(e.message || "Invalid credentials. Please try again.");
+      setError("We couldn’t sign you in with those details. Please check your username or phone number and password, then try again.");
     }
   };
 
