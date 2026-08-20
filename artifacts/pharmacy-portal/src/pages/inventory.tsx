@@ -84,7 +84,7 @@ export default function Inventory() {
           </p>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)} className="gap-2 shrink-0 bg-[#1A8F6E] hover:bg-[#157a5d] text-white">
-          <Plus className="w-4 h-4" /> Add a listing
+          <Plus className="w-4 h-4" /> Add Pharmacy Listing
         </Button>
       </div>
 
@@ -324,7 +324,7 @@ function AddListingModal({ open, onOpenChange }: { open: boolean; onOpenChange: 
       <DialogContent className="sm:max-w-[480px] gap-0 p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold">Add a listing</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Add Pharmacy Listing</DialogTitle>
             <button onClick={handleClose} className="rounded-sm opacity-70 hover:opacity-100 transition-opacity">
               <X className="h-4 w-4" />
             </button>
