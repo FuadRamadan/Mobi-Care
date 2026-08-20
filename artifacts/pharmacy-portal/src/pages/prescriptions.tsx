@@ -7,7 +7,9 @@ import {
   Prescription,
   PrescriptionStatus,
   PrescriptionRejectionReason,
-  useListInventory
+  useListInventory,
+  getListPrescriptionsQueryKey,
+  getGetAnalyticsOverviewQueryKey,
 } from "@workspace/api-client-react";
 import { formatDateTime } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,7 +37,9 @@ export default function Prescriptions() {
   const [search, setSearch] = useState("");
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
-  const { data: prescriptions, isLoading } = useListPrescriptions();
+  const { data: prescriptions, isLoading } = useListPrescriptions(undefined, {
+    query: { queryKey: getListPrescriptionsQueryKey(), refetchInterval: 15_000 },
+  });
 
   const filteredPrescriptions = prescriptions?.filter(p => {
     if (search && !p.patientName.toLowerCase().includes(search.toLowerCase()) && 
@@ -186,6 +190,7 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
       });
       toast.success("Prescription approved");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/prescriptions"] });
+      queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to approve prescription");
@@ -204,6 +209,7 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
       });
       toast.success("Prescription rejected");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/prescriptions"] });
+      queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to reject prescription");

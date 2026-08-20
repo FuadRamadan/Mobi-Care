@@ -70,7 +70,11 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     const newest = notifications[0];
     if (!newest) return;
 
-    if (newestNotificationId.current && newestNotificationId.current !== newest.id && newest.type === 'new_order') {
+    if (
+      newestNotificationId.current &&
+      newestNotificationId.current !== newest.id &&
+      (newest.type === 'new_order' || newest.type === 'order_ready')
+    ) {
       toast.info(newest.title, { description: newest.body });
     }
     newestNotificationId.current = newest.id;

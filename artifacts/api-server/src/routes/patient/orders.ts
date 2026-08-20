@@ -18,6 +18,11 @@ import { writeAudit } from "../../lib/audit.js";
 import { expireStaleOrders, paymentCutoff } from "../../lib/orderExpiry.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
+import {
+  notifyPharmacyOfNewOrder,
+  notifyPharmacyOfPaidOrder,
+  notifyPharmacyOfSubmittedPrescription,
+} from "../../lib/pharmacyNotifications.js";
 
 const router = Router();
 
@@ -347,6 +352,14 @@ router.post("/", async (req: AuthRequest, res) => {
   });
   await checkOrderFlags(createdOrder);
   await notifyHqOfNewOrder(createdOrder, pharmacy.name);
+  void notifyPharmacyOfNewOrder(createdOrder);
+  if (createdOrder.prescriptionId) {
+    void notifyPharmacyOfSubmittedPrescription({
+      pharmacyId: createdOrder.pharmacyId,
+      prescriptionId: createdOrder.prescriptionId,
+      patientName: createdOrder.patientName,
+    });
+  }
 
   res.status(201).json((await hydratePatientOrders([createdOrder]))[0]);
 });
@@ -402,6 +415,7 @@ router.post("/:id/pay", async (req: AuthRequest, res) => {
     details: { method: order.paymentMethod, totalLeones: order.totalLeones },
   });
   await checkOrderFlags(updated);
+  void notifyPharmacyOfPaidOrder(updated);
 
   res.json((await hydratePatientOrders([updated]))[0]);
 });

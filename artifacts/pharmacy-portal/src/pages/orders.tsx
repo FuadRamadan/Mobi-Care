@@ -4,6 +4,8 @@ import {
   useUpdateOrderStatus, 
   useMarkOrderCollected, 
   useMarkOrderPickedUp, 
+  getListOrdersQueryKey,
+  getGetAnalyticsOverviewQueryKey,
   Order, 
   OrderStatus 
 } from "@workspace/api-client-react";
@@ -25,6 +27,7 @@ import { CheckCircle, Clock, Package, MapPin, Search, AlertCircle, ShoppingBag, 
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 const STATUS_CONFIG: Record<string, { label: string, color: string, icon: any }> = {
   awaiting_payment: { label: "Awaiting Payment", color: "bg-muted text-muted-foreground", icon: Clock },
@@ -41,11 +44,18 @@ const STATUS_CONFIG: Record<string, { label: string, color: string, icon: any }>
 };
 
 export default function Orders() {
-  const [activeTab, setActiveTab] = useState("active");
+  const [location] = useLocation();
+  const [activeTab, setActiveTab] = useState(() =>
+    new URLSearchParams(location.split("?")[1]).get("tab") === "cancelled"
+      ? "cancelled"
+      : "active"
+  );
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const { data: orders, isLoading } = useListOrders();
+  const { data: orders, isLoading } = useListOrders(undefined, {
+    query: { queryKey: getListOrdersQueryKey(), refetchInterval: 15_000 },
+  });
 
   const filteredOrders = orders?.filter(order => {
     // Search filter
@@ -180,6 +190,7 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
       await updateStatus.mutateAsync({ id: order.id, data: { status: newStatus } });
       toast.success(`Order marked as ${newStatus}`);
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
+      queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to update order");
@@ -191,6 +202,7 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
       await markCollected.mutateAsync({ id: order.id, data: { idChecked: true } });
       toast.success("Order marked as collected");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
+      queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to complete order");
@@ -202,6 +214,7 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
       await markPickedUp.mutateAsync({ id: order.id });
       toast.success("Order marked as picked up by courier");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
+      queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to complete order");

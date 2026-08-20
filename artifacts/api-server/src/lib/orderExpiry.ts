@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, pharmacyInventoryTable } from "@workspace/db/schema";
 import { and, eq, lt, sql, inArray } from "drizzle-orm";
 import { logger } from "./logger.js";
+import { notifyPharmacyOfExpiredOrder } from "./pharmacyNotifications.js";
 
 /**
  * Unpaid orders reserve stock (conditional decrement at creation). To stop
@@ -60,6 +61,13 @@ export async function expireStaleOrders(): Promise<number> {
           eq(pharmacyInventoryTable.drugId, item.drugId)
         )
       );
+  }
+
+  for (const order of claimed) {
+    void notifyPharmacyOfExpiredOrder({
+      pharmacyId: order.pharmacyId,
+      orderId: order.id,
+    });
   }
 
   logger.info({ count: claimed.length }, "Expired unpaid orders and restocked");

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { notificationsTable } from "@workspace/db/schema";
-import { eq, and, isNull, count } from "drizzle-orm";
+import { eq, and, isNull, count, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 
 const router = Router();
@@ -15,7 +15,7 @@ router.get("/", async (req: AuthRequest, res) => {
     .select()
     .from(notificationsTable)
     .where(eq(notificationsTable.pharmacyId, pharmacyId))
-    .orderBy(notificationsTable.createdAt);
+    .orderBy(desc(notificationsTable.createdAt));
 
   res.json(rows);
 });

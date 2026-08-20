@@ -10,21 +10,28 @@ import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut } f
 import clsx from "clsx";
 
 const navItems = [
-  { href: "/dashboard",      label: "Overview",          icon: LayoutDashboard, badge: null as string | null },
-  { href: "/orders",         label: "Incoming Orders",   icon: ShoppingBag,     badge: null as string | null },
-  { href: "/inventory",      label: "Inventory",         icon: Package,         badge: null as string | null },
-  { href: "/prescriptions",  label: "Prescriptions",     icon: FileText,        badge: null as string | null },
-  { href: "/notifications",  label: "Notifications",     icon: Bell,            badge: null as string | null },
-  { href: "/profile",        label: "Profile",           icon: User,            badge: null as string | null },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/inventory", label: "Inventory", icon: Package },
+];
+
+const incomingItems = [
+  { href: "/orders", label: "Incoming Orders", icon: ShoppingBag },
+  { href: "/prescriptions", label: "Prescriptions", icon: FileText },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+];
+
+const accountItems = [
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function Sidebar() {
+  const LIVE_REFRESH_MS = 15_000;
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
   const { data: unreadData } = useGetUnreadCount({
     query: {
-      refetchInterval: 60000,
+      refetchInterval: LIVE_REFRESH_MS,
       enabled: !!user,
       queryKey: getGetUnreadCountQueryKey(),
     },
@@ -32,7 +39,9 @@ export function Sidebar() {
 
   const { data: analytics } = useGetAnalyticsOverview({
     query: {
-      refetchInterval: 120000,
+      // Analytics includes several aggregate queries. Keep the frequent live
+      // refresh reserved for the lightweight unread-notification count.
+      refetchInterval: 60_000,
       enabled: !!user,
       queryKey: getGetAnalyticsOverviewQueryKey(),
     },
@@ -43,6 +52,8 @@ export function Sidebar() {
   const lowStock = analytics?.lowStockItems ?? 0;
 
   function getBadge(href: string): { label: string; kind: "warn" | "info" } | null {
+    if (href === "/orders" && analytics?.pendingOrders)
+      return { label: String(analytics.pendingOrders), kind: "info" };
     if (href === "/notifications" && unread > 0)
       return { label: String(unread), kind: "info" };
     if (href === "/prescriptions" && pendingRx > 0)
@@ -104,6 +115,63 @@ export function Sidebar() {
                     {badge.label}
                   </span>
                 )}
+              </div>
+            </Link>
+          );
+        })}
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-2 mt-5 mb-2">
+          Incoming
+        </p>
+        {incomingItems.map((item) => {
+          const isActive = location.startsWith(item.href);
+          const badge = getBadge(item.href);
+
+          return (
+            <Link key={item.href} href={item.href}>
+              <div
+                className={clsx(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors cursor-pointer text-sm font-medium select-none",
+                  isActive
+                    ? "bg-[#1A8F6E] text-white"
+                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/75"
+                )}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span className="flex-1 leading-none">{item.label}</span>
+                {badge && (
+                  <span
+                    className={clsx(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none",
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-[#1A8F6E]/15 text-[#1A8F6E]"
+                    )}
+                  >
+                    {badge.label}
+                  </span>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-2 mt-5 mb-2">
+          Account
+        </p>
+        {accountItems.map((item) => {
+          const isActive = location.startsWith(item.href);
+
+          return (
+            <Link key={item.href} href={item.href}>
+              <div
+                className={clsx(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors cursor-pointer text-sm font-medium select-none",
+                  isActive
+                    ? "bg-[#1A8F6E] text-white"
+                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/75"
+                )}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span className="flex-1 leading-none">{item.label}</span>
               </div>
             </Link>
           );

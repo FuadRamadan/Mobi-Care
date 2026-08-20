@@ -5,9 +5,25 @@ import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText } from "
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import clsx from "clsx";
+import { useLocation } from "wouter";
+
+function destinationForNotification(type: string | null | undefined) {
+  if (type === "prescription_submitted") return "/prescriptions";
+  if (type === "order_cancelled") return "/orders?tab=cancelled";
+  return "/orders";
+}
+
+function iconForNotification(type: string | null | undefined) {
+  if (type === "prescription_submitted") return FileText;
+  if (type === "system") return Activity;
+  return Package;
+}
 
 export default function Notifications() {
-  const { data: notifications, isLoading } = useListNotifications({ query: { refetchInterval: 60000, queryKey: getListNotificationsQueryKey() } });
+  const [, setLocation] = useLocation();
+  const { data: notifications, isLoading } = useListNotifications({
+    query: { refetchInterval: 15_000, queryKey: getListNotificationsQueryKey() },
+  });
   const markRead = useMarkNotificationsRead();
   const queryClient = useQueryClient();
 
@@ -72,18 +88,20 @@ export default function Notifications() {
               {notifications.map(notification => {
                 const isUnread = !notification.readAt;
                 
-                let Icon = Bell;
-                if (notification.type === 'order') Icon = Package;
-                if (notification.type === 'prescription') Icon = FileText;
-                if (notification.type === 'system') Icon = Activity;
+                const Icon = iconForNotification(notification.type);
+                const destination = destinationForNotification(notification.type);
 
                 return (
                   <div 
                     key={notification.id} 
                     className={clsx(
-                      "p-4 flex gap-4 transition-colors relative group",
+                      "p-4 flex gap-4 transition-colors relative group cursor-pointer",
                       isUnread ? "bg-primary/5" : "hover:bg-muted/30"
                     )}
+                    onClick={() => {
+                      if (isUnread) void handleMarkRead(notification.id);
+                      setLocation(destination);
+                    }}
                   >
                     {isUnread && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
@@ -113,7 +131,10 @@ export default function Notifications() {
                     <div className="shrink-0 flex items-center justify-center w-8">
                       {isUnread ? (
                         <button 
-                          onClick={() => handleMarkRead(notification.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleMarkRead(notification.id);
+                          }}
                           className="text-primary hover:text-primary/70 opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Mark as read"
                         >

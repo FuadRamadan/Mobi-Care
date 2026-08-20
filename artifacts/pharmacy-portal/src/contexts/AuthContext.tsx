@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+  useRef,
+} from "react";
 import { PharmacyUser, useLogin, useLogout, useRefreshToken } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -34,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const hasInitialized = useRef(false);
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -56,6 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logoutMutation, queryClient, setLocation]);
 
   useEffect(() => {
+    // React Query mutation result objects can change identity between renders.
+    // Initialization must only happen once for a mounted provider, otherwise a
+    // refresh response can cause the provider to repeatedly re-initialize.
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     async function initAuth() {
       const access = localStorage.getItem("mc_access");
       const refresh = localStorage.getItem("mc_refresh");

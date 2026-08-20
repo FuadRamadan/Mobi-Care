@@ -7,6 +7,7 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
+import { notifyHqOfOrderReady } from "../../lib/hqNotifications.js";
 
 const router = Router();
 
@@ -143,6 +144,10 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
     .set({ status: body.data.status, updatedAt: new Date() })
     .where(eq(ordersTable.id, id))
     .returning();
+
+  if (body.data.status === "ready") {
+    void notifyHqOfOrderReady(updated!, req.pharmacy!.name);
+  }
 
   await writeAudit({
     actorType: "pharmacy",

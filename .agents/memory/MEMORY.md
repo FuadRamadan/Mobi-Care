@@ -6,3 +6,4 @@
 - [Password reset hashing](password-reset-hashing.md) — CodeExecution must load bcryptjs from the API workspace’s exact module path, not the repository root.
 - [HQ notification ownership](hq-notification-ownership.md) — HQ alerts are per staff member; one person reading an alert must not clear it for colleagues.
 - [Authenticated query caching](authenticated-query-caching.md) — positive cache freshness requires clearing shared client data whenever the signed-in identity changes.
+- [Portal session initialization](portal-session-initialization.md) — React Query mutation results are unstable effect dependencies; guard one-time session restoration explicitly.
