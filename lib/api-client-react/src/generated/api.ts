@@ -84,6 +84,10 @@ import type {
   RefreshInput,
   Settlement,
   SettlementsResponse,
+  TeamMember,
+  TeamPhotoUpdate,
+  TeamPhotoUploadRequest,
+  TeamPhotoUploadResponse,
   TokenPair,
   UnreadCount
 } from './api.schemas';
@@ -2788,6 +2792,160 @@ export function useGetOrdersByDay<TData = Awaited<ReturnType<typeof getOrdersByD
 
 
 
+export const getListTeamMembersUrl = () => {
+
+
+
+
+  return `/api/team`
+}
+
+/**
+ * @summary Public team roster for the About page
+ */
+export const listTeamMembers = async ( options?: Parameters<typeof customFetch>[1]): Promise<TeamMember[]> => {
+
+  return customFetch<TeamMember[]>(getListTeamMembersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeamMembersQueryKey = () => {
+    return [
+    `/api/team`
+    ] as const;
+    }
+
+
+export const getListTeamMembersQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeamMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMembers>>> = ({ signal }) => listTeamMembers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeamMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamMembers>>>
+export type ListTeamMembersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public team roster for the About page
+ */
+
+export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeamMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTeamMemberPhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/team/${id}/photo`
+}
+
+/**
+ * @summary Public profile photo for a team member
+ */
+export const getTeamMemberPhoto = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getGetTeamMemberPhotoUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTeamMemberPhotoQueryKey = (id: string,) => {
+    return [
+    `/api/team/${id}/photo`
+    ] as const;
+    }
+
+
+export const getGetTeamMemberPhotoQueryOptions = <TData = Awaited<ReturnType<typeof getTeamMemberPhoto>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamMemberPhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTeamMemberPhotoQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeamMemberPhoto>>> = ({ signal }) => getTeamMemberPhoto(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTeamMemberPhoto>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTeamMemberPhotoQueryResult = NonNullable<Awaited<ReturnType<typeof getTeamMemberPhoto>>>
+export type GetTeamMemberPhotoQueryError = ErrorType<void>
+
+
+/**
+ * @summary Public profile photo for a team member
+ */
+
+export function useGetTeamMemberPhoto<TData = Awaited<ReturnType<typeof getTeamMemberPhoto>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamMemberPhoto>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTeamMemberPhotoQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetHqDashboardUrl = () => {
 
 
@@ -3903,6 +4061,227 @@ export const useUpdatePasswordPolicy = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdatePasswordPolicyMutationOptions(options));
+    }
+
+export const getListHqTeamMembersUrl = () => {
+
+
+
+
+  return `/api/hq/team`
+}
+
+/**
+ * @summary Team roster for HQ content management
+ */
+export const listHqTeamMembers = async ( options?: Parameters<typeof customFetch>[1]): Promise<TeamMember[]> => {
+
+  return customFetch<TeamMember[]>(getListHqTeamMembersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHqTeamMembersQueryKey = () => {
+    return [
+    `/api/hq/team`
+    ] as const;
+    }
+
+
+export const getListHqTeamMembersQueryOptions = <TData = Awaited<ReturnType<typeof listHqTeamMembers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqTeamMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHqTeamMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHqTeamMembers>>> = ({ signal }) => listHqTeamMembers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHqTeamMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHqTeamMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listHqTeamMembers>>>
+export type ListHqTeamMembersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Team roster for HQ content management
+ */
+
+export function useListHqTeamMembers<TData = Awaited<ReturnType<typeof listHqTeamMembers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqTeamMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHqTeamMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestHqTeamPhotoUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/team/${id}/photo-upload`
+}
+
+/**
+ * @summary Request a signed direct-upload URL for a team profile photo
+ */
+export const requestHqTeamPhotoUpload = async (id: string,
+    teamPhotoUploadRequest: TeamPhotoUploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<TeamPhotoUploadResponse> => {
+
+  return customFetch<TeamPhotoUploadResponse>(getRequestHqTeamPhotoUploadUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(teamPhotoUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestHqTeamPhotoUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>, TError,{id: string;data: BodyType<TeamPhotoUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>, TError,{id: string;data: BodyType<TeamPhotoUploadRequest>}, TContext> => {
+
+const mutationKey = ['requestHqTeamPhotoUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>, {id: string;data: BodyType<TeamPhotoUploadRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  requestHqTeamPhotoUpload(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestHqTeamPhotoUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>>
+    export type RequestHqTeamPhotoUploadMutationBody = BodyType<TeamPhotoUploadRequest>
+    export type RequestHqTeamPhotoUploadMutationError = ErrorType<void>
+
+    /**
+ * @summary Request a signed direct-upload URL for a team profile photo
+ */
+export const useRequestHqTeamPhotoUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>, TError,{id: string;data: BodyType<TeamPhotoUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestHqTeamPhotoUpload>>,
+        TError,
+        {id: string;data: BodyType<TeamPhotoUploadRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestHqTeamPhotoUploadMutationOptions(options));
+    }
+
+export const getUpdateHqTeamMemberPhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/team/${id}/photo`
+}
+
+/**
+ * @summary Attach an uploaded profile photo to a team member
+ */
+export const updateHqTeamMemberPhoto = async (id: string,
+    teamPhotoUpdate: TeamPhotoUpdate, options?: Parameters<typeof customFetch>[1]): Promise<TeamMember> => {
+
+  return customFetch<TeamMember>(getUpdateHqTeamMemberPhotoUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(teamPhotoUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateHqTeamMemberPhotoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>, TError,{id: string;data: BodyType<TeamPhotoUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>, TError,{id: string;data: BodyType<TeamPhotoUpdate>}, TContext> => {
+
+const mutationKey = ['updateHqTeamMemberPhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>, {id: string;data: BodyType<TeamPhotoUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateHqTeamMemberPhoto(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateHqTeamMemberPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>>
+    export type UpdateHqTeamMemberPhotoMutationBody = BodyType<TeamPhotoUpdate>
+    export type UpdateHqTeamMemberPhotoMutationError = ErrorType<void>
+
+    /**
+ * @summary Attach an uploaded profile photo to a team member
+ */
+export const useUpdateHqTeamMemberPhoto = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>, TError,{id: string;data: BodyType<TeamPhotoUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateHqTeamMemberPhoto>>,
+        TError,
+        {id: string;data: BodyType<TeamPhotoUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateHqTeamMemberPhotoMutationOptions(options));
     }
 
 export const getListHqDrugsUrl = (params?: ListHqDrugsParams,) => {

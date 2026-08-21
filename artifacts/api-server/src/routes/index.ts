@@ -6,6 +6,7 @@ import hqRouter from "./hq/index.js";
 import patientRouter from "./patient/index.js";
 import notificationsRouter from "./pharmacy/notifications.js";
 import prescriptionImagesRouter from "./prescriptionImages.js";
+import teamRouter from "./team.js";
 import { pharmacy } from "../middlewares/auth.js";
 
 const router = Router();
@@ -21,5 +22,6 @@ router.use("/patient", patientRouter);
 router.use("/notifications", ...pharmacy, notificationsRouter);
 
 router.use("/prescription-images", prescriptionImagesRouter);
+router.use("/team", teamRouter);
 
 export default router;

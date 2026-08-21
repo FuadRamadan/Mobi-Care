@@ -133,6 +133,33 @@ export class ObjectStorageService {
     });
   }
 
+  /**
+   * Creates a direct-upload URL for a known object entity path. The caller is
+   * responsible for authorising the operation and for setting an ACL after the
+   * client has uploaded the object.
+   */
+  async getObjectEntityUploadInfo(
+    entityPath: string,
+  ): Promise<{ uploadUrl: string; objectPath: string }> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const cleanedPath = entityPath.replace(/^\/+/, '');
+    if (!cleanedPath || cleanedPath.includes('..')) {
+      throw new Error('Invalid object entity path');
+    }
+
+    const fullPath = `${privateObjectDir.replace(/\/$/, '')}/${cleanedPath}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    return {
+      uploadUrl: await signObjectURL({
+        bucketName,
+        objectName,
+        method: 'PUT',
+        ttlSec: 900,
+      }),
+      objectPath: `/objects/${cleanedPath}`,
+    };
+  }
+
   async getObjectEntityFile(objectPath: string): Promise<File> {
     if (!objectPath.startsWith('/objects/')) {
       throw new ObjectNotFoundError();

@@ -10,6 +10,7 @@ import settlementsRouter from "./settlements.js";
 import auditRouter from "./audit.js";
 import notificationsRouter from "./notifications.js";
 import passwordPolicyRouter from "./passwordPolicy.js";
+import teamRouter from "./team.js";
 
 const router = Router();
 
@@ -29,5 +30,6 @@ router.use("/settlements", settlementsRouter);
 router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/password-policy", passwordPolicyRouter);
+router.use("/team", teamRouter);
 
 export default router;

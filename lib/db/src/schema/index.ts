@@ -16,3 +16,4 @@ export * from "./flags";
 export * from "./auditLog";
 export * from "./patients";
 export * from "./patientNotifications";
+export * from "./teamMembers";

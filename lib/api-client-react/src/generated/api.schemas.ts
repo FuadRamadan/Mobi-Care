@@ -723,6 +723,44 @@ export interface HqPharmacyUpdate {
   address?: string | null;
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  /**
+     * Public profile-photo URL, null only before the first photo is uploaded
+     * @nullable
+     */
+  photoUrl: string | null;
+}
+
+export type TeamPhotoUploadRequestContentType = typeof TeamPhotoUploadRequestContentType[keyof typeof TeamPhotoUploadRequestContentType];
+
+
+export const TeamPhotoUploadRequestContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface TeamPhotoUploadRequest {
+  contentType: TeamPhotoUploadRequestContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  fileSize: number;
+}
+
+export interface TeamPhotoUploadResponse {
+  uploadUrl: string;
+  objectPath: string;
+}
+
+export interface TeamPhotoUpdate {
+  objectPath: string;
+}
+
 export type HqDrugTier = typeof HqDrugTier[keyof typeof HqDrugTier];
 
 

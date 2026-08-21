@@ -11,6 +11,7 @@ import {
   Wallet,
   ScrollText,
   ShieldCheck,
+  Users,
   LogOut,
   Bell,
   CheckCheck,
@@ -39,6 +40,7 @@ const NAV = [
   { href: '/hq/flags', label: 'Flags', icon: Flag },
   { href: '/hq/settlements', label: 'Settlements', icon: Wallet },
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
+  { href: '/hq/team', label: 'Team Profiles', icon: Users },
   { href: '/hq/settings', label: 'Security & Settings', icon: ShieldCheck },
 ];
 

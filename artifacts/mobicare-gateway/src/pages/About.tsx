@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Heart, ShieldCheck, Smartphone, Users, Search, FileCheck, ShoppingBag, Truck } from "lucide-react";
+import { useListTeamMembers } from "@workspace/api-client-react";
 import PolicyHighlights from "@/components/PolicyHighlights";
 
 const values = [
@@ -30,6 +31,8 @@ const values = [
 ];
 
 export default function About() {
+  const { data: teamMembers = [], isLoading: isLoadingTeam } = useListTeamMembers();
+
   return (
     <div className="flex-1 w-full pb-20">
       {/* Hero */}
@@ -261,13 +264,15 @@ export default function About() {
             <h2 className="text-2xl font-display font-bold text-dark-green mb-2">Meet Our Team</h2>
             <p className="text-muted-foreground text-sm mb-12"></p>
             <div className="grid grid-cols-2 gap-10">
-              {[
-                { initials: "AK", name: "Dr. Abdullah Osman Koroma", role: "CEO & Founder", color: "bg-primary/10 text-primary", photo: "/team-abdullah.jpg" },
-                { initials: "FS", name: "Fuad Ramadan Sesay", role: "CIO", color: "bg-blue-100 text-blue-700", photo: "/team-fuad.jpg" },
-                { initials: "AS", name: "Alhaji Samura", role: "DevOps Engineer", color: "bg-purple-100 text-purple-700", photo: "/team-alhaji.jpg" },
-                { initials: "AZ", name: "Pharm Alpha Aziz Jalloh", role: "Superintendent Pharmacist", color: "bg-green-100 text-green-700", photo: "/team-alpha.jpg" },
-                { initials: "MS", name: "Pharm Mamie Saio Johnson", role: "Pharmacy Manager", color: "bg-teal-100 text-teal-700" },
-              ].map((member, i) => (
+              {isLoadingTeam
+                ? Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex flex-col items-center text-center animate-pulse">
+                    <div className="w-64 h-64 rounded-full bg-muted mb-6" />
+                    <div className="h-4 w-36 rounded bg-muted mb-2" />
+                    <div className="h-3 w-20 rounded bg-muted" />
+                  </div>
+                ))
+                : teamMembers.map((member, i) => (
                 <motion.div
                   key={member.name}
                   initial={{ opacity: 0, y: 10 }}
@@ -276,17 +281,17 @@ export default function About() {
                   transition={{ delay: i * 0.1 }}
                   className="flex flex-col items-center text-center"
                 >
-                  {member.photo ? (
+                  {member.photoUrl ? (
                     <img
-                      src={member.photo}
+                      src={member.photoUrl}
                       alt={member.name}
                       loading="lazy"
                       decoding="async"
                       className="w-64 h-64 rounded-full object-cover object-top mb-6 border-4 border-white shadow-xl"
                     />
                   ) : (
-                    <div className={`w-64 h-64 rounded-full ${member.color} flex items-center justify-center text-5xl font-display font-bold mb-6 border-4 border-white shadow-xl`}>
-                      {member.initials}
+                    <div className="w-64 h-64 rounded-full bg-muted flex items-center justify-center text-sm text-muted-foreground mb-6 border-4 border-white shadow-xl">
+                      Portrait coming soon
                     </div>
                   )}
                   <h3 className="font-display font-semibold text-dark-green text-sm leading-snug mb-1">{member.name}</h3>

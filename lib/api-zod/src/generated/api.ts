@@ -952,6 +952,28 @@ export const GetOrdersByDayResponse = zod.array(GetOrdersByDayResponseItem)
 
 
 /**
+ * @summary Public team roster for the About page
+ */
+export const ListTeamMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
+})
+export const ListTeamMembersResponse = zod.array(ListTeamMembersResponseItem)
+
+
+/**
+ * @summary Public profile photo for a team member
+ */
+export const GetTeamMemberPhotoParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetTeamMemberPhotoResponse = zod.unknown()
+
+
+/**
  * @summary HQ command centre — aggregates, live feed, revenue
  */
 export const GetHqDashboardResponse = zod.object({
@@ -1420,6 +1442,59 @@ export const UpdatePasswordPolicyResponse = zod.object({
   "temporaryPasswordExpiryHours": zod.number().describe('Hours until a temporary password expires'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Team roster for HQ content management
+ */
+export const ListHqTeamMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
+})
+export const ListHqTeamMembersResponse = zod.array(ListHqTeamMembersResponseItem)
+
+
+/**
+ * @summary Request a signed direct-upload URL for a team profile photo
+ */
+export const RequestHqTeamPhotoUploadParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const requestHqTeamPhotoUploadBodyFileSizeMax = 5242880;
+
+
+
+export const RequestHqTeamPhotoUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "fileSize": zod.number().min(1).max(requestHqTeamPhotoUploadBodyFileSizeMax)
+})
+
+export const RequestHqTeamPhotoUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Attach an uploaded profile photo to a team member
+ */
+export const UpdateHqTeamMemberPhotoParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateHqTeamMemberPhotoBody = zod.object({
+  "objectPath": zod.string()
+})
+
+export const UpdateHqTeamMemberPhotoResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
 })
 
 

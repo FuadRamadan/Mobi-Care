@@ -794,6 +794,39 @@ paths:
                 items:
                   $ref: "#/components/schemas/DailyOrderStat"
 
+  # ── Public team ───────────────────────────────────────────────────────────
+  /team:
+    get:
+      operationId: listTeamMembers
+      tags: [hq]
+      summary: Public team roster for the About page
+      responses:
+        "200":
+          description: Team members in display order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+
+  /team/{id}/photo:
+    get:
+      operationId: getTeamMemberPhoto
+      tags: [hq]
+      summary: Public profile photo for a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile photo image
+        "404":
+          description: Team member or photo not found
+
   # ── HQ ────────────────────────────────────────────────────────────────────
   /hq/dashboard:
     get:
@@ -1112,6 +1145,85 @@ paths:
                 $ref: "#/components/schemas/PasswordPolicy"
         "400":
           description: Invalid policy values
+
+  /hq/team:
+    get:
+      operationId: listHqTeamMembers
+      tags: [hq]
+      summary: Team roster for HQ content management
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Team members in display order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+
+  /hq/team/{id}/photo-upload:
+    post:
+      operationId: requestHqTeamPhotoUpload
+      tags: [hq]
+      summary: Request a signed direct-upload URL for a team profile photo
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamPhotoUploadRequest"
+      responses:
+        "200":
+          description: Signed upload URL and the object path to save
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamPhotoUploadResponse"
+        "400":
+          description: Invalid image metadata
+        "404":
+          description: Team member not found
+
+  /hq/team/{id}/photo:
+    patch:
+      operationId: updateHqTeamMemberPhoto
+      tags: [hq]
+      summary: Attach an uploaded profile photo to a team member
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamPhotoUpdate"
+      responses:
+        "200":
+          description: Updated team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+        "400":
+          description: Invalid uploaded photo
+        "404":
+          description: Team member or upload not found
 
   /hq/drugs:
     get:
@@ -2378,6 +2490,48 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+
+    TeamMember:
+      type: object
+      required: [id, name, role, photoUrl]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+          description: Public profile-photo URL, null only before the first photo is uploaded
+
+    TeamPhotoUploadRequest:
+      type: object
+      required: [contentType, fileSize]
+      properties:
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        fileSize:
+          type: number
+          minimum: 1
+          maximum: 5242880
+
+    TeamPhotoUploadResponse:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl:
+          type: string
+        objectPath:
+          type: string
+
+    TeamPhotoUpdate:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
 
     HqDrug:
       type: object

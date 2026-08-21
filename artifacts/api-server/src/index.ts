@@ -33,6 +33,24 @@ async function assertSchemaUpToDate(): Promise<void> {
         ) AS exists
       `,
     },
+    {
+      label: "team_members table",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_name = 'team_members'
+        ) AS exists
+      `,
+    },
+    {
+      label: "team_photo_uploads table",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_name = 'team_photo_uploads'
+        ) AS exists
+      `,
+    },
   ];
 
   const missing: string[] = [];
