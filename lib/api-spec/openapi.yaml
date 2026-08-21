@@ -1459,6 +1459,8 @@ components:
           description: Fresh refresh token (pharmacy accounts only)
         user:
           $ref: "#/components/schemas/PharmacyUser"
+        passwordPolicy:
+          $ref: "#/components/schemas/PasswordPolicy"
 
     PharmacyUser:
       type: object
@@ -1482,6 +1484,9 @@ components:
         mustChangePassword:
           type: boolean
           description: Pharmacy accounts onboarded with a temp password must change it before using the portal API
+        passwordLastChangedAt:
+          type: string
+          description: ISO timestamp of the pharmacy account's most recent password change
 
     TokenPair:
       type: object
@@ -1502,6 +1507,8 @@ components:
           type: string
         user:
           $ref: "#/components/schemas/PharmacyUser"
+        passwordPolicy:
+          $ref: "#/components/schemas/PasswordPolicy"
 
     # ── Order schemas ──────────────────────────────────────────────────────
     OrderStatusUpdate:
@@ -2294,13 +2301,16 @@ components:
 
     PasswordPolicy:
       type: object
-      required: [id, maxPasswordAgeDays, minPasswordLength, requireUppercase, requireLowercase, requireNumber, requireSymbol, passwordHistoryCount, temporaryPasswordExpiryHours, createdAt, updatedAt]
+      required: [id, maxPasswordAgeDays, passwordExpiryWarningDays, minPasswordLength, requireUppercase, requireLowercase, requireNumber, requireSymbol, passwordHistoryCount, temporaryPasswordExpiryHours, createdAt, updatedAt]
       properties:
         id:
           type: number
         maxPasswordAgeDays:
           type: number
           description: Number of days before a password must be changed
+        passwordExpiryWarningDays:
+          type: number
+          description: Number of days before expiry when pharmacies may proactively change their password
         minPasswordLength:
           type: number
           description: Minimum number of characters required
@@ -2330,6 +2340,10 @@ components:
           type: number
           minimum: 1
           maximum: 365
+        passwordExpiryWarningDays:
+          type: number
+          minimum: 1
+          maximum: 30
         minPasswordLength:
           type: number
           minimum: 8

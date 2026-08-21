@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
+import type { SerializedPasswordPolicy } from "./passwordPolicy.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
@@ -20,6 +21,9 @@ export interface PharmacyTokenPayload {
    * Only present in pharmacy tokens.
    */
   sessionVersion?: number;
+  /** Password age metadata lets the portal render expiry UX without background API calls. */
+  passwordLastChangedAt?: string;
+  passwordPolicy?: SerializedPasswordPolicy;
 }
 
 export function signAccessToken(payload: PharmacyTokenPayload): string {

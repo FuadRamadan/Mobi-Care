@@ -15,6 +15,7 @@ import {
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { Shell } from '@/components/layout/Shell';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
+import { isInsideWarningWindow } from '@/utils/password';
 
 const Login = lazy(() => import('@/pages/login'));
 const ChangePassword = lazy(() => import('@/pages/change-password'));
@@ -48,7 +49,8 @@ function RouteLoading() {
 }
 
 function ProtectedRoutes() {
-  const { user, isLoading } = useAuth();
+  const { user, passwordPolicy, isLoading } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return <RouteLoading />;
@@ -58,15 +60,23 @@ function ProtectedRoutes() {
     return <Redirect to="/login" />;
   }
 
+  const isChangePasswordRoute = location === '/change-password';
+  const insideWarningWindow = isInsideWarningWindow(user, passwordPolicy);
+  const allowedToChange = user.mustChangePassword || insideWarningWindow;
+
+  if (isChangePasswordRoute) {
+    if (allowedToChange) {
+      return (
+        <Suspense fallback={<RouteLoading />}>
+          <ChangePassword />
+        </Suspense>
+      );
+    }
+    return <Redirect to="/dashboard" />;
+  }
+
   if (user.mustChangePassword) {
-    return (
-      <Suspense fallback={<RouteLoading />}>
-        <Switch>
-          <Route path="/change-password" component={ChangePassword} />
-          <Route component={() => <Redirect to="/change-password" />} />
-        </Switch>
-      </Suspense>
-    );
+    return <Redirect to="/change-password" />;
   }
 
   return (
@@ -79,7 +89,6 @@ function ProtectedRoutes() {
           <Route path="/prescriptions" component={Prescriptions} />
           <Route path="/profile" component={Profile} />
           <Route path="/notifications" component={Notifications} />
-          {/* We want to catch not found within shell too ideally, or just root not found */}
           <Route component={NotFound} />
         </Switch>
       </Suspense>

@@ -34,8 +34,23 @@ export const LoginResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
-  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API')
-})
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+}),
+  "passwordPolicy": zod.object({
+  "id": zod.number(),
+  "maxPasswordAgeDays": zod.number().describe('Number of days before a password must be changed'),
+  "passwordExpiryWarningDays": zod.number().describe('Number of days before expiry when pharmacies may proactively change their password'),
+  "minPasswordLength": zod.number().describe('Minimum number of characters required'),
+  "requireUppercase": zod.boolean(),
+  "requireLowercase": zod.boolean(),
+  "requireNumber": zod.boolean(),
+  "requireSymbol": zod.boolean(),
+  "passwordHistoryCount": zod.number().describe('Number of previous passwords that cannot be reused'),
+  "temporaryPasswordExpiryHours": zod.number().describe('Hours until a temporary password expires'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).optional()
 })
 
 
@@ -75,7 +90,22 @@ export const ChangePasswordResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
-  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API')
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+}).optional(),
+  "passwordPolicy": zod.object({
+  "id": zod.number(),
+  "maxPasswordAgeDays": zod.number().describe('Number of days before a password must be changed'),
+  "passwordExpiryWarningDays": zod.number().describe('Number of days before expiry when pharmacies may proactively change their password'),
+  "minPasswordLength": zod.number().describe('Minimum number of characters required'),
+  "requireUppercase": zod.boolean(),
+  "requireLowercase": zod.boolean(),
+  "requireNumber": zod.boolean(),
+  "requireSymbol": zod.boolean(),
+  "passwordHistoryCount": zod.number().describe('Number of previous passwords that cannot be reused'),
+  "temporaryPasswordExpiryHours": zod.number().describe('Hours until a temporary password expires'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 }).optional()
 })
 
@@ -542,8 +572,23 @@ export const RegisterPatientResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
-  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API')
-})
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+}),
+  "passwordPolicy": zod.object({
+  "id": zod.number(),
+  "maxPasswordAgeDays": zod.number().describe('Number of days before a password must be changed'),
+  "passwordExpiryWarningDays": zod.number().describe('Number of days before expiry when pharmacies may proactively change their password'),
+  "minPasswordLength": zod.number().describe('Minimum number of characters required'),
+  "requireUppercase": zod.boolean(),
+  "requireLowercase": zod.boolean(),
+  "requireNumber": zod.boolean(),
+  "requireSymbol": zod.boolean(),
+  "passwordHistoryCount": zod.number().describe('Number of previous passwords that cannot be reused'),
+  "temporaryPasswordExpiryHours": zod.number().describe('Hours until a temporary password expires'),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).optional()
 })
 
 
@@ -1320,6 +1365,7 @@ export const ResetPharmacyPasswordResponse = zod.object({
 export const GetPasswordPolicyResponse = zod.object({
   "id": zod.number(),
   "maxPasswordAgeDays": zod.number().describe('Number of days before a password must be changed'),
+  "passwordExpiryWarningDays": zod.number().describe('Number of days before expiry when pharmacies may proactively change their password'),
   "minPasswordLength": zod.number().describe('Minimum number of characters required'),
   "requireUppercase": zod.boolean(),
   "requireLowercase": zod.boolean(),
@@ -1337,6 +1383,8 @@ export const GetPasswordPolicyResponse = zod.object({
  */
 export const updatePasswordPolicyBodyMaxPasswordAgeDaysMax = 365;
 
+export const updatePasswordPolicyBodyPasswordExpiryWarningDaysMax = 30;
+
 export const updatePasswordPolicyBodyMinPasswordLengthMin = 8;
 export const updatePasswordPolicyBodyMinPasswordLengthMax = 128;
 
@@ -1349,6 +1397,7 @@ export const updatePasswordPolicyBodyTemporaryPasswordExpiryHoursMax = 168;
 
 export const UpdatePasswordPolicyBody = zod.object({
   "maxPasswordAgeDays": zod.number().min(1).max(updatePasswordPolicyBodyMaxPasswordAgeDaysMax).optional(),
+  "passwordExpiryWarningDays": zod.number().min(1).max(updatePasswordPolicyBodyPasswordExpiryWarningDaysMax).optional(),
   "minPasswordLength": zod.number().min(updatePasswordPolicyBodyMinPasswordLengthMin).max(updatePasswordPolicyBodyMinPasswordLengthMax).optional(),
   "requireUppercase": zod.boolean().optional(),
   "requireLowercase": zod.boolean().optional(),
@@ -1361,6 +1410,7 @@ export const UpdatePasswordPolicyBody = zod.object({
 export const UpdatePasswordPolicyResponse = zod.object({
   "id": zod.number(),
   "maxPasswordAgeDays": zod.number().describe('Number of days before a password must be changed'),
+  "passwordExpiryWarningDays": zod.number().describe('Number of days before expiry when pharmacies may proactively change their password'),
   "minPasswordLength": zod.number().describe('Minimum number of characters required'),
   "requireUppercase": zod.boolean(),
   "requireLowercase": zod.boolean(),

@@ -5,10 +5,12 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { PasswordPolicy } from './passwordPolicy';
 import type { PharmacyUser } from './pharmacyUser';
 
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: PharmacyUser;
+  passwordPolicy?: PasswordPolicy;
 }

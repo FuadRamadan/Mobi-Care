@@ -13,6 +13,11 @@ export interface PasswordPolicyUpdate {
      */
   maxPasswordAgeDays?: number;
   /**
+     * @minimum 1
+     * @maximum 30
+     */
+  passwordExpiryWarningDays?: number;
+  /**
      * @minimum 8
      * @maximum 128
      */

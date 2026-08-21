@@ -23,6 +23,7 @@ import {
   validatePasswordAgainstPolicy,
   isPasswordReused,
   appendPasswordHistory,
+  serializePasswordPolicy,
 } from "../lib/passwordPolicy.js";
 
 const router = Router();
@@ -74,6 +75,7 @@ router.post("/login", async (req, res) => {
 
       // Check if normal password has exceeded max age
       const policy = await getOrCreatePasswordPolicy();
+      const passwordPolicy = serializePasswordPolicy(policy);
       const passwordAgeDays =
         (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
         (1000 * 60 * 60 * 24);
@@ -105,6 +107,8 @@ router.post("/login", async (req, res) => {
         name: pharmacy.name,
         mustChangePassword: mustChangePassword || undefined,
         sessionVersion: pharmacy.sessionVersion,
+        passwordLastChangedAt: pharmacy.passwordLastChangedAt.toISOString(),
+        passwordPolicy,
       });
       res.json({
         accessToken,
@@ -117,7 +121,9 @@ router.post("/login", async (req, res) => {
           phone: pharmacy.phone,
           controlledSubstanceAuthorized: pharmacy.controlledSubstanceAuthorized,
           mustChangePassword,
+          passwordLastChangedAt: pharmacy.passwordLastChangedAt.toISOString(),
         },
+        passwordPolicy,
       });
       return;
     }
@@ -314,6 +320,7 @@ router.post("/refresh", async (req, res) => {
     // Preserve mustChangePassword policy state from the live row
     // Check if password has exceeded max age (same logic as login)
     const policy = await getOrCreatePasswordPolicy();
+    const passwordPolicy = serializePasswordPolicy(policy);
     const passwordAgeDays =
       (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
       (1000 * 60 * 60 * 24);
@@ -344,6 +351,8 @@ router.post("/refresh", async (req, res) => {
       name: pharmacy.name,
       mustChangePassword: mustChangePassword || undefined,
       sessionVersion: pharmacy.sessionVersion,
+      passwordLastChangedAt: pharmacy.passwordLastChangedAt.toISOString(),
+      passwordPolicy,
     });
     res.json({ accessToken, refreshToken: raw });
     return;
@@ -530,14 +539,31 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
 
   if (!record) { res.status(404).json({ error: "Not found" }); return; }
 
+  const policy = await getOrCreatePasswordPolicy();
+  const passwordAgeDays =
+    (Date.now() - record.passwordLastChangedAt.getTime()) /
+    (1000 * 60 * 60 * 24);
+  const canChangeForExpiry =
+    passwordAgeDays >=
+      policy.maxPasswordAgeDays -
+        Math.min(policy.passwordExpiryWarningDays, policy.maxPasswordAgeDays) &&
+    passwordAgeDays < policy.maxPasswordAgeDays;
+
+  if (!record.mustChangePassword && !canChangeForExpiry) {
+    res.status(403).json({
+      error: "Password changes are available only when your password is close to expiry.",
+      code: "PASSWORD_CHANGE_NOT_AVAILABLE",
+    });
+    return;
+  }
+
   const valid = await bcrypt.compare(body.data.currentPassword, record.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
 
-  // Load policy and validate the new password
-  const policy = await getOrCreatePasswordPolicy();
+  // Validate the new password against the policy loaded above.
   const { valid: policyValid, messages } = validatePasswordAgainstPolicy(body.data.newPassword, policy);
   if (!policyValid) {
     res.status(422).json({ error: "Password does not meet policy requirements", messages });
@@ -623,6 +649,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     name: record.name,
     // mustChangePassword is now false — omit it
     sessionVersion: updatedCredential.sessionVersion,
+    passwordLastChangedAt: now.toISOString(),
+    passwordPolicy: serializePasswordPolicy(policy),
   });
 
   res.json({
@@ -636,7 +664,9 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       phone: record.phone,
       controlledSubstanceAuthorized: record.controlledSubstanceAuthorized,
       mustChangePassword: false,
+      passwordLastChangedAt: now.toISOString(),
     },
+    passwordPolicy: serializePasswordPolicy(policy),
     message: "Password changed successfully",
   });
 });

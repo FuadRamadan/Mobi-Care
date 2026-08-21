@@ -10,6 +10,8 @@ export interface PasswordPolicy {
   id: number;
   /** Number of days before a password must be changed */
   maxPasswordAgeDays: number;
+  /** Number of days before expiry when pharmacies may proactively change their password */
+  passwordExpiryWarningDays: number;
   /** Minimum number of characters required */
   minPasswordLength: number;
   requireUppercase: boolean;

@@ -18,4 +18,6 @@ export interface PharmacyUser {
   controlledSubstanceAuthorized?: boolean;
   /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
   mustChangePassword?: boolean;
+  /** ISO timestamp of the pharmacy account's most recent password change */
+  passwordLastChangedAt?: string;
 }

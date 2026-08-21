@@ -19,6 +19,7 @@ router.get("/", async (_req, res) => {
 router.patch("/", async (req: AuthRequest, res) => {
   const body = z.object({
     maxPasswordAgeDays: z.number().int().min(1).max(365).optional(),
+    passwordExpiryWarningDays: z.number().int().min(1).max(30).optional(),
     minPasswordLength: z.number().int().min(8).max(128).optional(),
     requireUppercase: z.boolean().optional(),
     requireLowercase: z.boolean().optional(),

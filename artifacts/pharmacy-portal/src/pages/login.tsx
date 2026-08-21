@@ -79,7 +79,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Username or Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your identifier" {...field} className="h-11" />
+                        <Input placeholder="Enter your identifier" autoComplete="username" {...field} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -93,7 +93,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} className="h-11" />
+                        <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

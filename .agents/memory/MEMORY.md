@@ -8,3 +8,4 @@
 - [Authenticated query caching](authenticated-query-caching.md) — positive cache freshness requires clearing shared client data whenever the signed-in identity changes.
 - [Portal session initialization](portal-session-initialization.md) — React Query mutation results are unstable effect dependencies; guard one-time session restoration explicitly.
 - [Orval UUID validation](orval-uuid-validation.md) — Zod v3 codegen rejects OpenAPI `format: uuid`; use a UUID regex pattern for generated path validation.
+- [Password expiry boundary](password-expiry-boundary.md) — enforce password age on every authenticated pharmacy request, not only login or token refresh.

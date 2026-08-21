@@ -9,6 +9,7 @@ import { z } from "zod/v4";
 export const pharmacyPasswordPolicyTable = pgTable("pharmacy_password_policy", {
   id: integer("id").primaryKey().default(1),
   maxPasswordAgeDays: integer("max_password_age_days").notNull().default(90),
+  passwordExpiryWarningDays: integer("password_expiry_warning_days").notNull().default(7),
   minPasswordLength: integer("min_password_length").notNull().default(12),
   requireUppercase: boolean("require_uppercase").notNull().default(true),
   requireLowercase: boolean("require_lowercase").notNull().default(true),

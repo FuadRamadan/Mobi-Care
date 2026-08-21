@@ -19,6 +19,24 @@ import { eq, desc } from "drizzle-orm";
 
 // ── Singleton policy ──────────────────────────────────────────────────────────
 
+export type SerializedPasswordPolicy = Omit<
+  PharmacyPasswordPolicy,
+  "createdAt" | "updatedAt"
+> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+export function serializePasswordPolicy(
+  policy: PharmacyPasswordPolicy,
+): SerializedPasswordPolicy {
+  return {
+    ...policy,
+    createdAt: policy.createdAt.toISOString(),
+    updatedAt: policy.updatedAt.toISOString(),
+  };
+}
+
 /**
  * Load the singleton policy row, creating it with defaults if it does not exist.
  * Safe to call concurrently — uses INSERT … ON CONFLICT DO NOTHING.

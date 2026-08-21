@@ -49,6 +49,28 @@ export interface PharmacyUser {
   controlledSubstanceAuthorized?: boolean;
   /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
   mustChangePassword?: boolean;
+  /** ISO timestamp of the pharmacy account's most recent password change */
+  passwordLastChangedAt?: string;
+}
+
+export interface PasswordPolicy {
+  id: number;
+  /** Number of days before a password must be changed */
+  maxPasswordAgeDays: number;
+  /** Number of days before expiry when pharmacies may proactively change their password */
+  passwordExpiryWarningDays: number;
+  /** Minimum number of characters required */
+  minPasswordLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSymbol: boolean;
+  /** Number of previous passwords that cannot be reused */
+  passwordHistoryCount: number;
+  /** Hours until a temporary password expires */
+  temporaryPasswordExpiryHours: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PasswordChangeResult {
@@ -58,6 +80,7 @@ export interface PasswordChangeResult {
   /** Fresh refresh token (pharmacy accounts only) */
   refreshToken?: string;
   user?: PharmacyUser;
+  passwordPolicy?: PasswordPolicy;
 }
 
 export interface TokenPair {
@@ -69,6 +92,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: PharmacyUser;
+  passwordPolicy?: PasswordPolicy;
 }
 
 export type OrderStatusUpdateStatus = typeof OrderStatusUpdateStatus[keyof typeof OrderStatusUpdateStatus];
@@ -657,30 +681,17 @@ export interface PharmacyResetPasswordResponse {
   pharmacy: HqPharmacy;
 }
 
-export interface PasswordPolicy {
-  id: number;
-  /** Number of days before a password must be changed */
-  maxPasswordAgeDays: number;
-  /** Minimum number of characters required */
-  minPasswordLength: number;
-  requireUppercase: boolean;
-  requireLowercase: boolean;
-  requireNumber: boolean;
-  requireSymbol: boolean;
-  /** Number of previous passwords that cannot be reused */
-  passwordHistoryCount: number;
-  /** Hours until a temporary password expires */
-  temporaryPasswordExpiryHours: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface PasswordPolicyUpdate {
   /**
      * @minimum 1
      * @maximum 365
      */
   maxPasswordAgeDays?: number;
+  /**
+     * @minimum 1
+     * @maximum 30
+     */
+  passwordExpiryWarningDays?: number;
   /**
      * @minimum 8
      * @maximum 128

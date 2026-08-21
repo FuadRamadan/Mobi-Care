@@ -377,6 +377,18 @@ export async function customFetch<T = unknown>(
         new CustomEvent("mobicare:session-invalidated", { detail: errorData }),
       );
     }
+    if (
+      response.status === 403 &&
+      typeof window !== "undefined" &&
+      errorData &&
+      typeof errorData === "object" &&
+      "code" in errorData &&
+      errorData.code === "PASSWORD_CHANGE_REQUIRED"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("mobicare:password-change-required", { detail: errorData }),
+      );
+    }
     throw error;
   }
 

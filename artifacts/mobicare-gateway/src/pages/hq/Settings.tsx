@@ -39,6 +39,7 @@ export default function HqSettings() {
 
   const [form, setForm] = useState({
     maxPasswordAgeDays: 90,
+    passwordExpiryWarningDays: 7,
     minPasswordLength: 8,
     requireUppercase: true,
     requireLowercase: true,
@@ -52,6 +53,7 @@ export default function HqSettings() {
     if (policy) {
       setForm({
         maxPasswordAgeDays: policy.maxPasswordAgeDays,
+        passwordExpiryWarningDays: policy.passwordExpiryWarningDays,
         minPasswordLength: policy.minPasswordLength,
         requireUppercase: policy.requireUppercase,
         requireLowercase: policy.requireLowercase,
@@ -70,6 +72,7 @@ export default function HqSettings() {
 
   const isDirty = policy && (
     form.maxPasswordAgeDays !== policy.maxPasswordAgeDays ||
+    form.passwordExpiryWarningDays !== policy.passwordExpiryWarningDays ||
     form.minPasswordLength !== policy.minPasswordLength ||
     form.requireUppercase !== policy.requireUppercase ||
     form.requireLowercase !== policy.requireLowercase ||
@@ -135,6 +138,21 @@ export default function HqSettings() {
                         onChange={e => setForm({...form, temporaryPasswordExpiryHours: parseInt(e.target.value) || 1})}
                       />
                       <p className="text-[11px] text-muted-foreground">Validity window for newly generated temp passwords.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="passwordExpiryWarningDays" className="flex items-center justify-between">
+                        <span>Expiry Warning Window (Days)</span>
+                      </Label>
+                      <Input
+                        id="passwordExpiryWarningDays"
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={form.passwordExpiryWarningDays}
+                        onChange={e => setForm({...form, passwordExpiryWarningDays: parseInt(e.target.value) || 1})}
+                      />
+                      <p className="text-[11px] text-muted-foreground">Allow pharmacies to update an expiring password during this final window.</p>
                     </div>
 
                     <div className="space-y-2">
@@ -227,6 +245,7 @@ export default function HqSettings() {
                     if (policy) {
                       setForm({
                         maxPasswordAgeDays: policy.maxPasswordAgeDays,
+                        passwordExpiryWarningDays: policy.passwordExpiryWarningDays,
                         minPasswordLength: policy.minPasswordLength,
                         requireUppercase: policy.requireUppercase,
                         requireLowercase: policy.requireLowercase,

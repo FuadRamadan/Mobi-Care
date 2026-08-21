@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, PharmacyTokenPayload } from "../lib/jwt.js";
 import { db } from "@workspace/db";
 import { pharmaciesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { getOrCreatePasswordPolicy } from "../lib/passwordPolicy.js";
 
 export interface AuthRequest extends Request {
   pharmacy?: PharmacyTokenPayload;
@@ -16,7 +17,7 @@ export interface AuthRequest extends Request {
  * the live pharmacy row. This immediately invalidates all previously issued
  * access tokens after a credential reset without waiting for JWT expiry.
  */
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Missing or malformed Authorization header" });
@@ -34,42 +35,65 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   // For pharmacy tokens, validate sessionVersion against the live row.
   // HQ and patient tokens do not use sessionVersion — skip the DB check.
   if (payload.role === "pharmacy") {
-    db.select({
-      sessionVersion: pharmaciesTable.sessionVersion,
-      isActive: pharmaciesTable.isActive,
-      mustChangePassword: pharmaciesTable.mustChangePassword,
-      temporaryPasswordExpiresAt: pharmaciesTable.temporaryPasswordExpiresAt,
-    })
-      .from(pharmaciesTable)
-      .where(eq(pharmaciesTable.id, payload.sub))
-      .limit(1)
-      .then(([row]) => {
-        if (!row || !row.isActive) {
-          res.status(401).json({ error: "Account inactive or not found" });
-          return;
-        }
-        if (payload.sessionVersion !== row.sessionVersion) {
-          res.status(401).json({ error: "Session invalidated — please log in again", code: "SESSION_INVALIDATED" });
-          return;
-        }
-        if (
-          row.mustChangePassword &&
-          row.temporaryPasswordExpiresAt &&
-          row.temporaryPasswordExpiresAt.getTime() <= Date.now()
-        ) {
-          res.status(401).json({
-            error: "Temporary password has expired. Please contact HQ for a new password reset.",
-            code: "TEMPORARY_PASSWORD_EXPIRED",
-          });
-          return;
-        }
-        payload.mustChangePassword = row.mustChangePassword || undefined;
-        req.pharmacy = payload;
-        next();
-      })
-      .catch(() => {
-        res.status(500).json({ error: "Authentication check failed" });
-      });
+    try {
+      const [[row], policy] = await Promise.all([
+        db.select({
+          sessionVersion: pharmaciesTable.sessionVersion,
+          isActive: pharmaciesTable.isActive,
+          mustChangePassword: pharmaciesTable.mustChangePassword,
+          temporaryPasswordExpiresAt: pharmaciesTable.temporaryPasswordExpiresAt,
+          passwordLastChangedAt: pharmaciesTable.passwordLastChangedAt,
+        })
+          .from(pharmaciesTable)
+          .where(eq(pharmaciesTable.id, payload.sub))
+          .limit(1),
+        getOrCreatePasswordPolicy(),
+      ]);
+
+      if (!row || !row.isActive) {
+        res.status(401).json({ error: "Account inactive or not found" });
+        return;
+      }
+      if (payload.sessionVersion !== row.sessionVersion) {
+        res.status(401).json({ error: "Session invalidated — please log in again", code: "SESSION_INVALIDATED" });
+        return;
+      }
+
+      let mustChangePassword = row.mustChangePassword;
+      const passwordAgeMs = Date.now() - row.passwordLastChangedAt.getTime();
+      const maxPasswordAgeMs = policy.maxPasswordAgeDays * 24 * 60 * 60 * 1000;
+      if (!mustChangePassword && passwordAgeMs >= maxPasswordAgeMs) {
+        const [updated] = await db
+          .update(pharmaciesTable)
+          .set({ mustChangePassword: true, updatedAt: new Date() })
+          .where(
+            and(
+              eq(pharmaciesTable.id, payload.sub),
+              eq(pharmaciesTable.mustChangePassword, false),
+            ),
+          )
+          .returning({ mustChangePassword: pharmaciesTable.mustChangePassword });
+        mustChangePassword = updated?.mustChangePassword ?? true;
+      }
+
+      if (
+        mustChangePassword &&
+        row.temporaryPasswordExpiresAt &&
+        row.temporaryPasswordExpiresAt.getTime() <= Date.now()
+      ) {
+        res.status(401).json({
+          error: "Temporary password has expired. Please contact HQ for a new password reset.",
+          code: "TEMPORARY_PASSWORD_EXPIRED",
+        });
+        return;
+      }
+
+      payload.mustChangePassword = mustChangePassword || undefined;
+      req.pharmacy = payload;
+      next();
+    } catch {
+      res.status(500).json({ error: "Authentication check failed" });
+    }
     return;
   }
 
