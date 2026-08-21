@@ -10,7 +10,7 @@
  */
 import { db } from "@workspace/db";
 import { patientNotificationsTable, patientsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { sendSms } from "./sms.js";
 import { sendExpoPush } from "./push.js";
 
@@ -56,12 +56,27 @@ export async function createPatientNotification(
       .from(patientsTable)
       .where(eq(patientsTable.id, payload.patientId))
       .limit(1);
-    if (patient?.expoPushToken) {
+    const expoPushToken = patient?.expoPushToken;
+    if (expoPushToken) {
       await sendExpoPush({
-        to: patient.expoPushToken,
+        to: expoPushToken,
         title: payload.title,
         body: payload.body,
         data: payload.referenceId ? { url: `/order/${payload.referenceId}` } : {},
+      }, {
+        onDeviceNotRegistered: async () => {
+          // Only clear the token that failed. A newer app registration must
+          // not be removed if it arrived while Expo was processing this push.
+          await db
+            .update(patientsTable)
+            .set({ expoPushToken: null, updatedAt: new Date() })
+            .where(
+              and(
+                eq(patientsTable.id, payload.patientId),
+                eq(patientsTable.expoPushToken, expoPushToken)
+              )
+            );
+        },
       });
     }
   } catch (err) {

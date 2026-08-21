@@ -15,6 +15,15 @@ export interface PushMessage {
   data?: Record<string, unknown>;
 }
 
+export interface PushSendOptions {
+  /**
+   * Called when Expo reports that the device no longer accepts pushes.
+   * The caller owns persistence of the token because this transport helper
+   * does not know which patient record it belongs to.
+   */
+  onDeviceNotRegistered?: () => Promise<void> | void;
+}
+
 /** Basic sanity check that a string looks like an Expo push token. */
 export function isExpoPushToken(token: string): boolean {
   return /^(ExponentPushToken|ExpoPushToken)\[.+\]$/.test(token);
@@ -24,7 +33,10 @@ export function isExpoPushToken(token: string): boolean {
  * Send a push notification through Expo. Swallows all errors.
  * Returns true if Expo accepted the message ticket.
  */
-export async function sendExpoPush(message: PushMessage): Promise<boolean> {
+export async function sendExpoPush(
+  message: PushMessage,
+  options?: PushSendOptions
+): Promise<boolean> {
   if (!isExpoPushToken(message.to)) {
     console.warn("[push] Skipping invalid Expo push token");
     return false;
@@ -59,6 +71,13 @@ export async function sendExpoPush(message: PushMessage): Promise<boolean> {
       console.error(
         `[push] Push ticket error: ${ticket.details?.error ?? ""} ${ticket.message ?? ""}`
       );
+      if (ticket.details?.error === "DeviceNotRegistered") {
+        try {
+          await options?.onDeviceNotRegistered?.();
+        } catch (err) {
+          console.error("[push] Failed to clear unregistered device token:", err);
+        }
+      }
       return false;
     }
     return true;
