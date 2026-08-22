@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { db } from "@workspace/db";
 import {
   ordersTable,
@@ -10,7 +10,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, gt, inArray, desc, and, sql } from "drizzle-orm";
 
-const router = Router();
+const router = safeRouter();
 
 // GET /hq/dashboard — aggregate counts, live order feed, confirmed revenue.
 router.get("/", async (_req, res) => {

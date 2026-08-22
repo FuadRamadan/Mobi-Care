@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { prescriptionsTable, ordersTable } from "@workspace/db/schema";
@@ -8,7 +8,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
 import { createPatientNotification } from "../../lib/patientNotifications.js";
 
-const router = Router();
+const router = safeRouter();
 
 const REJECT_REASONS = [
   "illegible_image",

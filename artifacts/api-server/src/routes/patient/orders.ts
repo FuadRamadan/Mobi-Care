@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import {
@@ -24,7 +24,7 @@ import {
   notifyPharmacyOfSubmittedPrescription,
 } from "../../lib/pharmacyNotifications.js";
 
-const router = Router();
+const router = safeRouter();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

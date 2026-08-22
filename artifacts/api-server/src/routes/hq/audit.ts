@@ -1,10 +1,10 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { db } from "@workspace/db";
 import { auditLogTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
-const router = Router();
+const router = safeRouter();
 
 // ── GET /hq/audit?entityType=...&entityId=...&limit=... ──────────────────────
 // Read-only. The audit log is APPEND-ONLY: no POST/PATCH/DELETE routes exist

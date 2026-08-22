@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { pharmacy } from "../../middlewares/auth.js";
 import ordersRouter from "./orders.js";
 import inventoryRouter from "./inventory.js";
@@ -7,7 +7,7 @@ import prescriptionsRouter from "./prescriptions.js";
 import notificationsRouter from "./notifications.js";
 import analyticsRouter from "./analytics.js";
 
-const router = Router();
+const router = safeRouter();
 
 // All /pharmacy/* routes require a valid pharmacy-role access token.
 // Data is always scoped to req.pharmacy.sub — never trust a pharmacyId from the client.

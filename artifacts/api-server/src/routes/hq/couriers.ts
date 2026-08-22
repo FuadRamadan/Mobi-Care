@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { couriersTable, ordersTable } from "@workspace/db/schema";
@@ -6,7 +6,7 @@ import { eq, desc, sql, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
-const router = Router();
+const router = safeRouter();
 
 // ── GET /hq/couriers — fleet with live load ───────────────────────────────────
 router.get("/", async (_req, res) => {

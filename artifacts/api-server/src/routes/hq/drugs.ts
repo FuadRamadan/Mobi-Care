@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { drugCatalogueTable } from "@workspace/db/schema";
@@ -6,7 +6,7 @@ import { eq, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
-const router = Router();
+const router = safeRouter();
 
 const TIERS = ["1", "2", "3"] as const;
 

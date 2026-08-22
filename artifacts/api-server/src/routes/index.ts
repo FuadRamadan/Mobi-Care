@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../lib/safeRouter.js";
 import healthRouter from "./health.js";
 import authRouter from "./auth.js";
 import pharmacyRouter from "./pharmacy/index.js";
@@ -9,7 +9,7 @@ import prescriptionImagesRouter from "./prescriptionImages.js";
 import teamRouter from "./team.js";
 import { pharmacy } from "../middlewares/auth.js";
 
-const router = Router();
+const router = safeRouter();
 
 router.use("/healthz", healthRouter);
 router.use("/auth", authRouter);

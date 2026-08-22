@@ -1,10 +1,10 @@
-import { Router } from "express";
+import { safeRouter } from "../lib/safeRouter.js";
 import { asc, eq } from "drizzle-orm";
 import { db, teamMembersTable } from "@workspace/db";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage.js";
 import { ensureTeamMembers } from "../lib/teamMembers.js";
 
-const router = Router();
+const router = safeRouter();
 const objectStorage = new ObjectStorageService();
 
 function photoUrl(member: typeof teamMembersTable.$inferSelect): string | null {
@@ -68,12 +68,11 @@ router.get("/:id/photo", async (req, res) => {
   try {
     await pipeObjectToResponse(member.photoPath, res);
   } catch (error) {
-    if (error instanceof ObjectNotFoundError) {
+    if (error instanceof ObjectNotFoundError && !res.headersSent) {
       res.status(404).json({ error: "Team photo not found" });
       return;
     }
-    req.log.error(error, "Unable to stream team photo");
-    res.status(500).json({ error: "Unable to retrieve team photo" });
+    throw error;
   }
 });
 

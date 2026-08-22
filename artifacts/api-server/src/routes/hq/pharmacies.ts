@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
@@ -16,7 +16,7 @@ import {
   appendPasswordHistory,
 } from "../../lib/passwordPolicy.js";
 
-const router = Router();
+const router = safeRouter();
 
 function publicPharmacy(p: typeof pharmaciesTable.$inferSelect) {
   const { passwordHash: _ph, ...rest } = p;

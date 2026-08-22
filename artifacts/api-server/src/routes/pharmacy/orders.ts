@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, drugCatalogueTable, prescriptionsTable } from "@workspace/db/schema";
@@ -9,7 +9,7 @@ import { checkOrderFlags } from "../../lib/flags.js";
 import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
 import { notifyHqOfOrderReady } from "../../lib/hqNotifications.js";
 
-const router = Router();
+const router = safeRouter();
 
 // Status transitions the pharmacy is permitted to write
 const PHARMACY_WRITABLE_STATUSES = ["confirmed", "packaging", "ready"] as const;

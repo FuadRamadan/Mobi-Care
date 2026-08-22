@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { pharmacyInventoryTable, drugCatalogueTable } from "@workspace/db/schema";
@@ -7,7 +7,7 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { pharmaciesTable } from "@workspace/db/schema";
 
-const router = Router();
+const router = safeRouter();
 
 // ── List this pharmacy's inventory ────────────────────────────────────────────
 router.get("/", async (req: AuthRequest, res) => {

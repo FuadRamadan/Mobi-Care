@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { db } from "@workspace/db";
 import {
   drugCatalogueTable,
@@ -7,7 +7,7 @@ import {
 } from "@workspace/db/schema";
 import { and, eq, gt, ilike, or } from "drizzle-orm";
 
-const router = Router();
+const router = safeRouter();
 
 /**
  * GET /patient/search?q=para

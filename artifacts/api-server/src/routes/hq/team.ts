@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { and, asc, eq, gt, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db, teamMembersTable, teamPhotoUploadsTable } from "@workspace/db";
@@ -8,7 +8,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { ensureTeamMembers } from "../../lib/teamMembers.js";
 import { AuthRequest } from "../../middlewares/auth.js";
 
-const router = Router();
+const router = safeRouter();
 const objectStorage = new ObjectStorageService();
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -220,8 +220,7 @@ router.patch("/:id/photo", async (req: AuthRequest, res) => {
       res.status(404).json({ error: "Uploaded photo was not found. Please upload it again." });
       return;
     }
-    req.log.error(error, "Unable to save team photo");
-    res.status(500).json({ error: "Unable to save team photo" });
+    throw error;
   }
 });
 

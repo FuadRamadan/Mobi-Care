@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { hq } from "../../middlewares/auth.js";
 import dashboardRouter from "./dashboard.js";
 import ordersRouter, { dispatchHandler } from "./orders.js";
@@ -12,7 +12,7 @@ import notificationsRouter from "./notifications.js";
 import passwordPolicyRouter from "./passwordPolicy.js";
 import teamRouter from "./team.js";
 
-const router = Router();
+const router = safeRouter();
 
 // Every /hq/* route requires a valid token with role 'hq' — server-side
 // enforcement is the real boundary, not the frontend role check.

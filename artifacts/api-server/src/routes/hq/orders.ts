@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import {
@@ -13,7 +13,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
 
-const router = Router();
+const router = safeRouter();
 
 /** Attach items + pharmacy/courier names to a list of order rows. */
 async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {

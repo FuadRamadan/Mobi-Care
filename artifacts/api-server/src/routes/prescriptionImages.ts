@@ -8,7 +8,7 @@
  *   "local:<filename>"           — served from local disk (dev / legacy records)
  *   "cloud:/objects/uploads/…"   — streamed from Replit App Storage (GCS)
  */
-import { Router } from "express";
+import { safeRouter } from "../lib/safeRouter.js";
 import { z } from "zod";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -17,7 +17,7 @@ import { eq } from "drizzle-orm";
 import { verifyImageToken } from "../lib/signedUrl.js";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage.js";
 
-const router = Router();
+const router = safeRouter();
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads/prescriptions");
 const CONTENT_TYPES: Record<string, string> = {
@@ -102,12 +102,11 @@ router.get("/:id", async (req, res) => {
     try {
       await serveCloudImage(imageKey, res as any);
     } catch (err) {
-      if (err instanceof ObjectNotFoundError) {
+      if (err instanceof ObjectNotFoundError && !res.headersSent) {
         res.status(404).json({ error: "Image not found in cloud storage" });
-      } else {
-        console.error("Cloud image serve error:", err);
-        res.status(500).json({ error: "Failed to retrieve image" });
+        return;
       }
+      throw err;
     }
     return;
   }
@@ -127,8 +126,12 @@ router.get("/:id", async (req, res) => {
       res.setHeader("Content-Type", CONTENT_TYPES[path.extname(filename).toLowerCase()] ?? "application/octet-stream");
       res.setHeader("Cache-Control", "private, max-age=60");
       res.send(buf);
-    } catch {
-      res.status(404).json({ error: "Image file not found" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        res.status(404).json({ error: "Image file not found" });
+        return;
+      }
+      throw error;
     }
     return;
   }

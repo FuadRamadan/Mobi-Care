@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
@@ -7,7 +7,7 @@ import { db, prescriptionUploadsTable } from "@workspace/db";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { objectStorageClient } from "../../lib/objectStorage.js";
 
-const router = Router();
+const router = safeRouter();
 
 // Local dev storage for prescription images (fallback when object storage is
 // not configured). The imageKey prefix "local:" vs "cloud:" makes the storage

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import {
@@ -12,7 +12,7 @@ import { eq, desc, and, gte, lt, inArray, sql, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
-const router = Router();
+const router = safeRouter();
 
 const COMPLETED_STATUSES = ["delivered", "collected"] as const;
 

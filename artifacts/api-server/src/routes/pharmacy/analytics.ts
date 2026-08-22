@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { db } from "@workspace/db";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, sql, count, sum } from "drizzle-orm";
 
-const router = Router();
+const router = safeRouter();
 
 // GET /analytics/overview
 router.get("/overview", async (req: AuthRequest, res) => {

@@ -1,11 +1,11 @@
-import { Router } from "express";
+import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { hqNotificationsTable } from "@workspace/db/schema";
 import { AuthRequest } from "../../middlewares/auth.js";
 
-const router = Router();
+const router = safeRouter();
 
 router.get("/", async (req: AuthRequest, res): Promise<void> => {
   const hqStaffId = req.pharmacy!.sub;
