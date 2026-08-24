@@ -142,11 +142,21 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
   const [updated] = await db
     .update(ordersTable)
     .set({ status: body.data.status, updatedAt: new Date() })
-    .where(eq(ordersTable.id, id))
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.pharmacyId, pharmacyId),
+        eq(ordersTable.status, order.status)
+      )
+    )
     .returning();
+  if (!updated) {
+    res.status(409).json({ error: "Order status changed concurrently — refresh and retry" });
+    return;
+  }
 
   if (body.data.status === "ready") {
-    void notifyHqOfOrderReady(updated!, req.pharmacy!.name);
+    void notifyHqOfOrderReady(updated, req.pharmacy!.name);
   }
 
   await writeAudit({
@@ -158,7 +168,7 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
     entityId: id,
     details: { from: order.status, to: body.data.status },
   });
-  await checkOrderFlags(updated!);
+  await checkOrderFlags(updated);
 
   // Notify patient of status change (fire-and-forget; never blocks response)
   if (order.patientId) {
@@ -219,8 +229,18 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
   const [updated] = await db
     .update(ordersTable)
     .set({ status: "collected", idChecked: true, updatedAt: new Date() })
-    .where(eq(ordersTable.id, id))
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.pharmacyId, pharmacyId),
+        eq(ordersTable.status, "ready")
+      )
+    )
     .returning();
+  if (!updated) {
+    res.status(409).json({ error: "Order status changed concurrently — refresh and retry" });
+    return;
+  }
 
   await writeAudit({
     actorType: "pharmacy",
