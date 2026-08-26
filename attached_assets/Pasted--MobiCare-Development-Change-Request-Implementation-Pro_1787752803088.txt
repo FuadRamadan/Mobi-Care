@@ -1,0 +1,490 @@
+# MobiCare Development Change Request — Implementation Prompt
+
+## Role
+
+Act as a **senior full-stack software engineer, solution architect, database engineer, QA engineer, and security specialist** responsible for implementing the approved changes to the MobiCare platform.
+
+The affected modules are:
+
+* Pharmacy Portal
+* Patient App
+* HQ Portal
+* Orders & Delivery
+* Settlements
+* Notifications
+* Financial Reporting
+
+Your implementation must be production-ready, secure, maintainable, and fully integrated with the existing MobiCare architecture.
+
+---
+
+## 1. Critical Priority — Fix Existing Data Integrity Bug First
+
+Before implementing any new feature, investigate and resolve the existing **courier delivery-count bug**.
+
+Currently, deliveries completed by couriers are not correctly reflected in the HQ dashboard. This may also affect:
+
+* Delivery statistics
+* Delivery settlement calculations
+* Delivery commission
+* Financial dashboards
+* Revenue and payout totals
+* Any reports derived from delivery counts
+
+Trace the complete data flow from:
+
+**Courier completes delivery → Order status → Delivery record → Settlement calculation → HQ dashboard/reporting**
+
+Identify the root cause rather than applying a superficial UI fix.
+
+After fixing the issue:
+
+1. Verify that completed deliveries are correctly recorded.
+2. Verify that HQ dashboard counts update correctly.
+3. Verify that settlement calculations use the correct delivery data.
+4. Verify that historical records are not corrupted.
+5. Add appropriate automated tests to prevent regression.
+
+**Do not proceed to feature implementation until this bug has been investigated and the fix has been validated.**
+
+This requirement is explicitly identified as the highest-priority issue in the change request.
+
+---
+
+# 2. Pharmacy Portal
+
+## 2.1 Order Status Workflow
+
+Replace the existing order-status workflow with exactly three primary stages:
+
+**Confirmed → Packaged → Collected**
+
+Requirements:
+
+* Each status must be completed as a single action from the order details/view.
+* The user must not need to navigate to another page.
+* "Collected" means the order has been collected by the **courier**, not the patient.
+* Preserve appropriate timestamps and audit information for each status transition.
+
+Do not introduce additional status stages unless they already exist as necessary technical/system states.
+
+---
+
+## 2.2 Automatic 5% Markup
+
+Pharmacies enter their own selling price for each medicine.
+
+The system must automatically calculate the patient-facing price using a configurable markup.
+
+Formula:
+
+**Patient Medicine Price = Pharmacy Entered Price × 1.05**
+
+Therefore:
+
+**MobiCare Medicine Revenue = Pharmacy Entered Price × 0.05**
+
+**Amount Owed to Pharmacy = Pharmacy Entered Price**
+
+The markup percentage must be stored as a **configurable system value** and must not be hardcoded.
+
+For every transaction, store the actual markup rate used at the time of the transaction so that historical transactions remain accurate if the configured rate changes later.
+
+### Important calculation rule
+
+The 5% markup is calculated **on the pharmacy's entered price**, not on the final patient-facing price.
+
+Do not incorrectly calculate the commission as 5% of the final patient price.
+
+The implementation must preserve this distinction throughout:
+
+* Database calculations
+* Backend APIs
+* Checkout
+* Orders
+* Settlements
+* Reports
+* Dashboards
+
+---
+
+## 2.3 Hide MobiCare Commission From Pharmacies
+
+The pharmacy portal must not expose MobiCare's commission or markup.
+
+Pharmacies should only see:
+
+* Their own entered selling price
+* Their own earnings
+* Relevant order information
+
+Do not display:
+
+* MobiCare markup
+* Commission percentage
+* Commission amount
+* Patient-facing price
+* Commission line items
+
+Ensure this restriction is enforced at both the **UI and API/data-access level**, not only by hiding fields in the frontend.
+
+---
+
+## 2.4 Pharmacy Daily Revenue
+
+Add a **Daily Revenue** figure to the pharmacy dashboard.
+
+The value must represent:
+
+**Sum of the pharmacy's own entered prices for completed orders during the current day.**
+
+No deductions should be displayed because the pharmacy receives exactly the amount it entered.
+
+The calculation must use the pharmacy's original transaction price rather than the patient-facing price.
+
+---
+
+## 2.5 Automatically Populate Approved Prescriptions
+
+When a pharmacist approves a prescription:
+
+1. Retrieve the medicines originally requested by the patient.
+2. Automatically populate those medicines into the pharmacy order.
+3. Display the populated medicine list to the pharmacist.
+4. Allow the pharmacist to edit the list where appropriate.
+5. Do not require the pharmacist to manually re-enter the patient's requested medicines.
+
+Ensure that the implementation minimizes dispensing errors and maintains an audit trail where appropriate.
+
+---
+
+## 2.6 Default Order Sorting
+
+The pharmacy order list must default to:
+
+**Most recent orders first**
+
+Sort by the time the order was received in **descending order**.
+
+---
+
+# 3. Patient App
+
+## 3.1 Confirm Delivery
+
+Add a **Confirm Delivery** button to the patient's order-tracking page.
+
+The patient can use this action to confirm that their medication has been received.
+
+The system must:
+
+* Update the appropriate delivery status.
+* Record the confirmation timestamp.
+* Record that the delivery was confirmed by the patient.
+* Prevent inappropriate duplicate confirmations.
+
+---
+
+## 3.2 HQ Delivery Confirmation Fallback
+
+HQ must be able to manually mark an order as delivered if the patient does not confirm delivery.
+
+For every completed delivery, record:
+
+* Confirmation method: **Patient** or **HQ**
+* Confirmation timestamp
+* If confirmed by HQ:
+
+  * HQ user who performed the action
+  * Date/time of confirmation
+
+This ensures that orders do not remain indefinitely pending because a patient failed to confirm delivery.
+
+---
+
+## 3.3 Patient Age Requirement
+
+Patient age must be required for every delivery order.
+
+An order must not be submitted without the required age information.
+
+However, **do not make assumptions about the final implementation of the age field.**
+
+The Product Owner must confirm whether the system should capture:
+
+* Date of birth, or
+* Age
+
+The Product Owner must also confirm whether age should:
+
+* Simply be recorded, or
+* Be used to prevent certain orders.
+
+Until this is confirmed, do not implement additional age-based restrictions.
+
+---
+
+## 3.4 Patient Profile
+
+Add a patient profile section containing:
+
+* Address — Optional
+* Email — Optional
+
+National ID/NIN must **not** be collected from every user by default.
+
+NIN upload should only be required where necessary for controlled-substance collection.
+
+Any stored identity documents must:
+
+* Be encrypted at rest.
+* Have access restricted to authorized roles.
+* Not be exposed through unauthorized APIs.
+* Follow appropriate security and access-control practices.
+
+---
+
+# 4. HQ Portal
+
+## 4.1 Move Financial Dashboard to Settlements
+
+Move the financial dashboard into the **Settlements** section.
+
+All other HQ dashboards should remain in the general HQ dashboard area and should not be unnecessarily changed.
+
+The Settlements section must have stronger access control.
+
+Implement either:
+
+* Separate authentication, or
+* An elevated permission/role
+
+Only authorized users should be able to view financial information.
+
+Ensure authorization is enforced server-side and not only through frontend navigation restrictions.
+
+---
+
+# 5. Settlements Dashboard
+
+Create a dedicated Settlements dashboard containing:
+
+### Daily Commission Income
+
+Show:
+
+**Medicine Markup Revenue + Delivery Commission**
+
+### Total Owed to Pharmacies Today
+
+Calculate the total amount payable to pharmacies based on their actual entered prices for completed qualifying orders.
+
+### Total Owed to Delivery Partner Today
+
+Calculate the amount owed to the delivery partner using the existing approved delivery commission logic.
+
+### Cumulative Revenue
+
+Allow authorized users to select a date range and view cumulative revenue for that period.
+
+### Pharmacy Breakdown
+
+Provide a breakdown of:
+
+* Revenue by pharmacy
+* Pharmacy payouts
+* Relevant transaction/order counts
+
+All settlement calculations must use reliable transaction-level data and should be traceable back to the underlying orders.
+
+---
+
+# 6. Courier Profile
+
+Allow HQ administrators to upload a profile photo for each courier.
+
+The photo should be displayed where appropriate so that:
+
+* HQ users can identify the assigned courier.
+* Patients can identify the assigned courier where the product workflow permits it.
+
+Implement appropriate validation for uploaded images and secure storage/access.
+
+---
+
+# 7. HQ Sidebar Notification Badges
+
+Add notification badges to the HQ sidebar.
+
+Badges should display counts of items requiring attention, such as:
+
+* Pending prescriptions
+* Unconfirmed deliveries
+* Pending settlements
+* Other actionable items supported by the existing system
+
+The counts must be dynamically generated from the actual system data.
+
+Avoid hardcoded badge values.
+
+---
+
+# 8. Items Explicitly Excluded From This Development
+
+Do **not** make assumptions about requirements that have not yet been approved.
+
+The following items are intentionally excluded:
+
+### Delivery Fee Model
+
+The final delivery-fee model has not yet been decided.
+
+The future model may be distance-based or zone-based.
+
+Therefore:
+
+* Do not redesign the delivery pricing model.
+* Do not introduce a new delivery-fee calculation.
+* Keep the existing delivery commission logic unchanged until the Product Owner confirms the new model.
+
+### Patient Markup Disclosure
+
+Do not assume that the 5% markup should be displayed to patients as a separate checkout line item.
+
+This decision is still pending Product Owner confirmation.
+
+Do not implement additional disclosure unless explicitly approved.
+
+These exclusions are explicitly identified in the change request.
+
+---
+
+# 9. Database & Backend Requirements
+
+Before changing the database:
+
+1. Review the existing schema.
+2. Identify affected tables/entities.
+3. Reuse existing structures where appropriate.
+4. Avoid unnecessary duplication.
+5. Create migrations for all schema changes.
+6. Ensure existing production data remains intact.
+7. Maintain backward compatibility where required.
+
+For financial transactions, preserve historical values such as:
+
+* Pharmacy entered price
+* Markup rate used
+* Calculated MobiCare revenue
+* Pharmacy amount owed
+* Delivery commission
+* Transaction/order references
+* Relevant timestamps
+
+Historical transactions must not change simply because future configuration values are modified.
+
+---
+
+# 10. Security Requirements
+
+Apply security best practices throughout the implementation.
+
+Pay particular attention to:
+
+* Role-based access control
+* Financial-data authorization
+* Patient data protection
+* NIN/identity-document security
+* Secure file uploads
+* API authorization
+* Input validation
+* Audit logging
+* Encryption at rest for sensitive identity documents
+* Prevention of unauthorized access to financial information
+* Prevention of privilege escalation
+
+Never rely solely on frontend controls for security.
+
+---
+
+# 11. Testing Requirements
+
+For every implemented change, provide appropriate testing.
+
+At minimum, test:
+
+### Functional Testing
+
+Verify every requirement works according to specification.
+
+### Financial Testing
+
+Test:
+
+* 5% markup calculations
+* Pharmacy earnings
+* MobiCare revenue
+* Settlement totals
+* Delivery commissions
+* Date-range revenue
+* Historical transaction calculations
+
+### Permission Testing
+
+Verify that:
+
+* Pharmacies cannot see MobiCare commission.
+* Unauthorized HQ users cannot access Settlements.
+* Authorized HQ users can access financial information.
+* Restricted identity documents cannot be accessed by unauthorized users.
+
+### Workflow Testing
+
+Test:
+
+**Confirmed → Packaged → Collected → Delivered → Settlement**
+
+where applicable.
+
+### Regression Testing
+
+Ensure existing functionality continues to work after implementation.
+
+---
+
+# 12. Implementation Rules
+
+Before modifying code:
+
+1. Analyze the existing application architecture.
+2. Identify the relevant frontend, backend, database, API, authentication, and authorization components.
+3. Identify dependencies between the requested changes.
+4. Fix the critical delivery-count bug first.
+5. Implement the remaining requirements in logical phases.
+6. Avoid unnecessary changes to unrelated functionality.
+7. Preserve existing business rules unless this document explicitly changes them.
+8. Do not invent requirements that are marked as pending or unspecified.
+9. Clearly identify any requirement that cannot be implemented without Product Owner clarification.
+
+---
+
+# 13. Deliverables
+
+After implementation, provide:
+
+1. Summary of changes implemented.
+2. Critical bug root cause and resolution.
+3. Database/schema changes.
+4. API/backend changes.
+5. Frontend changes.
+6. Security and permission changes.
+7. Financial calculation logic.
+8. Tests performed and results.
+9. Any migration requirements.
+10. Any outstanding Product Owner decisions.
+11. Any assumptions made during implementation.
+12. Any risks or recommended follow-up actions.
+
+The final implementation must be **production-ready, secure, auditable, maintainable, and aligned strictly with the approved MobiCare change requirements.**
+
+**Most importantly: do not invent or silently assume business requirements that are explicitly marked as pending or unspecified.**
