@@ -14,7 +14,10 @@ export interface DrugOffer {
   pharmacyAddress?: string | null;
   /** @nullable */
   brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
   priceLeones: number;
+  unitOfSale: string;
   inStock: boolean;
   availableForDelivery: boolean;
   availableForCollection: boolean;

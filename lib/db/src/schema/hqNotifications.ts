@@ -17,10 +17,14 @@ export const hqNotificationsTable = pgTable("hq_notifications", {
   type: text("type"),
   referenceId: uuid("reference_id"),
   readAt: timestamp("read_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const insertHqNotificationSchema = createInsertSchema(hqNotificationsTable).omit({
+export const insertHqNotificationSchema = createInsertSchema(
+  hqNotificationsTable,
+).omit({
   id: true,
   createdAt: true,
 });

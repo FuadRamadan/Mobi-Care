@@ -41,10 +41,16 @@ function parsePrivateObjectDir(): { bucketName: string; dirPrefix: string } {
  * Upload a buffer directly to GCS (server-side) and return an imageKey of the
  * form "cloud:/objects/uploads/<uuid>.<ext>".
  */
-async function uploadToCloud(buf: Buffer, ext: string, uuid: string): Promise<string> {
+async function uploadToCloud(
+  buf: Buffer,
+  ext: string,
+  uuid: string,
+): Promise<string> {
   const filename = `${uuid}.${ext}`;
   const { bucketName, dirPrefix } = parsePrivateObjectDir();
-  const objectName = dirPrefix ? `${dirPrefix}/uploads/${filename}` : `uploads/${filename}`;
+  const objectName = dirPrefix
+    ? `${dirPrefix}/uploads/${filename}`
+    : `uploads/${filename}`;
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
 
   const bucket = objectStorageClient.bucket(bucketName);
@@ -72,7 +78,9 @@ router.post("/prescription", async (req: AuthRequest, res) => {
 
   const match = DATA_URL_RE.exec(body.data.image);
   if (!match) {
-    res.status(400).json({ error: "image must be a PNG, JPEG, or WebP data URL" });
+    res
+      .status(400)
+      .json({ error: "image must be a PNG, JPEG, or WebP data URL" });
     return;
   }
 

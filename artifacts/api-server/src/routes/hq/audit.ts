@@ -13,7 +13,9 @@ router.get("/", async (req, res) => {
   const entityType = req.query.entityType as string | undefined;
   const entityId = req.query.entityId as string | undefined;
   const limitRaw = Number(req.query.limit ?? 100);
-  const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 100;
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(limitRaw, 1), 500)
+    : 100;
 
   const conditions: SQL[] = [];
   if (entityType) conditions.push(eq(auditLogTable.entityType, entityType));
@@ -21,7 +23,10 @@ router.get("/", async (req, res) => {
 
   const base = db.select().from(auditLogTable).$dynamic();
   const rows = conditions.length
-    ? await base.where(and(...conditions)).orderBy(desc(auditLogTable.createdAt)).limit(limit)
+    ? await base
+        .where(and(...conditions))
+        .orderBy(desc(auditLogTable.createdAt))
+        .limit(limit)
     : await base.orderBy(desc(auditLogTable.createdAt)).limit(limit);
 
   res.json(rows);

@@ -19,7 +19,9 @@ export const auditLogTable = pgTable("audit_log", {
   entityId: uuid("entity_id"),
   // Snapshot of relevant change data
   details: jsonb("details"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type AuditLogEntry = typeof auditLogTable.$inferSelect;

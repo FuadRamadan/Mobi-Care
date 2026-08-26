@@ -12,8 +12,12 @@ export const hqStaffTable = pgTable("hq_staff", {
   phone: text("phone").unique(),
   isActive: boolean("is_active").notNull().default(true),
   passwordHash: text("password_hash").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type HqStaff = typeof hqStaffTable.$inferSelect;
@@ -27,7 +31,9 @@ export const hqRefreshTokensTable = pgTable("hq_refresh_tokens", {
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type HqRefreshToken = typeof hqRefreshTokensTable.$inferSelect;

@@ -4,10 +4,18 @@ import {
   drugCatalogueTable,
   pharmacyInventoryTable,
   pharmaciesTable,
+  DRUG_CATEGORY_TAXONOMY,
+  DRUG_PRIMARY_CATEGORIES,
+  DRUG_SUBCATEGORIES,
+  isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { and, eq, gt, ilike, or } from "drizzle-orm";
+import { and, eq, gt, ilike, or, type SQL } from "drizzle-orm";
 
 const router = safeRouter();
+
+router.get("/categories", (_req, res) => {
+  res.json(DRUG_CATEGORY_TAXONOMY);
+});
 
 /**
  * GET /patient/search?q=para
@@ -18,12 +26,66 @@ const router = safeRouter();
  */
 router.get("/", async (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  if (q.length < 2) {
-    res.status(400).json({ error: "Query 'q' must be at least 2 characters" });
+  const category =
+    typeof req.query.category === "string" ? req.query.category : "";
+  const subcategory =
+    typeof req.query.subcategory === "string" ? req.query.subcategory : "";
+  if (q.length > 0 && q.length < 2) {
+    res
+      .status(400)
+      .json({ error: "Query 'q' must be at least 2 characters when supplied" });
+    return;
+  }
+  if (!q && !category) {
+    res.status(400).json({ error: "Provide a search query or category" });
+    return;
+  }
+  if (category && !DRUG_PRIMARY_CATEGORIES.includes(category as never)) {
+    res.status(400).json({ error: "Unknown category" });
+    return;
+  }
+  if (subcategory && !DRUG_SUBCATEGORIES.includes(subcategory as never)) {
+    res.status(400).json({ error: "Unknown subcategory" });
+    return;
+  }
+  if (
+    category &&
+    subcategory &&
+    !isValidDrugCategoryPair(category, subcategory)
+  ) {
+    res
+      .status(400)
+      .json({ error: "The subcategory does not belong to that category" });
     return;
   }
 
   const pattern = `%${q}%`;
+  const filters: SQL[] = [
+    eq(drugCatalogueTable.isApproved, true),
+    eq(pharmacyInventoryTable.isActive, true),
+    eq(pharmacyInventoryTable.completionStatus, "complete"),
+    gt(
+      pharmacyInventoryTable.expiryDate,
+      new Date().toISOString().slice(0, 10),
+    ),
+    eq(pharmaciesTable.isActive, true),
+  ];
+  if (q) {
+    filters.push(
+      or(
+        ilike(drugCatalogueTable.name, pattern),
+        ilike(drugCatalogueTable.genericName, pattern),
+        ilike(pharmacyInventoryTable.brand, pattern),
+      )!,
+    );
+  }
+  if (category) {
+    filters.push(eq(pharmacyInventoryTable.primaryCategory, category as never));
+  }
+  if (subcategory) {
+    filters.push(eq(pharmacyInventoryTable.subcategory, subcategory as never));
+  }
+
   const rows = await db
     .select({
       drugId: drugCatalogueTable.id,
@@ -32,9 +94,15 @@ router.get("/", async (req, res) => {
       description: drugCatalogueTable.description,
       tier: drugCatalogueTable.tier,
       unit: drugCatalogueTable.unit,
+      strength: pharmacyInventoryTable.strength,
+      form: pharmacyInventoryTable.form,
+      unitOfSale: pharmacyInventoryTable.unitOfSale,
+      primaryCategory: pharmacyInventoryTable.primaryCategory,
+      subcategory: pharmacyInventoryTable.subcategory,
       maxUnitsPerOrder: drugCatalogueTable.maxUnitsPerOrder,
       inventoryId: pharmacyInventoryTable.id,
       brand: pharmacyInventoryTable.brand,
+      manufacturer: pharmacyInventoryTable.manufacturer,
       priceLeones: pharmacyInventoryTable.priceLeones,
       stockQuantity: pharmacyInventoryTable.stockQuantity,
       availableForDelivery: pharmacyInventoryTable.availableForDelivery,
@@ -42,29 +110,19 @@ router.get("/", async (req, res) => {
       pharmacyId: pharmaciesTable.id,
       pharmacyName: pharmaciesTable.name,
       pharmacyAddress: pharmaciesTable.address,
-      controlledSubstanceAuthorized: pharmaciesTable.controlledSubstanceAuthorized,
+      controlledSubstanceAuthorized:
+        pharmaciesTable.controlledSubstanceAuthorized,
     })
     .from(drugCatalogueTable)
     .innerJoin(
       pharmacyInventoryTable,
-      eq(pharmacyInventoryTable.drugId, drugCatalogueTable.id)
+      eq(pharmacyInventoryTable.drugId, drugCatalogueTable.id),
     )
     .innerJoin(
       pharmaciesTable,
-      eq(pharmaciesTable.id, pharmacyInventoryTable.pharmacyId)
+      eq(pharmaciesTable.id, pharmacyInventoryTable.pharmacyId),
     )
-    .where(
-      and(
-        eq(drugCatalogueTable.isApproved, true),
-        or(
-          ilike(drugCatalogueTable.name, pattern),
-          ilike(drugCatalogueTable.genericName, pattern)
-        ),
-        eq(pharmacyInventoryTable.isActive, true),
-        gt(pharmacyInventoryTable.stockQuantity, 0),
-        eq(pharmaciesTable.isActive, true)
-      )
-    )
+    .where(and(...filters))
     .limit(200);
 
   // Group offers per drug.
@@ -73,21 +131,29 @@ router.get("/", async (req, res) => {
     // Tier-1 (controlled) drugs may only be offered by authorised pharmacies.
     if (r.tier === "1" && !r.controlledSubstanceAuthorized) continue;
 
-    let entry = byDrug.get(r.drugId);
+    if (!r.strength || !r.form || !r.unitOfSale) continue;
+    const listingKey = [r.drugId, r.strength, r.form, r.unitOfSale].join("|");
+    let entry = byDrug.get(listingKey);
     if (!entry) {
       entry = {
+        listingKey,
         drugId: r.drugId,
         name: r.name,
         genericName: r.genericName,
         description: r.description,
         tier: r.tier,
         unit: r.unit,
+        strength: r.strength,
+        form: r.form,
+        unitOfSale: r.unitOfSale,
+        primaryCategory: r.primaryCategory,
+        subcategory: r.subcategory,
         maxUnitsPerOrder: r.maxUnitsPerOrder,
         prescriptionRequired: r.tier === "1" || r.tier === "2",
         collectionOnly: r.tier === "1",
         offers: [],
       };
-      byDrug.set(r.drugId, entry);
+      byDrug.set(listingKey, entry);
     }
     entry.offers.push({
       inventoryId: r.inventoryId,
@@ -95,7 +161,9 @@ router.get("/", async (req, res) => {
       pharmacyName: r.pharmacyName,
       pharmacyAddress: r.pharmacyAddress,
       brand: r.brand,
-      priceLeones: r.priceLeones,
+      manufacturer: r.manufacturer,
+      priceLeones: Number(r.priceLeones),
+      unitOfSale: r.unitOfSale,
       inStock: r.stockQuantity > 0,
       availableForDelivery: r.availableForDelivery && r.tier !== "1",
       availableForCollection: r.availableForCollection,

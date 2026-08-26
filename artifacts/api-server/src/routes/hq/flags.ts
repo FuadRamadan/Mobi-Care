@@ -36,7 +36,9 @@ router.get("/", async (req, res) => {
 
   const rows =
     status === "open" || status === "reviewed"
-      ? await base.where(eq(flagsTable.status, status)).orderBy(desc(flagsTable.createdAt))
+      ? await base
+          .where(eq(flagsTable.status, status))
+          .orderBy(desc(flagsTable.createdAt))
       : await base.orderBy(desc(flagsTable.createdAt));
 
   res.json(rows);
@@ -44,13 +46,26 @@ router.get("/", async (req, res) => {
 
 // ── Mark a flag reviewed with a note ─────────────────────────────────────────
 // Exposed both as POST /hq/flags/:id/review and PATCH /hq/flags/:id (contract alias).
-const reviewFlagHandler = async (req: AuthRequest, res: Parameters<Parameters<typeof router.post>[1]>[1]) => {
+const reviewFlagHandler = async (
+  req: AuthRequest,
+  res: Parameters<Parameters<typeof router.post>[1]>[1],
+) => {
   const id = req.params.id as string;
   const body = z.object({ note: z.string().min(1) }).safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: "note is required" }); return; }
+  if (!body.success) {
+    res.status(400).json({ error: "note is required" });
+    return;
+  }
 
-  const [flag] = await db.select().from(flagsTable).where(eq(flagsTable.id, id)).limit(1);
-  if (!flag) { res.status(404).json({ error: "Flag not found" }); return; }
+  const [flag] = await db
+    .select()
+    .from(flagsTable)
+    .where(eq(flagsTable.id, id))
+    .limit(1);
+  if (!flag) {
+    res.status(404).json({ error: "Flag not found" });
+    return;
+  }
   if (flag.status === "reviewed") {
     res.status(409).json({ error: "Flag already reviewed" });
     return;

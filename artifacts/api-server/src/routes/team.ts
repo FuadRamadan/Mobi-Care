@@ -1,7 +1,10 @@
 import { safeRouter } from "../lib/safeRouter.js";
 import { asc, eq } from "drizzle-orm";
 import { db, teamMembersTable } from "@workspace/db";
-import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage.js";
+import {
+  ObjectNotFoundError,
+  ObjectStorageService,
+} from "../lib/objectStorage.js";
 import { ensureTeamMembers } from "../lib/teamMembers.js";
 
 const router = safeRouter();
@@ -18,8 +21,14 @@ async function pipeObjectToResponse(
 ): Promise<void> {
   const file = await objectStorage.getObjectEntityFile(objectPath);
   const objectResponse = await objectStorage.downloadObject(file, 86_400);
-  res.setHeader("Content-Type", objectResponse.headers.get("Content-Type") ?? "image/jpeg");
-  res.setHeader("Cache-Control", objectResponse.headers.get("Cache-Control") ?? "public, max-age=86400");
+  res.setHeader(
+    "Content-Type",
+    objectResponse.headers.get("Content-Type") ?? "image/jpeg",
+  );
+  res.setHeader(
+    "Cache-Control",
+    objectResponse.headers.get("Cache-Control") ?? "public, max-age=86400",
+  );
 
   const reader = objectResponse.body!.getReader();
   try {

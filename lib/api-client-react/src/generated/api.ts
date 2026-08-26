@@ -32,6 +32,7 @@ import type {
   CourierUpdate,
   DailyOrderStat,
   DrugCatalogueItem,
+  DrugCategory,
   DrugProposal,
   DrugSearchResult,
   FlagReviewInput,
@@ -1218,6 +1219,83 @@ export const useProposeDrug = <TError = ErrorType<unknown>,
       return useMutation(getProposeDrugMutationOptions(options));
     }
 
+export const getListDrugCategoriesUrl = () => {
+
+
+
+
+  return `/api/pharmacy/catalogue/categories`
+}
+
+/**
+ * @summary List the HQ-controlled medicine category taxonomy
+ */
+export const listDrugCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<DrugCategory[]> => {
+
+  return customFetch<DrugCategory[]>(getListDrugCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDrugCategoriesQueryKey = () => {
+    return [
+    `/api/pharmacy/catalogue/categories`
+    ] as const;
+    }
+
+
+export const getListDrugCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listDrugCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDrugCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDrugCategories>>> = ({ signal }) => listDrugCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDrugCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDrugCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listDrugCategories>>>
+export type ListDrugCategoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the HQ-controlled medicine category taxonomy
+ */
+
+export function useListDrugCategories<TData = Awaited<ReturnType<typeof listDrugCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDrugCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListPrescriptionsUrl = (params?: ListPrescriptionsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1666,7 +1744,7 @@ export const useRegisterPatient = <TError = ErrorType<void>,
       return useMutation(getRegisterPatientMutationOptions(options));
     }
 
-export const getPatientSearchDrugsUrl = (params: PatientSearchDrugsParams,) => {
+export const getPatientSearchDrugsUrl = (params?: PatientSearchDrugsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -1684,7 +1762,7 @@ export const getPatientSearchDrugsUrl = (params: PatientSearchDrugsParams,) => {
 /**
  * @summary Search medicines across all pharmacies with price comparison
  */
-export const patientSearchDrugs = async (params: PatientSearchDrugsParams, options?: Parameters<typeof customFetch>[1]): Promise<DrugSearchResult[]> => {
+export const patientSearchDrugs = async (params?: PatientSearchDrugsParams, options?: Parameters<typeof customFetch>[1]): Promise<DrugSearchResult[]> => {
 
   return customFetch<DrugSearchResult[]>(getPatientSearchDrugsUrl(params),
   {
@@ -1706,7 +1784,7 @@ export const getPatientSearchDrugsQueryKey = (params?: PatientSearchDrugsParams,
     }
 
 
-export const getPatientSearchDrugsQueryOptions = <TData = Awaited<ReturnType<typeof patientSearchDrugs>>, TError = ErrorType<unknown>>(params: PatientSearchDrugsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSearchDrugs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getPatientSearchDrugsQueryOptions = <TData = Awaited<ReturnType<typeof patientSearchDrugs>>, TError = ErrorType<unknown>>(params?: PatientSearchDrugsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSearchDrugs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1733,11 +1811,88 @@ export type PatientSearchDrugsQueryError = ErrorType<unknown>
  */
 
 export function usePatientSearchDrugs<TData = Awaited<ReturnType<typeof patientSearchDrugs>>, TError = ErrorType<unknown>>(
- params: PatientSearchDrugsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSearchDrugs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: PatientSearchDrugsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSearchDrugs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getPatientSearchDrugsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPatientDrugCategoriesUrl = () => {
+
+
+
+
+  return `/api/patient/search/categories`
+}
+
+/**
+ * @summary List medicine categories available for patient search
+ */
+export const listPatientDrugCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<DrugCategory[]> => {
+
+  return customFetch<DrugCategory[]>(getListPatientDrugCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPatientDrugCategoriesQueryKey = () => {
+    return [
+    `/api/patient/search/categories`
+    ] as const;
+    }
+
+
+export const getListPatientDrugCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listPatientDrugCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPatientDrugCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPatientDrugCategories>>> = ({ signal }) => listPatientDrugCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPatientDrugCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPatientDrugCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listPatientDrugCategories>>>
+export type ListPatientDrugCategoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List medicine categories available for patient search
+ */
+
+export function useListPatientDrugCategories<TData = Awaited<ReturnType<typeof listPatientDrugCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPatientDrugCategoriesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

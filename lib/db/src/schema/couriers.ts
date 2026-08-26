@@ -7,8 +7,12 @@ export const couriersTable = pgTable("couriers", {
   phone: text("phone").notNull().unique(),
   vehicleType: text("vehicle_type").notNull().default("motorbike"), // motorbike | bicycle | car | van
   isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type Courier = typeof couriersTable.$inferSelect;

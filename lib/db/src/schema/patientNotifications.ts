@@ -13,7 +13,9 @@ export const patientNotificationsTable = pgTable("patient_notifications", {
   // ID of the related entity (order id)
   referenceId: uuid("reference_id"),
   readAt: timestamp("read_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type PatientNotification = typeof patientNotificationsTable.$inferSelect;

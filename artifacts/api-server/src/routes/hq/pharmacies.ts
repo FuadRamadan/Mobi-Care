@@ -2,10 +2,7 @@ import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import {
-  pharmaciesTable,
-  refreshTokensTable,
-} from "@workspace/db/schema";
+import { pharmaciesTable, refreshTokensTable } from "@workspace/db/schema";
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
@@ -25,21 +22,34 @@ function publicPharmacy(p: typeof pharmaciesTable.$inferSelect) {
 
 // ── GET /hq/pharmacies ────────────────────────────────────────────────────────
 router.get("/", async (_req, res) => {
-  const rows = await db.select().from(pharmaciesTable).orderBy(desc(pharmaciesTable.createdAt));
+  const rows = await db
+    .select()
+    .from(pharmaciesTable)
+    .orderBy(desc(pharmaciesTable.createdAt));
   res.json(rows.map(publicPharmacy));
 });
 
 // ── POST /hq/pharmacies — onboard a pharmacy, returns one-time temp password ──
 router.post("/", async (req: AuthRequest, res) => {
-  const body = z.object({
-    name: z.string().min(1),
-    username: z.string().min(3).regex(/^[a-z0-9_.-]+$/i, "username may only contain letters, numbers, and _.-"),
-    phone: z.string().min(5).optional(),
-    address: z.string().optional(),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      name: z.string().min(1),
+      username: z
+        .string()
+        .min(3)
+        .regex(
+          /^[a-z0-9_.-]+$/i,
+          "username may only contain letters, numbers, and _.-",
+        ),
+      phone: z.string().min(5).optional(),
+      address: z.string().optional(),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: body.error.issues[0]?.message ?? "Invalid input" });
+    res
+      .status(400)
+      .json({ error: body.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
 
@@ -48,7 +58,10 @@ router.post("/", async (req: AuthRequest, res) => {
     .from(pharmaciesTable)
     .where(eq(pharmaciesTable.username, body.data.username))
     .limit(1);
-  if (existing) { res.status(409).json({ error: "Username already taken" }); return; }
+  if (existing) {
+    res.status(409).json({ error: "Username already taken" });
+    return;
+  }
 
   // Load policy for temp password expiry
   const policy = await getOrCreatePasswordPolicy();
@@ -116,7 +129,9 @@ router.post("/:id/reset-password", async (req: AuthRequest, res) => {
     return;
   }
   if (!existing.isActive) {
-    res.status(409).json({ error: "Cannot reset password for an inactive pharmacy" });
+    res
+      .status(409)
+      .json({ error: "Cannot reset password for an inactive pharmacy" });
     return;
   }
 
@@ -165,8 +180,8 @@ router.post("/:id/reset-password", async (req: AuthRequest, res) => {
       .where(
         and(
           eq(refreshTokensTable.pharmacyId, id),
-          isNull(refreshTokensTable.revokedAt)
-        )
+          isNull(refreshTokensTable.revokedAt),
+        ),
       );
 
     return updated;
@@ -211,22 +226,30 @@ router.post("/:id/reset-password", async (req: AuthRequest, res) => {
 // ── PATCH /hq/pharmacies/:id — licence verification / tier-1 gate / status ────
 router.patch("/:id", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
-  const body = z.object({
-    isActive: z.boolean().optional(),
-    controlledSubstanceAuthorized: z.boolean().optional(),
-    name: z.string().min(1).optional(),
-    phone: z.string().min(5).nullable().optional(),
-    address: z.string().nullable().optional(),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      isActive: z.boolean().optional(),
+      controlledSubstanceAuthorized: z.boolean().optional(),
+      name: z.string().min(1).optional(),
+      phone: z.string().min(5).nullable().optional(),
+      address: z.string().nullable().optional(),
+    })
+    .safeParse(req.body);
 
   if (!body.success || Object.keys(body.data).length === 0) {
     res.status(400).json({ error: "No valid fields provided" });
     return;
   }
 
-  const [existing] = await db.select().from(pharmaciesTable)
-    .where(eq(pharmaciesTable.id, id)).limit(1);
-  if (!existing) { res.status(404).json({ error: "Pharmacy not found" }); return; }
+  const [existing] = await db
+    .select()
+    .from(pharmaciesTable)
+    .where(eq(pharmaciesTable.id, id))
+    .limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Pharmacy not found" });
+    return;
+  }
 
   const [updated] = await db
     .update(pharmaciesTable)

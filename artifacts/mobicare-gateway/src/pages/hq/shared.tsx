@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function formatLeones(n: number | null | undefined): string {
-  return `Le ${(n ?? 0).toLocaleString()}`;
+  return `Le ${(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
 export function formatDate(d: string | null | undefined): string {

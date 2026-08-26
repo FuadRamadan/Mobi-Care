@@ -1,10 +1,17 @@
-import { pgTable, uuid, text, timestamp, pgEnum, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  pgEnum,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { ordersTable } from "./orders";
 
 export const flagTypeEnum = pgEnum("flag_type", [
-  "velocity",         // too many orders from same patient phone in a window
-  "duplicate",        // near-identical order (same phone, pharmacy, total) close together
-  "payment_anomaly",  // unusual amount / suspicious payment pattern
+  "velocity", // too many orders from same patient phone in a window
+  "duplicate", // near-identical order (same phone, pharmacy, total) close together
+  "payment_anomaly", // unusual amount / suspicious payment pattern
 ]);
 
 export const flagStatusEnum = pgEnum("flag_status", ["open", "reviewed"]);
@@ -25,7 +32,9 @@ export const flagsTable = pgTable("flags", {
   reviewedByHqStaffId: uuid("reviewed_by_hq_staff_id"),
   reviewNote: text("review_note"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type Flag = typeof flagsTable.$inferSelect;

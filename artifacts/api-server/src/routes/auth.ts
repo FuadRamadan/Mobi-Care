@@ -30,10 +30,12 @@ const router = safeRouter();
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 router.post("/login", async (req, res) => {
-  const body = z.object({
-    identifier: z.string().min(1),
-    password: z.string().min(1),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      identifier: z.string().min(1),
+      password: z.string().min(1),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
     res.status(400).json({ error: "identifier and password are required" });
@@ -49,13 +51,15 @@ router.post("/login", async (req, res) => {
     .where(eq(pharmaciesTable.username, identifier))
     .limit(1);
 
-  const pharmacy = byUsername ?? (
-    await db
-      .select()
-      .from(pharmaciesTable)
-      .where(eq(pharmaciesTable.phone, identifier))
-      .limit(1)
-  )[0];
+  const pharmacy =
+    byUsername ??
+    (
+      await db
+        .select()
+        .from(pharmaciesTable)
+        .where(eq(pharmaciesTable.phone, identifier))
+        .limit(1)
+    )[0];
 
   if (pharmacy && pharmacy.isActive) {
     const valid = await bcrypt.compare(password, pharmacy.passwordHash);
@@ -67,7 +71,8 @@ router.post("/login", async (req, res) => {
         new Date() > pharmacy.temporaryPasswordExpiresAt
       ) {
         res.status(401).json({
-          error: "Temporary password has expired. Please contact HQ for a new password reset.",
+          error:
+            "Temporary password has expired. Please contact HQ for a new password reset.",
           code: "TEMPORARY_PASSWORD_EXPIRED",
         });
         return;
@@ -136,13 +141,15 @@ router.post("/login", async (req, res) => {
     .where(eq(hqStaffTable.username, identifier))
     .limit(1);
 
-  const staff = hqByUsername ?? (
-    await db
-      .select()
-      .from(hqStaffTable)
-      .where(eq(hqStaffTable.phone, identifier))
-      .limit(1)
-  )[0];
+  const staff =
+    hqByUsername ??
+    (
+      await db
+        .select()
+        .from(hqStaffTable)
+        .where(eq(hqStaffTable.phone, identifier))
+        .limit(1)
+    )[0];
 
   if (staff && staff.isActive) {
     const valid = await bcrypt.compare(password, staff.passwordHash);
@@ -154,7 +161,11 @@ router.post("/login", async (req, res) => {
         expiresAt: refreshTokenExpiresAt(),
       });
 
-      const accessToken = signAccessToken({ sub: staff.id, role: "hq", name: staff.name });
+      const accessToken = signAccessToken({
+        sub: staff.id,
+        role: "hq",
+        name: staff.name,
+      });
       res.json({
         accessToken,
         refreshToken: raw,
@@ -187,7 +198,11 @@ router.post("/login", async (req, res) => {
         expiresAt: refreshTokenExpiresAt(),
       });
 
-      const accessToken = signAccessToken({ sub: patientAcc.id, role: "patient", name: patientAcc.name });
+      const accessToken = signAccessToken({
+        sub: patientAcc.id,
+        role: "patient",
+        name: patientAcc.name,
+      });
       res.json({
         accessToken,
         refreshToken: raw,
@@ -208,14 +223,21 @@ router.post("/login", async (req, res) => {
 
 // ── Patient registration ──────────────────────────────────────────────────────
 router.post("/register", async (req, res) => {
-  const body = z.object({
-    name: z.string().min(2),
-    phone: z.string().min(5),
-    password: z.string().min(8),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      name: z.string().min(2),
+      phone: z.string().min(5),
+      password: z.string().min(8),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "name (min 2), phone (min 5) and password (min 8 chars) are required" });
+    res
+      .status(400)
+      .json({
+        error:
+          "name (min 2), phone (min 5) and password (min 8 chars) are required",
+      });
     return;
   }
 
@@ -225,7 +247,9 @@ router.post("/register", async (req, res) => {
     .where(eq(patientsTable.phone, body.data.phone))
     .limit(1);
   if (existing) {
-    res.status(409).json({ error: "An account with this phone number already exists" });
+    res
+      .status(409)
+      .json({ error: "An account with this phone number already exists" });
     return;
   }
 
@@ -236,7 +260,9 @@ router.post("/register", async (req, res) => {
     .onConflictDoNothing({ target: patientsTable.phone })
     .returning();
   if (!created) {
-    res.status(409).json({ error: "An account with this phone number already exists" });
+    res
+      .status(409)
+      .json({ error: "An account with this phone number already exists" });
     return;
   }
 
@@ -247,7 +273,11 @@ router.post("/register", async (req, res) => {
     expiresAt: refreshTokenExpiresAt(),
   });
 
-  const accessToken = signAccessToken({ sub: created.id, role: "patient", name: created.name });
+  const accessToken = signAccessToken({
+    sub: created.id,
+    role: "patient",
+    name: created.name,
+  });
   res.status(201).json({
     accessToken,
     refreshToken: raw,
@@ -263,7 +293,9 @@ router.post("/register", async (req, res) => {
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
 router.post("/refresh", async (req, res) => {
-  const body = z.object({ refreshToken: z.string().min(1) }).safeParse(req.body);
+  const body = z
+    .object({ refreshToken: z.string().min(1) })
+    .safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "refreshToken is required" });
     return;
@@ -282,8 +314,8 @@ router.post("/refresh", async (req, res) => {
       and(
         eq(refreshTokensTable.tokenHash, hash),
         isNull(refreshTokensTable.revokedAt),
-        gt(refreshTokensTable.expiresAt, now)
-      )
+        gt(refreshTokensTable.expiresAt, now),
+      ),
     )
     .returning();
 
@@ -311,7 +343,8 @@ router.post("/refresh", async (req, res) => {
       pharmacy.temporaryPasswordExpiresAt.getTime() <= now.getTime()
     ) {
       res.status(401).json({
-        error: "Temporary password has expired. Please contact HQ for a new password reset.",
+        error:
+          "Temporary password has expired. Please contact HQ for a new password reset.",
         code: "TEMPORARY_PASSWORD_EXPIRED",
       });
       return;
@@ -366,8 +399,8 @@ router.post("/refresh", async (req, res) => {
       and(
         eq(hqRefreshTokensTable.tokenHash, hash),
         isNull(hqRefreshTokensTable.revokedAt),
-        gt(hqRefreshTokensTable.expiresAt, now)
-      )
+        gt(hqRefreshTokensTable.expiresAt, now),
+      ),
     )
     .limit(1);
 
@@ -395,7 +428,11 @@ router.post("/refresh", async (req, res) => {
       expiresAt: refreshTokenExpiresAt(),
     });
 
-    const accessToken = signAccessToken({ sub: staff.id, role: "hq", name: staff.name });
+    const accessToken = signAccessToken({
+      sub: staff.id,
+      role: "hq",
+      name: staff.name,
+    });
     res.json({ accessToken, refreshToken: raw });
     return;
   }
@@ -408,8 +445,8 @@ router.post("/refresh", async (req, res) => {
       and(
         eq(patientRefreshTokensTable.tokenHash, hash),
         isNull(patientRefreshTokensTable.revokedAt),
-        gt(patientRefreshTokensTable.expiresAt, now)
-      )
+        gt(patientRefreshTokensTable.expiresAt, now),
+      ),
     )
     .limit(1);
 
@@ -437,7 +474,11 @@ router.post("/refresh", async (req, res) => {
       expiresAt: refreshTokenExpiresAt(),
     });
 
-    const accessToken = signAccessToken({ sub: patientAcc.id, role: "patient", name: patientAcc.name });
+    const accessToken = signAccessToken({
+      sub: patientAcc.id,
+      role: "patient",
+      name: patientAcc.name,
+    });
     res.json({ accessToken, refreshToken: raw });
     return;
   }
@@ -447,13 +488,17 @@ router.post("/refresh", async (req, res) => {
 
 // ── Change Password ───────────────────────────────────────────────────────────
 router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
-  const body = z.object({
-    currentPassword: z.string().min(1),
-    newPassword: z.string().min(8),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "currentPassword and newPassword are required" });
+    res
+      .status(400)
+      .json({ error: "currentPassword and newPassword are required" });
     return;
   }
 
@@ -467,9 +512,15 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       .where(eq(hqStaffTable.id, accountId))
       .limit(1);
 
-    if (!record) { res.status(404).json({ error: "Not found" }); return; }
+    if (!record) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
-    const valid = await bcrypt.compare(body.data.currentPassword, record.passwordHash);
+    const valid = await bcrypt.compare(
+      body.data.currentPassword,
+      record.passwordHash,
+    );
     if (!valid) {
       res.status(401).json({ error: "Current password is incorrect" });
       return;
@@ -487,8 +538,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       .where(
         and(
           eq(hqRefreshTokensTable.hqStaffId, accountId),
-          isNull(hqRefreshTokensTable.revokedAt)
-        )
+          isNull(hqRefreshTokensTable.revokedAt),
+        ),
       );
 
     res.json({ message: "Password changed successfully" });
@@ -502,9 +553,15 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       .where(eq(patientsTable.id, accountId))
       .limit(1);
 
-    if (!record) { res.status(404).json({ error: "Not found" }); return; }
+    if (!record) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
-    const valid = await bcrypt.compare(body.data.currentPassword, record.passwordHash);
+    const valid = await bcrypt.compare(
+      body.data.currentPassword,
+      record.passwordHash,
+    );
     if (!valid) {
       res.status(401).json({ error: "Current password is incorrect" });
       return;
@@ -522,8 +579,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       .where(
         and(
           eq(patientRefreshTokensTable.patientId, accountId),
-          isNull(patientRefreshTokensTable.revokedAt)
-        )
+          isNull(patientRefreshTokensTable.revokedAt),
+        ),
       );
 
     res.json({ message: "Password changed successfully" });
@@ -537,7 +594,10 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     .where(eq(pharmaciesTable.id, accountId))
     .limit(1);
 
-  if (!record) { res.status(404).json({ error: "Not found" }); return; }
+  if (!record) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
 
   const policy = await getOrCreatePasswordPolicy();
   const passwordAgeDays =
@@ -551,31 +611,47 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
 
   if (!record.mustChangePassword && !canChangeForExpiry) {
     res.status(403).json({
-      error: "Password changes are available only when your password is close to expiry.",
+      error:
+        "Password changes are available only when your password is close to expiry.",
       code: "PASSWORD_CHANGE_NOT_AVAILABLE",
     });
     return;
   }
 
-  const valid = await bcrypt.compare(body.data.currentPassword, record.passwordHash);
+  const valid = await bcrypt.compare(
+    body.data.currentPassword,
+    record.passwordHash,
+  );
   if (!valid) {
     res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
 
   // Validate the new password against the policy loaded above.
-  const { valid: policyValid, messages } = validatePasswordAgainstPolicy(body.data.newPassword, policy);
+  const { valid: policyValid, messages } = validatePasswordAgainstPolicy(
+    body.data.newPassword,
+    policy,
+  );
   if (!policyValid) {
-    res.status(422).json({ error: "Password does not meet policy requirements", messages });
+    res
+      .status(422)
+      .json({ error: "Password does not meet policy requirements", messages });
     return;
   }
 
   // Check history (current + recent history)
-  const reused = await isPasswordReused(body.data.newPassword, record.passwordHash, accountId, policy);
+  const reused = await isPasswordReused(
+    body.data.newPassword,
+    record.passwordHash,
+    accountId,
+    policy,
+  );
   if (reused) {
     res.status(422).json({
       error: `New password must differ from your current password and the last ${policy.passwordHistoryCount} previous passwords.`,
-      messages: [`Password has been used recently. Choose a different password.`],
+      messages: [
+        `Password has been used recently. Choose a different password.`,
+      ],
     });
     return;
   }
@@ -619,8 +695,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       .where(
         and(
           eq(refreshTokensTable.pharmacyId, accountId),
-          isNull(refreshTokensTable.revokedAt)
-        )
+          isNull(refreshTokensTable.revokedAt),
+        ),
       );
 
     return updated;
@@ -628,7 +704,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
 
   if (!updatedCredential) {
     res.status(409).json({
-      error: "Credentials changed during this request. Please sign in and try again.",
+      error:
+        "Credentials changed during this request. Please sign in and try again.",
       code: "CREDENTIALS_CHANGED",
     });
     return;
@@ -673,8 +750,13 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 router.post("/logout", async (req, res) => {
-  const body = z.object({ refreshToken: z.string().min(1) }).safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: "refreshToken required" }); return; }
+  const body = z
+    .object({ refreshToken: z.string().min(1) })
+    .safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "refreshToken required" });
+    return;
+  }
 
   const hash = hashRefreshToken(body.data.refreshToken);
   const now = new Date();

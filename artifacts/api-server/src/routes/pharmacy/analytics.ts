@@ -61,7 +61,8 @@ router.get("/overview", async (req: AuthRequest, res) => {
     totalOrders += n;
     ordersByStatus[row.status] = n;
     if (PENDING_STATUSES.has(row.status)) pendingOrders += n;
-    if (COMPLETED_STATUSES.has(row.status)) revenueLeones += Number(row.rev ?? 0);
+    if (COMPLETED_STATUSES.has(row.status))
+      revenueLeones += Number(row.rev ?? 0);
   }
 
   res.json({
@@ -86,12 +87,7 @@ router.get("/orders-by-day", async (req: AuthRequest, res) => {
       revenueLeones: sum(orders.totalLeones),
     })
     .from(orders)
-    .where(
-      and(
-        eq(orders.pharmacyId, pharmacyId),
-        gte(orders.createdAt, since),
-      ),
-    )
+    .where(and(eq(orders.pharmacyId, pharmacyId), gte(orders.createdAt, since)))
     .groupBy(sql`date_trunc('day', ${orders.createdAt})`)
     .orderBy(sql`date_trunc('day', ${orders.createdAt})`);
 

@@ -7,7 +7,7 @@
  */
 
 export interface PatientOrderItemInput {
-  drugId: string;
+  inventoryId: string;
   /** @minimum 1 */
   quantity: number;
 }

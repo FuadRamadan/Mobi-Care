@@ -5,6 +5,8 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
+import type { DrugSubcategory } from './drugSubcategory';
 import type { DrugSummaryTier } from './drugSummaryTier';
 
 export interface DrugSummary {
@@ -13,4 +15,8 @@ export interface DrugSummary {
   genericName?: string | null;
   tier: DrugSummaryTier;
   unit: string;
+  commonStrengths: string[];
+  commonForms: string[];
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
 }

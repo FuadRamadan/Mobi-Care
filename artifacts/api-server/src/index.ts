@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
  * Probes for columns added after the initial schema push (e.g. expo_push_token
  * on patients, the patient_notifications table). Exits with a clear error
  * message if anything is missing so operators know to run:
- *   pnpm --filter @workspace/db run push
+ *   pnpm --filter @workspace/db run migrate
  */
 async function assertSchemaUpToDate(): Promise<void> {
   type Row = { exists: boolean };
@@ -51,6 +51,71 @@ async function assertSchemaUpToDate(): Promise<void> {
         ) AS exists
       `,
     },
+    {
+      label: "governed drug catalogue columns",
+      query: sql`
+        SELECT (
+          COUNT(*) = 8
+        ) AS exists
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'drug_catalogue'
+          AND column_name IN (
+            'common_strengths', 'common_forms', 'primary_category',
+            'subcategory', 'review_status', 'rejection_reason',
+            'reviewed_at', 'reviewed_by_hq_staff_id'
+          )
+      `,
+    },
+    {
+      label: "complete pharmacy inventory schema",
+      query: sql`
+        SELECT (
+          COUNT(*) = 10
+          AND BOOL_AND(
+            column_name <> 'price_leones'
+            OR data_type = 'numeric'
+          )
+        ) AS exists
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'pharmacy_inventory'
+          AND column_name IN (
+            'strength', 'form', 'unit_of_sale', 'expiry_date', 'manufacturer',
+            'primary_category', 'subcategory', 'other_category_text',
+            'completion_status', 'price_leones'
+          )
+      `,
+    },
+    {
+      label: "exact inventory order references",
+      query: sql`
+        SELECT (
+          COUNT(*) = 2
+          AND BOOL_AND(
+            (table_name = 'order_items' AND column_name = 'inventory_id')
+            OR data_type = 'numeric'
+          )
+        ) AS exists
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND (
+            (table_name = 'order_items' AND column_name = 'inventory_id')
+            OR (table_name = 'orders' AND column_name = 'total_leones')
+          )
+      `,
+    },
+    {
+      label: "active inventory variant uniqueness index",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_indexes
+          WHERE schemaname = current_schema()
+            AND tablename = 'pharmacy_inventory'
+            AND indexname = 'uniq_active_pharmacy_drug_variant'
+        ) AS exists
+      `,
+    },
   ];
 
   const missing: string[] = [];
@@ -62,7 +127,7 @@ async function assertSchemaUpToDate(): Promise<void> {
   if (missing.length > 0) {
     logger.error(
       { missing },
-      "Database schema is out of date. Run: pnpm --filter @workspace/db run push"
+      "Database schema is out of date. Run: pnpm --filter @workspace/db run migrate"
     );
     process.exit(1);
   }

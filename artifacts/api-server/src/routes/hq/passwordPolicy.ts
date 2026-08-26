@@ -17,20 +17,26 @@ router.get("/", async (_req, res) => {
 
 // ── PATCH /hq/password-policy ─────────────────────────────────────────────────
 router.patch("/", async (req: AuthRequest, res) => {
-  const body = z.object({
-    maxPasswordAgeDays: z.number().int().min(1).max(365).optional(),
-    passwordExpiryWarningDays: z.number().int().min(1).max(30).optional(),
-    minPasswordLength: z.number().int().min(8).max(128).optional(),
-    requireUppercase: z.boolean().optional(),
-    requireLowercase: z.boolean().optional(),
-    requireNumber: z.boolean().optional(),
-    requireSymbol: z.boolean().optional(),
-    passwordHistoryCount: z.number().int().min(0).max(24).optional(),
-    temporaryPasswordExpiryHours: z.number().int().min(1).max(168).optional(),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      maxPasswordAgeDays: z.number().int().min(1).max(365).optional(),
+      passwordExpiryWarningDays: z.number().int().min(1).max(30).optional(),
+      minPasswordLength: z.number().int().min(8).max(128).optional(),
+      requireUppercase: z.boolean().optional(),
+      requireLowercase: z.boolean().optional(),
+      requireNumber: z.boolean().optional(),
+      requireSymbol: z.boolean().optional(),
+      passwordHistoryCount: z.number().int().min(0).max(24).optional(),
+      temporaryPasswordExpiryHours: z.number().int().min(1).max(168).optional(),
+    })
+    .safeParse(req.body);
 
   if (!body.success || Object.keys(body.data).length === 0) {
-    res.status(400).json({ error: body.error?.issues[0]?.message ?? "No valid fields provided" });
+    res
+      .status(400)
+      .json({
+        error: body.error?.issues[0]?.message ?? "No valid fields provided",
+      });
     return;
   }
 

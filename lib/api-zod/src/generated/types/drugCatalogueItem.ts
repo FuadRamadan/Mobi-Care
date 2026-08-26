@@ -5,7 +5,10 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DrugCatalogueItemReviewStatus } from './drugCatalogueItemReviewStatus';
 import type { DrugCatalogueItemTier } from './drugCatalogueItemTier';
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
+import type { DrugSubcategory } from './drugSubcategory';
 
 export interface DrugCatalogueItem {
   id: string;
@@ -16,6 +19,16 @@ export interface DrugCatalogueItem {
   description?: string | null;
   tier: DrugCatalogueItemTier;
   unit: string;
+  commonStrengths: string[];
+  commonForms: string[];
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
   isApproved: boolean;
+  reviewStatus: DrugCatalogueItemReviewStatus;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  reviewDueAt?: string;
   createdAt: string;
 }

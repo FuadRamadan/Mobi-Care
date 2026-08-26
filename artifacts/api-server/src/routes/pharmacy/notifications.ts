@@ -30,8 +30,8 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
     .where(
       and(
         eq(notificationsTable.pharmacyId, pharmacyId),
-        isNull(notificationsTable.readAt)
-      )
+        isNull(notificationsTable.readAt),
+      ),
     );
 
   res.json({ unreadCount: Number(result?.count ?? 0) });
@@ -41,12 +41,16 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
 router.post("/mark-read", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
 
-  const body = z.object({
-    ids: z.array(z.string().uuid()).optional(), // omit to mark all as read
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      ids: z.array(z.string().uuid()).optional(), // omit to mark all as read
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "ids must be an array of UUIDs if provided" });
+    res
+      .status(400)
+      .json({ error: "ids must be an array of UUIDs if provided" });
     return;
   }
 
@@ -61,8 +65,8 @@ router.post("/mark-read", async (req: AuthRequest, res) => {
         and(
           eq(notificationsTable.pharmacyId, pharmacyId),
           isNull(notificationsTable.readAt),
-          inArray(notificationsTable.id, body.data.ids)
-        )
+          inArray(notificationsTable.id, body.data.ids),
+        ),
       );
   } else {
     // Mark all unread as read
@@ -72,8 +76,8 @@ router.post("/mark-read", async (req: AuthRequest, res) => {
       .where(
         and(
           eq(notificationsTable.pharmacyId, pharmacyId),
-          isNull(notificationsTable.readAt)
-        )
+          isNull(notificationsTable.readAt),
+        ),
       );
   }
 

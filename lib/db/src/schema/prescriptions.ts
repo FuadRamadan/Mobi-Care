@@ -11,15 +11,18 @@ export const prescriptionStatusEnum = pgEnum("prescription_status", [
  * Fixed enum — do NOT add free-text reasons. Every rejection must have an auditable reason
  * from this closed set. Additions require a schema migration and clinical review.
  */
-export const prescriptionRejectReasonEnum = pgEnum("prescription_reject_reason", [
-  "illegible_image",
-  "expired_prescription",
-  "invalid_prescription",
-  "drug_unavailable",
-  "controlled_substance_not_authorized",
-  "patient_mismatch",
-  "quantity_exceeded",
-]);
+export const prescriptionRejectReasonEnum = pgEnum(
+  "prescription_reject_reason",
+  [
+    "illegible_image",
+    "expired_prescription",
+    "invalid_prescription",
+    "drug_unavailable",
+    "controlled_substance_not_authorized",
+    "patient_mismatch",
+    "quantity_exceeded",
+  ],
+);
 
 export const prescriptionsTable = pgTable("prescriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -49,8 +52,12 @@ export const prescriptionsTable = pgTable("prescriptions", {
   // Optional link back to the order that triggered this prescription review
   orderId: uuid("order_id"),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type Prescription = typeof prescriptionsTable.$inferSelect;

@@ -26,14 +26,17 @@ export async function checkOrderFlags(order: Order): Promise<void> {
       .where(
         and(
           eq(ordersTable.patientPhone, order.patientPhone),
-          gt(ordersTable.createdAt, oneHourAgo)
-        )
+          gt(ordersTable.createdAt, oneHourAgo),
+        ),
       );
 
     if (velocity && velocity.count > 3) {
-      await insertFlagOnce(order.id, "velocity",
+      await insertFlagOnce(
+        order.id,
+        "velocity",
         `${velocity.count} orders from ${order.patientPhone} in the last hour`,
-        { count: velocity.count, windowMinutes: 60 });
+        { count: velocity.count, windowMinutes: 60 },
+      );
     }
 
     // ── Duplicate ─────────────────────────────────────────────────────────────
@@ -46,22 +49,28 @@ export async function checkOrderFlags(order: Order): Promise<void> {
           eq(ordersTable.pharmacyId, order.pharmacyId),
           eq(ordersTable.totalLeones, order.totalLeones),
           ne(ordersTable.id, order.id),
-          gt(ordersTable.createdAt, tenMinAgo)
-        )
+          gt(ordersTable.createdAt, tenMinAgo),
+        ),
       );
 
     if (dup && dup.count > 0) {
-      await insertFlagOnce(order.id, "duplicate",
+      await insertFlagOnce(
+        order.id,
+        "duplicate",
         `Near-identical order (same phone, pharmacy, and total of Le ${order.totalLeones.toLocaleString()}) within 10 minutes`,
-        { matches: dup.count, totalLeones: order.totalLeones });
+        { matches: dup.count, totalLeones: order.totalLeones },
+      );
     }
 
     // ── Payment anomaly ───────────────────────────────────────────────────────
     const LARGE_ORDER_LEONES = 5_000_000;
-    if (order.totalLeones > LARGE_ORDER_LEONES) {
-      await insertFlagOnce(order.id, "payment_anomaly",
+    if (Number(order.totalLeones) > LARGE_ORDER_LEONES) {
+      await insertFlagOnce(
+        order.id,
+        "payment_anomaly",
         `Order total Le ${order.totalLeones.toLocaleString()} exceeds review threshold`,
-        { totalLeones: order.totalLeones, threshold: LARGE_ORDER_LEONES });
+        { totalLeones: order.totalLeones, threshold: LARGE_ORDER_LEONES },
+      );
     }
   } catch (err) {
     console.error("[flags] anomaly check failed for order", order.id, err);
@@ -73,7 +82,7 @@ async function insertFlagOnce(
   orderId: string,
   type: "velocity" | "duplicate" | "payment_anomaly",
   reason: string,
-  details: Record<string, unknown>
+  details: Record<string, unknown>,
 ): Promise<void> {
   const existing = await db
     .select({ id: flagsTable.id })

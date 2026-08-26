@@ -11,7 +11,10 @@ import { eq, and, inArray, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
-import { createPatientNotification, notificationForStatus } from "../../lib/patientNotifications.js";
+import {
+  createPatientNotification,
+  notificationForStatus,
+} from "../../lib/patientNotifications.js";
 
 const router = safeRouter();
 
@@ -19,19 +22,32 @@ const router = safeRouter();
 async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
   const orderIds = orders.map((o) => o.id);
   const pharmacyIds = [...new Set(orders.map((o) => o.pharmacyId))];
-  const courierIds = [...new Set(orders.map((o) => o.courierId).filter((c): c is string => !!c))];
+  const courierIds = [
+    ...new Set(orders.map((o) => o.courierId).filter((c): c is string => !!c)),
+  ];
 
   const [items, pharmacies, couriers] = await Promise.all([
     orderIds.length
-      ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
+      ? db
+          .select()
+          .from(orderItemsTable)
+          .where(inArray(orderItemsTable.orderId, orderIds))
       : Promise.resolve([]),
     pharmacyIds.length
-      ? db.select({ id: pharmaciesTable.id, name: pharmaciesTable.name })
-          .from(pharmaciesTable).where(inArray(pharmaciesTable.id, pharmacyIds))
+      ? db
+          .select({ id: pharmaciesTable.id, name: pharmaciesTable.name })
+          .from(pharmaciesTable)
+          .where(inArray(pharmaciesTable.id, pharmacyIds))
       : Promise.resolve([]),
     courierIds.length
-      ? db.select({ id: couriersTable.id, name: couriersTable.name, phone: couriersTable.phone })
-          .from(couriersTable).where(inArray(couriersTable.id, courierIds))
+      ? db
+          .select({
+            id: couriersTable.id,
+            name: couriersTable.name,
+            phone: couriersTable.phone,
+          })
+          .from(couriersTable)
+          .where(inArray(couriersTable.id, courierIds))
       : Promise.resolve([]),
   ]);
 
@@ -39,14 +55,17 @@ async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
   for (const item of items) {
     (itemsByOrder[item.orderId] ??= []).push(item);
   }
-  const pharmacyById: Record<string, string> = Object.fromEntries(pharmacies.map((p) => [p.id, p.name]));
-  const courierById: Record<string, (typeof couriers)[number]> = Object.fromEntries(couriers.map((c) => [c.id, c]));
+  const pharmacyById: Record<string, string> = Object.fromEntries(
+    pharmacies.map((p) => [p.id, p.name]),
+  );
+  const courierById: Record<string, (typeof couriers)[number]> =
+    Object.fromEntries(couriers.map((c) => [c.id, c]));
 
   return orders.map((o) => ({
     ...o,
     items: itemsByOrder[o.id] ?? [],
     pharmacyName: pharmacyById[o.pharmacyId] ?? null,
-    courier: o.courierId ? courierById[o.courierId] ?? null : null,
+    courier: o.courierId ? (courierById[o.courierId] ?? null) : null,
   }));
 }
 
@@ -55,7 +74,9 @@ router.get("/", async (req, res) => {
   const statusFilter = req.query.status as string | undefined;
 
   const orders = statusFilter
-    ? await db.select().from(ordersTable)
+    ? await db
+        .select()
+        .from(ordersTable)
         .where(eq(ordersTable.status, statusFilter as any))
         .orderBy(desc(ordersTable.createdAt))
     : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
@@ -66,15 +87,23 @@ router.get("/", async (req, res) => {
 // ── GET /hq/orders/dispatch — deliveries ready for courier assignment ────────
 // (Mounted before /:id routes so "dispatch" isn't captured as an id.)
 // Also exported and mounted as GET /hq/dispatch in index.ts (contract alias).
-export const dispatchHandler = async (_req: AuthRequest, res: Parameters<Parameters<typeof router.get>[1]>[1]) => {
+export const dispatchHandler = async (
+  _req: AuthRequest,
+  res: Parameters<Parameters<typeof router.get>[1]>[1],
+) => {
   const orders = await db
     .select()
     .from(ordersTable)
     .where(
       and(
-        inArray(ordersTable.status, ["ready", "assigned", "picked_up", "delivering"]),
-        eq(ordersTable.fulfillmentType, "delivery")
-      )
+        inArray(ordersTable.status, [
+          "ready",
+          "assigned",
+          "picked_up",
+          "delivering",
+        ]),
+        eq(ordersTable.fulfillmentType, "delivery"),
+      ),
     )
     .orderBy(desc(ordersTable.createdAt));
 
@@ -86,21 +115,38 @@ router.get("/dispatch", dispatchHandler);
 router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
   const body = z.object({ courierId: z.string().min(1) }).safeParse(req.body);
-  if (!body.success) { res.status(400).json({ error: "courierId is required" }); return; }
+  if (!body.success) {
+    res.status(400).json({ error: "courierId is required" });
+    return;
+  }
 
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
-  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, id))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   if (order.fulfillmentType !== "delivery") {
-    res.status(409).json({ error: "Only delivery orders can be assigned a courier" });
+    res
+      .status(409)
+      .json({ error: "Only delivery orders can be assigned a courier" });
     return;
   }
   if (order.status !== "ready") {
-    res.status(409).json({ error: "Order must be 'ready' before assigning a courier" });
+    res
+      .status(409)
+      .json({ error: "Order must be 'ready' before assigning a courier" });
     return;
   }
 
-  const [courier] = await db.select().from(couriersTable)
-    .where(eq(couriersTable.id, body.data.courierId)).limit(1);
+  const [courier] = await db
+    .select()
+    .from(couriersTable)
+    .where(eq(couriersTable.id, body.data.courierId))
+    .limit(1);
   if (!courier || !courier.isActive) {
     res.status(404).json({ error: "Courier not found or inactive" });
     return;
@@ -114,7 +160,9 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
     .where(and(eq(ordersTable.id, id), eq(ordersTable.status, "ready")))
     .returning();
   if (!updated) {
-    res.status(409).json({ error: "Order status changed concurrently — refresh and retry" });
+    res
+      .status(409)
+      .json({ error: "Order status changed concurrently — refresh and retry" });
     return;
   }
 
@@ -158,14 +206,25 @@ const COURIER_TRANSITIONS: Record<string, string[]> = {
 
 router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
-  const body = z.object({ status: z.enum(["delivering", "delivered"]) }).safeParse(req.body);
+  const body = z
+    .object({ status: z.enum(["delivering", "delivered"]) })
+    .safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "status must be 'delivering' or 'delivered'" });
+    res
+      .status(400)
+      .json({ error: "status must be 'delivering' or 'delivered'" });
     return;
   }
 
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
-  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, id))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   if (!order.courierId) {
     res.status(409).json({ error: "Order has no assigned courier" });
     return;
@@ -173,7 +232,11 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
 
   const allowed = COURIER_TRANSITIONS[order.status] ?? [];
   if (!allowed.includes(body.data.status)) {
-    res.status(409).json({ error: `Cannot transition from '${order.status}' to '${body.data.status}'` });
+    res
+      .status(409)
+      .json({
+        error: `Cannot transition from '${order.status}' to '${body.data.status}'`,
+      });
     return;
   }
 
@@ -185,10 +248,17 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   const [updated] = await db
     .update(ordersTable)
     .set({ status: body.data.status as any, updatedAt: new Date() })
-    .where(and(eq(ordersTable.id, id), inArray(ordersTable.status, validFrom as any)))
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        inArray(ordersTable.status, validFrom as any),
+      ),
+    )
     .returning();
   if (!updated) {
-    res.status(409).json({ error: "Order status changed concurrently — refresh and retry" });
+    res
+      .status(409)
+      .json({ error: "Order status changed concurrently — refresh and retry" });
     return;
   }
 
@@ -204,7 +274,10 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
 
   // Notify patient of delivery status change
   if (order.patientId) {
-    const notif = notificationForStatus(body.data.status, order.fulfillmentType);
+    const notif = notificationForStatus(
+      body.data.status,
+      order.fulfillmentType,
+    );
     if (notif) {
       void createPatientNotification({
         patientId: order.patientId,
@@ -224,10 +297,19 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
 router.post("/:id/cash-collected", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
 
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
-  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, id))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   if (order.status !== "delivered") {
-    res.status(409).json({ error: "Cash can only be reconciled on delivered orders" });
+    res
+      .status(409)
+      .json({ error: "Cash can only be reconciled on delivered orders" });
     return;
   }
   if (order.cashCollected) {
@@ -237,15 +319,23 @@ router.post("/:id/cash-collected", async (req: AuthRequest, res) => {
 
   const [updated] = await db
     .update(ordersTable)
-    .set({ cashCollected: true, cashCollectedAt: new Date(), updatedAt: new Date() })
-    .where(and(
-      eq(ordersTable.id, id),
-      eq(ordersTable.status, "delivered"),
-      eq(ordersTable.cashCollected, false),
-    ))
+    .set({
+      cashCollected: true,
+      cashCollectedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.status, "delivered"),
+        eq(ordersTable.cashCollected, false),
+      ),
+    )
     .returning();
   if (!updated) {
-    res.status(409).json({ error: "Order changed concurrently — refresh and retry" });
+    res
+      .status(409)
+      .json({ error: "Order changed concurrently — refresh and retry" });
     return;
   }
 

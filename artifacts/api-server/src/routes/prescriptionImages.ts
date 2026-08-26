@@ -15,7 +15,10 @@ import fs from "node:fs/promises";
 import { db, prescriptionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { verifyImageToken } from "../lib/signedUrl.js";
-import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage.js";
+import {
+  ObjectStorageService,
+  ObjectNotFoundError,
+} from "../lib/objectStorage.js";
 
 const router = safeRouter();
 
@@ -34,7 +37,10 @@ const objectStorage = new ObjectStorageService();
  * Re-uses ObjectStorageService.getObjectEntityFile() which validates the path
  * and checks for existence, then streams via downloadObject().
  */
-async function serveCloudImage(imageKey: string, res: import("express").Response): Promise<void> {
+async function serveCloudImage(
+  imageKey: string,
+  res: import("express").Response,
+): Promise<void> {
   // imageKey = "cloud:/objects/uploads/<uuid>.<ext>"
   const objectPath = imageKey.slice("cloud:".length); // "/objects/uploads/<uuid>.<ext>"
 
@@ -48,8 +54,14 @@ async function serveCloudImage(imageKey: string, res: import("express").Response
   const objectFile = await objectStorage.getObjectEntityFile(objectPath);
   const webResponse = await objectStorage.downloadObject(objectFile, 60);
 
-  res.setHeader("Content-Type", webResponse.headers.get("Content-Type") ?? "application/octet-stream");
-  res.setHeader("Cache-Control", webResponse.headers.get("Cache-Control") ?? "private, max-age=60");
+  res.setHeader(
+    "Content-Type",
+    webResponse.headers.get("Content-Type") ?? "application/octet-stream",
+  );
+  res.setHeader(
+    "Cache-Control",
+    webResponse.headers.get("Cache-Control") ?? "private, max-age=60",
+  );
 
   const reader = webResponse.body!.getReader();
   try {
@@ -65,11 +77,13 @@ async function serveCloudImage(imageKey: string, res: import("express").Response
 }
 
 router.get("/:id", async (req, res) => {
-  const query = z.object({
-    variant: z.enum(["preview", "full"]).default("preview"),
-    expires: z.coerce.number().int(),
-    sig: z.string().min(1),
-  }).safeParse(req.query);
+  const query = z
+    .object({
+      variant: z.enum(["preview", "full"]).default("preview"),
+      expires: z.coerce.number().int(),
+      sig: z.string().min(1),
+    })
+    .safeParse(req.query);
 
   if (!query.success) {
     res.status(400).json({ error: "Invalid or missing signed URL parameters" });
@@ -123,7 +137,11 @@ router.get("/:id", async (req, res) => {
 
     try {
       const buf = await fs.readFile(path.join(UPLOAD_DIR, filename));
-      res.setHeader("Content-Type", CONTENT_TYPES[path.extname(filename).toLowerCase()] ?? "application/octet-stream");
+      res.setHeader(
+        "Content-Type",
+        CONTENT_TYPES[path.extname(filename).toLowerCase()] ??
+          "application/octet-stream",
+      );
       res.setHeader("Cache-Control", "private, max-age=60");
       res.send(buf);
     } catch (error) {

@@ -31,8 +31,8 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
     .where(
       and(
         eq(patientNotificationsTable.patientId, patientId),
-        isNull(patientNotificationsTable.readAt)
-      )
+        isNull(patientNotificationsTable.readAt),
+      ),
     );
 
   res.json({ unreadCount: rows.length });
@@ -46,7 +46,9 @@ router.put("/push-token", async (req: AuthRequest, res) => {
     .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "expoPushToken must be a non-empty string or null" });
+    res
+      .status(400)
+      .json({ error: "expoPushToken must be a non-empty string or null" });
     return;
   }
 
@@ -67,7 +69,9 @@ router.post("/mark-read", async (req: AuthRequest, res) => {
     .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "ids must be an array of UUIDs if provided" });
+    res
+      .status(400)
+      .json({ error: "ids must be an array of UUIDs if provided" });
     return;
   }
 
@@ -81,8 +85,8 @@ router.post("/mark-read", async (req: AuthRequest, res) => {
         and(
           eq(patientNotificationsTable.patientId, patientId),
           inArray(patientNotificationsTable.id, body.data.ids),
-          isNull(patientNotificationsTable.readAt)
-        )
+          isNull(patientNotificationsTable.readAt),
+        ),
       );
   } else {
     // Mark all unread notifications as read
@@ -92,8 +96,8 @@ router.post("/mark-read", async (req: AuthRequest, res) => {
       .where(
         and(
           eq(patientNotificationsTable.patientId, patientId),
-          isNull(patientNotificationsTable.readAt)
-        )
+          isNull(patientNotificationsTable.readAt),
+        ),
       );
   }
 

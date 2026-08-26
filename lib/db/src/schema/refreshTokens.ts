@@ -12,7 +12,9 @@ export const refreshTokensTable = pgTable("refresh_tokens", {
   sessionVersion: integer("session_version").notNull().default(1),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type RefreshToken = typeof refreshTokensTable.$inferSelect;

@@ -5,10 +5,27 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
+import type { DrugSubcategory } from './drugSubcategory';
 
 export interface InventoryUpdate {
-  brand?: string;
-  countryOfOrigin?: string;
+  /** @nullable */
+  brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
+  /** @minLength 1 */
+  strength?: string;
+  /** @minLength 1 */
+  form?: string;
+  /** @minLength 1 */
+  unitOfSale?: string;
+  expiryDate?: string;
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
+  /** @nullable */
+  otherCategoryText?: string | null;
   /** @minimum 1 */
   priceLeones?: number;
   /** @minimum 0 */

@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { DrugOffer } from './drugOffer';
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSearchResultTier } from './drugSearchResultTier';
+import type { DrugSubcategory } from './drugSubcategory';
 
 export interface DrugSearchResult {
+  listingKey: string;
   drugId: string;
   name: string;
   /** @nullable */
@@ -16,7 +19,12 @@ export interface DrugSearchResult {
   /** @nullable */
   description?: string | null;
   tier: DrugSearchResultTier;
-  unit: string;
+  unit?: string;
+  strength: string;
+  form: string;
+  unitOfSale: string;
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
   prescriptionRequired: boolean;

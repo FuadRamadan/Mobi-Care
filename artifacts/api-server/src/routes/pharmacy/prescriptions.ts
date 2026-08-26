@@ -32,9 +32,9 @@ router.get("/", async (req: AuthRequest, res) => {
       statusFilter
         ? and(
             eq(prescriptionsTable.pharmacyId, pharmacyId),
-            eq(prescriptionsTable.status, statusFilter as any)
+            eq(prescriptionsTable.status, statusFilter as any),
           )
-        : eq(prescriptionsTable.pharmacyId, pharmacyId)
+        : eq(prescriptionsTable.pharmacyId, pharmacyId),
     )
     .orderBy(prescriptionsTable.createdAt);
 
@@ -50,10 +50,18 @@ router.get("/:id", async (req: AuthRequest, res) => {
   const [row] = await db
     .select()
     .from(prescriptionsTable)
-    .where(and(eq(prescriptionsTable.id, id), eq(prescriptionsTable.pharmacyId, pharmacyId)))
+    .where(
+      and(
+        eq(prescriptionsTable.id, id),
+        eq(prescriptionsTable.pharmacyId, pharmacyId),
+      ),
+    )
     .limit(1);
 
-  if (!row) { res.status(404).json({ error: "Prescription not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
   const { imageKey: _k, ...safe } = row;
   res.json(safe);
 });
@@ -63,9 +71,11 @@ router.post("/:id/image-url", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
   const id = req.params.id as string;
 
-  const body = z.object({
-    variant: z.enum(["preview", "full"]).default("preview"),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      variant: z.enum(["preview", "full"]).default("preview"),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
     res.status(400).json({ error: "variant must be 'preview' or 'full'" });
@@ -73,12 +83,23 @@ router.post("/:id/image-url", async (req: AuthRequest, res) => {
   }
 
   const [row] = await db
-    .select({ id: prescriptionsTable.id, imageKey: prescriptionsTable.imageKey })
+    .select({
+      id: prescriptionsTable.id,
+      imageKey: prescriptionsTable.imageKey,
+    })
     .from(prescriptionsTable)
-    .where(and(eq(prescriptionsTable.id, id), eq(prescriptionsTable.pharmacyId, pharmacyId)))
+    .where(
+      and(
+        eq(prescriptionsTable.id, id),
+        eq(prescriptionsTable.pharmacyId, pharmacyId),
+      ),
+    )
     .limit(1);
 
-  if (!row) { res.status(404).json({ error: "Prescription not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
 
   const { token, expiresAt } = mintImageToken(id, body.data.variant);
 
@@ -96,22 +117,34 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
   const id = req.params.id as string;
 
-  const body = z.object({
-    approvedDrugIds: z.array(z.string().uuid()).min(1),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      approvedDrugIds: z.array(z.string().uuid()).min(1),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "approvedDrugIds (non-empty array of UUIDs) required" });
+    res
+      .status(400)
+      .json({ error: "approvedDrugIds (non-empty array of UUIDs) required" });
     return;
   }
 
   const [row] = await db
     .select()
     .from(prescriptionsTable)
-    .where(and(eq(prescriptionsTable.id, id), eq(prescriptionsTable.pharmacyId, pharmacyId)))
+    .where(
+      and(
+        eq(prescriptionsTable.id, id),
+        eq(prescriptionsTable.pharmacyId, pharmacyId),
+      ),
+    )
     .limit(1);
 
-  if (!row) { res.status(404).json({ error: "Prescription not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
   if (row.status !== "pending") {
     res.status(409).json({ error: `Prescription is already '${row.status}'` });
     return;
@@ -147,10 +180,12 @@ router.post("/:id/reject", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
   const id = req.params.id as string;
 
-  const body = z.object({
-    reason: z.enum(REJECT_REASONS),
-    note: z.string().optional(), // supplementary context, not the primary record
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      reason: z.enum(REJECT_REASONS),
+      note: z.string().optional(), // supplementary context, not the primary record
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
     res.status(400).json({
@@ -164,10 +199,18 @@ router.post("/:id/reject", async (req: AuthRequest, res) => {
   const [row] = await db
     .select()
     .from(prescriptionsTable)
-    .where(and(eq(prescriptionsTable.id, id), eq(prescriptionsTable.pharmacyId, pharmacyId)))
+    .where(
+      and(
+        eq(prescriptionsTable.id, id),
+        eq(prescriptionsTable.pharmacyId, pharmacyId),
+      ),
+    )
     .limit(1);
 
-  if (!row) { res.status(404).json({ error: "Prescription not found" }); return; }
+  if (!row) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
   if (row.status !== "pending") {
     res.status(409).json({ error: `Prescription is already '${row.status}'` });
     return;

@@ -5,16 +5,19 @@ import {
   useCallback,
   useEffect,
   type ReactNode,
-} from 'react';
+} from "react";
 
-const CART_KEY = 'mc_pt_cart';
+const CART_KEY = "mc_pt_cart";
 
 /** One line in the cart. An order is always for a single pharmacy. */
 export interface CartItem {
+  inventoryId: string;
   drugId: string;
   drugName: string;
-  unit: string;
-  tier: '1' | '2' | '3';
+  strength: string;
+  form: string;
+  unitOfSale: string;
+  tier: "1" | "2" | "3";
   maxUnitsPerOrder: number | null;
   prescriptionRequired: boolean;
   collectionOnly: boolean;
@@ -36,11 +39,11 @@ interface CartValue {
   /** Add (or bump) an item. Returns false when the cart belongs to another pharmacy. */
   addItem: (
     pharmacy: { id: string; name: string; address: string | null },
-    item: Omit<CartItem, 'quantity'>,
+    item: Omit<CartItem, "quantity">,
     opts?: { replacePharmacy?: boolean },
   ) => boolean;
-  setQuantity: (drugId: string, quantity: number) => void;
-  removeItem: (drugId: string) => void;
+  setQuantity: (inventoryId: string, quantity: number) => void;
+  removeItem: (inventoryId: string) => void;
   clear: () => void;
   totalLeones: number;
   itemCount: number;
@@ -63,26 +66,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartState | null>(readStoredCart);
 
   useEffect(() => {
-    if (cart && cart.items.length > 0) localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    if (cart && cart.items.length > 0)
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
     else localStorage.removeItem(CART_KEY);
   }, [cart]);
 
-  const addItem = useCallback<CartValue['addItem']>((pharmacy, item, opts) => {
+  const addItem = useCallback<CartValue["addItem"]>((pharmacy, item, opts) => {
     let ok = true;
     setCart((prev) => {
-      if (prev && prev.pharmacyId !== pharmacy.id && prev.items.length > 0 && !opts?.replacePharmacy) {
+      if (
+        prev &&
+        prev.pharmacyId !== pharmacy.id &&
+        prev.items.length > 0 &&
+        !opts?.replacePharmacy
+      ) {
         ok = false;
         return prev;
       }
       const base: CartState =
         prev && prev.pharmacyId === pharmacy.id && !opts?.replacePharmacy
           ? prev
-          : { pharmacyId: pharmacy.id, pharmacyName: pharmacy.name, pharmacyAddress: pharmacy.address, items: [] };
-      const existing = base.items.find((i) => i.drugId === item.drugId);
+          : {
+              pharmacyId: pharmacy.id,
+              pharmacyName: pharmacy.name,
+              pharmacyAddress: pharmacy.address,
+              items: [],
+            };
+      const existing = base.items.find(
+        (i) => i.inventoryId === item.inventoryId,
+      );
       const items = existing
         ? base.items.map((i) =>
-            i.drugId === item.drugId
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.maxUnitsPerOrder ?? 999) }
+            i.inventoryId === item.inventoryId
+              ? {
+                  ...i,
+                  quantity: Math.min(i.quantity + 1, i.maxUnitsPerOrder ?? 999),
+                }
               : i,
           )
         : [...base.items, { ...item, quantity: 1 }];
@@ -91,13 +110,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
-  const setQuantity = useCallback((drugId: string, quantity: number) => {
+  const setQuantity = useCallback((inventoryId: string, quantity: number) => {
     setCart((prev) => {
       if (!prev) return prev;
       const items = prev.items
         .map((i) =>
-          i.drugId === drugId
-            ? { ...i, quantity: Math.max(1, Math.min(quantity, i.maxUnitsPerOrder ?? 999)) }
+          i.inventoryId === inventoryId
+            ? {
+                ...i,
+                quantity: Math.max(
+                  1,
+                  Math.min(quantity, i.maxUnitsPerOrder ?? 999),
+                ),
+              }
             : i,
         )
         .filter((i) => i.quantity > 0);
@@ -105,10 +130,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const removeItem = useCallback((drugId: string) => {
+  const removeItem = useCallback((inventoryId: string) => {
     setCart((prev) => {
       if (!prev) return prev;
-      const items = prev.items.filter((i) => i.drugId !== drugId);
+      const items = prev.items.filter((i) => i.inventoryId !== inventoryId);
       return items.length === 0 ? null : { ...prev, items };
     });
   }, []);
@@ -123,7 +148,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, addItem, setQuantity, removeItem, clear, totalLeones, itemCount, prescriptionRequired, collectionOnly }}
+      value={{
+        cart,
+        addItem,
+        setQuantity,
+        removeItem,
+        clear,
+        totalLeones,
+        itemCount,
+        prescriptionRequired,
+        collectionOnly,
+      }}
     >
       {children}
     </CartContext.Provider>
@@ -132,6 +167,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart(): CartValue {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
+  if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }

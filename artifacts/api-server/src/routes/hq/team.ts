@@ -11,8 +11,13 @@ import { AuthRequest } from "../../middlewares/auth.js";
 const router = safeRouter();
 const objectStorage = new ObjectStorageService();
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-const TEAM_PHOTO_PATH = /^\/objects\/team-photos\/[0-9a-f-]{36}\.(jpg|png|webp)$/i;
+const SUPPORTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+const TEAM_PHOTO_PATH =
+  /^\/objects\/team-photos\/[0-9a-f-]{36}\.(jpg|png|webp)$/i;
 const UPLOAD_TTL_MS = 15 * 60 * 1000;
 
 function publicMember(member: typeof teamMembersTable.$inferSelect) {
@@ -46,7 +51,9 @@ async function discardUpload(
       console.error("Unable to remove unclaimed team photo", error);
     }
   } finally {
-    await db.delete(teamPhotoUploadsTable).where(eq(teamPhotoUploadsTable.id, upload.id));
+    await db
+      .delete(teamPhotoUploadsTable)
+      .where(eq(teamPhotoUploadsTable.id, upload.id));
   }
 }
 
@@ -79,10 +86,12 @@ router.get("/", async (_req, res) => {
 // ── POST /hq/team/:id/photo-upload — request direct object-storage upload ─
 router.post("/:id/photo-upload", async (req: AuthRequest, res) => {
   await cleanExpiredUploads();
-  const body = z.object({
-    contentType: z.enum(SUPPORTED_IMAGE_TYPES),
-    fileSize: z.number().int().positive().max(MAX_PHOTO_BYTES),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      contentType: z.enum(SUPPORTED_IMAGE_TYPES),
+      fileSize: z.number().int().positive().max(MAX_PHOTO_BYTES),
+    })
+    .safeParse(req.body);
 
   if (!body.success) {
     res.status(400).json({
@@ -97,11 +106,12 @@ router.post("/:id/photo-upload", async (req: AuthRequest, res) => {
     return;
   }
 
-  const extension = body.data.contentType === "image/jpeg"
-    ? "jpg"
-    : body.data.contentType === "image/png"
-      ? "png"
-      : "webp";
+  const extension =
+    body.data.contentType === "image/jpeg"
+      ? "jpg"
+      : body.data.contentType === "image/png"
+        ? "png"
+        : "webp";
   const upload = await objectStorage.getObjectEntityUploadInfo(
     `team-photos/${crypto.randomUUID()}.${extension}`,
   );
@@ -119,14 +129,17 @@ router.post("/:id/photo-upload", async (req: AuthRequest, res) => {
 // ── PATCH /hq/team/:id/photo — attach completed upload to member ───────────
 router.patch("/:id/photo", async (req: AuthRequest, res) => {
   await cleanExpiredUploads();
-  const body = z.object({
-    objectPath: z.string().regex(
-      TEAM_PHOTO_PATH,
-      "Invalid team photo upload path",
-    ),
-  }).safeParse(req.body);
+  const body = z
+    .object({
+      objectPath: z
+        .string()
+        .regex(TEAM_PHOTO_PATH, "Invalid team photo upload path"),
+    })
+    .safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: body.error.issues[0]?.message ?? "Invalid team photo" });
+    res
+      .status(400)
+      .json({ error: body.error.issues[0]?.message ?? "Invalid team photo" });
     return;
   }
 
@@ -151,7 +164,9 @@ router.patch("/:id/photo", async (req: AuthRequest, res) => {
       )
       .limit(1);
     if (!upload) {
-      res.status(400).json({ error: "This upload is expired or was not requested for you" });
+      res
+        .status(400)
+        .json({ error: "This upload is expired or was not requested for you" });
       return;
     }
 
@@ -160,14 +175,21 @@ router.patch("/:id/photo", async (req: AuthRequest, res) => {
     const size = Number(metadata.size ?? 0);
     const contentType = String(metadata.contentType ?? "").toLowerCase();
     if (
-      !SUPPORTED_IMAGE_TYPES.includes(contentType as (typeof SUPPORTED_IMAGE_TYPES)[number]) ||
+      !SUPPORTED_IMAGE_TYPES.includes(
+        contentType as (typeof SUPPORTED_IMAGE_TYPES)[number],
+      ) ||
       size <= 0 ||
       size > MAX_PHOTO_BYTES ||
       size !== upload.fileSize ||
       contentType !== upload.contentType
     ) {
       await discardUpload(upload);
-      res.status(400).json({ error: "Uploaded file must be a JPG, PNG, or WebP image no larger than 5 MB" });
+      res
+        .status(400)
+        .json({
+          error:
+            "Uploaded file must be a JPG, PNG, or WebP image no larger than 5 MB",
+        });
       return;
     }
 
@@ -195,7 +217,9 @@ router.patch("/:id/photo", async (req: AuthRequest, res) => {
     // Replaced UUID-named uploads are no longer reachable after the update.
     if (member.photoPath && TEAM_PHOTO_PATH.test(member.photoPath)) {
       try {
-        const previousFile = await objectStorage.getObjectEntityFile(member.photoPath);
+        const previousFile = await objectStorage.getObjectEntityFile(
+          member.photoPath,
+        );
         await previousFile.delete({ ignoreNotFound: true });
       } catch (error) {
         if (!(error instanceof Error && error.name === "ObjectNotFoundError")) {
@@ -217,7 +241,11 @@ router.patch("/:id/photo", async (req: AuthRequest, res) => {
     res.json(publicMember(updated!));
   } catch (error) {
     if (error instanceof Error && error.name === "ObjectNotFoundError") {
-      res.status(404).json({ error: "Uploaded photo was not found. Please upload it again." });
+      res
+        .status(404)
+        .json({
+          error: "Uploaded photo was not found. Please upload it again.",
+        });
       return;
     }
     throw error;

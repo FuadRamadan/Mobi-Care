@@ -5,6 +5,8 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
+import type { DrugSubcategory } from './drugSubcategory';
 import type { HqDrugInputTier } from './hqDrugInputTier';
 
 export interface HqDrugInput {
@@ -14,6 +16,12 @@ export interface HqDrugInput {
   description?: string;
   tier: HqDrugInputTier;
   unit?: string;
+  /** @minItems 1 */
+  commonStrengths: string[];
+  /** @minItems 1 */
+  commonForms: string[];
+  primaryCategory: DrugPrimaryCategory;
+  subcategory: DrugSubcategory;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
 }

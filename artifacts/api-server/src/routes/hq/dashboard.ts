@@ -17,7 +17,16 @@ router.get("/", async (_req, res) => {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const REVENUE_STATUSES = ["confirmed", "packaging", "ready", "assigned", "picked_up", "delivering", "delivered", "collected"] as const;
+  const REVENUE_STATUSES = [
+    "confirmed",
+    "packaging",
+    "ready",
+    "assigned",
+    "picked_up",
+    "delivering",
+    "delivered",
+    "collected",
+  ] as const;
 
   const [
     [orderCounts],
@@ -31,32 +40,50 @@ router.get("/", async (_req, res) => {
     recentOrders,
   ] = await Promise.all([
     db.select({ total: sql<number>`count(*)::int` }).from(ordersTable),
-    db.select({
-      total: sql<number>`count(*)::int`,
-      active: sql<number>`count(*) filter (where ${pharmaciesTable.isActive})::int`,
-    }).from(pharmaciesTable),
-    db.select({
-      total: sql<number>`count(*)::int`,
-      active: sql<number>`count(*) filter (where ${couriersTable.isActive})::int`,
-    }).from(couriersTable),
-    db.select({ count: sql<number>`count(*)::int` }).from(flagsTable).where(eq(flagsTable.status, "open")),
-    db.select({ count: sql<number>`count(*)::int` }).from(drugCatalogueTable).where(eq(drugCatalogueTable.isApproved, false)),
-    db.select({ count: sql<number>`count(*)::int` }).from(settlementsTable).where(eq(settlementsTable.status, "pending")),
-    db.select({ total: sql<number>`coalesce(sum(${ordersTable.totalLeones}), 0)::int` })
+    db
+      .select({
+        total: sql<number>`count(*)::int`,
+        active: sql<number>`count(*) filter (where ${pharmaciesTable.isActive})::int`,
+      })
+      .from(pharmaciesTable),
+    db
+      .select({
+        total: sql<number>`count(*)::int`,
+        active: sql<number>`count(*) filter (where ${couriersTable.isActive})::int`,
+      })
+      .from(couriersTable),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(flagsTable)
+      .where(eq(flagsTable.status, "open")),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(drugCatalogueTable)
+      .where(eq(drugCatalogueTable.isApproved, false)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(settlementsTable)
+      .where(eq(settlementsTable.status, "pending")),
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${ordersTable.totalLeones}), 0)::int`,
+      })
       .from(ordersTable)
       .where(inArray(ordersTable.status, [...REVENUE_STATUSES])),
-    db.select({ count: sql<number>`count(*)::int` })
+    db
+      .select({ count: sql<number>`count(*)::int` })
       .from(ordersTable)
       .where(gt(ordersTable.createdAt, startOfToday)),
-    db.select({
-      id: ordersTable.id,
-      status: ordersTable.status,
-      fulfillmentType: ordersTable.fulfillmentType,
-      totalLeones: ordersTable.totalLeones,
-      patientName: ordersTable.patientName,
-      pharmacyName: pharmaciesTable.name,
-      createdAt: ordersTable.createdAt,
-    })
+    db
+      .select({
+        id: ordersTable.id,
+        status: ordersTable.status,
+        fulfillmentType: ordersTable.fulfillmentType,
+        totalLeones: ordersTable.totalLeones,
+        patientName: ordersTable.patientName,
+        pharmacyName: pharmaciesTable.name,
+        createdAt: ordersTable.createdAt,
+      })
       .from(ordersTable)
       .leftJoin(pharmaciesTable, eq(ordersTable.pharmacyId, pharmaciesTable.id))
       .orderBy(desc(ordersTable.createdAt))
@@ -72,7 +99,12 @@ router.get("/", async (_req, res) => {
   const awaitingDispatch = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(ordersTable)
-    .where(and(eq(ordersTable.status, "ready"), eq(ordersTable.fulfillmentType, "delivery")));
+    .where(
+      and(
+        eq(ordersTable.status, "ready"),
+        eq(ordersTable.fulfillmentType, "delivery"),
+      ),
+    );
 
   res.json({
     totals: {

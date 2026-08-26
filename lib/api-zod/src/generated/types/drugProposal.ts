@@ -5,11 +5,20 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DrugPrimaryCategory } from './drugPrimaryCategory';
+import type { DrugSubcategory } from './drugSubcategory';
 
 export interface DrugProposal {
   /** @minLength 2 */
   name: string;
-  genericName?: string;
+  /** @minLength 2 */
+  genericName: string;
+  /** @minLength 1 */
+  strength: string;
+  /** @minLength 1 */
+  form: string;
+  suggestedCategory: DrugPrimaryCategory;
+  suggestedSubcategory: DrugSubcategory;
   description?: string;
   unit?: string;
 }

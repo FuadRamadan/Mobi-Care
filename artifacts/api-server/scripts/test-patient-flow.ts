@@ -21,13 +21,21 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { db } from "@workspace/db";
-import { hqStaffTable, auditLogTable } from "@workspace/db/schema";
+import {
+  hqStaffTable,
+  auditLogTable,
+  pharmacyInventoryTable,
+  ordersTable,
+} from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
 // ─── config ──────────────────────────────────────────────────────────────────
 const PORT = process.env["PORT"] ?? "4000";
 const BASE_URL =
-  (process.env["TEST_API_BASE_URL"] ?? `http://localhost:${PORT}`).replace(/\/$/, "") + "/api";
+  (process.env["TEST_API_BASE_URL"] ?? `http://localhost:${PORT}`).replace(
+    /\/$/,
+    "",
+  ) + "/api";
 
 /**
  * One-time HQ credentials generated fresh every run.
@@ -52,6 +60,9 @@ const PHARMACY_NAME = `Test Pharmacy ${RUN_ID}`;
 const PHARMACY_USERNAME = `testph${RUN_DIGITS}`.toLowerCase().slice(0, 30);
 
 const DRUG_NAME = `TestDrug ${RUN_ID}`;
+const TEST_STRENGTH = "500 mg";
+const TEST_FORM = "tablet";
+const TEST_UNIT_OF_SALE = "box of 10 tablets";
 
 // 1×1 transparent PNG — smallest valid image for prescription upload
 const MOCK_PRESCRIPTION_B64 =
@@ -116,11 +127,16 @@ function expect(
 // ─── step 0: health-check (fail fast if server is down) ──────────────────────
 async function checkHealth() {
   try {
-    const r = await fetch(`${BASE_URL}/healthz`, { signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${BASE_URL}/healthz`, {
+      signal: AbortSignal.timeout(5000),
+    });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     pass("Health check", `${BASE_URL}/healthz → 200`);
   } catch (e) {
-    fail("Health check", `Cannot reach ${BASE_URL}/healthz — is the API server running? ${e}`);
+    fail(
+      "Health check",
+      `Cannot reach ${BASE_URL}/healthz — is the API server running? ${e}`,
+    );
     throw new Error("abort: server unreachable");
   }
 }
@@ -139,7 +155,10 @@ async function bootstrapHQ(): Promise<{ hqToken: string; hqId: string }> {
     action: "hq_staff.bootstrap",
     entityType: "hq_staff",
     entityId: created!.id,
-    details: { username: HQ_USERNAME, note: "ephemeral test account — deactivated after test" },
+    details: {
+      username: HQ_USERNAME,
+      note: "ephemeral test account — deactivated after test",
+    },
   });
   log("Created ephemeral HQ account", HQ_USERNAME);
 
@@ -147,7 +166,9 @@ async function bootstrapHQ(): Promise<{ hqToken: string; hqId: string }> {
   const loginRes = await api("POST", "/auth/login", {
     body: { identifier: HQ_USERNAME, password: HQ_PASSWORD },
   });
-  const loginBody = expect("HQ login", loginRes, 200) as { accessToken: string };
+  const loginBody = expect("HQ login", loginRes, 200) as {
+    accessToken: string;
+  };
   pass("HQ login");
   return { hqToken: loginBody.accessToken, hqId: created!.id };
 }
@@ -176,7 +197,9 @@ async function createTestPharmacy(hqToken: string): Promise<{
   const loginRes = await api("POST", "/auth/login", {
     body: { identifier: PHARMACY_USERNAME, password: body.tempPassword },
   });
-  const loginBody = expect("Pharmacy first login", loginRes, 200) as { accessToken: string };
+  const loginBody = expect("Pharmacy first login", loginRes, 200) as {
+    accessToken: string;
+  };
   pass("Pharmacy first login (temp password)");
 
   const changeRes = await api("POST", "/auth/change-password", {
@@ -189,7 +212,9 @@ async function createTestPharmacy(hqToken: string): Promise<{
   const finalLogin = await api("POST", "/auth/login", {
     body: { identifier: PHARMACY_USERNAME, password: "PharmacyPwd_2!" },
   });
-  const finalBody = expect("Pharmacy re-login", finalLogin, 200) as { accessToken: string };
+  const finalBody = expect("Pharmacy re-login", finalLogin, 200) as {
+    accessToken: string;
+  };
   pass("Pharmacy re-login");
 
   return { pharmacyId: body.pharmacy.id, pharmacyToken: finalBody.accessToken };
@@ -205,6 +230,10 @@ async function createTestDrug(hqToken: string): Promise<string> {
       description: "A harmless test-only drug entry",
       tier: "3",
       unit: "tablets",
+      commonStrengths: [TEST_STRENGTH],
+      commonForms: [TEST_FORM],
+      primaryCategory: "pain_fever",
+      subcategory: "analgesics_antipyretics",
     },
   });
   const body = expect("Create test drug (HQ)", res, 201) as { id: string };
@@ -213,25 +242,41 @@ async function createTestDrug(hqToken: string): Promise<string> {
 }
 
 // ─── step 4: add inventory for the test pharmacy ──────────────────────────────
-async function addInventory(pharmacyToken: string, drugId: string): Promise<string> {
+async function addInventory(
+  pharmacyToken: string,
+  drugId: string,
+): Promise<string> {
   const res = await api("POST", "/pharmacy/inventory", {
     token: pharmacyToken,
     body: {
       drugId,
+      strength: TEST_STRENGTH,
+      form: TEST_FORM,
+      unitOfSale: TEST_UNIT_OF_SALE,
+      expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
       brand: "TestBrand",
-      priceLeones: 5000,
-      stockQuantity: 100,
+      manufacturer: "Test Manufacturer",
+      priceLeones: 5000.25,
+      stockQuantity: 3,
       availableForDelivery: true,
       availableForCollection: true,
     },
   });
-  const body = expect("Add drug to pharmacy inventory", res, 201) as { id: string };
+  const body = expect("Add drug to pharmacy inventory", res, 201) as {
+    id: string;
+  };
   pass("Add drug to pharmacy inventory", `listingId=${body.id}`);
   return body.id;
 }
 
 // ─── step 5: register patient ─────────────────────────────────────────────────
-async function registerPatient(): Promise<{ accessToken: string; refreshToken: string; patientId: string }> {
+async function registerPatient(): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  patientId: string;
+}> {
   const res = await api("POST", "/auth/register", {
     body: {
       name: PATIENT_NAME,
@@ -256,20 +301,41 @@ async function registerPatient(): Promise<{ accessToken: string; refreshToken: s
 }
 
 // ─── step 6: search for the drug ─────────────────────────────────────────────
-async function searchDrug(token: string, drugName: string): Promise<{ drugId: string; pharmacyId: string; inventoryId: string; priceLeones: number }> {
+async function searchDrug(
+  token: string,
+  drugName: string,
+): Promise<{
+  drugId: string;
+  pharmacyId: string;
+  inventoryId: string;
+  priceLeones: number;
+}> {
   const query = drugName.slice(0, 8); // Use first 8 chars as search term
-  const res = await api("GET", `/patient/search?q=${encodeURIComponent(query)}`, { token });
+  const res = await api(
+    "GET",
+    `/patient/search?q=${encodeURIComponent(query)}`,
+    { token },
+  );
   const results = expect("Search for drug", res, 200) as Array<{
     drugId: string;
     name: string;
-    offers: Array<{ pharmacyId: string; inventoryId: string; priceLeones: number; inStock: boolean }>;
+    offers: Array<{
+      pharmacyId: string;
+      inventoryId: string;
+      priceLeones: number;
+      inStock: boolean;
+    }>;
   }>;
   if (!Array.isArray(results) || results.length === 0) {
-    throw new Error(`No results for query "${query}". Got: ${JSON.stringify(results)}`);
+    throw new Error(
+      `No results for query "${query}". Got: ${JSON.stringify(results)}`,
+    );
   }
   const match = results.find((r) => r.name === drugName);
   if (!match) {
-    throw new Error(`Drug "${drugName}" not found in results: ${results.map((r) => r.name).join(", ")}`);
+    throw new Error(
+      `Drug "${drugName}" not found in results: ${results.map((r) => r.name).join(", ")}`,
+    );
   }
   const offer = match.offers.find((o) => o.inStock);
   if (!offer) {
@@ -290,7 +356,9 @@ async function uploadPrescription(token: string): Promise<string> {
     token,
     body: { image: MOCK_PRESCRIPTION_B64 },
   });
-  const body = expect("Upload prescription image", res, 201) as { imageKey: string };
+  const body = expect("Upload prescription image", res, 201) as {
+    imageKey: string;
+  };
   pass("Upload prescription image", `key=${body.imageKey}`);
   return body.imageKey;
 }
@@ -299,8 +367,9 @@ async function uploadPrescription(token: string): Promise<string> {
 async function placeOrder(
   token: string,
   pharmacyId: string,
-  drugId: string,
-  prescriptionImageKey: string,
+  inventoryId: string,
+  prescriptionImageKey?: string,
+  quantity = 2,
 ): Promise<string> {
   const res = await api("POST", "/patient/orders", {
     token,
@@ -309,10 +378,13 @@ async function placeOrder(
       fulfillmentType: "delivery",
       deliveryAddress: "12 Test Avenue, Freetown",
       prescriptionImageKey,
-      items: [{ drugId, quantity: 2 }],
+      items: [{ inventoryId, quantity }],
     },
   });
-  const body = expect("Place order", res, 201) as { id: string; status: string };
+  const body = expect("Place order", res, 201) as {
+    id: string;
+    status: string;
+  };
   if (body.status !== "awaiting_payment") {
     throw new Error(`Expected status=awaiting_payment, got ${body.status}`);
   }
@@ -321,22 +393,104 @@ async function placeOrder(
 }
 
 // ─── step 9: pay for order ────────────────────────────────────────────────────
-async function payOrder(token: string, orderId: string): Promise<void> {
-  const res = await api("POST", `/patient/orders/${orderId}/pay`, { token, body: {} });
-  const body = expect("Pay order (Orange Money mock)", res, 200) as { id: string; status: string };
+async function getStock(inventoryId: string): Promise<number> {
+  const [row] = await db
+    .select({ stockQuantity: pharmacyInventoryTable.stockQuantity })
+    .from(pharmacyInventoryTable)
+    .where(eq(pharmacyInventoryTable.id, inventoryId));
+  if (!row) throw new Error(`Inventory ${inventoryId} not found`);
+  return row.stockQuantity;
+}
+
+async function payOrderConcurrently(
+  token: string,
+  orderId: string,
+  inventoryId: string,
+): Promise<void> {
+  const before = await getStock(inventoryId);
+  if (before !== 3) {
+    throw new Error(
+      `Expected stock to remain 3 after unpaid order creation, got ${before}`,
+    );
+  }
+  pass("Unpaid order does not reserve stock", `stock=${before}`);
+
+  const responses = await Promise.all([
+    api("POST", `/patient/orders/${orderId}/pay`, { token, body: {} }),
+    api("POST", `/patient/orders/${orderId}/pay`, { token, body: {} }),
+  ]);
+  const successes = responses.filter((response) => response.status === 200);
+  const conflicts = responses.filter((response) => response.status === 409);
+  if (successes.length !== 1 || conflicts.length !== 1) {
+    throw new Error(
+      `Expected one payment success and one conflict, got ${responses.map((r) => r.status).join(", ")}`,
+    );
+  }
+  const body = successes[0]!.body as { id: string; status: string };
   if (body.status !== "paid") {
     throw new Error(`Expected status=paid, got ${body.status}`);
   }
-  pass("Pay order (Orange Money mock)", `status=${body.status}`);
+  const after = await getStock(inventoryId);
+  if (after !== 1) {
+    throw new Error(
+      `Expected one exact stock deduction to leave 1, got ${after}`,
+    );
+  }
+  pass("Concurrent payment deducts inventory exactly once", `stock=${after}`);
+}
+
+async function verifyPaymentStockConflict(
+  token: string,
+  pharmacyId: string,
+  inventoryId: string,
+): Promise<void> {
+  const conflictOrderId = await placeOrder(
+    token,
+    pharmacyId,
+    inventoryId,
+    undefined,
+    1,
+  );
+  await db
+    .update(pharmacyInventoryTable)
+    .set({ stockQuantity: 0, updatedAt: new Date() })
+    .where(eq(pharmacyInventoryTable.id, inventoryId));
+
+  const response = await api("POST", `/patient/orders/${conflictOrderId}/pay`, {
+    token,
+    body: {},
+  });
+  expect("Pay order after stock changed", response, 409);
+  const [order] = await db
+    .select({ status: ordersTable.status })
+    .from(ordersTable)
+    .where(eq(ordersTable.id, conflictOrderId));
+  if (order?.status !== "awaiting_payment") {
+    throw new Error(
+      `Stock-conflicted payment changed order status to ${order?.status}`,
+    );
+  }
+  if ((await getStock(inventoryId)) !== 0) {
+    throw new Error("Stock-conflicted payment changed inventory");
+  }
+  pass("Stock conflict rolls payment back without deducting or marking paid");
 }
 
 // ─── step 10: verify order in list ───────────────────────────────────────────
-async function verifyOrderInList(token: string, orderId: string): Promise<void> {
+async function verifyOrderInList(
+  token: string,
+  orderId: string,
+): Promise<void> {
   const res = await api("GET", "/patient/orders", { token });
-  const orders = expect("List patient orders", res, 200) as Array<{ id: string; status: string }>;
+  const orders = expect("List patient orders", res, 200) as Array<{
+    id: string;
+    status: string;
+  }>;
   const found = orders.find((o) => o.id === orderId);
   if (!found) {
-    throw new Error(`Order ${orderId} not found in list (${orders.length} orders returned)`);
+    throw new Error(
+      `Order ${orderId} not found in list (${orders.length} orders returned)`,
+    );
   }
   if (found.status !== "paid") {
     throw new Error(`Order found but status=${found.status}, expected paid`);
@@ -376,12 +530,16 @@ async function testTokenRefresh(
   // expected JWT behaviour (not a rotation bug). The important property is that
   // the *refresh* token is a new opaque value.
   if (refreshBody.refreshToken === refreshToken) {
-    throw new Error("New refresh token is identical to old one — rotation is broken");
+    throw new Error(
+      "New refresh token is identical to old one — rotation is broken",
+    );
   }
   pass("Token refresh returns new token pair (refresh token rotated)");
 
   // 11b: New access token works for authenticated endpoint
-  const ordersRes = await api("GET", "/patient/orders", { token: refreshBody.accessToken });
+  const ordersRes = await api("GET", "/patient/orders", {
+    token: refreshBody.accessToken,
+  });
   expect("New access token is accepted by API", ordersRes, 200);
   pass("New access token is accepted by API");
 
@@ -417,7 +575,11 @@ async function testTokenRefresh(
 }
 
 // ─── step 12: cleanup — deactivate test pharmacy and ephemeral HQ account ───
-async function cleanup(hqToken: string, pharmacyId: string | null, hqId: string): Promise<void> {
+async function cleanup(
+  hqToken: string,
+  pharmacyId: string | null,
+  hqId: string,
+): Promise<void> {
   // Deactivate test pharmacy
   if (pharmacyId) {
     const res = await api("PATCH", `/hq/pharmacies/${pharmacyId}`, {
@@ -425,7 +587,9 @@ async function cleanup(hqToken: string, pharmacyId: string | null, hqId: string)
       body: { isActive: false },
     });
     if (res.status !== 200) {
-      console.warn(`  ⚠️  WARN  Could not deactivate test pharmacy (${res.status})`);
+      console.warn(
+        `  ⚠️  WARN  Could not deactivate test pharmacy (${res.status})`,
+      );
     } else {
       log("Deactivated test pharmacy", pharmacyId);
     }
@@ -445,14 +609,20 @@ async function cleanup(hqToken: string, pharmacyId: string | null, hqId: string)
 
 // ─── main ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log("\n═══════════════════════════════════════════════════════════════");
+  console.log(
+    "\n═══════════════════════════════════════════════════════════════",
+  );
   console.log("  MobiCare — Patient Order Flow Integration Test");
   console.log(`  API base : ${BASE_URL}`);
   console.log(`  Run ID   : ${RUN_ID}`);
-  console.log("═══════════════════════════════════════════════════════════════\n");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n",
+  );
 
   // ------ Setup ------
-  console.log("── Setup ──────────────────────────────────────────────────────");
+  console.log(
+    "── Setup ──────────────────────────────────────────────────────",
+  );
   try {
     await checkHealth();
   } catch {
@@ -496,7 +666,9 @@ async function main() {
   }
 
   // ------ Patient flow ------
-  console.log("\n── Patient Flow ────────────────────────────────────────────────");
+  console.log(
+    "\n── Patient Flow ────────────────────────────────────────────────",
+  );
 
   let accessToken: string;
   let refreshToken: string;
@@ -534,7 +706,12 @@ async function main() {
   // Place order
   let orderId: string;
   try {
-    orderId = await placeOrder(token, searchResult.pharmacyId, searchResult.drugId, prescriptionKey);
+    orderId = await placeOrder(
+      token,
+      searchResult.pharmacyId,
+      searchResult.inventoryId,
+      prescriptionKey,
+    );
   } catch (e) {
     fail("Place order", e);
     await cleanup(hqToken, pharmacyId, hqId);
@@ -543,7 +720,12 @@ async function main() {
 
   // Pay
   try {
-    await payOrder(token, orderId);
+    await payOrderConcurrently(token, orderId, searchResult.inventoryId);
+    await verifyPaymentStockConflict(
+      token,
+      searchResult.pharmacyId,
+      searchResult.inventoryId,
+    );
   } catch (e) {
     fail("Pay order", e);
   }
@@ -556,7 +738,9 @@ async function main() {
   }
 
   // ------ Auth refresh ------
-  console.log("\n── Auth / Token Refresh ────────────────────────────────────────");
+  console.log(
+    "\n── Auth / Token Refresh ────────────────────────────────────────",
+  );
   try {
     await testTokenRefresh(accessToken, refreshToken);
   } catch (e) {
@@ -564,20 +748,28 @@ async function main() {
   }
 
   // ------ Cleanup ------
-  console.log("\n── Cleanup ─────────────────────────────────────────────────────");
+  console.log(
+    "\n── Cleanup ─────────────────────────────────────────────────────",
+  );
   await cleanup(hqToken, pharmacyId, hqId);
 
   // ------ Summary ------
   const total = passed + failed;
-  console.log("\n═══════════════════════════════════════════════════════════════");
+  console.log(
+    "\n═══════════════════════════════════════════════════════════════",
+  );
   console.log(`  Results: ${passed}/${total} passed`);
   if (failed > 0) {
     console.log(`  ❌ ${failed} test(s) FAILED`);
-    console.log("═══════════════════════════════════════════════════════════════\n");
+    console.log(
+      "═══════════════════════════════════════════════════════════════\n",
+    );
     process.exit(1);
   } else {
     console.log("  🎉 All tests passed!");
-    console.log("═══════════════════════════════════════════════════════════════\n");
+    console.log(
+      "═══════════════════════════════════════════════════════════════\n",
+    );
     process.exit(0);
   }
 }

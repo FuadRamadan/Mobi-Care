@@ -12,8 +12,12 @@ export const teamMembersTable = pgTable("team_members", {
   role: text("role").notNull(),
   photoPath: text("photo_path"),
   sortOrder: integer("sort_order").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type TeamMember = typeof teamMembersTable.$inferSelect;
@@ -32,7 +36,9 @@ export const teamPhotoUploadsTable = pgTable("team_photo_uploads", {
   fileSize: integer("file_size").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type TeamPhotoUpload = typeof teamPhotoUploadsTable.$inferSelect;

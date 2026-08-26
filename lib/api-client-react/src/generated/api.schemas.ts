@@ -116,6 +116,8 @@ export interface OrderItem {
   id: string;
   orderId: string;
   drugId: string;
+  /** @nullable */
+  inventoryId?: string | null;
   drugName: string;
   quantity: number;
   unitPriceLeones: number;
@@ -181,7 +183,10 @@ export interface DrugOffer {
   pharmacyAddress?: string | null;
   /** @nullable */
   brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
   priceLeones: number;
+  unitOfSale: string;
   inStock: boolean;
   availableForDelivery: boolean;
   availableForCollection: boolean;
@@ -196,7 +201,57 @@ export const DrugSearchResultTier = {
   NUMBER_3: '3',
 } as const;
 
+export type DrugPrimaryCategory = typeof DrugPrimaryCategory[keyof typeof DrugPrimaryCategory];
+
+
+export const DrugPrimaryCategory = {
+  pain_fever: 'pain_fever',
+  infection: 'infection',
+  malaria: 'malaria',
+  respiratory_allergy: 'respiratory_allergy',
+  digestive: 'digestive',
+  cardiovascular: 'cardiovascular',
+  diabetes_endocrine: 'diabetes_endocrine',
+  womens_reproductive: 'womens_reproductive',
+  child_health: 'child_health',
+  mental_neurological: 'mental_neurological',
+  skin_wound: 'skin_wound',
+  eye_ear: 'eye_ear',
+  vitamins_nutrition: 'vitamins_nutrition',
+  other: 'other',
+} as const;
+
+export type DrugSubcategory = typeof DrugSubcategory[keyof typeof DrugSubcategory];
+
+
+export const DrugSubcategory = {
+  analgesics_antipyretics: 'analgesics_antipyretics',
+  anti_inflammatory: 'anti_inflammatory',
+  antibiotics: 'antibiotics',
+  antifungal_antiparasitic: 'antifungal_antiparasitic',
+  antimalarials: 'antimalarials',
+  cough_cold: 'cough_cold',
+  allergy: 'allergy',
+  gastrointestinal: 'gastrointestinal',
+  oral_rehydration: 'oral_rehydration',
+  hypertension: 'hypertension',
+  heart_health: 'heart_health',
+  diabetes: 'diabetes',
+  reproductive_health: 'reproductive_health',
+  maternal_health: 'maternal_health',
+  pediatric: 'pediatric',
+  neurological: 'neurological',
+  mental_health: 'mental_health',
+  dermatology: 'dermatology',
+  wound_care: 'wound_care',
+  eye_care: 'eye_care',
+  ear_care: 'ear_care',
+  vitamins_minerals: 'vitamins_minerals',
+  other: 'other',
+} as const;
+
 export interface DrugSearchResult {
+  listingKey: string;
   drugId: string;
   name: string;
   /** @nullable */
@@ -204,7 +259,12 @@ export interface DrugSearchResult {
   /** @nullable */
   description?: string | null;
   tier: DrugSearchResultTier;
-  unit: string;
+  unit?: string;
+  strength: string;
+  form: string;
+  unitOfSale: string;
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
   prescriptionRequired: boolean;
@@ -213,7 +273,7 @@ export interface DrugSearchResult {
 }
 
 export interface PatientOrderItemInput {
-  drugId: string;
+  inventoryId: string;
   /** @minimum 1 */
   quantity: number;
 }
@@ -299,15 +359,43 @@ export interface DrugSummary {
   genericName?: string | null;
   tier: DrugSummaryTier;
   unit: string;
+  commonStrengths: string[];
+  commonForms: string[];
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
 }
+
+export type InventoryItemCompletionStatus = typeof InventoryItemCompletionStatus[keyof typeof InventoryItemCompletionStatus];
+
+
+export const InventoryItemCompletionStatus = {
+  incomplete: 'incomplete',
+  complete: 'complete',
+} as const;
 
 export interface InventoryItem {
   id: string;
   drugId: string;
   /** @nullable */
+  strength?: string | null;
+  /** @nullable */
+  form?: string | null;
+  /** @nullable */
+  unitOfSale?: string | null;
+  /** @nullable */
+  expiryDate?: string | null;
+  /** @nullable */
   brand?: string | null;
   /** @nullable */
+  manufacturer?: string | null;
+  /** @nullable */
   countryOfOrigin?: string | null;
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
+  /** @nullable */
+  otherCategoryText?: string | null;
+  requiresHqReview: boolean;
+  completionStatus: InventoryItemCompletionStatus;
   priceLeones: number;
   stockQuantity: number;
   lowStockAlertAt?: number;
@@ -320,12 +408,23 @@ export interface InventoryItem {
 
 export interface InventoryInput {
   drugId: string;
+  /** @minLength 1 */
+  strength: string;
+  /** @minLength 1 */
+  form: string;
+  /** @minLength 1 */
+  unitOfSale: string;
+  expiryDate: string;
   brand?: string;
+  manufacturer?: string;
   countryOfOrigin?: string;
+  primaryCategory?: DrugPrimaryCategory;
+  subcategory?: DrugSubcategory;
+  otherCategoryText?: string;
   /** @minimum 1 */
   priceLeones: number;
   /** @minimum 0 */
-  stockQuantity?: number;
+  stockQuantity: number;
   /** @minimum 0 */
   lowStockAlertAt?: number;
   availableForDelivery?: boolean;
@@ -333,8 +432,23 @@ export interface InventoryInput {
 }
 
 export interface InventoryUpdate {
-  brand?: string;
-  countryOfOrigin?: string;
+  /** @nullable */
+  brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
+  /** @minLength 1 */
+  strength?: string;
+  /** @minLength 1 */
+  form?: string;
+  /** @minLength 1 */
+  unitOfSale?: string;
+  expiryDate?: string;
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
+  /** @nullable */
+  otherCategoryText?: string | null;
   /** @minimum 1 */
   priceLeones?: number;
   /** @minimum 0 */
@@ -355,6 +469,15 @@ export const DrugCatalogueItemTier = {
   NUMBER_3: '3',
 } as const;
 
+export type DrugCatalogueItemReviewStatus = typeof DrugCatalogueItemReviewStatus[keyof typeof DrugCatalogueItemReviewStatus];
+
+
+export const DrugCatalogueItemReviewStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
 export interface DrugCatalogueItem {
   id: string;
   name: string;
@@ -364,16 +487,44 @@ export interface DrugCatalogueItem {
   description?: string | null;
   tier: DrugCatalogueItemTier;
   unit: string;
+  commonStrengths: string[];
+  commonForms: string[];
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
   isApproved: boolean;
+  reviewStatus: DrugCatalogueItemReviewStatus;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  reviewDueAt?: string;
   createdAt: string;
 }
 
 export interface DrugProposal {
   /** @minLength 2 */
   name: string;
-  genericName?: string;
+  /** @minLength 2 */
+  genericName: string;
+  /** @minLength 1 */
+  strength: string;
+  /** @minLength 1 */
+  form: string;
+  suggestedCategory: DrugPrimaryCategory;
+  suggestedSubcategory: DrugSubcategory;
   description?: string;
   unit?: string;
+}
+
+export interface DrugSubcategoryOption {
+  value: DrugSubcategory;
+  label: string;
+}
+
+export interface DrugCategory {
+  value: DrugPrimaryCategory;
+  label: string;
+  subcategories: DrugSubcategoryOption[];
 }
 
 export type PrescriptionStatus = typeof PrescriptionStatus[keyof typeof PrescriptionStatus];
@@ -770,6 +921,15 @@ export const HqDrugTier = {
   NUMBER_3: '3',
 } as const;
 
+export type HqDrugReviewStatus = typeof HqDrugReviewStatus[keyof typeof HqDrugReviewStatus];
+
+
+export const HqDrugReviewStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
 export interface HqDrug {
   id: string;
   name: string;
@@ -779,7 +939,16 @@ export interface HqDrug {
   description?: string | null;
   tier: HqDrugTier;
   unit: string;
+  commonStrengths: string[];
+  commonForms: string[];
+  primaryCategory?: DrugPrimaryCategory | null;
+  subcategory?: DrugSubcategory | null;
   isApproved: boolean;
+  reviewStatus: HqDrugReviewStatus;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
   /** @nullable */
@@ -803,6 +972,12 @@ export interface HqDrugInput {
   description?: string;
   tier: HqDrugInputTier;
   unit?: string;
+  /** @minItems 1 */
+  commonStrengths: string[];
+  /** @minItems 1 */
+  commonForms: string[];
+  primaryCategory: DrugPrimaryCategory;
+  subcategory: DrugSubcategory;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
 }
@@ -816,17 +991,34 @@ export const HqDrugUpdateTier = {
   NUMBER_3: '3',
 } as const;
 
+export type HqDrugUpdateReviewStatus = typeof HqDrugUpdateReviewStatus[keyof typeof HqDrugUpdateReviewStatus];
+
+
+export const HqDrugUpdateReviewStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
 export interface HqDrugUpdate {
   tier?: HqDrugUpdateTier;
   /** @nullable */
   maxUnitsPerOrder?: number | null;
   isApproved?: boolean;
+  reviewStatus?: HqDrugUpdateReviewStatus;
+  /** @nullable */
+  rejectionReason?: string | null;
   name?: string;
   /** @nullable */
   genericName?: string | null;
   /** @nullable */
   description?: string | null;
   unit?: string;
+  /** @minItems 1 */
+  commonStrengths?: string[];
+  /** @minItems 1 */
+  commonForms?: string[];
+  primaryCategory?: DrugPrimaryCategory;
+  subcategory?: DrugSubcategory;
 }
 
 export interface Courier {
@@ -1025,7 +1217,9 @@ status?: string;
 };
 
 export type PatientSearchDrugsParams = {
-q: string;
+q?: string;
+category?: DrugPrimaryCategory;
+subcategory?: DrugSubcategory;
 };
 
 export type ListHqOrdersParams = {

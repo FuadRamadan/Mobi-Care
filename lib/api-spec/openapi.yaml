@@ -162,7 +162,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: true
         content:
@@ -192,7 +192,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: true
         content:
@@ -220,7 +220,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       responses:
         "200":
           description: Updated order
@@ -280,7 +280,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: true
         content:
@@ -307,7 +307,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       responses:
         "200":
           description: Deleted
@@ -354,6 +354,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/DrugCatalogueItem"
 
+  /pharmacy/catalogue/categories:
+    get:
+      operationId: listDrugCategories
+      tags: [catalogue]
+      summary: List the HQ-controlled medicine category taxonomy
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Controlled two-tier category taxonomy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrugCategory"
+
   # ── Prescriptions ─────────────────────────────────────────────────────────
   /pharmacy/prescriptions:
     get:
@@ -391,7 +408,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       responses:
         "200":
           description: Prescription
@@ -413,7 +430,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: true
         content:
@@ -441,7 +458,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: true
         content:
@@ -469,7 +486,7 @@ paths:
           required: true
           schema:
             type: string
-  
+
       requestBody:
         required: false
         content:
@@ -516,9 +533,19 @@ paths:
       parameters:
         - name: q
           in: query
-          required: true
+          required: false
           schema:
             type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DrugPrimaryCategory"
+        - name: subcategory
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DrugSubcategory"
       responses:
         "200":
           description: Drugs with per-pharmacy price offers
@@ -528,6 +555,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DrugSearchResult"
+
+  /patient/search/categories:
+    get:
+      operationId: listPatientDrugCategories
+      tags: [patient]
+      summary: List medicine categories available for patient search
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Controlled two-tier category taxonomy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrugCategory"
 
   /patient/orders:
     get:
@@ -609,7 +653,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/PatientOrder"
         "409":
-          description: Order is not awaiting payment
+          description: Order is expired, already paid, or current inventory is insufficient
 
   /patient/uploads/prescription:
     post:
@@ -1650,6 +1694,8 @@ components:
 
         drugId:
           type: string
+        inventoryId:
+          type: ["string", "null"]
 
         drugName:
           type: string
@@ -1660,10 +1706,22 @@ components:
         prescriptionId:
           type: ["string", "null"]
 
-
     Order:
       type: object
-      required: [id, pharmacyId, patientName, patientPhone, status, fulfillmentType, idChecked, totalLeones, createdAt, updatedAt, items]
+      required:
+        [
+          id,
+          pharmacyId,
+          patientName,
+          patientPhone,
+          status,
+          fulfillmentType,
+          idChecked,
+          totalLeones,
+          createdAt,
+          updatedAt,
+          items,
+        ]
       properties:
         id:
           type: string
@@ -1677,7 +1735,20 @@ components:
           type: string
         status:
           type: string
-          enum: [awaiting_payment, paid, confirmed, packaging, ready, assigned, picked_up, delivering, delivered, collected, cancelled]
+          enum:
+            [
+              awaiting_payment,
+              paid,
+              confirmed,
+              packaging,
+              ready,
+              assigned,
+              picked_up,
+              delivering,
+              delivered,
+              collected,
+              cancelled,
+            ]
         fulfillmentType:
           type: string
           enum: [delivery, collection]
@@ -1716,7 +1787,17 @@ components:
 
     DrugOffer:
       type: object
-      required: [inventoryId, pharmacyId, pharmacyName, priceLeones, inStock, availableForDelivery, availableForCollection]
+      required:
+        [
+          inventoryId,
+          pharmacyId,
+          pharmacyName,
+          priceLeones,
+          unitOfSale,
+          inStock,
+          availableForDelivery,
+          availableForCollection,
+        ]
       properties:
         inventoryId:
           type: string
@@ -1728,8 +1809,12 @@ components:
           type: ["string", "null"]
         brand:
           type: ["string", "null"]
+        manufacturer:
+          type: ["string", "null"]
         priceLeones:
           type: number
+        unitOfSale:
+          type: string
         inStock:
           type: boolean
         availableForDelivery:
@@ -1739,8 +1824,22 @@ components:
 
     DrugSearchResult:
       type: object
-      required: [drugId, name, tier, unit, prescriptionRequired, collectionOnly, offers]
+      required:
+        [
+          listingKey,
+          drugId,
+          name,
+          strength,
+          form,
+          unitOfSale,
+          tier,
+          prescriptionRequired,
+          collectionOnly,
+          offers,
+        ]
       properties:
+        listingKey:
+          type: string
         drugId:
           type: string
         name:
@@ -1754,6 +1853,20 @@ components:
           enum: ["1", "2", "3"]
         unit:
           type: string
+        strength:
+          type: string
+        form:
+          type: string
+        unitOfSale:
+          type: string
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
         maxUnitsPerOrder:
           type: ["number", "null"]
         prescriptionRequired:
@@ -1767,9 +1880,9 @@ components:
 
     PatientOrderItemInput:
       type: object
-      required: [drugId, quantity]
+      required: [inventoryId, quantity]
       properties:
-        drugId:
+        inventoryId:
           type: string
         quantity:
           type: number
@@ -1869,7 +1982,7 @@ components:
     # ── Inventory schemas ──────────────────────────────────────────────────
     DrugSummary:
       type: object
-      required: [name, tier, unit]
+      required: [name, tier, unit, commonStrengths, commonForms]
       properties:
         name:
           type: string
@@ -1880,19 +1993,73 @@ components:
           enum: ["1", "2", "3"]
         unit:
           type: string
+        commonStrengths:
+          type: array
+          items:
+            type: string
+        commonForms:
+          type: array
+          items:
+            type: string
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
 
     InventoryItem:
       type: object
-      required: [id, drugId, priceLeones, stockQuantity, availableForDelivery, availableForCollection, isActive, updatedAt, drug]
+      required:
+        [
+          id,
+          drugId,
+          priceLeones,
+          stockQuantity,
+          requiresHqReview,
+          completionStatus,
+          availableForDelivery,
+          availableForCollection,
+          isActive,
+          updatedAt,
+          drug,
+        ]
       properties:
         id:
           type: string
         drugId:
           type: string
+        strength:
+          type: ["string", "null"]
+        form:
+          type: ["string", "null"]
+        unitOfSale:
+          type: ["string", "null"]
+        expiryDate:
+          type: ["string", "null"]
         brand:
+          type: ["string", "null"]
+        manufacturer:
           type: ["string", "null"]
         countryOfOrigin:
           type: ["string", "null"]
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
+        otherCategoryText:
+          type: ["string", "null"]
+        requiresHqReview:
+          type: boolean
+        completionStatus:
+          type: string
+          enum: [incomplete, complete]
         priceLeones:
           type: number
         stockQuantity:
@@ -1912,13 +2079,41 @@ components:
 
     InventoryInput:
       type: object
-      required: [drugId, priceLeones]
+      required:
+        [
+          drugId,
+          strength,
+          form,
+          unitOfSale,
+          expiryDate,
+          priceLeones,
+          stockQuantity,
+        ]
       properties:
         drugId:
           type: string
+        strength:
+          type: string
+          minLength: 1
+        form:
+          type: string
+          minLength: 1
+        unitOfSale:
+          type: string
+          minLength: 1
+        expiryDate:
+          type: string
         brand:
           type: string
+        manufacturer:
+          type: string
         countryOfOrigin:
+          type: string
+        primaryCategory:
+          $ref: "#/components/schemas/DrugPrimaryCategory"
+        subcategory:
+          $ref: "#/components/schemas/DrugSubcategory"
+        otherCategoryText:
           type: string
         priceLeones:
           type: number
@@ -1938,9 +2133,32 @@ components:
       type: object
       properties:
         brand:
-          type: string
+          type: ["string", "null"]
+        manufacturer:
+          type: ["string", "null"]
         countryOfOrigin:
+          type: ["string", "null"]
+        strength:
           type: string
+          minLength: 1
+        form:
+          type: string
+          minLength: 1
+        unitOfSale:
+          type: string
+          minLength: 1
+        expiryDate:
+          type: string
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
+        otherCategoryText:
+          type: ["string", "null"]
         priceLeones:
           type: number
           minimum: 1
@@ -1960,7 +2178,18 @@ components:
     # ── Catalogue schemas ──────────────────────────────────────────────────
     DrugCatalogueItem:
       type: object
-      required: [id, name, tier, unit, isApproved, createdAt]
+      required:
+        [
+          id,
+          name,
+          tier,
+          unit,
+          commonStrengths,
+          commonForms,
+          isApproved,
+          reviewStatus,
+          createdAt,
+        ]
       properties:
         id:
           type: string
@@ -1976,30 +2205,153 @@ components:
           enum: ["1", "2", "3"]
         unit:
           type: string
+        commonStrengths:
+          type: array
+          items:
+            type: string
+        commonForms:
+          type: array
+          items:
+            type: string
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
         isApproved:
           type: boolean
+        reviewStatus:
+          type: string
+          enum: [pending, approved, rejected]
+        rejectionReason:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        reviewDueAt:
+          type: string
         createdAt:
           type: string
 
-
     DrugProposal:
       type: object
-      required: [name]
+      required:
+        [
+          name,
+          genericName,
+          strength,
+          form,
+          suggestedCategory,
+          suggestedSubcategory,
+        ]
       properties:
         name:
           type: string
           minLength: 2
         genericName:
           type: string
+          minLength: 2
+        strength:
+          type: string
+          minLength: 1
+        form:
+          type: string
+          minLength: 1
+        suggestedCategory:
+          $ref: "#/components/schemas/DrugPrimaryCategory"
+        suggestedSubcategory:
+          $ref: "#/components/schemas/DrugSubcategory"
         description:
           type: string
         unit:
           type: string
 
+    DrugPrimaryCategory:
+      type: string
+      enum:
+        [
+          pain_fever,
+          infection,
+          malaria,
+          respiratory_allergy,
+          digestive,
+          cardiovascular,
+          diabetes_endocrine,
+          womens_reproductive,
+          child_health,
+          mental_neurological,
+          skin_wound,
+          eye_ear,
+          vitamins_nutrition,
+          other,
+        ]
+
+    DrugSubcategory:
+      type: string
+      enum:
+        [
+          analgesics_antipyretics,
+          anti_inflammatory,
+          antibiotics,
+          antifungal_antiparasitic,
+          antimalarials,
+          cough_cold,
+          allergy,
+          gastrointestinal,
+          oral_rehydration,
+          hypertension,
+          heart_health,
+          diabetes,
+          reproductive_health,
+          maternal_health,
+          pediatric,
+          neurological,
+          mental_health,
+          dermatology,
+          wound_care,
+          eye_care,
+          ear_care,
+          vitamins_minerals,
+          other,
+        ]
+
+    DrugSubcategoryOption:
+      type: object
+      required: [value, label]
+      properties:
+        value:
+          $ref: "#/components/schemas/DrugSubcategory"
+        label:
+          type: string
+
+    DrugCategory:
+      type: object
+      required: [value, label, subcategories]
+      properties:
+        value:
+          $ref: "#/components/schemas/DrugPrimaryCategory"
+        label:
+          type: string
+        subcategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugSubcategoryOption"
+
     # ── Prescription schemas ───────────────────────────────────────────────
     Prescription:
       type: object
-      required: [id, pharmacyId, patientName, patientPhone, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          pharmacyId,
+          patientName,
+          patientPhone,
+          status,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: string
@@ -2018,7 +2370,7 @@ components:
           type: ["array", "null"]
           items:
             type: string
-  
+
         rejectReason:
           type: ["string", "null"]
           enum:
@@ -2044,7 +2396,6 @@ components:
         updatedAt:
           type: string
 
-
     PrescriptionApproval:
       type: object
       required: [approvedDrugIds]
@@ -2053,7 +2404,7 @@ components:
           type: array
           items:
             type: string
-  
+
           minItems: 1
 
     PrescriptionRejection:
@@ -2118,7 +2469,6 @@ components:
         createdAt:
           type: string
 
-
     UnreadCount:
       type: object
       required: [unreadCount]
@@ -2142,12 +2492,19 @@ components:
           type: string
           nullable: true
           description: Expo push token for the device, or null to disable push
-  
 
     # ── Analytics schemas ──────────────────────────────────────────────────
     AnalyticsOverview:
       type: object
-      required: [totalOrders, pendingOrders, revenueLeones, pendingPrescriptions, lowStockItems, ordersByStatus]
+      required:
+        [
+          totalOrders,
+          pendingOrders,
+          revenueLeones,
+          pendingPrescriptions,
+          lowStockItems,
+          ordersByStatus,
+        ]
       properties:
         totalOrders:
           type: number
@@ -2207,7 +2564,20 @@ components:
       properties:
         totals:
           type: object
-          required: [orders, ordersToday, pharmacies, activePharmacies, couriers, activeCouriers, openFlags, heldDrugs, pendingSettlements, awaitingDispatch, confirmedRevenueLeones]
+          required:
+            [
+              orders,
+              ordersToday,
+              pharmacies,
+              activePharmacies,
+              couriers,
+              activeCouriers,
+              openFlags,
+              heldDrugs,
+              pendingSettlements,
+              awaitingDispatch,
+              confirmedRevenueLeones,
+            ]
           properties:
             orders:
               type: number
@@ -2245,7 +2615,8 @@ components:
           type: array
           items:
             type: object
-            required: [id, status, fulfillmentType, totalLeones, patientName, createdAt]
+            required:
+              [id, status, fulfillmentType, totalLeones, patientName, createdAt]
             properties:
               id:
                 type: string
@@ -2275,7 +2646,22 @@ components:
 
     HqOrder:
       type: object
-      required: [id, pharmacyId, patientName, patientPhone, status, fulfillmentType, idChecked, totalLeones, cashCollected, paymentMethod, createdAt, updatedAt, items]
+      required:
+        [
+          id,
+          pharmacyId,
+          patientName,
+          patientPhone,
+          status,
+          fulfillmentType,
+          idChecked,
+          totalLeones,
+          cashCollected,
+          paymentMethod,
+          createdAt,
+          updatedAt,
+          items,
+        ]
       properties:
         id:
           type: string
@@ -2289,7 +2675,20 @@ components:
           type: string
         status:
           type: string
-          enum: [awaiting_payment, paid, confirmed, packaging, ready, assigned, picked_up, delivering, delivered, collected, cancelled]
+          enum:
+            [
+              awaiting_payment,
+              paid,
+              confirmed,
+              packaging,
+              ready,
+              assigned,
+              picked_up,
+              delivering,
+              delivered,
+              collected,
+              cancelled,
+            ]
         fulfillmentType:
           type: string
           enum: [delivery, collection]
@@ -2337,7 +2736,19 @@ components:
 
     HqPharmacy:
       type: object
-      required: [id, name, username, isActive, controlledSubstanceAuthorized, mustChangePassword, sessionVersion, passwordLastChangedAt, createdAt, updatedAt]
+      required:
+        [
+          id,
+          name,
+          username,
+          isActive,
+          controlledSubstanceAuthorized,
+          mustChangePassword,
+          sessionVersion,
+          passwordLastChangedAt,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: string
@@ -2413,7 +2824,21 @@ components:
 
     PasswordPolicy:
       type: object
-      required: [id, maxPasswordAgeDays, passwordExpiryWarningDays, minPasswordLength, requireUppercase, requireLowercase, requireNumber, requireSymbol, passwordHistoryCount, temporaryPasswordExpiryHours, createdAt, updatedAt]
+      required:
+        [
+          id,
+          maxPasswordAgeDays,
+          passwordExpiryWarningDays,
+          minPasswordLength,
+          requireUppercase,
+          requireLowercase,
+          requireNumber,
+          requireSymbol,
+          passwordHistoryCount,
+          temporaryPasswordExpiryHours,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: number
@@ -2535,7 +2960,18 @@ components:
 
     HqDrug:
       type: object
-      required: [id, name, tier, unit, isApproved, createdAt]
+      required:
+        [
+          id,
+          name,
+          tier,
+          unit,
+          commonStrengths,
+          commonForms,
+          isApproved,
+          reviewStatus,
+          createdAt,
+        ]
       properties:
         id:
           type: string
@@ -2550,8 +2986,31 @@ components:
           enum: ["1", "2", "3"]
         unit:
           type: string
+        commonStrengths:
+          type: array
+          items:
+            type: string
+        commonForms:
+          type: array
+          items:
+            type: string
+        primaryCategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugPrimaryCategory"
+            - type: "null"
+        subcategory:
+          oneOf:
+            - $ref: "#/components/schemas/DrugSubcategory"
+            - type: "null"
         isApproved:
           type: boolean
+        reviewStatus:
+          type: string
+          enum: [pending, approved, rejected]
+        rejectionReason:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
         maxUnitsPerOrder:
           type: ["number", "null"]
         proposedByPharmacyId:
@@ -2561,7 +3020,8 @@ components:
 
     HqDrugInput:
       type: object
-      required: [name, tier]
+      required:
+        [name, tier, commonStrengths, commonForms, primaryCategory, subcategory]
       properties:
         name:
           type: string
@@ -2575,6 +3035,20 @@ components:
           enum: ["1", "2", "3"]
         unit:
           type: string
+        commonStrengths:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        commonForms:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        primaryCategory:
+          $ref: "#/components/schemas/DrugPrimaryCategory"
+        subcategory:
+          $ref: "#/components/schemas/DrugSubcategory"
         maxUnitsPerOrder:
           type: ["number", "null"]
 
@@ -2588,6 +3062,11 @@ components:
           type: ["number", "null"]
         isApproved:
           type: boolean
+        reviewStatus:
+          type: string
+          enum: [approved, rejected]
+        rejectionReason:
+          type: ["string", "null"]
         name:
           type: string
         genericName:
@@ -2596,6 +3075,20 @@ components:
           type: ["string", "null"]
         unit:
           type: string
+        commonStrengths:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        commonForms:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        primaryCategory:
+          $ref: "#/components/schemas/DrugPrimaryCategory"
+        subcategory:
+          $ref: "#/components/schemas/DrugSubcategory"
 
     Courier:
       type: object

@@ -27,8 +27,8 @@ router.get("/unread-count", async (req: AuthRequest, res): Promise<void> => {
     .where(
       and(
         eq(hqNotificationsTable.hqStaffId, hqStaffId),
-        isNull(hqNotificationsTable.readAt)
-      )
+        isNull(hqNotificationsTable.readAt),
+      ),
     );
 
   res.json({ unreadCount: Number(result?.count ?? 0) });
@@ -36,23 +36,29 @@ router.get("/unread-count", async (req: AuthRequest, res): Promise<void> => {
 
 router.post("/mark-read", async (req: AuthRequest, res): Promise<void> => {
   const hqStaffId = req.pharmacy!.sub;
-  const body = z.object({ ids: z.array(z.string().uuid()).optional() }).safeParse(req.body);
+  const body = z
+    .object({ ids: z.array(z.string().uuid()).optional() })
+    .safeParse(req.body);
 
   if (!body.success) {
-    res.status(400).json({ error: "ids must be an array of UUIDs if provided" });
+    res
+      .status(400)
+      .json({ error: "ids must be an array of UUIDs if provided" });
     return;
   }
 
   const unreadForStaff = and(
     eq(hqNotificationsTable.hqStaffId, hqStaffId),
-    isNull(hqNotificationsTable.readAt)
+    isNull(hqNotificationsTable.readAt),
   );
 
   if (body.data.ids?.length) {
     await db
       .update(hqNotificationsTable)
       .set({ readAt: new Date() })
-      .where(and(unreadForStaff, inArray(hqNotificationsTable.id, body.data.ids)));
+      .where(
+        and(unreadForStaff, inArray(hqNotificationsTable.id, body.data.ids)),
+      );
   } else {
     await db
       .update(hqNotificationsTable)

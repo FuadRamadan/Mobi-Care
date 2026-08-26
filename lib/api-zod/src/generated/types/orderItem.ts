@@ -10,6 +10,8 @@ export interface OrderItem {
   id: string;
   orderId: string;
   drugId: string;
+  /** @nullable */
+  inventoryId?: string | null;
   drugName: string;
   quantity: number;
   unitPriceLeones: number;
