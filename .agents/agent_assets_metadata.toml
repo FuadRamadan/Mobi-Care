@@ -14,3 +14,17 @@ mtime_ms = 1787161344179
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/895794d9-4425-443c-a694-0a837d909ffc/8e237060-716f-4640-ba51-b2c65682baf5"
 storage_version_token = "1787161348361021"
 content_type = "text/plain"
+
+[[outputs]]
+id = "aN3GNj1doLY3IsGUJZsIE"
+uri = "file://exports/mobicare-source-export.zip"
+type = "unspecified"
+title = "MobiCare complete source export"
+description = "Downloadable ZIP containing the MobiCare monorepo source, app configurations, shared libraries, database schema, API contracts, scripts, assets, and attached project references. Generated dependencies, build output, Git metadata, internal agent files, and secret files are excluded."
+logical_id = "ec13e16c-c4e8-4b66-8e83-e3d8d9c34cb3"
+content_hash = "sha256:dfc4a588d431005f35404247f9e0c0bbac817deddb8ae8bab6340efaec4186e7"
+size = 3657592
+mtime_ms = 1787753909430
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/ec13e16c-c4e8-4b66-8e83-e3d8d9c34cb3/8d8332c9-b688-42f7-907f-4e9e7c25d923"
+storage_version_token = "1787753913931924"
+content_type = "application/octet-stream"

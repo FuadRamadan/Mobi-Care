@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "MobiCare",
+    "slug": "mobicare-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "mobicare-mobile",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B3D2E"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mobicare.patient"
+    },
+    "android": {
+      "package": "com.mobicare.patient"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MobiCare needs access to your photos to upload prescription images.",
+          "cameraPermission": "MobiCare needs your camera to capture prescription photos."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

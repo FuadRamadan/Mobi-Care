@@ -1,0 +1,31 @@
+Flow A — HQ-initiated reset (proactive / onboarding / rotation)
+
+HQ admin selects a pharmacy account and clicks "Reset Password."
+System generates a secure, random one-time password (OTP-style temporary password).
+Temporary password is delivered to the pharmacy (displayed once to HQ admin to relay, and/or emailed/SMS'd directly to the pharmacy's registered contact).
+Pharmacy account is flagged must_change_password = true.
+On the pharmacy's next login using the temporary password, the portal forces a "Set New Password" screen before granting access to any other page — no dashboard access until the password is changed.
+Pharmacy sets their own new password (subject to complexity rules); temporary password is invalidated immediately after use.
+
+Flow B — HQ-assisted reset (forgot password / locked out)
+
+Pharmacy contacts HQ (or requests via a "Forgot Password" flow that routes to HQ for verification, since pharmacies may not have self-service email reset).
+HQ admin verifies the pharmacy's identity, then issues a new temporary password the same way as Flow A.
+Same forced-change-on-next-login behavior applies.
+
+Both flows share the same backend mechanism — the only difference is the trigger (HQ-initiated vs. pharmacy-requested/HQ-confirmed).
+
+2. Password Retention / Expiry Policy
+
+HQ must be able to configure, per-system (or per-pharmacy-tier if applicable), how many days a pharmacy password remains valid before it expires and must be changed.
+
+Requirements:
+
+A settings entity (e.g., password_policy) storing:
+max_password_age_days (e.g., 90) — HQ-configurable
+min_password_length, complexity rules (uppercase/lowercase/number/symbol) — configurable or fixed, your call based on existing patterns
+password_history_count (optional but recommended) — prevents reusing last N passwords
+otp_expiry_minutes or otp_expiry_hours — how long a temporary password issued by HQ remains valid before it must be used
+On every pharmacy login, the system checks password_last_changed_at + max_password_age_days against the current date.
+If expired, block normal login and force the "Set New Password" screen (same UX as the forced-change flow).
+HQ Dashboard settings page to view/update the policy, with an audit trail of who changed it and when.

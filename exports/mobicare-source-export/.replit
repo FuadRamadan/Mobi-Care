@@ -1,0 +1,31 @@
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+JWT_SECRET = "110b6aba21215c75cd892337efeea213c95900743f3cb79c0e27017408603a99874cf71d8d118175943514c7d388f110947a366cf3e23e6f71f458bf41076e9b"
+
+[nix]
+channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-08905a86-6f70-458f-b053-383025172b50"
