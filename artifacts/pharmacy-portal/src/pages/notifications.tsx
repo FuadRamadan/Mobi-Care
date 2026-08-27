@@ -1,5 +1,6 @@
 import { useListNotifications, useMarkNotificationsRead, getListNotificationsQueryKey } from "@workspace/api-client-react";
 import { formatDateTime } from "@/lib/format";
+import { markNotificationsReadAndRefresh } from "@/lib/notification-read";
 import { Button } from "@/components/ui/button";
 import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,10 +30,11 @@ export default function Notifications() {
 
   const handleMarkAllRead = async () => {
     try {
-      await markRead.mutateAsync({ data: {} }); // empty data marks all
+      await markNotificationsReadAndRefresh(
+        markRead.mutateAsync,
+        queryClient,
+      );
       toast.success("All notifications marked as read");
-      queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/notifications/unread-count"] });
     } catch (e: any) {
       toast.error("Failed to mark notifications");
     }
@@ -40,9 +42,11 @@ export default function Notifications() {
 
   const handleMarkRead = async (id: string) => {
     try {
-      await markRead.mutateAsync({ data: { ids: [id] } });
-      queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/notifications/unread-count"] });
+      await markNotificationsReadAndRefresh(
+        markRead.mutateAsync,
+        queryClient,
+        [id],
+      );
     } catch (e: any) {
       // ignore
     }
