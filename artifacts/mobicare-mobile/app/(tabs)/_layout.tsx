@@ -141,12 +141,13 @@ export default function TabLayout() {
   const { data: unread } = useGetPatientUnreadCount({
     query: {
       queryKey: getGetPatientUnreadCountQueryKey(),
-      enabled: isAuthenticated,
+      enabled: !isLoading && isAuthenticated,
       refetchInterval: 30_000,
     },
   });
   const unreadCount = unread?.unreadCount ?? 0;
 
+  if (isLoading) return null;
   if (!isLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   if (isLiquidGlassAvailable()) {
