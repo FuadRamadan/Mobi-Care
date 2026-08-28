@@ -7,6 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "test": "JWT_SECRET=test-secret esbuild src/error-boundary.test.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/error-boundary.test.cjs --log-level=warning && NODE_ENV=production LOG_LEVEL=silent JWT_SECRET=test-secret node --test dist/error-boundary.test.cjs",
     "bootstrap-hq": "esbuild scripts/bootstrap-hq.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/bootstrap-hq.cjs --log-level=warning && node dist/bootstrap-hq.cjs",
     "seed-team-photos": "esbuild scripts/seed-team-photos.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/seed-team-photos.cjs --log-level=warning && node dist/seed-team-photos.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
