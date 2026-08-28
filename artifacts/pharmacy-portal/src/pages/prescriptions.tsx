@@ -218,7 +218,7 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
 
   return (
     <Sheet open={!!prescription} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-card border-l flex flex-col p-0">
+      <SheetContent className="w-full max-w-full sm:w-[540px] overflow-y-auto bg-card border-l flex flex-col p-0">
         <div className="p-6 border-b bg-muted/20">
           <SheetHeader>
             <div className="flex items-center justify-between mb-2">

@@ -80,14 +80,14 @@ export default function Orders() {
     <div className="space-y-6 flex flex-col h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground mt-1 text-sm">Manage fulfillment for patient orders.</p>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-card p-2 rounded-lg border shadow-sm">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-          <TabsList>
+          <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="active">Active Work</TabsTrigger>
             <TabsTrigger value="all">All Orders</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
@@ -223,7 +223,7 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
 
   return (
     <Sheet open={!!order} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto bg-card border-l flex flex-col p-0">
+      <SheetContent className="w-full max-w-full sm:w-[540px] overflow-y-auto bg-card border-l flex flex-col p-0">
         <div className="p-6 border-b bg-muted/20">
           <SheetHeader>
             <div className="flex items-center justify-between mb-2">

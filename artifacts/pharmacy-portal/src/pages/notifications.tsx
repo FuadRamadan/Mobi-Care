@@ -58,7 +58,7 @@ export default function Notifications() {
     <div className="max-w-4xl mx-auto space-y-6 flex flex-col h-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
           <p className="text-muted-foreground mt-1 text-sm">Updates on orders, prescriptions, and system alerts.</p>
         </div>
         {hasUnread && (
@@ -99,7 +99,7 @@ export default function Notifications() {
                   <div 
                     key={notification.id} 
                     className={clsx(
-                      "p-4 flex gap-4 transition-colors relative group cursor-pointer",
+                      "p-3 sm:p-4 flex gap-3 sm:gap-4 transition-colors relative group cursor-pointer",
                       isUnread ? "bg-primary/5" : "hover:bg-muted/30"
                     )}
                     onClick={() => {
@@ -112,18 +112,18 @@ export default function Notifications() {
                     )}
                     
                     <div className={clsx(
-                      "w-10 h-10 rounded-full flex items-center justify-center shrink-0 border",
+                      "hidden sm:flex w-10 h-10 rounded-full items-center justify-center shrink-0 border",
                       isUnread ? "bg-primary/10 text-primary border-primary/20" : "bg-muted text-muted-foreground border-transparent"
                     )}>
                       <Icon className="w-5 h-5" />
                     </div>
                     
                     <div className="flex-1 space-y-1">
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-1">
                         <h4 className={clsx("text-sm", isUnread ? "font-bold text-foreground" : "font-medium text-muted-foreground")}>
                           {notification.title}
                         </h4>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap sm:ml-4">
                           {formatDateTime(notification.createdAt)}
                         </span>
                       </div>
@@ -132,14 +132,15 @@ export default function Notifications() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 flex items-center justify-center w-8">
+                    <div className="shrink-0 flex items-center justify-center w-6 sm:w-8">
                       {isUnread ? (
                         <button 
                           onClick={(event) => {
                             event.stopPropagation();
                             void handleMarkRead(notification.id);
                           }}
-                          className="text-primary hover:text-primary/70 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-primary hover:text-primary/70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                          aria-label="Mark notification as read"
                           title="Mark as read"
                         >
                           <Circle className="w-5 h-5" />

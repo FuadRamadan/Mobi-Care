@@ -24,7 +24,7 @@ const accountItems = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const LIVE_REFRESH_MS = 15_000;
   const [location] = useLocation();
   const { user, logout } = useAuth();
@@ -64,7 +64,7 @@ export function Sidebar() {
   }
 
   return (
-    <div className="w-60 bg-sidebar text-sidebar-foreground min-h-[100dvh] flex flex-col border-r border-sidebar-border shadow-md z-10 relative">
+    <div className="w-60 max-w-full bg-sidebar text-sidebar-foreground h-[100dvh] flex flex-col border-r border-sidebar-border shadow-md z-10 relative">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4 flex items-center gap-3 border-b border-sidebar-border/40">
         <img
@@ -92,6 +92,7 @@ export function Sidebar() {
           return (
             <Link key={item.href} href={item.href}>
               <div
+                onClick={onNavigate}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors cursor-pointer text-sm font-medium select-none",
                   isActive
@@ -129,6 +130,7 @@ export function Sidebar() {
           return (
             <Link key={item.href} href={item.href}>
               <div
+                onClick={onNavigate}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors cursor-pointer text-sm font-medium select-none",
                   isActive
@@ -163,6 +165,7 @@ export function Sidebar() {
           return (
             <Link key={item.href} href={item.href}>
               <div
+                onClick={onNavigate}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors cursor-pointer text-sm font-medium select-none",
                   isActive
@@ -195,7 +198,10 @@ export function Sidebar() {
           </div>
         </div>
         <button
-          onClick={logout}
+          onClick={() => {
+            onNavigate?.();
+            logout();
+          }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-md border border-sidebar-border/60 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
         >
           <LogOut className="w-4 h-4" />

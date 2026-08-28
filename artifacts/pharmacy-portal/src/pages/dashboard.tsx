@@ -27,9 +27,9 @@ export default function Dashboard() {
   if (!analytics) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Today's Overview</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Today's Overview</h1>
         <p className="text-muted-foreground mt-1 text-sm">Key metrics and recent activity for your pharmacy.</p>
       </div>
 
@@ -66,20 +66,20 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8">
         {analytics.pendingOrders > 0 && (
-          <Link href="/orders" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-sm">
+          <Link href="/orders" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center justify-between sm:justify-start gap-2 hover:bg-primary/90 transition-colors shadow-sm">
             Review {analytics.pendingOrders} Pending Orders <ArrowRight className="w-4 h-4" />
           </Link>
         )}
         {analytics.pendingPrescriptions > 0 && (
-          <Link href="/prescriptions" className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-destructive/90 transition-colors shadow-sm">
+          <Link href="/prescriptions" className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center justify-between sm:justify-start gap-2 hover:bg-destructive/90 transition-colors shadow-sm">
             Review {analytics.pendingPrescriptions} Prescriptions <ArrowRight className="w-4 h-4" />
           </Link>
         )}
       </div>
 
-      <div className="bg-card border border-card-border rounded-xl p-6 shadow-sm">
+      <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6 shadow-sm">
         <div className="mb-6">
           <h3 className="text-lg font-semibold">Order Volume & Revenue</h3>
           <p className="text-sm text-muted-foreground">Last 30 days</p>
