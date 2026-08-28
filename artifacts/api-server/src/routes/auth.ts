@@ -1,6 +1,13 @@
 import { safeRouter } from "../lib/safeRouter.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import {
+  createHash,
+  createHmac,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
 import { db } from "@workspace/db";
 import {
   pharmaciesTable,
@@ -9,8 +16,9 @@ import {
   hqRefreshTokensTable,
   patientsTable,
   patientRefreshTokensTable,
+  patientPasswordResetCodesTable,
 } from "@workspace/db/schema";
-import { eq, and, isNull, gt, sql } from "drizzle-orm";
+import { eq, and, isNull, gt, sql, desc, or } from "drizzle-orm";
 import {
   signAccessToken,
   generateRefreshToken,
@@ -25,8 +33,38 @@ import {
   appendPasswordHistory,
   serializePasswordPolicy,
 } from "../lib/passwordPolicy.js";
+import { sendSms } from "../lib/sms.js";
 
 const router = safeRouter();
+const RESET_TTL_MS = 10 * 60 * 1000;
+const RESET_RESEND_SECONDS = 60;
+const RESET_MAX_ATTEMPTS = 5;
+const RESET_MAX_PHONE_REQUESTS_PER_HOUR = 3;
+const RESET_MAX_REQUESTER_REQUESTS_PER_HOUR = 20;
+const RESET_MESSAGE =
+  "If that phone number belongs to an active patient account, a verification code has been sent.";
+
+function normalizePhone(value: string): string {
+  const trimmed = value.trim();
+  const prefix = trimmed.startsWith("+") ? "+" : "";
+  return prefix + trimmed.replace(/\D/g, "");
+}
+
+function recoveryHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function recoveryCodeHash(requestId: string, code: string): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is required");
+  return createHmac("sha256", secret).update(`${requestId}:${code}`).digest("hex");
+}
+
+function hashesMatch(left: string, right: string): boolean {
+  const a = Buffer.from(left, "hex");
+  const b = Buffer.from(right, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 router.post("/login", async (req, res) => {
@@ -202,6 +240,7 @@ router.post("/login", async (req, res) => {
         sub: patientAcc.id,
         role: "patient",
         name: patientAcc.name,
+        sessionVersion: patientAcc.sessionVersion,
       });
       res.json({
         accessToken,
@@ -277,6 +316,7 @@ router.post("/register", async (req, res) => {
     sub: created.id,
     role: "patient",
     name: created.name,
+    sessionVersion: created.sessionVersion,
   });
   res.status(201).json({
     accessToken,
@@ -289,6 +329,241 @@ router.post("/register", async (req, res) => {
       phone: created.phone,
     },
   });
+});
+
+// ── Patient password recovery ─────────────────────────────────────────────────
+router.post("/patient-password-reset/request", async (req, res) => {
+  const body = z.object({ phone: z.string().min(5).max(40) }).safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "A valid phone number is required" });
+    return;
+  }
+
+  const phone = normalizePhone(body.data.phone);
+  if (phone.replace(/\D/g, "").length < 5) {
+    res.status(400).json({ error: "A valid phone number is required" });
+    return;
+  }
+
+  const phoneHash = recoveryHash(phone);
+  const requesterHash = recoveryHash(req.ip || req.socket.remoteAddress || "unknown");
+  const outcome = await db.transaction(async (tx) => {
+    // Serialize each phone and requester bucket so concurrent requests cannot
+    // all pass the same pre-insert rate-limit check.
+    const lockKeys = [`phone:${phoneHash}`, `requester:${requesterHash}`].sort();
+    for (const lockKey of lockKeys) {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`,
+      );
+    }
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recent = await tx
+      .select({
+        phoneHash: patientPasswordResetCodesTable.phoneHash,
+        requesterHash: patientPasswordResetCodesTable.requesterHash,
+        createdAt: patientPasswordResetCodesTable.createdAt,
+      })
+      .from(patientPasswordResetCodesTable)
+      .where(
+        and(
+          gt(patientPasswordResetCodesTable.createdAt, oneHourAgo),
+          or(
+            eq(patientPasswordResetCodesTable.phoneHash, phoneHash),
+            eq(patientPasswordResetCodesTable.requesterHash, requesterHash),
+          ),
+        ),
+      )
+      .orderBy(desc(patientPasswordResetCodesTable.createdAt))
+      .limit(
+        RESET_MAX_PHONE_REQUESTS_PER_HOUR +
+          RESET_MAX_REQUESTER_REQUESTS_PER_HOUR +
+          1,
+      );
+    const phoneRequests = recent.filter((row) => row.phoneHash === phoneHash);
+    const requesterRequests = recent.filter(
+      (row) => row.requesterHash === requesterHash,
+    );
+    const latest = phoneRequests[0];
+    if (
+      phoneRequests.length >= RESET_MAX_PHONE_REQUESTS_PER_HOUR ||
+      requesterRequests.length >= RESET_MAX_REQUESTER_REQUESTS_PER_HOUR
+    ) {
+      return { blocked: true as const, retryAfterSeconds: 3600 };
+    }
+    if (
+      latest &&
+      Date.now() - latest.createdAt.getTime() < RESET_RESEND_SECONDS * 1000
+    ) {
+      return {
+        blocked: true as const,
+        retryAfterSeconds: Math.ceil(
+          (RESET_RESEND_SECONDS * 1000 -
+            (Date.now() - latest.createdAt.getTime())) /
+            1000,
+        ),
+      };
+    }
+
+    const [patient] = await tx
+      .select()
+      .from(patientsTable)
+      .where(
+        sql`regexp_replace(${patientsTable.phone}, '[^0-9+]', '', 'g') = ${phone}`,
+      )
+      .limit(1);
+    const requestId = randomUUID();
+    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+    await tx.insert(patientPasswordResetCodesTable).values({
+      id: requestId,
+      patientId: patient?.isActive ? patient.id : null,
+      phoneHash,
+      requesterHash,
+      codeHash: recoveryCodeHash(requestId, code),
+      expiresAt: new Date(Date.now() + RESET_TTL_MS),
+    });
+    return {
+      blocked: false as const,
+      requestId,
+      code,
+      patientPhone: patient?.isActive ? patient.phone : null,
+    };
+  });
+
+  if (outcome.blocked) {
+    res.status(429).json({
+      error:
+        outcome.retryAfterSeconds === 3600
+          ? "Too many recovery requests. Please try again later."
+          : "Please wait before requesting another code.",
+      retryAfterSeconds: outcome.retryAfterSeconds,
+    });
+    return;
+  }
+
+  if (outcome.patientPhone) {
+    // Do not await the provider: response timing must not reveal whether the
+    // phone belongs to an account.
+    void sendSms(
+      outcome.patientPhone,
+      `Your MobiCare password reset code is ${outcome.code}. It expires in 10 minutes. Do not share this code.`,
+    ).catch((error) => {
+      console.error("[patient password reset] SMS send failed", error);
+    });
+  }
+
+  res.json({
+    requestId: outcome.requestId,
+    message: RESET_MESSAGE,
+    retryAfterSeconds: RESET_RESEND_SECONDS,
+  });
+});
+
+router.post("/patient-password-reset/confirm", async (req, res) => {
+  const body = z
+    .object({
+      requestId: z.string().uuid(),
+      code: z.string().regex(/^\d{6}$/),
+      newPassword: z.string().min(8).max(200),
+    })
+    .safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Request, six-digit code, and new password are required" });
+    return;
+  }
+
+  const [record] = await db
+    .select()
+    .from(patientPasswordResetCodesTable)
+    .where(eq(patientPasswordResetCodesTable.id, body.data.requestId))
+    .limit(1);
+  const now = new Date();
+  const unusable =
+    !record ||
+    !record.patientId ||
+    !!record.usedAt ||
+    record.expiresAt <= now ||
+    record.attemptCount >= RESET_MAX_ATTEMPTS;
+  if (unusable) {
+    res.status(400).json({ error: "This reset code is invalid or has expired. Request a new code." });
+    return;
+  }
+
+  const suppliedHash = recoveryCodeHash(record.id, body.data.code);
+  if (!hashesMatch(record.codeHash, suppliedHash)) {
+    const [updated] = await db
+      .update(patientPasswordResetCodesTable)
+      .set({ attemptCount: sql`${patientPasswordResetCodesTable.attemptCount} + 1` })
+      .where(
+        and(
+          eq(patientPasswordResetCodesTable.id, record.id),
+          isNull(patientPasswordResetCodesTable.usedAt),
+          sql`${patientPasswordResetCodesTable.attemptCount} < ${RESET_MAX_ATTEMPTS}`,
+        ),
+      )
+      .returning({ attemptCount: patientPasswordResetCodesTable.attemptCount });
+    if ((updated?.attemptCount ?? RESET_MAX_ATTEMPTS) >= RESET_MAX_ATTEMPTS) {
+      res.status(429).json({ error: "Too many incorrect codes. Request a new code." });
+      return;
+    }
+    res.status(400).json({ error: "The verification code is incorrect." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
+  const completed = await db.transaction(async (tx) => {
+    // Serialize credential replacement with patient refresh rotation.
+    await tx.execute(
+      sql`SELECT id FROM patients WHERE id = ${record.patientId} FOR UPDATE`,
+    );
+    const [claimed] = await tx
+      .update(patientPasswordResetCodesTable)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(patientPasswordResetCodesTable.id, record.id),
+          isNull(patientPasswordResetCodesTable.usedAt),
+          gt(patientPasswordResetCodesTable.expiresAt, now),
+          sql`${patientPasswordResetCodesTable.attemptCount} < ${RESET_MAX_ATTEMPTS}`,
+        ),
+      )
+      .returning({ patientId: patientPasswordResetCodesTable.patientId });
+    if (!claimed?.patientId) return false;
+
+    await tx
+      .update(patientsTable)
+      .set({
+        passwordHash,
+        sessionVersion: sql`${patientsTable.sessionVersion} + 1`,
+        updatedAt: now,
+      })
+      .where(eq(patientsTable.id, claimed.patientId));
+    await tx
+      .update(patientRefreshTokensTable)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(patientRefreshTokensTable.patientId, claimed.patientId),
+          isNull(patientRefreshTokensTable.revokedAt),
+        ),
+      );
+    await tx
+      .update(patientPasswordResetCodesTable)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(patientPasswordResetCodesTable.patientId, claimed.patientId),
+          isNull(patientPasswordResetCodesTable.usedAt),
+        ),
+      );
+    return true;
+  });
+
+  if (!completed) {
+    res.status(409).json({ error: "This reset request has already been completed." });
+    return;
+  }
+  res.json({ message: "Password reset successfully. Sign in with your new password." });
 });
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
@@ -438,7 +713,7 @@ router.post("/refresh", async (req, res) => {
   }
 
   // ── Patient token? ──
-  const [ptStored] = await db
+  const [ptCandidate] = await db
     .select()
     .from(patientRefreshTokensTable)
     .where(
@@ -450,37 +725,61 @@ router.post("/refresh", async (req, res) => {
     )
     .limit(1);
 
-  if (ptStored) {
-    await db
-      .update(patientRefreshTokensTable)
-      .set({ revokedAt: now })
-      .where(eq(patientRefreshTokensTable.id, ptStored.id));
+  if (ptCandidate) {
+    const refreshed = await db.transaction(async (tx) => {
+      // Lock the patient first. Password reset/change takes the same lock, so
+      // either the replacement token is revoked by the credential change or
+      // this refresh observes that the original token was already revoked.
+      await tx.execute(
+        sql`SELECT id FROM patients WHERE id = ${ptCandidate.patientId} FOR UPDATE`,
+      );
+      const [patientAcc] = await tx
+        .select()
+        .from(patientsTable)
+        .where(eq(patientsTable.id, ptCandidate.patientId))
+        .limit(1);
+      if (!patientAcc || !patientAcc.isActive) {
+        return { inactive: true as const };
+      }
+      const [claimed] = await tx
+        .update(patientRefreshTokensTable)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(patientRefreshTokensTable.id, ptCandidate.id),
+            isNull(patientRefreshTokensTable.revokedAt),
+            gt(patientRefreshTokensTable.expiresAt, now),
+          ),
+        )
+        .returning({ id: patientRefreshTokensTable.id });
+      if (!claimed) return null;
 
-    const [patientAcc] = await db
-      .select()
-      .from(patientsTable)
-      .where(eq(patientsTable.id, ptStored.patientId))
-      .limit(1);
+      const { raw, hash: newHash } = generateRefreshToken();
+      await tx.insert(patientRefreshTokensTable).values({
+        patientId: patientAcc.id,
+        tokenHash: newHash,
+        expiresAt: refreshTokenExpiresAt(),
+      });
+      const accessToken = signAccessToken({
+        sub: patientAcc.id,
+        role: "patient",
+        name: patientAcc.name,
+        sessionVersion: patientAcc.sessionVersion,
+      });
+      return { inactive: false as const, accessToken, refreshToken: raw };
+    });
 
-    if (!patientAcc || !patientAcc.isActive) {
+    if (refreshed?.inactive) {
       res.status(401).json({ error: "Account inactive" });
       return;
     }
-
-    const { raw, hash: newHash } = generateRefreshToken();
-    await db.insert(patientRefreshTokensTable).values({
-      patientId: patientAcc.id,
-      tokenHash: newHash,
-      expiresAt: refreshTokenExpiresAt(),
-    });
-
-    const accessToken = signAccessToken({
-      sub: patientAcc.id,
-      role: "patient",
-      name: patientAcc.name,
-    });
-    res.json({ accessToken, refreshToken: raw });
-    return;
+    if (refreshed) {
+      res.json({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+      });
+      return;
+    }
   }
 
   res.status(401).json({ error: "Invalid or expired refresh token" });
@@ -547,41 +846,48 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   }
 
   if (role === "patient") {
-    const [record] = await db
-      .select()
-      .from(patientsTable)
-      .where(eq(patientsTable.id, accountId))
-      .limit(1);
-
-    if (!record) {
+    const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
+    const changed = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT id FROM patients WHERE id = ${accountId} FOR UPDATE`,
+      );
+      const [record] = await tx
+        .select()
+        .from(patientsTable)
+        .where(eq(patientsTable.id, accountId))
+        .limit(1);
+      if (!record) return "missing" as const;
+      if (!(await bcrypt.compare(body.data.currentPassword, record.passwordHash))) {
+        return "invalid" as const;
+      }
+      const now = new Date();
+      await tx
+        .update(patientsTable)
+        .set({
+          passwordHash,
+          sessionVersion: sql`${patientsTable.sessionVersion} + 1`,
+          updatedAt: now,
+        })
+        .where(eq(patientsTable.id, accountId));
+      await tx
+        .update(patientRefreshTokensTable)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(patientRefreshTokensTable.patientId, accountId),
+            isNull(patientRefreshTokensTable.revokedAt),
+          ),
+        );
+      return "changed" as const;
+    });
+    if (changed === "missing") {
       res.status(404).json({ error: "Not found" });
       return;
     }
-
-    const valid = await bcrypt.compare(
-      body.data.currentPassword,
-      record.passwordHash,
-    );
-    if (!valid) {
+    if (changed === "invalid") {
       res.status(401).json({ error: "Current password is incorrect" });
       return;
     }
-
-    const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
-    await db
-      .update(patientsTable)
-      .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(patientsTable.id, accountId));
-
-    await db
-      .update(patientRefreshTokensTable)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(patientRefreshTokensTable.patientId, accountId),
-          isNull(patientRefreshTokensTable.revokedAt),
-        ),
-      );
 
     res.json({ message: "Password changed successfully" });
     return;

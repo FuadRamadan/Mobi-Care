@@ -25,11 +25,32 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "patients.session_version column",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'patients'
+            AND column_name = 'session_version'
+        ) AS exists
+      `,
+    },
+    {
       label: "patient_notifications table",
       query: sql`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables
           WHERE table_name = 'patient_notifications'
+        ) AS exists
+      `,
+    },
+    {
+      label: "patient_password_reset_codes table",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = current_schema()
+            AND table_name = 'patient_password_reset_codes'
         ) AS exists
       `,
     },

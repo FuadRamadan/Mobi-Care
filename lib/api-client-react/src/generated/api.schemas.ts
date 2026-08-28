@@ -13,6 +13,28 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface PatientPasswordResetRequest {
+  /** @minLength 5 */
+  phone: string;
+}
+
+export interface PatientPasswordResetRequested {
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  requestId: string;
+  message: string;
+  /** @minimum 0 */
+  retryAfterSeconds: number;
+}
+
+export interface PatientPasswordResetConfirm {
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  requestId: string;
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
 export interface LoginInput {
   /** Username or phone number */
   identifier: string;

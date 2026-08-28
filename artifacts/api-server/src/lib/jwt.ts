@@ -18,7 +18,7 @@ export interface PharmacyTokenPayload {
   /**
    * Incremented on every credential reset. requireAuth compares this against
    * the live pharmacy row and rejects stale tokens immediately.
-   * Only present in pharmacy tokens.
+   * Present in pharmacy and patient tokens.
    */
   sessionVersion?: number;
   /** Password age metadata lets the portal render expiry UX without background API calls. */

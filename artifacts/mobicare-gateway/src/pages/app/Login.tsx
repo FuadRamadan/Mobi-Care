@@ -1,26 +1,50 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Redirect, useLocation } from 'wouter';
 import { ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { usePatientAuth } from '@/patient/auth';
+import {
+  useConfirmPatientPasswordReset,
+  useRequestPatientPasswordReset,
+} from '@workspace/api-client-react';
+
+type Mode = 'login' | 'register' | 'recover';
 
 export default function PatientLogin() {
   const { user, login, register } = usePatientAuth();
   const [, navigate] = useLocation();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [retryAfter, setRetryAfter] = useState(0);
+  const requestReset = useRequestPatientPasswordReset();
+  const confirmReset = useConfirmPatientPasswordReset();
+
+  useEffect(() => {
+    if (retryAfter <= 0) return;
+    const timer = window.setInterval(
+      () => setRetryAfter((current) => Math.max(0, current - 1)),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [retryAfter]);
 
   if (user) return <Redirect to="/app/search" />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setBusy(true);
     try {
       if (mode === 'login') await login(phone, password);
@@ -28,6 +52,59 @@ export default function PatientLogin() {
       navigate('/app/search');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendResetCode() {
+    if (phone.trim().length < 5) {
+      setError('Enter your registered phone number.');
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      const result = await requestReset.mutateAsync({ data: { phone: phone.trim() } });
+      setRequestId(result.requestId);
+      setRetryAfter(Math.ceil(result.retryAfterSeconds));
+    } catch (err: any) {
+      setError(err?.data?.error ?? err?.message ?? 'Could not request a code. Try again.');
+      if (typeof err?.data?.retryAfterSeconds === 'number') {
+        setRetryAfter(Math.ceil(err.data.retryAfterSeconds));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finishReset(e: FormEvent) {
+    e.preventDefault();
+    if (!requestId) return sendResetCode();
+    if (newPassword.length < 8) {
+      setError('Your new password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('The passwords do not match.');
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await confirmReset.mutateAsync({
+        data: { requestId, code, newPassword },
+      });
+      setMode('login');
+      setPassword('');
+      setCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setRequestId(null);
+      setNotice('Password reset successfully. Sign in with your new password.');
+    } catch (err: any) {
+      setError(err?.data?.error ?? err?.message ?? 'Could not reset your password.');
     } finally {
       setBusy(false);
     }
@@ -53,14 +130,14 @@ export default function PatientLogin() {
 
         <div className="text-center mb-6">
           <h1 className="font-display font-bold text-2xl text-dark-green mb-2">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password'}
           </h1>
           <p className="text-muted-foreground text-sm">
             Search medicines, compare prices, and order from trusted pharmacies.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 bg-secondary rounded-full p-1 mb-6 text-sm">
+        {mode !== 'recover' && <div className="grid grid-cols-2 gap-1 bg-secondary rounded-full p-1 mb-6 text-sm">
           <button
             type="button"
             onClick={() => { setMode('login'); setError(null); }}
@@ -77,9 +154,9 @@ export default function PatientLogin() {
           >
             Register
           </button>
-        </div>
+        </div>}
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={mode === 'recover' ? finishReset : onSubmit} className="space-y-4">
           {mode === 'register' && (
             <div className="space-y-1.5">
               <Label htmlFor="pt-name">Full name</Label>
@@ -107,7 +184,7 @@ export default function PatientLogin() {
               data-testid="input-phone"
             />
           </div>
-          <div className="space-y-1.5">
+          {mode !== 'recover' && <div className="space-y-1.5">
             <Label htmlFor="pt-password">Password</Label>
             <Input
               id="pt-password"
@@ -122,15 +199,69 @@ export default function PatientLogin() {
             {mode === 'register' && (
               <p className="text-xs text-muted-foreground">At least 8 characters.</p>
             )}
-          </div>
+          </div>}
+
+          {mode === 'recover' && requestId && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                If this number belongs to an active patient account, we sent a six-digit SMS code.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="pt-reset-code">Verification code</Label>
+                <Input
+                  id="pt-reset-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  pattern="[0-9]{6}"
+                  data-testid="input-reset-code"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pt-new-password">New password</Label>
+                <Input id="pt-new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pt-confirm-password">Confirm new password</Label>
+                <Input id="pt-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
+              </div>
+            </>
+          )}
 
           {error && (
             <p className="text-sm text-destructive" data-testid="text-login-error">{error}</p>
           )}
+          {notice && (
+            <p className="text-sm text-primary" role="status" data-testid="text-login-notice">{notice}</p>
+          )}
 
-          <Button type="submit" className="w-full rounded-full" disabled={busy} data-testid="button-submit">
-            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+          <Button
+            type="submit"
+            className="w-full rounded-full"
+            disabled={busy}
+            data-testid="button-submit"
+          >
+            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : requestId ? 'Reset password' : 'Send verification code'}
           </Button>
+          {mode === 'login' && (
+            <button type="button" onClick={() => { setMode('recover'); setError(null); setNotice(null); }} className="w-full text-sm font-medium text-primary hover:underline" data-testid="button-forgot-password">
+              Forgot password?
+            </button>
+          )}
+          {mode === 'recover' && (
+            <div className="flex justify-between gap-4 text-sm">
+              <button type="button" onClick={() => { setMode('login'); setError(null); setRequestId(null); }} className="font-medium text-primary hover:underline">
+                Back to sign in
+              </button>
+              {requestId && (
+                <button type="button" onClick={sendResetCode} disabled={busy || retryAfter > 0} className="font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline">
+                  {retryAfter > 0 ? `Resend in ${retryAfter}s` : 'Resend code'}
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </div>
       <p className="text-xs text-muted-foreground mt-6">

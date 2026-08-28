@@ -71,6 +71,9 @@ import type {
   PatientNotification,
   PatientOrder,
   PatientOrderInput,
+  PatientPasswordResetConfirm,
+  PatientPasswordResetRequest,
+  PatientPasswordResetRequested,
   PatientRegisterInput,
   PatientSearchDrugsParams,
   PharmacyOnboardInput,
@@ -337,6 +340,148 @@ export const useRefreshToken = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRefreshTokenMutationOptions(options));
+    }
+
+export const getRequestPatientPasswordResetUrl = () => {
+
+
+
+
+  return `/api/auth/patient-password-reset/request`
+}
+
+/**
+ * @summary Request a patient password reset code by SMS
+ */
+export const requestPatientPasswordReset = async (patientPasswordResetRequest: PatientPasswordResetRequest, options?: Parameters<typeof customFetch>[1]): Promise<PatientPasswordResetRequested> => {
+
+  return customFetch<PatientPasswordResetRequested>(getRequestPatientPasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientPasswordResetRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestPatientPasswordResetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetRequest>}, TContext> => {
+
+const mutationKey = ['requestPatientPasswordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestPatientPasswordReset>>, {data: BodyType<PatientPasswordResetRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestPatientPasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestPatientPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof requestPatientPasswordReset>>>
+    export type RequestPatientPasswordResetMutationBody = BodyType<PatientPasswordResetRequest>
+    export type RequestPatientPasswordResetMutationError = ErrorType<void>
+
+    /**
+ * @summary Request a patient password reset code by SMS
+ */
+export const useRequestPatientPasswordReset = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestPatientPasswordReset>>,
+        TError,
+        {data: BodyType<PatientPasswordResetRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestPatientPasswordResetMutationOptions(options));
+    }
+
+export const getConfirmPatientPasswordResetUrl = () => {
+
+
+
+
+  return `/api/auth/patient-password-reset/confirm`
+}
+
+/**
+ * @summary Verify a patient reset code and set a new password
+ */
+export const confirmPatientPasswordReset = async (patientPasswordResetConfirm: PatientPasswordResetConfirm, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getConfirmPatientPasswordResetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientPasswordResetConfirm)
+  }
+);}
+
+
+
+
+
+export const getConfirmPatientPasswordResetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetConfirm>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetConfirm>}, TContext> => {
+
+const mutationKey = ['confirmPatientPasswordReset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPatientPasswordReset>>, {data: BodyType<PatientPasswordResetConfirm>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmPatientPasswordReset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmPatientPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPatientPasswordReset>>>
+    export type ConfirmPatientPasswordResetMutationBody = BodyType<PatientPasswordResetConfirm>
+    export type ConfirmPatientPasswordResetMutationError = ErrorType<void>
+
+    /**
+ * @summary Verify a patient reset code and set a new password
+ */
+export const useConfirmPatientPasswordReset = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPatientPasswordReset>>, TError,{data: BodyType<PatientPasswordResetConfirm>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmPatientPasswordReset>>,
+        TError,
+        {data: BodyType<PatientPasswordResetConfirm>},
+        TContext
+      > => {
+      return useMutation(getConfirmPatientPasswordResetMutationOptions(options));
     }
 
 export const getChangePasswordUrl = () => {

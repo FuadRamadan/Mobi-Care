@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, PharmacyTokenPayload } from "../lib/jwt.js";
 import { db } from "@workspace/db";
-import { pharmaciesTable } from "@workspace/db/schema";
+import { patientsTable, pharmaciesTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getOrCreatePasswordPolicy } from "../lib/passwordPolicy.js";
 
@@ -33,7 +33,7 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   }
 
   // For pharmacy tokens, validate sessionVersion against the live row.
-  // HQ and patient tokens do not use sessionVersion — skip the DB check.
+  // HQ tokens do not use sessionVersion — skip the DB check.
   if (payload.role === "pharmacy") {
     try {
       const [[row], policy] = await Promise.all([
@@ -95,6 +95,33 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
       res.status(500).json({ error: "Authentication check failed" });
     }
     return;
+  }
+
+  if (payload.role === "patient") {
+    try {
+      const [row] = await db
+        .select({
+          sessionVersion: patientsTable.sessionVersion,
+          isActive: patientsTable.isActive,
+        })
+        .from(patientsTable)
+        .where(eq(patientsTable.id, payload.sub))
+        .limit(1);
+      if (!row || !row.isActive) {
+        res.status(401).json({ error: "Account inactive or not found" });
+        return;
+      }
+      if (payload.sessionVersion !== row.sessionVersion) {
+        res.status(401).json({
+          error: "Session invalidated — please log in again",
+          code: "SESSION_INVALIDATED",
+        });
+        return;
+      }
+    } catch {
+      res.status(500).json({ error: "Authentication check failed" });
+      return;
+    }
   }
 
   req.pharmacy = payload;

@@ -68,6 +68,49 @@ export const RefreshTokenResponse = zod.object({
 
 
 /**
+ * @summary Request a patient password reset code by SMS
+ */
+export const requestPatientPasswordResetBodyPhoneMin = 5;
+
+
+
+export const RequestPatientPasswordResetBody = zod.object({
+  "phone": zod.string().min(requestPatientPasswordResetBodyPhoneMin)
+})
+
+export const requestPatientPasswordResetResponseRequestIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const requestPatientPasswordResetResponseRetryAfterSecondsMin = 0;
+
+
+
+export const RequestPatientPasswordResetResponse = zod.object({
+  "requestId": zod.string().regex(requestPatientPasswordResetResponseRequestIdRegExp),
+  "message": zod.string(),
+  "retryAfterSeconds": zod.number().min(requestPatientPasswordResetResponseRetryAfterSecondsMin)
+})
+
+
+/**
+ * @summary Verify a patient reset code and set a new password
+ */
+export const confirmPatientPasswordResetBodyRequestIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+export const confirmPatientPasswordResetBodyCodeRegExp = new RegExp('^[0-9]{6}$');
+export const confirmPatientPasswordResetBodyNewPasswordMin = 8;
+
+
+
+export const ConfirmPatientPasswordResetBody = zod.object({
+  "requestId": zod.string().regex(confirmPatientPasswordResetBodyRequestIdRegExp),
+  "code": zod.string().regex(confirmPatientPasswordResetBodyCodeRegExp),
+  "newPassword": zod.string().min(confirmPatientPasswordResetBodyNewPasswordMin)
+})
+
+export const ConfirmPatientPasswordResetResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary Change password (authenticated). For pharmacy accounts, returns a fresh token pair and user so the frontend can continue without re-logging in.
  */
 export const changePasswordBodyNewPasswordMin = 8;
