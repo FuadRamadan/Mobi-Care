@@ -74,13 +74,6 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
-      label: "sms_provider_config table",
-      query: sql`
-        SELECT to_regclass(current_schema() || '.sms_provider_config')
-          IS NOT NULL AS exists
-      `,
-    },
-    {
       label: "api_connections registry",
       query: sql`
         SELECT to_regclass(current_schema() || '.api_connections')

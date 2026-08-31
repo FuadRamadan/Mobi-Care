@@ -69,7 +69,10 @@ function hashesMatch(left: string, right: string): boolean {
 // ── Login ─────────────────────────────────────────────────────────────────────
 router.post("/login", async (req, res) => {
   const body = z
-    .object({ refreshToken: z.string().min(1) })
+    .object({
+      identifier: z.string().min(1),
+      password: z.string().min(1),
+    })
     .safeParse(req.body);
 
   if (!body.success) {
@@ -97,10 +100,7 @@ router.post("/login", async (req, res) => {
     )[0];
 
   if (pharmacy && pharmacy.isActive) {
-  const valid = await bcrypt.compare(
-    body.data.currentPassword,
-    record.passwordHash,
-  );
+    const valid = await bcrypt.compare(password, pharmacy.passwordHash);
     if (valid) {
       // Check if temporary password has expired
       if (
@@ -117,16 +117,17 @@ router.post("/login", async (req, res) => {
       }
 
       // Check if normal password has exceeded max age
-  const policy = await getOrCreatePasswordPolicy();
-    const passwordPolicy = serializePasswordPolicy(policy);
-  const passwordAgeDays =
-    (Date.now() - record.passwordLastChangedAt.getTime()) /
-    (1000 * 60 * 60 * 24);
-    const isExpiredByAge =
-      !pharmacy.mustChangePassword &&
-      passwordAgeDays > policy.maxPasswordAgeDays;
+      const policy = await getOrCreatePasswordPolicy();
+      const passwordPolicy = serializePasswordPolicy(policy);
+      const passwordAgeDays =
+        (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      const isExpiredByAge =
+        !pharmacy.mustChangePassword &&
+        passwordAgeDays > policy.maxPasswordAgeDays;
 
-    let mustChangePassword = pharmacy.mustChangePassword;
+      // If password has exceeded max age, mark mustChangePassword
+      let mustChangePassword = pharmacy.mustChangePassword;
       if (isExpiredByAge) {
         mustChangePassword = true;
         await db
@@ -135,22 +136,23 @@ router.post("/login", async (req, res) => {
           .where(eq(pharmaciesTable.id, pharmacy.id));
       }
 
-  const { raw, hash } = generateRefreshToken();
-  await db.insert(patientRefreshTokensTable).values({
-    patientId: created.id,
-    tokenHash: hash,
-    expiresAt: refreshTokenExpiresAt(),
-  });
+      const { raw, hash } = generateRefreshToken();
+      await db.insert(refreshTokensTable).values({
+        pharmacyId: pharmacy.id,
+        tokenHash: hash,
+        sessionVersion: pharmacy.sessionVersion,
+        expiresAt: refreshTokenExpiresAt(),
+      });
 
-  const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
-  });
+      const accessToken = signAccessToken({
+        sub: pharmacy.id,
+        role: "pharmacy",
+        name: pharmacy.name,
+        mustChangePassword: mustChangePassword || undefined,
+        sessionVersion: pharmacy.sessionVersion,
+        passwordLastChangedAt: pharmacy.passwordLastChangedAt.toISOString(),
+        passwordPolicy,
+      });
       res.json({
         accessToken,
         refreshToken: raw,
@@ -188,27 +190,20 @@ router.post("/login", async (req, res) => {
     )[0];
 
   if (staff && staff.isActive) {
-  const valid = await bcrypt.compare(
-    body.data.currentPassword,
-    record.passwordHash,
-  );
+    const valid = await bcrypt.compare(password, staff.passwordHash);
     if (valid) {
-  const { raw, hash } = generateRefreshToken();
-  await db.insert(patientRefreshTokensTable).values({
-    patientId: created.id,
-    tokenHash: hash,
-    expiresAt: refreshTokenExpiresAt(),
-  });
+      const { raw, hash } = generateRefreshToken();
+      await db.insert(hqRefreshTokensTable).values({
+        hqStaffId: staff.id,
+        tokenHash: hash,
+        expiresAt: refreshTokenExpiresAt(),
+      });
 
-  const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
-  });
+      const accessToken = signAccessToken({
+        sub: staff.id,
+        role: "hq",
+        name: staff.name,
+      });
       res.json({
         accessToken,
         refreshToken: raw,
@@ -233,50 +228,47 @@ router.post("/login", async (req, res) => {
     .limit(1);
 
   if (patientAcc && patientAcc.isActive) {
-  const valid = await bcrypt.compare(
-    body.data.currentPassword,
-    record.passwordHash,
-  );
+    const valid = await bcrypt.compare(password, patientAcc.passwordHash);
     if (valid) {
-  const { raw, hash } = generateRefreshToken();
-  await db.insert(patientRefreshTokensTable).values({
-    patientId: created.id,
-    tokenHash: hash,
-    expiresAt: refreshTokenExpiresAt(),
-  });
+      const { raw, hash } = generateRefreshToken();
+      await db.insert(patientRefreshTokensTable).values({
+        patientId: patientAcc.id,
+        tokenHash: hash,
+        expiresAt: refreshTokenExpiresAt(),
+      });
 
-  const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
-  });
+      const accessToken = signAccessToken({
+        sub: patientAcc.id,
+        role: "patient",
+        name: patientAcc.name,
+        sessionVersion: patientAcc.sessionVersion,
+      });
+      res.json({
+        accessToken,
+        refreshToken: raw,
+        user: {
+          id: patientAcc.id,
+          role: "patient",
+          name: patientAcc.name,
+          username: patientAcc.phone,
+          phone: patientAcc.phone,
+        },
+      });
+      return;
+    }
+  }
 
-  res.json({
-    accessToken,
-    refreshToken: raw,
-    user: {
-      id: record.id,
-      role: "pharmacy",
-      name: record.name,
-      username: record.username,
-      phone: record.phone,
-      controlledSubstanceAuthorized: record.controlledSubstanceAuthorized,
-      mustChangePassword: false,
-      passwordLastChangedAt: now.toISOString(),
-    },
-    passwordPolicy: serializePasswordPolicy(policy),
-    message: "Password changed successfully",
-  });
+  res.status(401).json({ error: "Invalid credentials" });
 });
 
-// ── Logout ────────────────────────────────────────────────────────────────────
-router.post("/logout", async (req, res) => {
+// ── Patient registration ──────────────────────────────────────────────────────
+router.post("/register", async (req, res) => {
   const body = z
-    .object({ refreshToken: z.string().min(1) })
+    .object({
+      name: z.string().min(2),
+      phone: z.string().min(5),
+      password: z.string().min(8),
+    })
     .safeParse(req.body);
 
   if (!body.success) {
@@ -301,7 +293,7 @@ router.post("/logout", async (req, res) => {
     return;
   }
 
-    const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
+  const passwordHash = await bcrypt.hash(body.data.password, 12);
   const [created] = await db
     .insert(patientsTable)
     .values({ name: body.data.name, phone: body.data.phone, passwordHash })
@@ -322,38 +314,27 @@ router.post("/logout", async (req, res) => {
   });
 
   const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
+    sub: created.id,
+    role: "patient",
+    name: created.name,
+    sessionVersion: created.sessionVersion,
   });
-
-  res.json({
+  res.status(201).json({
     accessToken,
     refreshToken: raw,
     user: {
-      id: record.id,
-      role: "pharmacy",
-      name: record.name,
-      username: record.username,
-      phone: record.phone,
-      controlledSubstanceAuthorized: record.controlledSubstanceAuthorized,
-      mustChangePassword: false,
-      passwordLastChangedAt: now.toISOString(),
+      id: created.id,
+      role: "patient",
+      name: created.name,
+      username: created.phone,
+      phone: created.phone,
     },
-    passwordPolicy: serializePasswordPolicy(policy),
-    message: "Password changed successfully",
   });
 });
 
-// ── Logout ────────────────────────────────────────────────────────────────────
-router.post("/logout", async (req, res) => {
-  const body = z
-    .object({ refreshToken: z.string().min(1) })
-    .safeParse(req.body);
+// ── Patient password recovery ─────────────────────────────────────────────────
+router.post("/patient-password-reset/request", async (req, res) => {
+  const body = z.object({ phone: z.string().min(5).max(40) }).safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "A valid phone number is required" });
     return;
@@ -450,12 +431,42 @@ router.post("/logout", async (req, res) => {
     };
   });
 
-      const code =
-        error instanceof Error && "code" in error
-          ? String(error.code)
-          : "SMS_UNKNOWN_ERROR";
+  if (outcome.blocked) {
+    res.status(429).json({
+      error:
+        outcome.retryAfterSeconds === 3600
+          ? "Too many recovery requests. Please try again later."
+          : "Please wait before requesting another code.",
+      retryAfterSeconds: outcome.retryAfterSeconds,
+    });
+    return;
+  }
+
+  if (outcome.patientPhone) {
+    // Do not await the provider: response timing must not reveal whether the
+    // phone belongs to an account.
+    void sendSms(
+      outcome.patientPhone,
+      `Your MobiCare password reset code is ${outcome.code}. It expires in 10 minutes. Do not share this code.`,
+    ).catch((error) => {
+      console.error("[patient password reset] SMS send failed", error);
+    });
+  }
+
+  res.json({
+    requestId: outcome.requestId,
+    message: RESET_MESSAGE,
+    retryAfterSeconds: RESET_RESEND_SECONDS,
+  });
+});
+
+router.post("/patient-password-reset/confirm", async (req, res) => {
   const body = z
-    .object({ refreshToken: z.string().min(1) })
+    .object({
+      requestId: z.string().uuid(),
+      code: z.string().regex(/^\d{6}$/),
+      newPassword: z.string().min(8).max(200),
+    })
     .safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Request, six-digit code, and new password are required" });
@@ -464,8 +475,8 @@ router.post("/logout", async (req, res) => {
 
   const [record] = await db
     .select()
-    .from(pharmaciesTable)
-    .where(eq(pharmaciesTable.id, accountId))
+    .from(patientPasswordResetCodesTable)
+    .where(eq(patientPasswordResetCodesTable.id, body.data.requestId))
     .limit(1);
   const now = new Date();
   const unusable =
@@ -500,7 +511,7 @@ router.post("/logout", async (req, res) => {
     return;
   }
 
-    const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
+  const passwordHash = await bcrypt.hash(body.data.newPassword, 12);
   const completed = await db.transaction(async (tx) => {
     // Serialize credential replacement with patient refresh rotation.
     await tx.execute(
@@ -562,7 +573,7 @@ router.post("/refresh", async (req, res) => {
     .object({ refreshToken: z.string().min(1) })
     .safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "refreshToken required" });
+    res.status(400).json({ error: "refreshToken is required" });
     return;
   }
 
@@ -617,11 +628,11 @@ router.post("/refresh", async (req, res) => {
 
     // Preserve mustChangePassword policy state from the live row
     // Check if password has exceeded max age (same logic as login)
-  const policy = await getOrCreatePasswordPolicy();
+    const policy = await getOrCreatePasswordPolicy();
     const passwordPolicy = serializePasswordPolicy(policy);
-  const passwordAgeDays =
-    (Date.now() - record.passwordLastChangedAt.getTime()) /
-    (1000 * 60 * 60 * 24);
+    const passwordAgeDays =
+      (Date.now() - pharmacy.passwordLastChangedAt.getTime()) /
+      (1000 * 60 * 60 * 24);
     const isExpiredByAge =
       !pharmacy.mustChangePassword &&
       passwordAgeDays > policy.maxPasswordAgeDays;
@@ -636,21 +647,22 @@ router.post("/refresh", async (req, res) => {
     }
 
     const { raw, hash: newHash } = generateRefreshToken();
-    await db.insert(hqRefreshTokensTable).values({
-      hqStaffId: staff.id,
+    await db.insert(refreshTokensTable).values({
+      pharmacyId: pharmacy.id,
       tokenHash: newHash,
+      sessionVersion: pharmacy.sessionVersion,
       expiresAt: refreshTokenExpiresAt(),
     });
 
-  const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
-  });
+    const accessToken = signAccessToken({
+      sub: pharmacy.id,
+      role: "pharmacy",
+      name: pharmacy.name,
+      mustChangePassword: mustChangePassword || undefined,
+      sessionVersion: pharmacy.sessionVersion,
+      passwordLastChangedAt: pharmacy.passwordLastChangedAt.toISOString(),
+      passwordPolicy,
+    });
     res.json({ accessToken, refreshToken: raw });
     return;
   }
@@ -692,15 +704,11 @@ router.post("/refresh", async (req, res) => {
       expiresAt: refreshTokenExpiresAt(),
     });
 
-  const accessToken = signAccessToken({
-    sub: record.id,
-    role: "pharmacy",
-    name: record.name,
-    // mustChangePassword is now false — omit it
-    sessionVersion: updatedCredential.sessionVersion,
-    passwordLastChangedAt: now.toISOString(),
-    passwordPolicy: serializePasswordPolicy(policy),
-  });
+    const accessToken = signAccessToken({
+      sub: staff.id,
+      role: "hq",
+      name: staff.name,
+    });
     res.json({ accessToken, refreshToken: raw });
     return;
   }
@@ -781,7 +789,10 @@ router.post("/refresh", async (req, res) => {
 // ── Change Password ───────────────────────────────────────────────────────────
 router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   const body = z
-    .object({ refreshToken: z.string().min(1) })
+    .object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8),
+    })
     .safeParse(req.body);
 
   if (!body.success) {
@@ -795,21 +806,21 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   const role = req.pharmacy!.role;
 
   if (role === "hq") {
-  const [record] = await db
-    .select()
-    .from(pharmaciesTable)
-    .where(eq(pharmaciesTable.id, accountId))
-    .limit(1);
+    const [record] = await db
+      .select()
+      .from(hqStaffTable)
+      .where(eq(hqStaffTable.id, accountId))
+      .limit(1);
 
     if (!record) {
       res.status(404).json({ error: "Not found" });
       return;
     }
 
-  const valid = await bcrypt.compare(
-    body.data.currentPassword,
-    record.passwordHash,
-  );
+    const valid = await bcrypt.compare(
+      body.data.currentPassword,
+      record.passwordHash,
+    );
     if (!valid) {
       res.status(401).json({ error: "Current password is incorrect" });
       return;

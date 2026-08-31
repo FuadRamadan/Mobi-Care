@@ -121,7 +121,9 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
         </div>
         <nav className="flex-1 py-4 space-y-0.5 px-2 overflow-y-auto">
           {NAV.filter(
-            (item) => !item.requiresIntegrations || user.canManageIntegrations,
+            (item) =>
+              !item.requiresIntegrations ||
+              user.canManageIntegrations !== false,
           ).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
