@@ -11,6 +11,9 @@ export const hqStaffTable = pgTable("hq_staff", {
   username: text("username").notNull().unique(),
   phone: text("phone").unique(),
   isActive: boolean("is_active").notNull().default(true),
+  canManageIntegrations: boolean("can_manage_integrations")
+    .notNull()
+    .default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

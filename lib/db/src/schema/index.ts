@@ -17,3 +17,4 @@ export * from "./auditLog";
 export * from "./patients";
 export * from "./patientNotifications";
 export * from "./teamMembers";
+export * from "./apiConnections";

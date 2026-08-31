@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test-patient-flow": "pnpm --filter @workspace/db exec tsc -p tsconfig.json && esbuild scripts/test-patient-flow.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-patient-flow.cjs --log-level=warning && node dist/test-patient-flow.cjs",
     "test-patient-password-reset": "esbuild scripts/test-patient-password-reset.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-patient-password-reset.cjs --log-level=warning && node dist/test-patient-password-reset.cjs",
+    "test-orange-api-connection": "esbuild scripts/test-orange-api-connection.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-orange-api-connection.cjs --log-level=warning && node dist/test-orange-api-connection.cjs",
     "test-order-concurrency": "pnpm --filter @workspace/api-server run build && esbuild scripts/test-order-concurrency.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-order-concurrency.cjs --log-level=warning && node dist/test-order-concurrency.cjs"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, PharmacyTokenPayload } from "../lib/jwt.js";
 import { db } from "@workspace/db";
-import { patientsTable, pharmaciesTable } from "@workspace/db/schema";
+import { hqStaffTable, patientsTable, pharmaciesTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getOrCreatePasswordPolicy } from "../lib/passwordPolicy.js";
 
@@ -173,6 +173,38 @@ export function requireHqRole(
 
 /** Convenience: combine both middleware in one array */
 export const hq = [requireAuth, requireHqRole] as const;
+
+export async function requireManageIntegrations(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.pharmacy?.role !== "hq") {
+    res.status(403).json({ error: "HQ role required" });
+    return;
+  }
+  try {
+    const [staff] = await db
+      .select({
+        isActive: hqStaffTable.isActive,
+        canManageIntegrations: hqStaffTable.canManageIntegrations,
+      })
+      .from(hqStaffTable)
+      .where(eq(hqStaffTable.id, req.pharmacy.sub))
+      .limit(1);
+    if (!staff?.isActive) {
+      res.status(401).json({ error: "Account inactive or not found" });
+      return;
+    }
+    if (!staff.canManageIntegrations) {
+      res.status(403).json({ error: "Integration management permission required" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Permission check failed" });
+  }
+}
 
 /**
  * After requireAuth: reject if the token role is not 'patient'.

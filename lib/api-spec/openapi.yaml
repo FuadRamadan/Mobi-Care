@@ -1236,6 +1236,69 @@ paths:
         "400":
           description: Invalid policy values
 
+  /hq/api-connections/orange:
+    get:
+      operationId: getOrangeSmsConnection
+      tags: [hq]
+      summary: Get the masked Orange Sierra Leone SMS connection status
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Masked Orange SMS connection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrangeSmsConnection"
+    put:
+      operationId: updateOrangeSmsConnection
+      tags: [hq]
+      summary: Save encrypted Orange Sierra Leone SMS connection settings
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrangeSmsConnectionUpdate"
+      responses:
+        "200":
+          description: Updated masked Orange SMS connection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrangeSmsConnection"
+        "400":
+          description: Invalid or incomplete settings
+
+  /hq/api-connections/orange/test:
+    post:
+      operationId: testOrangeSmsConnection
+      tags: [hq]
+      summary: Send a test SMS with the stored Orange connection
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrangeSmsTestInput"
+      responses:
+        "200":
+          description: Test SMS accepted by Orange
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrangeSmsTestResult"
+        "400":
+          description: Invalid test phone number
+        "409":
+          description: Connection is not configured
+        "502":
+          description: Orange rejected or could not complete the test
+
   /hq/team:
     get:
       operationId: listHqTeamMembers
@@ -1724,6 +1787,9 @@ components:
         passwordLastChangedAt:
           type: string
           description: ISO timestamp of the pharmacy account's most recent password change
+        canManageIntegrations:
+          type: boolean
+          description: Present for HQ accounts; controls access to API connection management
 
     TokenPair:
       type: object
@@ -2982,6 +3048,90 @@ components:
           type: number
           minimum: 1
           maximum: 168
+
+    OrangeSmsConnection:
+      type: object
+      required:
+        [
+          provider,
+          displayName,
+          credentialsConfigured,
+          senderConfigured,
+          connectionStatus,
+          isEnabled,
+        ]
+      properties:
+        provider:
+          type: string
+          enum: [orange_sl]
+        displayName:
+          type: string
+        credentialsConfigured:
+          type: boolean
+        senderConfigured:
+          type: boolean
+        connectionStatus:
+          type: string
+          enum: [not_configured, incomplete, ready]
+        senderAddress:
+          type: ["string", "null"]
+        senderName:
+          type: ["string", "null"]
+        isEnabled:
+          type: boolean
+        lastTestedAt:
+          type: ["string", "null"]
+        lastTestStatus:
+          type: ["string", "null"]
+          enum: [success, failed, null]
+        lastTestMessage:
+          type: ["string", "null"]
+        updatedAt:
+          type: ["string", "null"]
+
+    OrangeSmsConnectionUpdate:
+      type: object
+      required: [isEnabled]
+      properties:
+        clientId:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Omit to preserve the saved encrypted client ID
+        clientSecret:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Omit to preserve the saved encrypted client secret
+        senderAddress:
+          type: ["string", "null"]
+          pattern: "^\\+[1-9][0-9]{4,19}$"
+        senderName:
+          type: ["string", "null"]
+          pattern: "^[A-Za-z0-9 ]{1,11}$"
+        isEnabled:
+          type: boolean
+
+    OrangeSmsTestInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          pattern: "^\\+[1-9][0-9]{4,19}$"
+
+    OrangeSmsTestResult:
+      type: object
+      required: [success, message, testedAt]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        providerMessageId:
+          type: ["string", "null"]
+        testedAt:
+          type: string
 
     HqPharmacyUpdate:
       type: object

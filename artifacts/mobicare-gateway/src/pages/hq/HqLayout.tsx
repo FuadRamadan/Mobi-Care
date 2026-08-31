@@ -15,6 +15,8 @@ import {
   LogOut,
   Bell,
   CheckCheck,
+  Cable,
+  type LucideIcon,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -30,7 +32,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const NAV = [
+const NAV: Array<{
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  requiresIntegrations?: boolean;
+}> = [
   { href: '/hq/dashboard', label: 'Command Centre', icon: LayoutDashboard },
   { href: '/hq/orders', label: 'All Orders', icon: Package },
   { href: '/hq/dispatch', label: 'Dispatch', icon: Truck },
@@ -42,6 +49,7 @@ const NAV = [
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
   { href: '/hq/team', label: 'Team Profiles', icon: Users },
   { href: '/hq/settings', label: 'Security & Settings', icon: ShieldCheck },
+  { href: '/hq/api-connections', label: 'API Connections', icon: Cable, requiresIntegrations: true },
 ];
 
 export default function HqLayout({ children, title }: { children: ReactNode; title: string }) {
@@ -112,7 +120,9 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
           </div>
         </div>
         <nav className="flex-1 py-4 space-y-0.5 px-2 overflow-y-auto">
-          {NAV.map(({ href, label, icon: Icon }) => (
+          {NAV.filter(
+            (item) => !item.requiresIntegrations || user.canManageIntegrations,
+          ).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

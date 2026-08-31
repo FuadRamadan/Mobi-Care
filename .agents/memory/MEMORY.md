@@ -10,3 +10,4 @@
 - [Orval UUID validation](orval-uuid-validation.md) — Zod v3 codegen rejects OpenAPI `format: uuid`; use a UUID regex pattern for generated path validation.
 - [Password expiry boundary](password-expiry-boundary.md) — enforce password age on every authenticated pharmacy request, not only login or token refresh.
 - [API test bundling](api-test-bundling.md) — bundle server tests as CommonJS and disable development logging transports to avoid ESM and worker-path failures.
+- [External API connections](external-api-connections.md) — store provider credentials in one extensible registry; gate management by live HQ permission and never return secrets.

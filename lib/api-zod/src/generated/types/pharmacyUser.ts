@@ -20,4 +20,6 @@ export interface PharmacyUser {
   mustChangePassword?: boolean;
   /** ISO timestamp of the pharmacy account's most recent password change */
   passwordLastChangedAt?: string;
+  /** Present for HQ accounts; controls access to API connection management */
+  canManageIntegrations?: boolean;
 }

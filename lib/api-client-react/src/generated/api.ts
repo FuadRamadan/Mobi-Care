@@ -63,6 +63,10 @@ import type {
   MarkReadInput,
   MessageResponse,
   Notification,
+  OrangeSmsConnection,
+  OrangeSmsConnectionUpdate,
+  OrangeSmsTestInput,
+  OrangeSmsTestResult,
   Order,
   OrderStatusUpdate,
   PasswordChangeResult,
@@ -4361,6 +4365,225 @@ export const useUpdatePasswordPolicy = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdatePasswordPolicyMutationOptions(options));
+    }
+
+export const getGetOrangeSmsConnectionUrl = () => {
+
+
+
+
+  return `/api/hq/api-connections/orange`
+}
+
+/**
+ * @summary Get the masked Orange Sierra Leone SMS connection status
+ */
+export const getOrangeSmsConnection = async ( options?: Parameters<typeof customFetch>[1]): Promise<OrangeSmsConnection> => {
+
+  return customFetch<OrangeSmsConnection>(getGetOrangeSmsConnectionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrangeSmsConnectionQueryKey = () => {
+    return [
+    `/api/hq/api-connections/orange`
+    ] as const;
+    }
+
+
+export const getGetOrangeSmsConnectionQueryOptions = <TData = Awaited<ReturnType<typeof getOrangeSmsConnection>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrangeSmsConnection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrangeSmsConnectionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrangeSmsConnection>>> = ({ signal }) => getOrangeSmsConnection({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrangeSmsConnection>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrangeSmsConnectionQueryResult = NonNullable<Awaited<ReturnType<typeof getOrangeSmsConnection>>>
+export type GetOrangeSmsConnectionQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the masked Orange Sierra Leone SMS connection status
+ */
+
+export function useGetOrangeSmsConnection<TData = Awaited<ReturnType<typeof getOrangeSmsConnection>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrangeSmsConnection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrangeSmsConnectionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateOrangeSmsConnectionUrl = () => {
+
+
+
+
+  return `/api/hq/api-connections/orange`
+}
+
+/**
+ * @summary Save encrypted Orange Sierra Leone SMS connection settings
+ */
+export const updateOrangeSmsConnection = async (orangeSmsConnectionUpdate: OrangeSmsConnectionUpdate, options?: Parameters<typeof customFetch>[1]): Promise<OrangeSmsConnection> => {
+
+  return customFetch<OrangeSmsConnection>(getUpdateOrangeSmsConnectionUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orangeSmsConnectionUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateOrangeSmsConnectionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsConnectionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsConnectionUpdate>}, TContext> => {
+
+const mutationKey = ['updateOrangeSmsConnection'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrangeSmsConnection>>, {data: BodyType<OrangeSmsConnectionUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateOrangeSmsConnection(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrangeSmsConnectionMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrangeSmsConnection>>>
+    export type UpdateOrangeSmsConnectionMutationBody = BodyType<OrangeSmsConnectionUpdate>
+    export type UpdateOrangeSmsConnectionMutationError = ErrorType<void>
+
+    /**
+ * @summary Save encrypted Orange Sierra Leone SMS connection settings
+ */
+export const useUpdateOrangeSmsConnection = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsConnectionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrangeSmsConnection>>,
+        TError,
+        {data: BodyType<OrangeSmsConnectionUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrangeSmsConnectionMutationOptions(options));
+    }
+
+export const getTestOrangeSmsConnectionUrl = () => {
+
+
+
+
+  return `/api/hq/api-connections/orange/test`
+}
+
+/**
+ * @summary Send a test SMS with the stored Orange connection
+ */
+export const testOrangeSmsConnection = async (orangeSmsTestInput: OrangeSmsTestInput, options?: Parameters<typeof customFetch>[1]): Promise<OrangeSmsTestResult> => {
+
+  return customFetch<OrangeSmsTestResult>(getTestOrangeSmsConnectionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orangeSmsTestInput)
+  }
+);}
+
+
+
+
+
+export const getTestOrangeSmsConnectionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsTestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsTestInput>}, TContext> => {
+
+const mutationKey = ['testOrangeSmsConnection'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testOrangeSmsConnection>>, {data: BodyType<OrangeSmsTestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  testOrangeSmsConnection(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestOrangeSmsConnectionMutationResult = NonNullable<Awaited<ReturnType<typeof testOrangeSmsConnection>>>
+    export type TestOrangeSmsConnectionMutationBody = BodyType<OrangeSmsTestInput>
+    export type TestOrangeSmsConnectionMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a test SMS with the stored Orange connection
+ */
+export const useTestOrangeSmsConnection = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testOrangeSmsConnection>>, TError,{data: BodyType<OrangeSmsTestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testOrangeSmsConnection>>,
+        TError,
+        {data: BodyType<OrangeSmsTestInput>},
+        TContext
+      > => {
+      return useMutation(getTestOrangeSmsConnectionMutationOptions(options));
     }
 
 export const getListHqTeamMembersUrl = () => {

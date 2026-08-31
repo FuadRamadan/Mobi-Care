@@ -1,5 +1,5 @@
 import { safeRouter } from "../../lib/safeRouter.js";
-import { hq } from "../../middlewares/auth.js";
+import { hq, requireManageIntegrations } from "../../middlewares/auth.js";
 import dashboardRouter from "./dashboard.js";
 import ordersRouter, { dispatchHandler } from "./orders.js";
 import pharmaciesRouter from "./pharmacies.js";
@@ -11,6 +11,7 @@ import auditRouter from "./audit.js";
 import notificationsRouter from "./notifications.js";
 import passwordPolicyRouter from "./passwordPolicy.js";
 import teamRouter from "./team.js";
+import apiConnectionsRouter from "./apiConnections.js";
 
 const router = safeRouter();
 
@@ -31,5 +32,10 @@ router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/password-policy", passwordPolicyRouter);
 router.use("/team", teamRouter);
+router.use(
+  "/api-connections",
+  requireManageIntegrations,
+  apiConnectionsRouter,
+);
 
 export default router;

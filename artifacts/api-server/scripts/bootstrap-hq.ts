@@ -40,7 +40,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
   const [created] = await db
     .insert(hqStaffTable)
-    .values({ username, name, passwordHash })
+    .values({ username, name, passwordHash, canManageIntegrations: true })
     .returning({ id: hqStaffTable.id });
 
   await db.insert(auditLogTable).values({

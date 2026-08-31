@@ -35,7 +35,8 @@ export const LoginResponse = zod.object({
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
-  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -134,7 +135,8 @@ export const ChangePasswordResponse = zod.object({
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
-  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
 }).optional(),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -722,7 +724,8 @@ export const RegisterPatientResponse = zod.object({
   "phone": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
-  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change')
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -1624,6 +1627,78 @@ export const UpdatePasswordPolicyResponse = zod.object({
   "temporaryPasswordExpiryHours": zod.number().describe('Hours until a temporary password expires'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get the masked Orange Sierra Leone SMS connection status
+ */
+export const GetOrangeSmsConnectionResponse = zod.object({
+  "provider": zod.enum(['orange_sl']),
+  "displayName": zod.string(),
+  "credentialsConfigured": zod.boolean(),
+  "senderConfigured": zod.boolean(),
+  "connectionStatus": zod.enum(['not_configured', 'incomplete', 'ready']),
+  "senderAddress": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "isEnabled": zod.boolean(),
+  "lastTestedAt": zod.string().nullish(),
+  "lastTestStatus": zod.union([zod.literal('success'),zod.literal('failed'),zod.literal(null)]).nullish(),
+  "lastTestMessage": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Save encrypted Orange Sierra Leone SMS connection settings
+ */
+export const updateOrangeSmsConnectionBodyClientIdMax = 500;
+
+export const updateOrangeSmsConnectionBodyClientSecretMax = 1000;
+
+export const updateOrangeSmsConnectionBodySenderAddressRegExp = new RegExp('^\\+[1-9][0-9]{4,19}$');
+export const updateOrangeSmsConnectionBodySenderNameRegExp = new RegExp('^[A-Za-z0-9 ]{1,11}$');
+
+
+export const UpdateOrangeSmsConnectionBody = zod.object({
+  "clientId": zod.string().min(1).max(updateOrangeSmsConnectionBodyClientIdMax).optional().describe('Omit to preserve the saved encrypted client ID'),
+  "clientSecret": zod.string().min(1).max(updateOrangeSmsConnectionBodyClientSecretMax).optional().describe('Omit to preserve the saved encrypted client secret'),
+  "senderAddress": zod.string().regex(updateOrangeSmsConnectionBodySenderAddressRegExp).nullish(),
+  "senderName": zod.string().regex(updateOrangeSmsConnectionBodySenderNameRegExp).nullish(),
+  "isEnabled": zod.boolean()
+})
+
+export const UpdateOrangeSmsConnectionResponse = zod.object({
+  "provider": zod.enum(['orange_sl']),
+  "displayName": zod.string(),
+  "credentialsConfigured": zod.boolean(),
+  "senderConfigured": zod.boolean(),
+  "connectionStatus": zod.enum(['not_configured', 'incomplete', 'ready']),
+  "senderAddress": zod.string().nullish(),
+  "senderName": zod.string().nullish(),
+  "isEnabled": zod.boolean(),
+  "lastTestedAt": zod.string().nullish(),
+  "lastTestStatus": zod.union([zod.literal('success'),zod.literal('failed'),zod.literal(null)]).nullish(),
+  "lastTestMessage": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Send a test SMS with the stored Orange connection
+ */
+export const testOrangeSmsConnectionBodyPhoneRegExp = new RegExp('^\\+[1-9][0-9]{4,19}$');
+
+
+export const TestOrangeSmsConnectionBody = zod.object({
+  "phone": zod.string().regex(testOrangeSmsConnectionBodyPhoneRegExp)
+})
+
+export const TestOrangeSmsConnectionResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string(),
+  "providerMessageId": zod.string().nullish(),
+  "testedAt": zod.string()
 })
 
 

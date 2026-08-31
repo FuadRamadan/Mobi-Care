@@ -73,6 +73,8 @@ export interface PharmacyUser {
   mustChangePassword?: boolean;
   /** ISO timestamp of the pharmacy account's most recent password change */
   passwordLastChangedAt?: string;
+  /** Present for HQ accounts; controls access to API connection management */
+  canManageIntegrations?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -884,6 +886,93 @@ export interface PasswordPolicyUpdate {
      * @maximum 168
      */
   temporaryPasswordExpiryHours?: number;
+}
+
+export type OrangeSmsConnectionProvider = typeof OrangeSmsConnectionProvider[keyof typeof OrangeSmsConnectionProvider];
+
+
+export const OrangeSmsConnectionProvider = {
+  orange_sl: 'orange_sl',
+} as const;
+
+export type OrangeSmsConnectionConnectionStatus = typeof OrangeSmsConnectionConnectionStatus[keyof typeof OrangeSmsConnectionConnectionStatus];
+
+
+export const OrangeSmsConnectionConnectionStatus = {
+  not_configured: 'not_configured',
+  incomplete: 'incomplete',
+  ready: 'ready',
+} as const;
+
+/**
+ * @nullable
+ */
+export type OrangeSmsConnectionLastTestStatus = typeof OrangeSmsConnectionLastTestStatus[keyof typeof OrangeSmsConnectionLastTestStatus] | null;
+
+
+export const OrangeSmsConnectionLastTestStatus = {
+  success: 'success',
+  failed: 'failed',
+} as const;
+
+export interface OrangeSmsConnection {
+  provider: OrangeSmsConnectionProvider;
+  displayName: string;
+  credentialsConfigured: boolean;
+  senderConfigured: boolean;
+  connectionStatus: OrangeSmsConnectionConnectionStatus;
+  /** @nullable */
+  senderAddress?: string | null;
+  /** @nullable */
+  senderName?: string | null;
+  isEnabled: boolean;
+  /** @nullable */
+  lastTestedAt?: string | null;
+  /** @nullable */
+  lastTestStatus?: OrangeSmsConnectionLastTestStatus;
+  /** @nullable */
+  lastTestMessage?: string | null;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export interface OrangeSmsConnectionUpdate {
+  /**
+     * Omit to preserve the saved encrypted client ID
+     * @minLength 1
+     * @maxLength 500
+     */
+  clientId?: string;
+  /**
+     * Omit to preserve the saved encrypted client secret
+     * @minLength 1
+     * @maxLength 1000
+     */
+  clientSecret?: string;
+  /**
+     * @nullable
+     * @pattern ^\+[1-9][0-9]{4,19}$
+     */
+  senderAddress?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[A-Za-z0-9 ]{1,11}$
+     */
+  senderName?: string | null;
+  isEnabled: boolean;
+}
+
+export interface OrangeSmsTestInput {
+  /** @pattern ^\+[1-9][0-9]{4,19}$ */
+  phone: string;
+}
+
+export interface OrangeSmsTestResult {
+  success: boolean;
+  message: string;
+  /** @nullable */
+  providerMessageId?: string | null;
+  testedAt: string;
 }
 
 export interface HqPharmacyUpdate {

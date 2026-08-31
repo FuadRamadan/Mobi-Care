@@ -1,0 +1,39 @@
+Prompt: HQ Portal — Orange API Connection Setup & Test
+
+Add an Orange API Integration section to the HQ Dashboard settings, allowing HQ to configure and verify connectivity to the Orange API (e.g., Orange Money payments) without touching code or redeploying.
+
+1. Connection configuration UI
+
+A settings page/tab: "Orange API Integration."
+Fields: client_id, client_secret, merchant_key (or whatever credentials Orange's API requires), environment toggle (Sandbox / Live), and base API URL if it differs by environment.
+Store credentials encrypted at rest (never plaintext in the database or logs). Mask the secret in the UI after saving (show only last 4 characters, with a "reveal"/"replace" option).
+Only HQ admins with a specific permission (e.g., manage_integrations) can view or edit this page.
+
+2. Save & validate on submit
+
+On save, do a basic format check (non-empty, correct field lengths) before persisting.
+Do not require a successful live test to save — HQ may want to store credentials before testing.
+
+3. "Test Connection" action
+
+A dedicated Test Connection button, separate from Save.
+On click, backend makes a lightweight authenticated call to Orange's API (e.g., a token/auth endpoint or a harmless read-only endpoint) using the stored credentials.
+Display a clear result inline: ✅ "Connected successfully" (with response time) or ❌ "Connection failed" with the actual error reason returned by Orange (auth failure, timeout, invalid endpoint, etc.) — don't just say "failed."
+Log each test attempt (timestamp, HQ admin who ran it, result) to an audit/integration log, without logging the secret itself.
+
+4. Status indicator
+
+Show a small status badge on the integration page and/or main HQ dashboard: Connected / Not Configured / Connection Error, based on the last test result and timestamp ("Last tested: 2 hours ago").
+
+Backend endpoints needed
+
+POST /api/hq/integrations/orange — save/update credentials
+POST /api/hq/integrations/orange/test — run the connection test, return structured success/failure result
+GET /api/hq/integrations/orange — retrieve current status (masked credentials + last test result)
+
+Constraints
+
+Keep this self-contained — no changes to existing payment/transaction logic yet, this is purely the connection setup and health-check layer.
+Credentials encrypted at rest; secrets never returned in full via API responses after initial save.
+
+Let me know if this is for Orange Money payments specifically (vs. another Orange API product) — I can tighten the exact endpoint/field names if so.
