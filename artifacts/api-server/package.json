@@ -4,17 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "export NODE_ENV=development SMS_TRANSPORT=test && pnpm run build && node --enable-source-maps ./dist/index.mjs",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
-    "test": "JWT_SECRET=test-secret esbuild src/error-boundary.test.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/error-boundary.test.cjs --log-level=warning && NODE_ENV=production LOG_LEVEL=silent JWT_SECRET=test-secret node --test dist/error-boundary.test.cjs",
+    "start": "export NODE_ENV=production SMS_TRANSPORT=orange && node --enable-source-maps ./dist/index.mjs",
+    "test": "JWT_SECRET=test-secret esbuild src/error-boundary.test.ts src/lib/sms.test.ts --bundle --platform=node --format=cjs --out-extension:.js=.cjs --external:pg-native --outdir=dist/tests --log-level=warning && NODE_ENV=production LOG_LEVEL=silent JWT_SECRET=test-secret node --test $(find dist/tests -name '*.test.cjs' -type f)",
     "bootstrap-hq": "esbuild scripts/bootstrap-hq.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/bootstrap-hq.cjs --log-level=warning && node dist/bootstrap-hq.cjs",
     "seed-team-photos": "esbuild scripts/seed-team-photos.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/seed-team-photos.cjs --log-level=warning && node dist/seed-team-photos.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test-patient-flow": "pnpm --filter @workspace/db exec tsc -p tsconfig.json && esbuild scripts/test-patient-flow.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-patient-flow.cjs --log-level=warning && node dist/test-patient-flow.cjs",
     "test-patient-password-reset": "esbuild scripts/test-patient-password-reset.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-patient-password-reset.cjs --log-level=warning && node dist/test-patient-password-reset.cjs",
     "test-orange-api-connection": "esbuild scripts/test-orange-api-connection.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-orange-api-connection.cjs --log-level=warning && node dist/test-orange-api-connection.cjs",
-    "test-order-concurrency": "pnpm --filter @workspace/api-server run build && esbuild scripts/test-order-concurrency.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-order-concurrency.cjs --log-level=warning && node dist/test-order-concurrency.cjs"
+    "test-order-concurrency": "pnpm --filter @workspace/api-server run build && esbuild scripts/test-order-concurrency.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/test-order-concurrency.cjs --log-level=warning && node dist/test-order-concurrency.cjs",
+    "verify-orange-sms": "esbuild scripts/verify-orange-sms.ts --bundle --platform=node --format=cjs --outfile=dist/verify-orange-sms.cjs --log-level=warning && NODE_ENV=production SMS_TRANSPORT=orange node dist/verify-orange-sms.cjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^8.0.0",

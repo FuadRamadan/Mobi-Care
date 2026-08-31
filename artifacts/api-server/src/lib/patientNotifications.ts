@@ -3,7 +3,7 @@
  *
  * Every order-status transition calls createPatientNotification() to:
  *   1. Insert a persistent in-app notification row for the patient.
- *   2. Fire the stubbed SMS sender (no-op until a gateway is configured).
+ *   2. Send an SMS through the shared delivery boundary.
  *
  * Both steps are fire-and-forget — a failure here must never block the
  * status transition response back to the caller.
@@ -25,7 +25,7 @@ export interface NotificationPayload {
 }
 
 /**
- * Insert a patient notification and fire the SMS stub.
+ * Insert a patient notification and send the SMS.
  * Swallows all errors so callers never need try/catch.
  */
 export async function createPatientNotification(
@@ -46,7 +46,8 @@ export async function createPatientNotification(
   try {
     await sendSms(payload.patientPhone, `MobiCare: ${payload.body}`);
   } catch (err) {
-    console.error("[patientNotifications] SMS send failed:", err);
+    const code = err instanceof Error && "code" in err ? String(err.code) : "SMS_UNKNOWN_ERROR";
+    console.error("[patientNotifications] SMS send failed", { code });
   }
 
   // Push notification (fire-and-forget; deep-links into the order detail screen)

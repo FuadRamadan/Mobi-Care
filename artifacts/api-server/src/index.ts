@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startOrderExpirySweep } from "./lib/orderExpiry";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { assertSmsConfiguration } from "./lib/sms";
 
 /**
  * Verify that the live database schema matches the Drizzle model.
@@ -181,6 +182,8 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+assertSmsConfiguration();
 
 assertSchemaUpToDate().then(() => {
   app.listen(port, (err) => {
