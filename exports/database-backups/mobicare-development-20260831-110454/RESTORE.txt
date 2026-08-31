@@ -1,8 +1,0 @@
-MobiCare development database backup
-
-Format: PostgreSQL custom archive
-
-Restore into an empty PostgreSQL database:
-  pg_restore --clean --if-exists --no-owner --no-acl --dbname="YOUR_DATABASE_URL" mobicare-development.dump
-
-Warning: This backup may contain sensitive patient, account, order, audit, and encrypted integration data. Store and share it securely.

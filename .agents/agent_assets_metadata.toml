@@ -28,17 +28,3 @@ mtime_ms = 1787753909430
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/ec13e16c-c4e8-4b66-8e83-e3d8d9c34cb3/8d8332c9-b688-42f7-907f-4e9e7c25d923"
 storage_version_token = "1787753913931924"
 content_type = "application/octet-stream"
-
-[[outputs]]
-id = "1XzHJ5Qfb-_K8OEE5kg1O"
-uri = "file://exports/database-backups/mobicare-development-20260831-110454.zip"
-type = "unspecified"
-title = "MobiCare Development Database Backup"
-description = "Verified PostgreSQL custom-format backup with restore instructions. Contains the complete development database and may include sensitive data; store it securely."
-logical_id = "aee5a7b2-00f0-4978-a8d1-756cc82c9a88"
-content_hash = "sha256:55b32074fcaf4fec55bdd2dc59e141b1357bdd1f18d0583eeee0fd4daa190524"
-size = 112860
-mtime_ms = 1788174295438
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/aee5a7b2-00f0-4978-a8d1-756cc82c9a88/8c19f47f-60ca-49f7-92ff-a95947fa3ca7"
-storage_version_token = "1788174305427574"
-content_type = "application/octet-stream"

@@ -93,11 +93,15 @@ export default function PatientLogin() {
     setError(null);
     setBusy(true);
     try {
+      const resetPassword = newPassword;
       await confirmReset.mutateAsync({
-        data: { requestId, code, newPassword },
+        data: { requestId, code, newPassword: resetPassword },
       });
       setMode('login');
-      setPassword('');
+      // Keep the successful credential only in this live form so the browser can
+      // associate the async reset with the phone-number username and offer its
+      // own save/update UI. Nothing is written to MobiCare-managed storage.
+      setPassword(resetPassword);
       setCode('');
       setNewPassword('');
       setConfirmPassword('');
@@ -156,7 +160,12 @@ export default function PatientLogin() {
           </button>
         </div>}
 
-        <form onSubmit={mode === 'recover' ? finishReset : onSubmit} className="space-y-4">
+        <form
+          onSubmit={mode === 'recover' ? finishReset : onSubmit}
+          className="space-y-4"
+          autoComplete="on"
+          name={mode === 'recover' ? 'patient-password-reset' : 'patient-auth'}
+        >
           {mode === 'register' && (
             <div className="space-y-1.5">
               <Label htmlFor="pt-name">Full name</Label>
@@ -175,10 +184,12 @@ export default function PatientLogin() {
             <Label htmlFor="pt-phone">Phone number</Label>
             <Input
               id="pt-phone"
+              name="username"
+              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+232 76 000 000"
-              autoComplete="tel"
+              autoComplete="username"
               required
               minLength={5}
               data-testid="input-phone"
@@ -188,6 +199,7 @@ export default function PatientLogin() {
             <Label htmlFor="pt-password">Password</Label>
             <Input
               id="pt-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -210,6 +222,7 @@ export default function PatientLogin() {
                 <Label htmlFor="pt-reset-code">Verification code</Label>
                 <Input
                   id="pt-reset-code"
+                  name="one-time-code"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   inputMode="numeric"
@@ -221,11 +234,11 @@ export default function PatientLogin() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="pt-new-password">New password</Label>
-                <Input id="pt-new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
+                <Input id="pt-new-password" name="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="pt-confirm-password">Confirm new password</Label>
-                <Input id="pt-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
+                <Input id="pt-confirm-password" name="new-password-confirmation" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} required autoComplete="new-password" />
               </div>
             </>
           )}

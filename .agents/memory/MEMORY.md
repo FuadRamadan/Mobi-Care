@@ -11,3 +11,4 @@
 - [Password expiry boundary](password-expiry-boundary.md) — enforce password age on every authenticated pharmacy request, not only login or token refresh.
 - [API test bundling](api-test-bundling.md) — bundle server tests as CommonJS and disable development logging transports to avoid ESM and worker-path failures.
 - [External API connections](external-api-connections.md) — store provider credentials in one extensible registry; gate management by live HQ permission and never return secrets.
+- [Password-manager handoff](password-manager-handoff.md) — retain reset credentials only in live form state long enough for browser/OS save prompts; never app-persist plaintext.

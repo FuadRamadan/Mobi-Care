@@ -85,15 +85,18 @@ export default function LoginScreen() {
             'If this number belongs to an active patient account, we sent a six-digit SMS code.',
           );
         } else {
+          const resetPassword = password;
           await confirmPatientPasswordReset({
             requestId,
             code,
-            newPassword: password,
+            newPassword: resetPassword,
           });
           setMode('login');
           setRequestId(null);
           setCode('');
-          setPassword('');
+          // Retain the credential only in the live sign-in form so the OS can
+          // offer to save/update it. It is never written to app-managed storage.
+          setPassword(resetPassword);
           setConfirmPassword('');
           Alert.alert('Password reset', 'Sign in with your new password.');
         }
@@ -186,7 +189,9 @@ export default function LoginScreen() {
               placeholder="+232 76 123456"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="phone-pad"
-              autoComplete="tel"
+              autoComplete="username"
+              textContentType="username"
+              importantForAutofill="yes"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
               blurOnSubmit={false}
@@ -203,6 +208,8 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                importantForAutofill="yes"
                 maxLength={6}
                 returnKeyType="next"
                 onSubmitEditing={() => passwordRef.current?.focus()}
@@ -221,6 +228,8 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPassword}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                textContentType={mode === 'login' ? 'password' : 'newPassword'}
+                importantForAutofill="yes"
                 returnKeyType="done"
                 onSubmitEditing={handleSubmit}
               />
@@ -240,6 +249,8 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPassword}
                 autoComplete="new-password"
+                textContentType="newPassword"
+                importantForAutofill="yes"
                 returnKeyType="done"
                 onSubmitEditing={handleSubmit}
               />
