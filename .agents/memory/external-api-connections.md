@@ -7,4 +7,8 @@ Use one provider-neutral connection registry for all external institutions. Keep
 
 **Why:** HQ needs to add Orange products, banks, insurers, and other institutions over time without creating a credential table for every provider. A shared registry keeps the storage and security model consistent.
 
-**How to apply:** Never return saved credentials or include them in logs/audits. Preserve omitted credentials during replacement, require a live database-backed HQ permission for every management/test route, block tests while disabled, rate-limit side-effecting tests, and use fixed allowlisted provider endpoints rather than user-controlled URLs.
+Production provider calls must read the enabled HQ-managed connection record at send time; deployment environment variables must not become a second, conflicting credential source.
+
+**Why:** HQ administrators need to add or rotate Orange credentials without a code change or redeployment, and the settings shown in the portal must be the settings the application actually uses.
+
+**How to apply:** Never return saved credentials or include them in logs/audits. Preserve omitted credentials during replacement, require a live database-backed HQ permission for every management/test route, block tests while disabled, rate-limit side-effecting tests, and use fixed allowlisted provider endpoints rather than user-controlled URLs. Keep an unconfigured provider disabled while allowing the application to start normally.

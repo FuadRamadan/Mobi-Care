@@ -140,11 +140,11 @@ router.put("/orange", async (req: AuthRequest, res): Promise<void> => {
 
   if (
     body.data.isEnabled &&
-    (!credentialsEncrypted || !senderAddress)
+    (!credentialsEncrypted || !senderAddress || !senderName)
   ) {
     res.status(400).json({
       error:
-        "Client ID, client secret, and Orange sender address are required before enabling.",
+        "Client ID, client secret, sender address, and approved sender name are required before enabling.",
     });
     return;
   }

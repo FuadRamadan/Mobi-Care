@@ -33,7 +33,7 @@ import {
   appendPasswordHistory,
   serializePasswordPolicy,
 } from "../lib/passwordPolicy.js";
-import { sendSms } from "../lib/sms.js";
+import { sendSms } from "../lib/configuredSms.js";
 
 const router = safeRouter();
 const RESET_TTL_MS = 10 * 60 * 1000;

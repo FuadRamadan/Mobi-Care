@@ -128,7 +128,7 @@ export default function HqApiConnections() {
                     </div>
                     <div>
                       <h2 className="font-semibold text-foreground">{connection.displayName}</h2>
-                      <p className="text-[13px] text-muted-foreground mt-0.5">Configure SMS gateway credentials and sender details.</p>
+                        <p className="text-[13px] text-muted-foreground mt-0.5">Add or edit the SMS gateway credentials and sender details at any time.</p>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                       <Switch 
@@ -207,7 +207,7 @@ export default function HqApiConnections() {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="senderName">Sender Name (Optional)</Label>
+                            <Label htmlFor="senderName">Approved Sender Name</Label>
                             <Input 
                               id="senderName"
                               value={form.senderName}

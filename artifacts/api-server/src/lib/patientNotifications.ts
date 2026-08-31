@@ -11,7 +11,7 @@
 import { db } from "@workspace/db";
 import { patientNotificationsTable, patientsTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
-import { sendSms } from "./sms.js";
+import { sendSms } from "./configuredSms.js";
 import { sendExpoPush } from "./push.js";
 
 export interface NotificationPayload {
