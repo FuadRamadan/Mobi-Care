@@ -34,3 +34,16 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
     console.error("[audit] failed to write audit entry", entry.action, err);
   }
 }
+
+/** Strict audit path used by saved API requests: callers must surface failure. */
+export async function writeAuditStrict(entry: AuditEntry, client: Pick<typeof db, "insert"> = db): Promise<void> {
+  await client.insert(auditLogTable).values({
+    actorType: entry.actorType,
+    actorId: entry.actorId ?? null,
+    actorName: entry.actorName ?? null,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId ?? null,
+    details: entry.details ?? null,
+  });
+}

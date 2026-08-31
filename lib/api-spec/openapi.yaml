@@ -1299,6 +1299,68 @@ paths:
         "502":
           description: Orange rejected or could not complete the test
 
+  /hq/api-connections/requests:
+    get:
+      operationId: listSavedApiRequests
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200": { description: Saved requests, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SavedApiRequest" } } } } }
+    post:
+      operationId: createSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequestInput" } } } }
+      responses:
+        "201": { description: Created request, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequest" } } } }
+  /hq/api-connections/requests/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      operationId: getSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      responses: { "200": { description: Saved request, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequest" } } } } }
+    put:
+      operationId: updateSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequestInput" } } } }
+      responses: { "200": { description: Updated request, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequest" } } } } }
+    delete:
+      operationId: deleteSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      responses: { "204": { description: Deleted } }
+  /hq/api-connections/requests/{id}/duplicate:
+    post:
+      operationId: duplicateSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "201": { description: Duplicated request, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiRequest" } } } } }
+  /hq/api-connections/requests/{id}/execute:
+    post:
+      operationId: executeSavedApiRequest
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: Sanitized response, content: { application/json: { schema: { $ref: "#/components/schemas/SavedApiExecution" } } } } }
+  /hq/api-connections/requests/{id}/history:
+    get:
+      operationId: getSavedApiRequestHistory
+      tags: [hq]
+      security: [{ BearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Bounded execution history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedApiRequestHistory"
+
   /hq/team:
     get:
       operationId: listHqTeamMembers
@@ -3132,6 +3194,66 @@ components:
           type: ["string", "null"]
         testedAt:
           type: string
+
+    SavedApiPair:
+      type: object
+      required: [key, value]
+      description: Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.
+      properties:
+        key: { type: string, maxLength: 200 }
+        value:
+          type: string
+          maxLength: 8000
+          description: Plaintext replacement on create/update, or the fixed mask "••••••••" to preserve an existing same-key value. Never returned as plaintext.
+    SavedApiRequestInput:
+      type: object
+      required: [name, url, method]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        url: { type: string, maxLength: 2000 }
+        method: { type: string, enum: [GET, POST, PUT, PATCH, DELETE, HEAD] }
+        authType: { type: string, enum: [none, basic, bearer, api-key-header] }
+        auth:
+          type: object
+          properties:
+            username: { type: string, maxLength: 500 }
+            headerName: { type: string, maxLength: 200 }
+            secret: { type: string, writeOnly: true, maxLength: 8000 }
+        params: { type: array, maxItems: 50, items: { $ref: "#/components/schemas/SavedApiPair" } }
+        headers: { type: array, maxItems: 50, items: { $ref: "#/components/schemas/SavedApiPair" } }
+        body: { type: ["string", "null"], maxLength: 65536 }
+    SavedApiRequest:
+      allOf:
+        - $ref: "#/components/schemas/SavedApiRequestInput"
+        - type: object
+          required: [id, authConfigured, createdAt, updatedAt]
+          properties:
+            id: { type: string }
+            authConfigured: { type: boolean }
+            auth: { type: ["object", "null"], properties: { secret: { type: string, readOnly: true } } }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    SavedApiExecution:
+      type: object
+      required: [status, durationMs, headers, body]
+      properties:
+        status: { type: number }
+        durationMs: { type: number }
+        headers: { type: object, additionalProperties: { type: string } }
+        body: { type: ["string", "null"] }
+    SavedApiRequestHistory:
+      type: object
+      properties:
+        id: { type: string }
+        requestId: { type: string }
+        method: { type: string }
+        url: { type: string }
+        status: { type: ["number", "null"] }
+        durationMs: { type: number }
+        responseHeaders: { type: object, additionalProperties: { type: string } }
+        responseBody: { type: ["string", "null"] }
+        error: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
 
     HqPharmacyUpdate:
       type: object

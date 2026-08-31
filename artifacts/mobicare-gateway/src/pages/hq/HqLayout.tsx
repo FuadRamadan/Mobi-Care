@@ -54,7 +54,7 @@ const NAV: Array<{
 
 export default function HqLayout({ children, title }: { children: ReactNode; title: string }) {
   const { user, logout } = useHqAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const queryClient = useQueryClient();
   const newestNotificationId = useRef<string | null>(null);
   const { data: notifications = [] } = useListHqNotifications({
@@ -155,19 +155,32 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-2 bg-dark-green text-white px-4 py-3 overflow-x-auto">
-          {NAV.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'whitespace-nowrap text-xs rounded-full px-3 py-1.5',
-                location === href ? 'bg-white/20' : 'bg-white/5 text-white/70',
-              )}
-            >
-              {label}
-            </Link>
-          ))}
+        <div className="md:hidden flex items-center gap-2 bg-dark-green text-white px-3 py-2.5">
+          <img src="/mobicare-pin.png" alt="" className="h-7 w-auto shrink-0" />
+          <label className="sr-only" htmlFor="hq-mobile-navigation">HQ section</label>
+          <select
+            id="hq-mobile-navigation"
+            value={location}
+            onChange={(event) => navigate(event.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-white/40"
+          >
+            {NAV.filter(
+              (item) =>
+                !item.requiresIntegrations ||
+                user.canManageIntegrations !== false,
+            ).map(({ href, label }) => (
+              <option key={href} value={href} className="text-foreground">
+                {label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={logout}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
         <main className="flex-1 p-4 md:p-8">
           <div className="flex items-center justify-between gap-4 mb-6">

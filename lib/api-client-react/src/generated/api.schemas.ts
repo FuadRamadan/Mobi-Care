@@ -975,6 +975,116 @@ export interface OrangeSmsTestResult {
   testedAt: string;
 }
 
+/**
+ * Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.
+ */
+export interface SavedApiPair {
+  /** @maxLength 200 */
+  key: string;
+  /**
+     * Plaintext replacement on create/update, or the fixed mask "••••••••" to preserve an existing same-key value. Never returned as plaintext.
+     * @maxLength 8000
+     */
+  value: string;
+}
+
+export type SavedApiRequestInputMethod = typeof SavedApiRequestInputMethod[keyof typeof SavedApiRequestInputMethod];
+
+
+export const SavedApiRequestInputMethod = {
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  PATCH: 'PATCH',
+  DELETE: 'DELETE',
+  HEAD: 'HEAD',
+} as const;
+
+export type SavedApiRequestInputAuthType = typeof SavedApiRequestInputAuthType[keyof typeof SavedApiRequestInputAuthType];
+
+
+export const SavedApiRequestInputAuthType = {
+  none: 'none',
+  basic: 'basic',
+  bearer: 'bearer',
+  'api-key-header': 'api-key-header',
+} as const;
+
+export type SavedApiRequestInputAuth = {
+  /** @maxLength 500 */
+  username?: string;
+  /** @maxLength 200 */
+  headerName?: string;
+  /** @maxLength 8000 */
+  secret?: string;
+};
+
+export interface SavedApiRequestInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** @maxLength 2000 */
+  url: string;
+  method: SavedApiRequestInputMethod;
+  authType?: SavedApiRequestInputAuthType;
+  auth?: SavedApiRequestInputAuth;
+  /** @maxItems 50 */
+  params?: SavedApiPair[];
+  /** @maxItems 50 */
+  headers?: SavedApiPair[];
+  /**
+     * @maxLength 65536
+     * @nullable
+     */
+  body?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type SavedApiRequestAuth = {
+  readonly secret?: string;
+} | null;
+
+export type SavedApiRequest = SavedApiRequestInput & {
+  id: string;
+  authConfigured: boolean;
+  /** @nullable */
+  auth?: SavedApiRequestAuth;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SavedApiExecutionHeaders = {[key: string]: string};
+
+export interface SavedApiExecution {
+  status: number;
+  durationMs: number;
+  headers: SavedApiExecutionHeaders;
+  /** @nullable */
+  body: string | null;
+}
+
+export type SavedApiRequestHistoryResponseHeaders = {[key: string]: string};
+
+export interface SavedApiRequestHistory {
+  id?: string;
+  requestId?: string;
+  method?: string;
+  url?: string;
+  /** @nullable */
+  status?: number | null;
+  durationMs?: number;
+  responseHeaders?: SavedApiRequestHistoryResponseHeaders;
+  /** @nullable */
+  responseBody?: string | null;
+  /** @nullable */
+  error?: string | null;
+  createdAt?: string;
+}
+
 export interface HqPharmacyUpdate {
   isActive?: boolean;
   controlledSubstanceAuthorized?: boolean;

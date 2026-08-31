@@ -90,6 +90,10 @@ import type {
   PrescriptionUploadResponse,
   PushTokenInput,
   RefreshInput,
+  SavedApiExecution,
+  SavedApiRequest,
+  SavedApiRequestHistory,
+  SavedApiRequestInput,
   Settlement,
   SettlementsResponse,
   TeamMember,
@@ -4585,6 +4589,545 @@ export const useTestOrangeSmsConnection = <TError = ErrorType<void>,
       > => {
       return useMutation(getTestOrangeSmsConnectionMutationOptions(options));
     }
+
+export const getListSavedApiRequestsUrl = () => {
+
+
+
+
+  return `/api/hq/api-connections/requests`
+}
+
+export const listSavedApiRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequest[]> => {
+
+  return customFetch<SavedApiRequest[]>(getListSavedApiRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSavedApiRequestsQueryKey = () => {
+    return [
+    `/api/hq/api-connections/requests`
+    ] as const;
+    }
+
+
+export const getListSavedApiRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listSavedApiRequests>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedApiRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSavedApiRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedApiRequests>>> = ({ signal }) => listSavedApiRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedApiRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSavedApiRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listSavedApiRequests>>>
+export type ListSavedApiRequestsQueryError = ErrorType<unknown>
+
+
+
+export function useListSavedApiRequests<TData = Awaited<ReturnType<typeof listSavedApiRequests>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedApiRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSavedApiRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSavedApiRequestUrl = () => {
+
+
+
+
+  return `/api/hq/api-connections/requests`
+}
+
+export const createSavedApiRequest = async (savedApiRequestInput: SavedApiRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequest> => {
+
+  return customFetch<SavedApiRequest>(getCreateSavedApiRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(savedApiRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSavedApiRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedApiRequest>>, TError,{data: BodyType<SavedApiRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSavedApiRequest>>, TError,{data: BodyType<SavedApiRequestInput>}, TContext> => {
+
+const mutationKey = ['createSavedApiRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSavedApiRequest>>, {data: BodyType<SavedApiRequestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSavedApiRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSavedApiRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createSavedApiRequest>>>
+    export type CreateSavedApiRequestMutationBody = BodyType<SavedApiRequestInput>
+    export type CreateSavedApiRequestMutationError = ErrorType<unknown>
+
+    export const useCreateSavedApiRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedApiRequest>>, TError,{data: BodyType<SavedApiRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSavedApiRequest>>,
+        TError,
+        {data: BodyType<SavedApiRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSavedApiRequestMutationOptions(options));
+    }
+
+export const getGetSavedApiRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}`
+}
+
+export const getSavedApiRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequest> => {
+
+  return customFetch<SavedApiRequest>(getGetSavedApiRequestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSavedApiRequestQueryKey = (id: string,) => {
+    return [
+    `/api/hq/api-connections/requests/${id}`
+    ] as const;
+    }
+
+
+export const getGetSavedApiRequestQueryOptions = <TData = Awaited<ReturnType<typeof getSavedApiRequest>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSavedApiRequestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSavedApiRequest>>> = ({ signal }) => getSavedApiRequest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSavedApiRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getSavedApiRequest>>>
+export type GetSavedApiRequestQueryError = ErrorType<unknown>
+
+
+
+export function useGetSavedApiRequest<TData = Awaited<ReturnType<typeof getSavedApiRequest>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSavedApiRequestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSavedApiRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}`
+}
+
+export const updateSavedApiRequest = async (id: string,
+    savedApiRequestInput: SavedApiRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequest> => {
+
+  return customFetch<SavedApiRequest>(getUpdateSavedApiRequestUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(savedApiRequestInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSavedApiRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedApiRequest>>, TError,{id: string;data: BodyType<SavedApiRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSavedApiRequest>>, TError,{id: string;data: BodyType<SavedApiRequestInput>}, TContext> => {
+
+const mutationKey = ['updateSavedApiRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSavedApiRequest>>, {id: string;data: BodyType<SavedApiRequestInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSavedApiRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSavedApiRequestMutationResult = NonNullable<Awaited<ReturnType<typeof updateSavedApiRequest>>>
+    export type UpdateSavedApiRequestMutationBody = BodyType<SavedApiRequestInput>
+    export type UpdateSavedApiRequestMutationError = ErrorType<unknown>
+
+    export const useUpdateSavedApiRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedApiRequest>>, TError,{id: string;data: BodyType<SavedApiRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSavedApiRequest>>,
+        TError,
+        {id: string;data: BodyType<SavedApiRequestInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateSavedApiRequestMutationOptions(options));
+    }
+
+export const getDeleteSavedApiRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}`
+}
+
+export const deleteSavedApiRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSavedApiRequestUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSavedApiRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSavedApiRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteSavedApiRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSavedApiRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSavedApiRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSavedApiRequestMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSavedApiRequest>>>
+
+    export type DeleteSavedApiRequestMutationError = ErrorType<unknown>
+
+    export const useDeleteSavedApiRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSavedApiRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteSavedApiRequestMutationOptions(options));
+    }
+
+export const getDuplicateSavedApiRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}/duplicate`
+}
+
+export const duplicateSavedApiRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequest> => {
+
+  return customFetch<SavedApiRequest>(getDuplicateSavedApiRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getDuplicateSavedApiRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof duplicateSavedApiRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['duplicateSavedApiRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof duplicateSavedApiRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  duplicateSavedApiRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DuplicateSavedApiRequestMutationResult = NonNullable<Awaited<ReturnType<typeof duplicateSavedApiRequest>>>
+
+    export type DuplicateSavedApiRequestMutationError = ErrorType<unknown>
+
+    export const useDuplicateSavedApiRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof duplicateSavedApiRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDuplicateSavedApiRequestMutationOptions(options));
+    }
+
+export const getExecuteSavedApiRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}/execute`
+}
+
+export const executeSavedApiRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiExecution> => {
+
+  return customFetch<SavedApiExecution>(getExecuteSavedApiRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getExecuteSavedApiRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof executeSavedApiRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['executeSavedApiRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof executeSavedApiRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  executeSavedApiRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExecuteSavedApiRequestMutationResult = NonNullable<Awaited<ReturnType<typeof executeSavedApiRequest>>>
+
+    export type ExecuteSavedApiRequestMutationError = ErrorType<unknown>
+
+    export const useExecuteSavedApiRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeSavedApiRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof executeSavedApiRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getExecuteSavedApiRequestMutationOptions(options));
+    }
+
+export const getGetSavedApiRequestHistoryUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/api-connections/requests/${id}/history`
+}
+
+export const getSavedApiRequestHistory = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedApiRequestHistory[]> => {
+
+  return customFetch<SavedApiRequestHistory[]>(getGetSavedApiRequestHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSavedApiRequestHistoryQueryKey = (id: string,) => {
+    return [
+    `/api/hq/api-connections/requests/${id}/history`
+    ] as const;
+    }
+
+
+export const getGetSavedApiRequestHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getSavedApiRequestHistory>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequestHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSavedApiRequestHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSavedApiRequestHistory>>> = ({ signal }) => getSavedApiRequestHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequestHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSavedApiRequestHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getSavedApiRequestHistory>>>
+export type GetSavedApiRequestHistoryQueryError = ErrorType<unknown>
+
+
+
+export function useGetSavedApiRequestHistory<TData = Awaited<ReturnType<typeof getSavedApiRequestHistory>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedApiRequestHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSavedApiRequestHistoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListHqTeamMembersUrl = () => {
 

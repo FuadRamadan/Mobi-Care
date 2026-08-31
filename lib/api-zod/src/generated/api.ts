@@ -1702,6 +1702,431 @@ export const TestOrangeSmsConnectionResponse = zod.object({
 })
 
 
+export const listSavedApiRequestsResponseOneNameMax = 200;
+
+export const listSavedApiRequestsResponseOneUrlMax = 2000;
+
+export const listSavedApiRequestsResponseOneAuthUsernameMax = 500;
+
+export const listSavedApiRequestsResponseOneAuthHeaderNameMax = 200;
+
+export const listSavedApiRequestsResponseOneAuthSecretMax = 8000;
+
+export const listSavedApiRequestsResponseOneParamsItemKeyMax = 200;
+
+export const listSavedApiRequestsResponseOneParamsItemValueMax = 8000;
+
+export const listSavedApiRequestsResponseOneParamsMax = 50;
+
+export const listSavedApiRequestsResponseOneHeadersItemKeyMax = 200;
+
+export const listSavedApiRequestsResponseOneHeadersItemValueMax = 8000;
+
+export const listSavedApiRequestsResponseOneHeadersMax = 50;
+
+export const listSavedApiRequestsResponseOneBodyMax = 65536;
+
+
+
+export const ListSavedApiRequestsResponseItem = zod.object({
+  "name": zod.string().min(1).max(listSavedApiRequestsResponseOneNameMax),
+  "url": zod.string().max(listSavedApiRequestsResponseOneUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(listSavedApiRequestsResponseOneAuthUsernameMax).optional(),
+  "headerName": zod.string().max(listSavedApiRequestsResponseOneAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(listSavedApiRequestsResponseOneAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(listSavedApiRequestsResponseOneParamsItemKeyMax),
+  "value": zod.string().max(listSavedApiRequestsResponseOneParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(listSavedApiRequestsResponseOneParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(listSavedApiRequestsResponseOneHeadersItemKeyMax),
+  "value": zod.string().max(listSavedApiRequestsResponseOneHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(listSavedApiRequestsResponseOneHeadersMax).optional(),
+  "body": zod.string().max(listSavedApiRequestsResponseOneBodyMax).nullish()
+}).and(zod.object({
+  "id": zod.string(),
+  "authConfigured": zod.boolean(),
+  "auth": zod.object({
+  "secret": zod.string().optional()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+export const ListSavedApiRequestsResponse = zod.array(ListSavedApiRequestsResponseItem)
+
+
+export const createSavedApiRequestBodyNameMax = 200;
+
+export const createSavedApiRequestBodyUrlMax = 2000;
+
+export const createSavedApiRequestBodyAuthUsernameMax = 500;
+
+export const createSavedApiRequestBodyAuthHeaderNameMax = 200;
+
+export const createSavedApiRequestBodyAuthSecretMax = 8000;
+
+export const createSavedApiRequestBodyParamsItemKeyMax = 200;
+
+export const createSavedApiRequestBodyParamsItemValueMax = 8000;
+
+export const createSavedApiRequestBodyParamsMax = 50;
+
+export const createSavedApiRequestBodyHeadersItemKeyMax = 200;
+
+export const createSavedApiRequestBodyHeadersItemValueMax = 8000;
+
+export const createSavedApiRequestBodyHeadersMax = 50;
+
+export const createSavedApiRequestBodyBodyMax = 65536;
+
+
+
+export const CreateSavedApiRequestBody = zod.object({
+  "name": zod.string().min(1).max(createSavedApiRequestBodyNameMax),
+  "url": zod.string().max(createSavedApiRequestBodyUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(createSavedApiRequestBodyAuthUsernameMax).optional(),
+  "headerName": zod.string().max(createSavedApiRequestBodyAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(createSavedApiRequestBodyAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(createSavedApiRequestBodyParamsItemKeyMax),
+  "value": zod.string().max(createSavedApiRequestBodyParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(createSavedApiRequestBodyParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(createSavedApiRequestBodyHeadersItemKeyMax),
+  "value": zod.string().max(createSavedApiRequestBodyHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(createSavedApiRequestBodyHeadersMax).optional(),
+  "body": zod.string().max(createSavedApiRequestBodyBodyMax).nullish()
+})
+
+export const createSavedApiRequestResponseOneNameMax = 200;
+
+export const createSavedApiRequestResponseOneUrlMax = 2000;
+
+export const createSavedApiRequestResponseOneAuthUsernameMax = 500;
+
+export const createSavedApiRequestResponseOneAuthHeaderNameMax = 200;
+
+export const createSavedApiRequestResponseOneAuthSecretMax = 8000;
+
+export const createSavedApiRequestResponseOneParamsItemKeyMax = 200;
+
+export const createSavedApiRequestResponseOneParamsItemValueMax = 8000;
+
+export const createSavedApiRequestResponseOneParamsMax = 50;
+
+export const createSavedApiRequestResponseOneHeadersItemKeyMax = 200;
+
+export const createSavedApiRequestResponseOneHeadersItemValueMax = 8000;
+
+export const createSavedApiRequestResponseOneHeadersMax = 50;
+
+export const createSavedApiRequestResponseOneBodyMax = 65536;
+
+
+
+export const CreateSavedApiRequestResponse = zod.object({
+  "name": zod.string().min(1).max(createSavedApiRequestResponseOneNameMax),
+  "url": zod.string().max(createSavedApiRequestResponseOneUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(createSavedApiRequestResponseOneAuthUsernameMax).optional(),
+  "headerName": zod.string().max(createSavedApiRequestResponseOneAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(createSavedApiRequestResponseOneAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(createSavedApiRequestResponseOneParamsItemKeyMax),
+  "value": zod.string().max(createSavedApiRequestResponseOneParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(createSavedApiRequestResponseOneParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(createSavedApiRequestResponseOneHeadersItemKeyMax),
+  "value": zod.string().max(createSavedApiRequestResponseOneHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(createSavedApiRequestResponseOneHeadersMax).optional(),
+  "body": zod.string().max(createSavedApiRequestResponseOneBodyMax).nullish()
+}).and(zod.object({
+  "id": zod.string(),
+  "authConfigured": zod.boolean(),
+  "auth": zod.object({
+  "secret": zod.string().optional()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+export const GetSavedApiRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getSavedApiRequestResponseOneNameMax = 200;
+
+export const getSavedApiRequestResponseOneUrlMax = 2000;
+
+export const getSavedApiRequestResponseOneAuthUsernameMax = 500;
+
+export const getSavedApiRequestResponseOneAuthHeaderNameMax = 200;
+
+export const getSavedApiRequestResponseOneAuthSecretMax = 8000;
+
+export const getSavedApiRequestResponseOneParamsItemKeyMax = 200;
+
+export const getSavedApiRequestResponseOneParamsItemValueMax = 8000;
+
+export const getSavedApiRequestResponseOneParamsMax = 50;
+
+export const getSavedApiRequestResponseOneHeadersItemKeyMax = 200;
+
+export const getSavedApiRequestResponseOneHeadersItemValueMax = 8000;
+
+export const getSavedApiRequestResponseOneHeadersMax = 50;
+
+export const getSavedApiRequestResponseOneBodyMax = 65536;
+
+
+
+export const GetSavedApiRequestResponse = zod.object({
+  "name": zod.string().min(1).max(getSavedApiRequestResponseOneNameMax),
+  "url": zod.string().max(getSavedApiRequestResponseOneUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(getSavedApiRequestResponseOneAuthUsernameMax).optional(),
+  "headerName": zod.string().max(getSavedApiRequestResponseOneAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(getSavedApiRequestResponseOneAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(getSavedApiRequestResponseOneParamsItemKeyMax),
+  "value": zod.string().max(getSavedApiRequestResponseOneParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(getSavedApiRequestResponseOneParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(getSavedApiRequestResponseOneHeadersItemKeyMax),
+  "value": zod.string().max(getSavedApiRequestResponseOneHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(getSavedApiRequestResponseOneHeadersMax).optional(),
+  "body": zod.string().max(getSavedApiRequestResponseOneBodyMax).nullish()
+}).and(zod.object({
+  "id": zod.string(),
+  "authConfigured": zod.boolean(),
+  "auth": zod.object({
+  "secret": zod.string().optional()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+export const UpdateSavedApiRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateSavedApiRequestBodyNameMax = 200;
+
+export const updateSavedApiRequestBodyUrlMax = 2000;
+
+export const updateSavedApiRequestBodyAuthUsernameMax = 500;
+
+export const updateSavedApiRequestBodyAuthHeaderNameMax = 200;
+
+export const updateSavedApiRequestBodyAuthSecretMax = 8000;
+
+export const updateSavedApiRequestBodyParamsItemKeyMax = 200;
+
+export const updateSavedApiRequestBodyParamsItemValueMax = 8000;
+
+export const updateSavedApiRequestBodyParamsMax = 50;
+
+export const updateSavedApiRequestBodyHeadersItemKeyMax = 200;
+
+export const updateSavedApiRequestBodyHeadersItemValueMax = 8000;
+
+export const updateSavedApiRequestBodyHeadersMax = 50;
+
+export const updateSavedApiRequestBodyBodyMax = 65536;
+
+
+
+export const UpdateSavedApiRequestBody = zod.object({
+  "name": zod.string().min(1).max(updateSavedApiRequestBodyNameMax),
+  "url": zod.string().max(updateSavedApiRequestBodyUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(updateSavedApiRequestBodyAuthUsernameMax).optional(),
+  "headerName": zod.string().max(updateSavedApiRequestBodyAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(updateSavedApiRequestBodyAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(updateSavedApiRequestBodyParamsItemKeyMax),
+  "value": zod.string().max(updateSavedApiRequestBodyParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(updateSavedApiRequestBodyParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(updateSavedApiRequestBodyHeadersItemKeyMax),
+  "value": zod.string().max(updateSavedApiRequestBodyHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(updateSavedApiRequestBodyHeadersMax).optional(),
+  "body": zod.string().max(updateSavedApiRequestBodyBodyMax).nullish()
+})
+
+export const updateSavedApiRequestResponseOneNameMax = 200;
+
+export const updateSavedApiRequestResponseOneUrlMax = 2000;
+
+export const updateSavedApiRequestResponseOneAuthUsernameMax = 500;
+
+export const updateSavedApiRequestResponseOneAuthHeaderNameMax = 200;
+
+export const updateSavedApiRequestResponseOneAuthSecretMax = 8000;
+
+export const updateSavedApiRequestResponseOneParamsItemKeyMax = 200;
+
+export const updateSavedApiRequestResponseOneParamsItemValueMax = 8000;
+
+export const updateSavedApiRequestResponseOneParamsMax = 50;
+
+export const updateSavedApiRequestResponseOneHeadersItemKeyMax = 200;
+
+export const updateSavedApiRequestResponseOneHeadersItemValueMax = 8000;
+
+export const updateSavedApiRequestResponseOneHeadersMax = 50;
+
+export const updateSavedApiRequestResponseOneBodyMax = 65536;
+
+
+
+export const UpdateSavedApiRequestResponse = zod.object({
+  "name": zod.string().min(1).max(updateSavedApiRequestResponseOneNameMax),
+  "url": zod.string().max(updateSavedApiRequestResponseOneUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(updateSavedApiRequestResponseOneAuthUsernameMax).optional(),
+  "headerName": zod.string().max(updateSavedApiRequestResponseOneAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(updateSavedApiRequestResponseOneAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(updateSavedApiRequestResponseOneParamsItemKeyMax),
+  "value": zod.string().max(updateSavedApiRequestResponseOneParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(updateSavedApiRequestResponseOneParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(updateSavedApiRequestResponseOneHeadersItemKeyMax),
+  "value": zod.string().max(updateSavedApiRequestResponseOneHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(updateSavedApiRequestResponseOneHeadersMax).optional(),
+  "body": zod.string().max(updateSavedApiRequestResponseOneBodyMax).nullish()
+}).and(zod.object({
+  "id": zod.string(),
+  "authConfigured": zod.boolean(),
+  "auth": zod.object({
+  "secret": zod.string().optional()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+export const DeleteSavedApiRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteSavedApiRequestResponse = zod.void()
+
+
+export const DuplicateSavedApiRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const duplicateSavedApiRequestResponseOneNameMax = 200;
+
+export const duplicateSavedApiRequestResponseOneUrlMax = 2000;
+
+export const duplicateSavedApiRequestResponseOneAuthUsernameMax = 500;
+
+export const duplicateSavedApiRequestResponseOneAuthHeaderNameMax = 200;
+
+export const duplicateSavedApiRequestResponseOneAuthSecretMax = 8000;
+
+export const duplicateSavedApiRequestResponseOneParamsItemKeyMax = 200;
+
+export const duplicateSavedApiRequestResponseOneParamsItemValueMax = 8000;
+
+export const duplicateSavedApiRequestResponseOneParamsMax = 50;
+
+export const duplicateSavedApiRequestResponseOneHeadersItemKeyMax = 200;
+
+export const duplicateSavedApiRequestResponseOneHeadersItemValueMax = 8000;
+
+export const duplicateSavedApiRequestResponseOneHeadersMax = 50;
+
+export const duplicateSavedApiRequestResponseOneBodyMax = 65536;
+
+
+
+export const DuplicateSavedApiRequestResponse = zod.object({
+  "name": zod.string().min(1).max(duplicateSavedApiRequestResponseOneNameMax),
+  "url": zod.string().max(duplicateSavedApiRequestResponseOneUrlMax),
+  "method": zod.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']),
+  "authType": zod.enum(['none', 'basic', 'bearer', 'api-key-header']).optional(),
+  "auth": zod.object({
+  "username": zod.string().max(duplicateSavedApiRequestResponseOneAuthUsernameMax).optional(),
+  "headerName": zod.string().max(duplicateSavedApiRequestResponseOneAuthHeaderNameMax).optional(),
+  "secret": zod.string().max(duplicateSavedApiRequestResponseOneAuthSecretMax).optional()
+}).optional(),
+  "params": zod.array(zod.object({
+  "key": zod.string().max(duplicateSavedApiRequestResponseOneParamsItemKeyMax),
+  "value": zod.string().max(duplicateSavedApiRequestResponseOneParamsItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(duplicateSavedApiRequestResponseOneParamsMax).optional(),
+  "headers": zod.array(zod.object({
+  "key": zod.string().max(duplicateSavedApiRequestResponseOneHeadersItemKeyMax),
+  "value": zod.string().max(duplicateSavedApiRequestResponseOneHeadersItemValueMax).describe('Plaintext replacement on create\/update, or the fixed mask \"••••••••\" to preserve an existing same-key value. Never returned as plaintext.')
+}).describe('Pair values are encrypted at rest. Responses return eight bullets for non-empty values and an empty string for empty values. On update, the eight-bullet mask preserves the next existing value with the same key.')).max(duplicateSavedApiRequestResponseOneHeadersMax).optional(),
+  "body": zod.string().max(duplicateSavedApiRequestResponseOneBodyMax).nullish()
+}).and(zod.object({
+  "id": zod.string(),
+  "authConfigured": zod.boolean(),
+  "auth": zod.object({
+  "secret": zod.string().optional()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+export const ExecuteSavedApiRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ExecuteSavedApiRequestResponse = zod.object({
+  "status": zod.number(),
+  "durationMs": zod.number(),
+  "headers": zod.record(zod.string(), zod.string()),
+  "body": zod.string().nullable()
+})
+
+
+export const GetSavedApiRequestHistoryParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetSavedApiRequestHistoryResponseItem = zod.object({
+  "id": zod.string().optional(),
+  "requestId": zod.string().optional(),
+  "method": zod.string().optional(),
+  "url": zod.string().optional(),
+  "status": zod.number().nullish(),
+  "durationMs": zod.number().optional(),
+  "responseHeaders": zod.record(zod.string(), zod.string()).optional(),
+  "responseBody": zod.string().nullish(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date().optional()
+})
+export const GetSavedApiRequestHistoryResponse = zod.array(GetSavedApiRequestHistoryResponseItem)
+
+
 /**
  * @summary Team roster for HQ content management
  */
