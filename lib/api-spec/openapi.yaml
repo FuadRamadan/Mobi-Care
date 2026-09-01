@@ -1143,7 +1143,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/PharmacyOnboardResponse"
         "409":
-          description: Username taken
+          description: Username or phone number already registered
 
   /hq/pharmacies/{id}:
     patch:

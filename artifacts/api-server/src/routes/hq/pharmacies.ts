@@ -3,7 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { pharmaciesTable, refreshTokensTable } from "@workspace/db/schema";
-import { eq, and, isNull, desc, sql } from "drizzle-orm";
+import { eq, and, isNull, desc, sql, or } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import {
@@ -18,6 +18,34 @@ const router = safeRouter();
 function publicPharmacy(p: typeof pharmaciesTable.$inferSelect) {
   const { passwordHash: _ph, ...rest } = p;
   return rest;
+}
+
+export function pharmacyUniqueConstraint(error: unknown): string | null {
+  let current = error;
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!current || typeof current !== "object") return null;
+    const candidate = current as {
+      code?: unknown;
+      constraint?: unknown;
+      cause?: unknown;
+    };
+    if (candidate.code === "23505") {
+      return typeof candidate.constraint === "string"
+        ? candidate.constraint
+        : "unknown";
+    }
+    current = candidate.cause;
+  }
+  return null;
+}
+
+function sendPharmacyConflict(res: Parameters<Parameters<typeof router.post>[1]>[1], constraint: string): void {
+  const error = constraint.includes("phone")
+    ? "That phone number is already registered to another pharmacy"
+    : constraint.includes("username")
+      ? "That username is already registered to another pharmacy"
+      : "A pharmacy with those login details already exists";
+  res.status(409).json({ error });
 }
 
 // ── GET /hq/pharmacies ────────────────────────────────────────────────────────
@@ -54,12 +82,27 @@ router.post("/", async (req: AuthRequest, res) => {
   }
 
   const [existing] = await db
-    .select({ id: pharmaciesTable.id })
+    .select({
+      username: pharmaciesTable.username,
+      phone: pharmaciesTable.phone,
+    })
     .from(pharmaciesTable)
-    .where(eq(pharmaciesTable.username, body.data.username))
+    .where(
+      body.data.phone
+        ? or(
+            eq(pharmaciesTable.username, body.data.username),
+            eq(pharmaciesTable.phone, body.data.phone),
+          )
+        : eq(pharmaciesTable.username, body.data.username),
+    )
     .limit(1);
   if (existing) {
-    res.status(409).json({ error: "Username already taken" });
+    sendPharmacyConflict(
+      res,
+      existing.username === body.data.username
+        ? "pharmacies_username_unique"
+        : "pharmacies_phone_unique",
+    );
     return;
   }
 
@@ -73,19 +116,30 @@ router.post("/", async (req: AuthRequest, res) => {
   const temporaryPasswordExpiresAt = calculateTempPasswordExpiry(policy);
   const now = new Date();
 
-  const [created] = await db
-    .insert(pharmaciesTable)
-    .values({
-      name: body.data.name,
-      username: body.data.username,
-      phone: body.data.phone ?? null,
-      address: body.data.address ?? null,
-      passwordHash,
-      mustChangePassword: true,
-      temporaryPasswordExpiresAt,
-      passwordLastChangedAt: now,
-    })
-    .returning();
+  let created: typeof pharmaciesTable.$inferSelect;
+  try {
+    const [inserted] = await db
+      .insert(pharmaciesTable)
+      .values({
+        name: body.data.name,
+        username: body.data.username,
+        phone: body.data.phone ?? null,
+        address: body.data.address ?? null,
+        passwordHash,
+        mustChangePassword: true,
+        temporaryPasswordExpiresAt,
+        passwordLastChangedAt: now,
+      })
+      .returning();
+    created = inserted!;
+  } catch (error) {
+    const constraint = pharmacyUniqueConstraint(error);
+    if (constraint) {
+      sendPharmacyConflict(res, constraint);
+      return;
+    }
+    throw error;
+  }
 
   await writeAudit({
     actorType: "hq",
@@ -93,17 +147,17 @@ router.post("/", async (req: AuthRequest, res) => {
     actorName: req.pharmacy!.name,
     action: "pharmacy.onboard",
     entityType: "pharmacy",
-    entityId: created!.id,
+    entityId: created.id,
     // No plaintext or hash in audit details
     details: {
-      name: created!.name,
-      username: created!.username,
+      name: created.name,
+      username: created.username,
       temporaryPasswordExpiresAt: temporaryPasswordExpiresAt.toISOString(),
     },
   });
 
   res.status(201).json({
-    pharmacy: publicPharmacy(created!),
+    pharmacy: publicPharmacy(created),
     tempPassword,
     temporaryPasswordExpiresAt: temporaryPasswordExpiresAt.toISOString(),
   });
