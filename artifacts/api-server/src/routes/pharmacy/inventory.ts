@@ -50,6 +50,13 @@ function normalizeOptional(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+export function catalogueAllowsValue(
+  approvedValues: string[],
+  submittedValue: string,
+): boolean {
+  return approvedValues.length === 0 || approvedValues.includes(submittedValue);
+}
+
 function validateListing(
   data: z.infer<typeof inventoryFields>,
   drug: typeof drugCatalogueTable.$inferSelect,
@@ -57,10 +64,10 @@ function validateListing(
   if (data.expiryDate <= todayIso()) {
     return "Expired stock cannot be saved. Enter an expiry date after today.";
   }
-  if (!drug.commonStrengths.includes(data.strength)) {
+  if (!catalogueAllowsValue(drug.commonStrengths, data.strength)) {
     return "Select a strength approved in the MobiCare catalogue.";
   }
-  if (!drug.commonForms.includes(data.form)) {
+  if (!catalogueAllowsValue(drug.commonForms, data.form)) {
     return "Select a form approved in the MobiCare catalogue.";
   }
   const primaryCategory = data.primaryCategory ?? drug.primaryCategory;

@@ -484,6 +484,7 @@ function ListingModal({
   const [isActive, setIsActive] = useState(true);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -524,6 +525,7 @@ function ListingModal({
         setIsActive(true);
       }
       setErrors({});
+      setSaveError("");
     }
   }, [open, item]);
 
@@ -569,6 +571,7 @@ function ListingModal({
   };
 
   const handleSave = async () => {
+    setSaveError("");
     if (!validate()) return;
 
     try {
@@ -628,7 +631,9 @@ function ListingModal({
       }
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e.message || "Failed to save listing");
+      const message = e.message || "Failed to save listing";
+      setSaveError(message);
+      toast.error(message);
     }
   };
 
@@ -670,6 +675,20 @@ function ListingModal({
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
+          {saveError && (
+            <div
+              className="flex gap-2 items-start bg-red-50 text-red-800 p-3 rounded-lg border border-red-200"
+              role="alert"
+              data-testid="error-save-listing"
+            >
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Listing could not be saved</p>
+                <p className="text-sm mt-0.5">{saveError}</p>
+              </div>
+            </div>
+          )}
+
           {errors.duplicate && (
             <div
               className="flex gap-2 items-start bg-red-50 text-red-800 p-3 rounded-lg border border-red-200"
