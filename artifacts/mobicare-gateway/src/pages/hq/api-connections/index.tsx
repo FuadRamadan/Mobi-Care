@@ -6,13 +6,16 @@ import { OrangeSmsPanel } from './OrangeSmsPanel';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useListSavedApiRequests } from '@workspace/api-client-react';
+import {
+  getListSavedApiRequestsQueryKey,
+  useListSavedApiRequests,
+} from '@workspace/api-client-react';
 
 export default function HqApiConnections() {
   const [activeItem, setActiveItem] = useState<{ type: 'sms' } | { type: 'request', id: string }>({ type: 'sms' });
   const [isMobileList, setIsMobileList] = useState(true);
   const workspaceAccess = useListSavedApiRequests({
-    query: { retry: false },
+    query: { queryKey: getListSavedApiRequestsQueryKey(), retry: false },
   });
 
   const handleNavigate = (item: any) => {
