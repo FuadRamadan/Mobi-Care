@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 370" role="img" aria-labelledby="title">
+  <title id="title">MobiCare location and medical cross mark</title>
+  <path fill="#249b79" d="M150 0C67.2 0 0 67.2 0 150c0 112.5 150 220 150 220s150-107.5 150-220C300 67.2 232.8 0 150 0Z"/>
+  <circle cx="150" cy="145" r="78" fill="#fff"/>
+  <path fill="#249b79" d="M130 92h40c10 0 18 8 18 18v17h17c10 0 18 8 18 18v40c0 10-8 18-18 18h-17v17c0 10-8 18-18 18h-40c-10 0-18-8-18-18v-17H95c-10 0-18-8-18-18v-40c0-10 8-18 18-18h17v-17c0-10 8-18 18-18Z"/>
+</svg>

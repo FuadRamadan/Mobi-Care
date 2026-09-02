@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut } from "lucide-react";
+import { MobiCareLogo } from "@/components/MobiCareLogo";
 import clsx from "clsx";
 
 const navItems = [
@@ -67,13 +68,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="w-60 max-w-full bg-sidebar text-sidebar-foreground h-[100dvh] flex flex-col border-r border-sidebar-border shadow-md z-10 relative">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4 flex items-center gap-3 border-b border-sidebar-border/40">
-        <img
-          src={`${import.meta.env.BASE_URL}mobicare-pin.png`}
-          alt="MobiCare"
-          className="h-9 w-auto object-contain shrink-0"
-        />
+        <MobiCareLogo markClassName="h-9" textClassName="text-sm" />
         <div className="min-w-0">
-          <p className="font-bold text-sm leading-tight truncate">MobiCare</p>
           <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/50 leading-tight">
             Pharmacy Portal
           </p>

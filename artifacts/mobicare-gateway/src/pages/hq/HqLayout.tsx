@@ -124,9 +124,15 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
       {/* Sidebar */}
       <aside className="hidden md:flex w-60 shrink-0 flex-col bg-dark-green text-white">
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
-          <img src="/mobicare-pin.png" alt="MobiCare" className="h-8 w-auto" />
+          <div className="rounded-full bg-white px-2 py-1 inline-flex items-center gap-1.5" aria-label="MobiCare">
+            <img src="/mobicare-pin.png" alt="" className="h-8 w-auto" />
+            <span className="font-display font-bold text-sm leading-none">
+              <span className="text-[#0B3D2E]">Mobi</span>
+              <span className="text-[#2E9E77]">Care</span>
+            </span>
+          </div>
           <div>
-            <div className="font-display font-bold leading-tight">MobiCare HQ</div>
+            <div className="font-display font-bold leading-tight">HQ</div>
             <div className="text-[11px] text-white/60">Oversight console</div>
           </div>
         </div>
@@ -171,7 +177,13 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile top bar */}
         <div className="md:hidden flex items-center gap-2 bg-dark-green text-white px-3 py-2.5">
-          <img src="/mobicare-pin.png" alt="" className="h-7 w-auto shrink-0" />
+          <div className="rounded-full bg-white px-2 py-1 inline-flex items-center gap-1" aria-label="MobiCare">
+            <img src="/mobicare-pin.png" alt="" className="h-7 w-auto shrink-0" />
+            <span className="font-display font-bold text-sm leading-none">
+              <span className="text-[#0B3D2E]">Mobi</span>
+              <span className="text-[#2E9E77]">Care</span>
+            </span>
+          </div>
           <label className="sr-only" htmlFor="hq-mobile-navigation">HQ section</label>
           <select
             id="hq-mobile-navigation"

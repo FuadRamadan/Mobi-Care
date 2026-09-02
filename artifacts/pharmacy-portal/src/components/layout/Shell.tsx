@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Redirect, Link } from "wouter";
 import { calculateDaysRemaining, isInsideWarningWindow } from "@/utils/password";
 import { AlertCircle, Menu, X } from "lucide-react";
+import { MobiCareLogo } from "@/components/MobiCareLogo";
 import {
   Sheet,
   SheetContent,
@@ -110,13 +111,8 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <img
-            src={`${import.meta.env.BASE_URL}mobicare-pin.png`}
-            alt=""
-            className="h-8 w-auto"
-          />
+          <MobiCareLogo markClassName="h-8" textClassName="text-sm" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold leading-tight">MobiCare</p>
             <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
               Pharmacy Portal
             </p>

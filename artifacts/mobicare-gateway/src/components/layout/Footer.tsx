@@ -7,8 +7,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-12">
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4 inline-flex">
-              <img src="/mobicare-pin.png" alt="MobiCare" className="h-9 w-auto" />
-              <span className="font-display font-bold text-2xl tracking-tight text-white">MobiCare</span>
+              <span className="rounded-full bg-white px-3 py-1.5 inline-flex items-center gap-2">
+                <img src="/mobicare-pin.png" alt="" className="h-9 w-auto" />
+                <span className="font-display font-bold text-2xl tracking-tight">
+                  <span className="text-[#0B3D2E]">Mobi</span>
+                  <span className="text-[#2E9E77]">Care</span>
+                </span>
+              </span>
             </Link>
             <p className="text-secondary/70 max-w-sm text-sm leading-relaxed">
               Your trusted connection to pharmacies across Sierra Leone.

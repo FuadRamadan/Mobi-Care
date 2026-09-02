@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ArrowLeft } from "lucide-react";
+import { MobiCareLogo } from "@/components/MobiCareLogo";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Username or phone is required"),
@@ -53,7 +54,7 @@ export default function Login() {
               <ArrowLeft className="w-4 h-4" />
               Back to MobiCare
             </a>
-            <img src={`${import.meta.env.BASE_URL}mobicare-pin.png`} alt="MobiCare Logo" className="h-16 w-auto object-contain mb-8" />
+            <MobiCareLogo className="mb-8" markClassName="h-14" textClassName="text-3xl" />
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Pharmacy Portal
             </h2>

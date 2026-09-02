@@ -17,6 +17,7 @@ import { Redirect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { useColors } from '@/hooks/useColors';
+import { MobiCareLogo } from '@/components/MobiCareLogo';
 import {
   confirmPatientPasswordReset,
   requestPatientPasswordReset,
@@ -176,10 +177,7 @@ export default function LoginScreen() {
       >
         {/* Header */}
         <View style={s.header}>
-          <View style={s.logoBox}>
-            <Ionicons name="medkit" size={32} color="#FFFFFF" />
-          </View>
-          <Text style={s.brandName}>MobiCare</Text>
+          <MobiCareLogo inverse />
           <Text style={s.tagline}>Medicine, delivered to your door</Text>
         </View>
 
@@ -379,16 +377,6 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
       paddingHorizontal: 24,
     },
     header: { alignItems: 'center', marginBottom: 36 },
-    logoBox: {
-      width: 72,
-      height: 72,
-      borderRadius: 22,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 14,
-    },
-    brandName: { fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
     tagline: { fontSize: 14, color: 'rgba(255,255,255,0.65)', marginTop: 4 },
     toggleRow: {
       flexDirection: 'row',

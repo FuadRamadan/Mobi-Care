@@ -35,8 +35,12 @@ export default function HqLogin() {
       <div className="w-full max-w-md bg-card border rounded-3xl shadow-xl p-8 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-2 bg-dark-green" />
 
-        <div className="flex justify-center mb-6">
-          <img src="/mobicare-pin.png" alt="MobiCare" className="h-14 w-auto" />
+        <div className="flex items-center justify-center gap-2 mb-6" aria-label="MobiCare">
+          <img src="/mobicare-pin.png" alt="" className="h-14 w-auto" />
+          <span className="font-display font-bold text-3xl leading-none">
+            <span className="text-[#0B3D2E]">Mobi</span>
+            <span className="text-[#2E9E77]">Care</span>
+          </span>
         </div>
 
         <div className="text-center mb-8">
