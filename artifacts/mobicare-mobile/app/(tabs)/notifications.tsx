@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   FlatList,
   Platform,
@@ -79,8 +79,7 @@ export default function NotificationsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const isWeb = Platform.OS === 'web';
   const topPad = isWeb ? insets.top + 67 : insets.top;
   const canQuery = !isAuthLoading && isAuthenticated;
@@ -117,15 +116,6 @@ export default function NotificationsScreen() {
 
   const s = makeStyles(colors);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } catch {
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
       <MobiCareHeader />
@@ -136,16 +126,6 @@ export default function NotificationsScreen() {
             <Text style={s.badgeText}>{unreadData!.unreadCount}</Text>
           </View>
         )}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-          disabled={isLoggingOut}
-          onPress={handleLogout}
-          style={s.logoutButton}
-          testID="notifications-sign-out"
-        >
-          <Ionicons name="log-out-outline" size={22} color={colors.destructive} />
-        </Pressable>
       </View>
 
       <FlatList
@@ -179,7 +159,6 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     container: { flex: 1, backgroundColor: colors.background },
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 16 },
     screenTitle: { fontSize: 26, fontWeight: '800', color: colors.darkGreen },
-    logoutButton: { marginLeft: 'auto', padding: 8 },
     badge: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
     badgeText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
     list: { paddingHorizontal: 16, paddingBottom: 120, gap: 8 },

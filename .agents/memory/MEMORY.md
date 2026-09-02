@@ -16,3 +16,4 @@
 - [Delivery receipt ownership](delivery-receipt-ownership.md) — HQ may advance delivery only to delivering; the owning customer alone confirms receipt and sets delivered.
 - [Courier retirement](courier-retirement.md) — deleting a courier retires them from fleet views while preserving historical order and settlement attribution.
 - [Patient eligibility and cancellation](patient-eligibility-cancellation.md) — adult registration is enforced server-side; patients may cancel only before courier assignment.
+- [Catalogue replacement safety](catalogue-replacement-safety.md) — aggregate variant files by generic drug and preserve referenced IDs or remap aliases before retiring old rows.

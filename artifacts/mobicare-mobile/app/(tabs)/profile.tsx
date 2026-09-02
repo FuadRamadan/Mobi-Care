@@ -38,12 +38,13 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [ninDraft, setNinDraft] = useState<string | null>(null);
   const [addressDraft, setAddressDraft] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
   const [nationalityDraft, setNationalityDraft] = useState<string | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? insets.top + 67 : insets.top;
 
@@ -159,6 +160,33 @@ export default function ProfileScreen() {
         nationality: currentNationality.trim() || null,
       },
     });
+  };
+
+  const exitSession = async () => {
+    setIsExiting(true);
+    try {
+      await logout();
+    } catch {
+      setIsExiting(false);
+      Alert.alert("Could not exit", "Your session could not be closed. Please try again.");
+    }
+  };
+
+  const confirmExit = () => {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Exit MobiCare?\n\nAre you sure you want to exit your patient session?");
+      if (confirmed) void exitSession();
+      return;
+    }
+
+    Alert.alert(
+      "Exit MobiCare?",
+      "Are you sure you want to exit your patient session?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Exit", style: "destructive", onPress: () => void exitSession() },
+      ],
+    );
   };
 
   return (
@@ -306,6 +334,30 @@ export default function ProfileScreen() {
                 )}
               </Pressable>
             </View>
+
+            <View style={s.sessionSection}>
+              <Text style={s.sessionTitle}>Session</Text>
+              <Text style={s.sessionHint}>Exit securely when you have finished using MobiCare.</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Exit patient session"
+                testID="profile-exit-button"
+                disabled={isExiting}
+                onPress={confirmExit}
+                style={({ pressed }) => [
+                  s.exitButton,
+                  pressed && !isExiting && s.exitButtonPressed,
+                  isExiting && s.exitButtonDisabled,
+                ]}
+              >
+                {isExiting ? (
+                  <ActivityIndicator size="small" color={colors.destructive} />
+                ) : (
+                  <Feather name="log-out" size={18} color={colors.destructive} />
+                )}
+                <Text style={s.exitText}>{isExiting ? "Exiting…" : "Exit"}</Text>
+              </Pressable>
+            </View>
           </>
         )}
       </ScrollView>
@@ -341,5 +393,12 @@ function makeStyles(colors: Colors) {
     saveButton: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: colors.radius, backgroundColor: colors.primary, marginTop: 12 },
     saveButtonDisabled: { opacity: 0.45 },
     saveText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
+    sessionSection: { marginTop: 20, padding: 18, borderWidth: 1, borderColor: colors.border, borderRadius: colors.radius + 4, backgroundColor: colors.card, gap: 7 },
+    sessionTitle: { color: colors.foreground, fontSize: 15, fontWeight: "800" },
+    sessionHint: { color: colors.mutedForeground, fontSize: 13, lineHeight: 18 },
+    exitButton: { minHeight: 48, marginTop: 5, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: colors.destructive, borderRadius: colors.radius, backgroundColor: colors.background },
+    exitButtonPressed: { opacity: 0.72 },
+    exitButtonDisabled: { opacity: 0.5 },
+    exitText: { color: colors.destructive, fontSize: 15, fontWeight: "800" },
   });
 }

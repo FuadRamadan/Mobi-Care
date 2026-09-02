@@ -25,7 +25,9 @@ type PharmacyStatus = (typeof PHARMACY_WRITABLE_STATUSES)[number];
 
 const ALLOWED_TRANSITIONS: Record<string, PharmacyStatus[]> = {
   paid: ["confirmed"],
-  confirmed: ["packaging"],
+  // The three-stage pharmacy UI records "Packaged" directly as `ready`.
+  // `packaging` remains accepted for older clients and in-flight legacy orders.
+  confirmed: ["packaging", "ready"],
   packaging: ["ready"],
 };
 

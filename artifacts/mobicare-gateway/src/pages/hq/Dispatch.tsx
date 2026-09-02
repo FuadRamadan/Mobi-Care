@@ -48,6 +48,9 @@ export default function HqDispatch() {
 
   return (
     <HqLayout title="Dispatch">
+      <p className="text-sm text-muted-foreground mb-4">
+        Assign an active courier as soon as a pharmacy marks a delivery order as packaged.
+      </p>
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : orders.length === 0 ? (

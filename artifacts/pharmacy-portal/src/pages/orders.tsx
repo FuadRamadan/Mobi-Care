@@ -7,7 +7,6 @@ import {
   getListOrdersQueryKey,
   getGetAnalyticsOverviewQueryKey,
   Order, 
-  OrderStatus 
 } from "@workspace/api-client-react";
 import { formatLeones, formatDateTime } from "@/lib/format";
 import { 
@@ -33,15 +32,28 @@ const STATUS_CONFIG: Record<string, { label: string, color: string, icon: any }>
   awaiting_payment: { label: "Awaiting Payment", color: "bg-muted text-muted-foreground", icon: Clock },
   paid: { label: "Paid - Needs Confirmation", color: "bg-accent text-accent-foreground border-accent-foreground/20 border", icon: AlertCircle },
   confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300", icon: CheckCircle },
-  packaging: { label: "Packaging", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300", icon: Package },
-  ready: { label: "Ready", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border border-green-200", icon: ShoppingBag },
+  packaging: { label: "Packaging (Legacy)", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300", icon: Package },
+  ready: { label: "Packaged", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border border-green-200", icon: Package },
   assigned: { label: "Courier Assigned", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300", icon: Truck },
-  picked_up: { label: "Picked Up", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300", icon: Truck },
+  picked_up: { label: "Collected", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300", icon: Truck },
   delivering: { label: "Delivering", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300", icon: Truck },
   delivered: { label: "Delivered", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", icon: Check },
   collected: { label: "Collected", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", icon: Check },
   cancelled: { label: "Cancelled", color: "bg-destructive/10 text-destructive", icon: AlertCircle },
 };
+
+const DELIVERY_STAGES = [
+  { label: "Confirmed", statuses: ["confirmed", "packaging", "ready", "assigned", "picked_up", "delivering", "delivered"] },
+  { label: "Packaged", statuses: ["ready", "assigned", "picked_up", "delivering", "delivered"] },
+  { label: "Collected", statuses: ["picked_up", "delivering", "delivered"] },
+] as const;
+
+function statusConfigFor(order: Order) {
+  if (order.status === "collected" && order.fulfillmentType === "collection") {
+    return { label: "Patient Handover Complete", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", icon: Check };
+  }
+  return STATUS_CONFIG[order.status] || { label: order.status, color: "bg-muted", icon: Clock };
+}
 
 export default function Orders() {
   const [location] = useLocation();
@@ -138,7 +150,7 @@ export default function Orders() {
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => {
-                  const statusInfo = STATUS_CONFIG[order.status] || { label: order.status, color: "bg-muted" };
+                  const statusInfo = statusConfigFor(order);
                   return (
                     <TableRow 
                       key={order.id} 
@@ -170,12 +182,21 @@ export default function Orders() {
       <OrderDetailsSheet 
         order={selectedOrder} 
         onClose={() => setSelectedOrder(null)} 
+        onOrderUpdated={setSelectedOrder}
       />
     </div>
   );
 }
 
-function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: () => void }) {
+function OrderDetailsSheet({
+  order,
+  onClose,
+  onOrderUpdated,
+}: {
+  order: Order | null;
+  onClose: () => void;
+  onOrderUpdated: (order: Order) => void;
+}) {
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus();
   const markCollected = useMarkOrderCollected();
@@ -183,15 +204,15 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
   
   if (!order) return <Sheet open={false} onOpenChange={onClose}><SheetContent /></Sheet>;
 
-  const statusInfo = STATUS_CONFIG[order.status] || { label: order.status, color: "bg-muted" };
+  const statusInfo = statusConfigFor(order);
 
-  const handleStatusUpdate = async (newStatus: "confirmed" | "packaging" | "ready") => {
+  const handleStatusUpdate = async (newStatus: "confirmed" | "ready") => {
     try {
-      await updateStatus.mutateAsync({ id: order.id, data: { status: newStatus } });
-      toast.success(`Order marked as ${newStatus}`);
+      const updated = await updateStatus.mutateAsync({ id: order.id, data: { status: newStatus } });
+      onOrderUpdated(updated);
+      toast.success(newStatus === "ready" ? "Order marked as packaged" : "Order confirmed");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
-      onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to update order");
     }
@@ -199,11 +220,11 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
 
   const handleCollected = async () => {
     try {
-      await markCollected.mutateAsync({ id: order.id, data: { idChecked: true } });
-      toast.success("Order marked as collected");
+      const updated = await markCollected.mutateAsync({ id: order.id, data: { idChecked: true } });
+      onOrderUpdated(updated);
+      toast.success("Patient handover completed");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
-      onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to complete order");
     }
@@ -211,11 +232,11 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
 
   const handlePickedUp = async () => {
     try {
-      await markPickedUp.mutateAsync({ id: order.id });
-      toast.success("Order marked as picked up by courier");
+      const updated = await markPickedUp.mutateAsync({ id: order.id });
+      onOrderUpdated(updated);
+      toast.success("Order marked as collected by courier");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
-      onClose();
     } catch (e: any) {
       toast.error(e.message || "Failed to complete order");
     }
@@ -295,35 +316,65 @@ function OrderDetailsSheet({ order, onClose }: { order: Order | null; onClose: (
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Actions</h3>
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pharmacy Stages</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {order.fulfillmentType === "delivery"
+                  ? "Collected means the assigned courier has collected the packaged order."
+                  : "In-person patient handover is tracked separately from courier collection."}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {DELIVERY_STAGES.map((stage, index) => {
+                const complete = stage.statuses.includes(order.status as never);
+                const unavailable = order.fulfillmentType === "collection" && index === 2;
+                return (
+                  <div
+                    key={stage.label}
+                    className={`rounded-lg border px-3 py-3 text-center ${
+                      complete && !unavailable
+                        ? "border-primary/30 bg-primary/5 text-primary"
+                        : "bg-muted/20 text-muted-foreground"
+                    }`}
+                  >
+                    <div className="flex justify-center mb-1">
+                      {complete && !unavailable ? <CheckCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                    </div>
+                    <div className="text-xs font-semibold">{unavailable ? "In-Person" : stage.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Next Action</h3>
             <div className="flex flex-col gap-2 p-4 bg-muted/20 border rounded-lg">
               {order.status === "paid" && (
                 <Button onClick={() => handleStatusUpdate("confirmed")} className="w-full">
                   Confirm Order
                 </Button>
               )}
-              {order.status === "confirmed" && (
-                <Button onClick={() => handleStatusUpdate("packaging")} className="w-full">
-                  Start Packaging
-                </Button>
-              )}
-              {order.status === "packaging" && (
+              {(order.status === "confirmed" || order.status === "packaging") && (
                 <Button onClick={() => handleStatusUpdate("ready")} className="w-full">
-                  Mark as Ready
+                  Mark as Packaged
                 </Button>
               )}
               {order.status === "ready" && order.fulfillmentType === "collection" && (
                 <Button onClick={handleCollected} className="w-full">
-                  Customer Collected (ID Checked)
+                  Complete Patient Handover (ID Checked)
                 </Button>
               )}
               {order.status === "ready" && order.fulfillmentType === "delivery" && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Packaged. Waiting for HQ to assign a courier.
+                </p>
+              )}
+              {order.status === "assigned" && order.fulfillmentType === "delivery" && (
                 <Button onClick={handlePickedUp} className="w-full">
-                  Courier Picked Up
+                  Mark as Collected by Courier
                 </Button>
               )}
               
-              {["awaiting_payment", "assigned", "delivering", "delivered", "collected", "cancelled"].includes(order.status) && (
+              {["awaiting_payment", "picked_up", "delivering", "delivered", "collected", "cancelled"].includes(order.status) && (
                 <p className="text-sm text-muted-foreground text-center py-2">
                   No actions available for current status.
                 </p>

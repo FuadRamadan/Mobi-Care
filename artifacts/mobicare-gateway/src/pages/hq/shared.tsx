@@ -34,10 +34,15 @@ const STATUS_STYLES: Record<string, string> = {
   paid_settlement: 'bg-green-100 text-green-800',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  ready: 'packaged',
+  picked_up: 'collected',
+};
+
 export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge variant="secondary" className={STATUS_STYLES[status] ?? ''}>
-      {status.replaceAll('_', ' ')}
+      {(STATUS_LABELS[status] ?? status).replaceAll('_', ' ')}
     </Badge>
   );
 }
