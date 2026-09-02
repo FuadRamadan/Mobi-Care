@@ -129,8 +129,12 @@ export default function PatientLogin() {
           Back to MobiCare
         </button>
 
-        <div className="flex justify-center mb-6">
-          <img src="/mobicare-pin.png" alt="MobiCare" className="h-14 w-auto" />
+        <div className="flex items-center justify-center gap-2 mb-6" aria-label="MobiCare">
+          <img src="/mobicare-pin.png" alt="" className="h-14 w-auto" />
+          <span className="font-display font-bold text-3xl leading-none">
+            <span className="text-[#0B3D2E]">Mobi</span>
+            <span className="text-[#2E9E77]">Care</span>
+          </span>
         </div>
 
         <div className="text-center mb-6">

@@ -36,9 +36,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-secondary/40 flex flex-col">
       <header className="sticky top-0 z-20 bg-dark-green text-white shadow-md">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 h-14">
-          <Link href="/app/search" className="flex items-center gap-2 font-display font-bold">
-            <img src="/mobicare-pin.png" alt="MobiCare" className="h-7 w-auto" />
-            MobiCare
+          <Link
+            href="/app/search"
+            className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 hover:opacity-90 transition-opacity"
+            aria-label="MobiCare"
+          >
+            <img src="/mobicare-pin.png" alt="" className="h-7 w-auto" />
+            <span className="font-display font-bold text-lg leading-none">
+              <span className="text-[#0B3D2E]">Mobi</span>
+              <span className="text-[#2E9E77]">Care</span>
+            </span>
           </Link>
           <div className="flex items-center gap-2 text-sm">
             <span className="opacity-80 hidden sm:inline" data-testid="text-patient-name">{user.name}</span>
