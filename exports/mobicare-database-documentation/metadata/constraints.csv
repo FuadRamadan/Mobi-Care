@@ -1,0 +1,280 @@
+table_name,constraint_name,constraint_type,columns
+api_connections,2200_33548_12_not_null,CHECK,""
+api_connections,2200_33548_13_not_null,CHECK,""
+api_connections,2200_33548_1_not_null,CHECK,""
+api_connections,2200_33548_2_not_null,CHECK,""
+api_connections,2200_33548_3_not_null,CHECK,""
+api_connections,2200_33548_4_not_null,CHECK,""
+api_connections,2200_33548_6_not_null,CHECK,""
+api_connections,2200_33548_7_not_null,CHECK,""
+api_connections,api_connections_updated_by_hq_staff_id_fk,FOREIGN KEY,updated_by
+api_connections,api_connections_pkey,PRIMARY KEY,id
+audit_log,2200_16681_1_not_null,CHECK,""
+audit_log,2200_16681_2_not_null,CHECK,""
+audit_log,2200_16681_5_not_null,CHECK,""
+audit_log,2200_16681_6_not_null,CHECK,""
+audit_log,2200_16681_9_not_null,CHECK,""
+audit_log,audit_log_pkey,PRIMARY KEY,id
+courier_settlements,2200_16647_10_not_null,CHECK,""
+courier_settlements,2200_16647_11_not_null,CHECK,""
+courier_settlements,2200_16647_1_not_null,CHECK,""
+courier_settlements,2200_16647_2_not_null,CHECK,""
+courier_settlements,2200_16647_3_not_null,CHECK,""
+courier_settlements,2200_16647_4_not_null,CHECK,""
+courier_settlements,2200_16647_5_not_null,CHECK,""
+courier_settlements,2200_16647_6_not_null,CHECK,""
+courier_settlements,2200_16647_7_not_null,CHECK,""
+courier_settlements,courier_settlements_courier_id_couriers_id_fk,FOREIGN KEY,courier_id
+courier_settlements,courier_settlements_pkey,PRIMARY KEY,id
+couriers,2200_16633_1_not_null,CHECK,""
+couriers,2200_16633_2_not_null,CHECK,""
+couriers,2200_16633_3_not_null,CHECK,""
+couriers,2200_16633_4_not_null,CHECK,""
+couriers,2200_16633_5_not_null,CHECK,""
+couriers,2200_16633_6_not_null,CHECK,""
+couriers,2200_16633_7_not_null,CHECK,""
+couriers,couriers_pkey,PRIMARY KEY,id
+couriers,couriers_phone_unique,UNIQUE,phone
+drug_catalogue,2200_16474_10_not_null,CHECK,""
+drug_catalogue,2200_16474_12_not_null,CHECK,""
+drug_catalogue,2200_16474_13_not_null,CHECK,""
+drug_catalogue,2200_16474_16_not_null,CHECK,""
+drug_catalogue,2200_16474_1_not_null,CHECK,""
+drug_catalogue,2200_16474_2_not_null,CHECK,""
+drug_catalogue,2200_16474_5_not_null,CHECK,""
+drug_catalogue,2200_16474_6_not_null,CHECK,""
+drug_catalogue,2200_16474_7_not_null,CHECK,""
+drug_catalogue,2200_16474_9_not_null,CHECK,""
+drug_catalogue,drug_catalogue_proposed_by_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,proposed_by_pharmacy_id
+drug_catalogue,drug_catalogue_reviewed_by_hq_staff_id_hq_staff_id_fk,FOREIGN KEY,reviewed_by_hq_staff_id
+drug_catalogue,drug_catalogue_pkey,PRIMARY KEY,id
+flags,2200_16671_10_not_null,CHECK,""
+flags,2200_16671_1_not_null,CHECK,""
+flags,2200_16671_2_not_null,CHECK,""
+flags,2200_16671_3_not_null,CHECK,""
+flags,2200_16671_4_not_null,CHECK,""
+flags,2200_16671_6_not_null,CHECK,""
+flags,flags_order_id_orders_id_fk,FOREIGN KEY,order_id
+flags,flags_pkey,PRIMARY KEY,id
+hq_notifications,2200_16776_1_not_null,CHECK,""
+hq_notifications,2200_16776_2_not_null,CHECK,""
+hq_notifications,2200_16776_3_not_null,CHECK,""
+hq_notifications,2200_16776_4_not_null,CHECK,""
+hq_notifications,2200_16776_8_not_null,CHECK,""
+hq_notifications,hq_notifications_hq_staff_id_hq_staff_id_fk,FOREIGN KEY,hq_staff_id
+hq_notifications,hq_notifications_pkey,PRIMARY KEY,id
+hq_refresh_tokens,2200_16607_1_not_null,CHECK,""
+hq_refresh_tokens,2200_16607_2_not_null,CHECK,""
+hq_refresh_tokens,2200_16607_3_not_null,CHECK,""
+hq_refresh_tokens,2200_16607_4_not_null,CHECK,""
+hq_refresh_tokens,2200_16607_6_not_null,CHECK,""
+hq_refresh_tokens,hq_refresh_tokens_hq_staff_id_hq_staff_id_fk,FOREIGN KEY,hq_staff_id
+hq_refresh_tokens,hq_refresh_tokens_pkey,PRIMARY KEY,id
+hq_refresh_tokens,hq_refresh_tokens_token_hash_unique,UNIQUE,token_hash
+hq_staff,2200_16618_1_not_null,CHECK,""
+hq_staff,2200_16618_2_not_null,CHECK,""
+hq_staff,2200_16618_3_not_null,CHECK,""
+hq_staff,2200_16618_5_not_null,CHECK,""
+hq_staff,2200_16618_6_not_null,CHECK,""
+hq_staff,2200_16618_7_not_null,CHECK,""
+hq_staff,2200_16618_8_not_null,CHECK,""
+hq_staff,2200_16618_9_not_null,CHECK,""
+hq_staff,hq_staff_pkey,PRIMARY KEY,id
+hq_staff,hq_staff_phone_unique,UNIQUE,phone
+hq_staff,hq_staff_username_unique,UNIQUE,username
+notifications,2200_16533_1_not_null,CHECK,""
+notifications,2200_16533_2_not_null,CHECK,""
+notifications,2200_16533_3_not_null,CHECK,""
+notifications,2200_16533_4_not_null,CHECK,""
+notifications,2200_16533_8_not_null,CHECK,""
+notifications,notifications_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+notifications,notifications_pkey,PRIMARY KEY,id
+order_items,2200_16513_1_not_null,CHECK,""
+order_items,2200_16513_2_not_null,CHECK,""
+order_items,2200_16513_3_not_null,CHECK,""
+order_items,2200_16513_4_not_null,CHECK,""
+order_items,2200_16513_5_not_null,CHECK,""
+order_items,2200_16513_6_not_null,CHECK,""
+order_items,2200_16513_8_not_null,CHECK,""
+order_items,order_items_drug_id_drug_catalogue_id_fk,FOREIGN KEY,drug_id
+order_items,order_items_inventory_id_pharmacy_inventory_id_fk,FOREIGN KEY,inventory_id
+order_items,order_items_order_id_orders_id_fk,FOREIGN KEY,order_id
+order_items,order_items_pkey,PRIMARY KEY,id
+orders,2200_16501_10_not_null,CHECK,""
+orders,2200_16501_11_not_null,CHECK,""
+orders,2200_16501_13_not_null,CHECK,""
+orders,2200_16501_15_not_null,CHECK,""
+orders,2200_16501_1_not_null,CHECK,""
+orders,2200_16501_2_not_null,CHECK,""
+orders,2200_16501_3_not_null,CHECK,""
+orders,2200_16501_4_not_null,CHECK,""
+orders,2200_16501_5_not_null,CHECK,""
+orders,2200_16501_6_not_null,CHECK,""
+orders,2200_16501_7_not_null,CHECK,""
+orders,2200_16501_8_not_null,CHECK,""
+orders,orders_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+orders,orders_pkey,PRIMARY KEY,id
+patient_notifications,2200_16762_1_not_null,CHECK,""
+patient_notifications,2200_16762_2_not_null,CHECK,""
+patient_notifications,2200_16762_3_not_null,CHECK,""
+patient_notifications,2200_16762_4_not_null,CHECK,""
+patient_notifications,2200_16762_8_not_null,CHECK,""
+patient_notifications,patient_notifications_patient_id_patients_id_fk,FOREIGN KEY,patient_id
+patient_notifications,patient_notifications_pkey,PRIMARY KEY,id
+patient_password_reset_codes,2200_25342_1_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_3_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_4_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_5_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_6_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_7_not_null,CHECK,""
+patient_password_reset_codes,2200_25342_9_not_null,CHECK,""
+patient_password_reset_codes,patient_password_reset_codes_patient_id_patients_id_fk,FOREIGN KEY,patient_id
+patient_password_reset_codes,patient_password_reset_codes_pkey,PRIMARY KEY,id
+patient_refresh_tokens,2200_16717_1_not_null,CHECK,""
+patient_refresh_tokens,2200_16717_2_not_null,CHECK,""
+patient_refresh_tokens,2200_16717_3_not_null,CHECK,""
+patient_refresh_tokens,2200_16717_4_not_null,CHECK,""
+patient_refresh_tokens,2200_16717_6_not_null,CHECK,""
+patient_refresh_tokens,patient_refresh_tokens_patient_id_patients_id_fk,FOREIGN KEY,patient_id
+patient_refresh_tokens,patient_refresh_tokens_pkey,PRIMARY KEY,id
+patient_refresh_tokens,patient_refresh_tokens_token_hash_unique,UNIQUE,token_hash
+patients,2200_16728_1_not_null,CHECK,""
+patients,2200_16728_2_not_null,CHECK,""
+patients,2200_16728_3_not_null,CHECK,""
+patients,2200_16728_4_not_null,CHECK,""
+patients,2200_16728_5_not_null,CHECK,""
+patients,2200_16728_6_not_null,CHECK,""
+patients,2200_16728_7_not_null,CHECK,""
+patients,2200_16728_9_not_null,CHECK,""
+patients,patients_pkey,PRIMARY KEY,id
+patients,patients_phone_unique,UNIQUE,phone
+pharmacies,2200_16447_10_not_null,CHECK,""
+pharmacies,2200_16447_11_not_null,CHECK,""
+pharmacies,2200_16447_12_not_null,CHECK,""
+pharmacies,2200_16447_13_not_null,CHECK,""
+pharmacies,2200_16447_14_not_null,CHECK,""
+pharmacies,2200_16447_16_not_null,CHECK,""
+pharmacies,2200_16447_1_not_null,CHECK,""
+pharmacies,2200_16447_2_not_null,CHECK,""
+pharmacies,2200_16447_3_not_null,CHECK,""
+pharmacies,2200_16447_8_not_null,CHECK,""
+pharmacies,2200_16447_9_not_null,CHECK,""
+pharmacies,pharmacies_pkey,PRIMARY KEY,id
+pharmacies,pharmacies_phone_unique,UNIQUE,phone
+pharmacies,pharmacies_username_unique,UNIQUE,username
+pharmacy_inventory,2200_16487_10_not_null,CHECK,""
+pharmacy_inventory,2200_16487_13_not_null,CHECK,""
+pharmacy_inventory,2200_16487_1_not_null,CHECK,""
+pharmacy_inventory,2200_16487_22_not_null,CHECK,""
+pharmacy_inventory,2200_16487_23_not_null,CHECK,""
+pharmacy_inventory,2200_16487_2_not_null,CHECK,""
+pharmacy_inventory,2200_16487_3_not_null,CHECK,""
+pharmacy_inventory,2200_16487_4_not_null,CHECK,""
+pharmacy_inventory,2200_16487_5_not_null,CHECK,""
+pharmacy_inventory,2200_16487_6_not_null,CHECK,""
+pharmacy_inventory,2200_16487_7_not_null,CHECK,""
+pharmacy_inventory,2200_16487_8_not_null,CHECK,""
+pharmacy_inventory,2200_16487_9_not_null,CHECK,""
+pharmacy_inventory,pharmacy_inventory_drug_id_drug_catalogue_id_fk,FOREIGN KEY,drug_id
+pharmacy_inventory,pharmacy_inventory_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+pharmacy_inventory,pharmacy_inventory_pkey,PRIMARY KEY,id
+pharmacy_password_history,2200_24984_1_not_null,CHECK,""
+pharmacy_password_history,2200_24984_2_not_null,CHECK,""
+pharmacy_password_history,2200_24984_3_not_null,CHECK,""
+pharmacy_password_history,2200_24984_4_not_null,CHECK,""
+pharmacy_password_history,2200_24984_5_not_null,CHECK,""
+pharmacy_password_history,pharmacy_password_history_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+pharmacy_password_history,pharmacy_password_history_pkey,PRIMARY KEY,id
+pharmacy_password_policy,2200_24968_10_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_11_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_12_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_1_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_2_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_3_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_4_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_5_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_6_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_7_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_8_not_null,CHECK,""
+pharmacy_password_policy,2200_24968_9_not_null,CHECK,""
+pharmacy_password_policy,pharmacy_password_policy_pkey,PRIMARY KEY,id
+prescription_uploads,2200_16746_1_not_null,CHECK,""
+prescription_uploads,2200_16746_2_not_null,CHECK,""
+prescription_uploads,2200_16746_3_not_null,CHECK,""
+prescription_uploads,2200_16746_5_not_null,CHECK,""
+prescription_uploads,prescription_uploads_patient_id_patients_id_fk,FOREIGN KEY,patient_id
+prescription_uploads,prescription_uploads_pkey,PRIMARY KEY,id
+prescription_uploads,prescription_uploads_image_key_unique,UNIQUE,image_key
+prescriptions,2200_16522_12_not_null,CHECK,""
+prescriptions,2200_16522_13_not_null,CHECK,""
+prescriptions,2200_16522_1_not_null,CHECK,""
+prescriptions,2200_16522_2_not_null,CHECK,""
+prescriptions,2200_16522_3_not_null,CHECK,""
+prescriptions,2200_16522_4_not_null,CHECK,""
+prescriptions,2200_16522_5_not_null,CHECK,""
+prescriptions,2200_16522_6_not_null,CHECK,""
+prescriptions,prescriptions_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+prescriptions,prescriptions_pkey,PRIMARY KEY,id
+refresh_tokens,2200_16463_1_not_null,CHECK,""
+refresh_tokens,2200_16463_2_not_null,CHECK,""
+refresh_tokens,2200_16463_3_not_null,CHECK,""
+refresh_tokens,2200_16463_4_not_null,CHECK,""
+refresh_tokens,2200_16463_6_not_null,CHECK,""
+refresh_tokens,2200_16463_7_not_null,CHECK,""
+refresh_tokens,refresh_tokens_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+refresh_tokens,refresh_tokens_pkey,PRIMARY KEY,id
+refresh_tokens,refresh_tokens_token_hash_unique,UNIQUE,token_hash
+saved_api_request_history,2200_33608_11_not_null,CHECK,""
+saved_api_request_history,2200_33608_1_not_null,CHECK,""
+saved_api_request_history,2200_33608_2_not_null,CHECK,""
+saved_api_request_history,2200_33608_4_not_null,CHECK,""
+saved_api_request_history,2200_33608_5_not_null,CHECK,""
+saved_api_request_history,2200_33608_7_not_null,CHECK,""
+saved_api_request_history,2200_33608_8_not_null,CHECK,""
+saved_api_request_history,saved_api_request_history_actor_id_hq_staff_id_fk,FOREIGN KEY,actor_id
+saved_api_request_history,saved_api_request_history_request_id_saved_api_requests_id_fk,FOREIGN KEY,request_id
+saved_api_request_history,saved_api_request_history_pkey,PRIMARY KEY,id
+saved_api_requests,2200_33585_12_not_null,CHECK,""
+saved_api_requests,2200_33585_13_not_null,CHECK,""
+saved_api_requests,2200_33585_1_not_null,CHECK,""
+saved_api_requests,2200_33585_2_not_null,CHECK,""
+saved_api_requests,2200_33585_3_not_null,CHECK,""
+saved_api_requests,2200_33585_4_not_null,CHECK,""
+saved_api_requests,2200_33585_5_not_null,CHECK,""
+saved_api_requests,2200_33585_7_not_null,CHECK,""
+saved_api_requests,2200_33585_8_not_null,CHECK,""
+saved_api_requests,saved_api_requests_created_by_hq_staff_id_fk,FOREIGN KEY,created_by
+saved_api_requests,saved_api_requests_updated_by_hq_staff_id_fk,FOREIGN KEY,updated_by
+saved_api_requests,saved_api_requests_pkey,PRIMARY KEY,id
+settlements,2200_16659_10_not_null,CHECK,""
+settlements,2200_16659_11_not_null,CHECK,""
+settlements,2200_16659_1_not_null,CHECK,""
+settlements,2200_16659_2_not_null,CHECK,""
+settlements,2200_16659_3_not_null,CHECK,""
+settlements,2200_16659_4_not_null,CHECK,""
+settlements,2200_16659_5_not_null,CHECK,""
+settlements,2200_16659_6_not_null,CHECK,""
+settlements,2200_16659_7_not_null,CHECK,""
+settlements,settlements_pharmacy_id_pharmacies_id_fk,FOREIGN KEY,pharmacy_id
+settlements,settlements_pkey,PRIMARY KEY,id
+team_members,2200_25014_1_not_null,CHECK,""
+team_members,2200_25014_2_not_null,CHECK,""
+team_members,2200_25014_3_not_null,CHECK,""
+team_members,2200_25014_4_not_null,CHECK,""
+team_members,2200_25014_6_not_null,CHECK,""
+team_members,2200_25014_7_not_null,CHECK,""
+team_members,2200_25014_8_not_null,CHECK,""
+team_members,team_members_pkey,PRIMARY KEY,id
+team_members,team_members_slug_unique,UNIQUE,slug
+team_photo_uploads,2200_25026_1_not_null,CHECK,""
+team_photo_uploads,2200_25026_2_not_null,CHECK,""
+team_photo_uploads,2200_25026_3_not_null,CHECK,""
+team_photo_uploads,2200_25026_4_not_null,CHECK,""
+team_photo_uploads,2200_25026_5_not_null,CHECK,""
+team_photo_uploads,2200_25026_6_not_null,CHECK,""
+team_photo_uploads,2200_25026_7_not_null,CHECK,""
+team_photo_uploads,2200_25026_9_not_null,CHECK,""
+team_photo_uploads,team_photo_uploads_requested_by_hq_staff_id_hq_staff_id_fk,FOREIGN KEY,requested_by_hq_staff_id
+team_photo_uploads,team_photo_uploads_team_member_id_team_members_id_fk,FOREIGN KEY,team_member_id
+team_photo_uploads,team_photo_uploads_pkey,PRIMARY KEY,id
+team_photo_uploads,team_photo_uploads_object_path_unique,UNIQUE,object_path

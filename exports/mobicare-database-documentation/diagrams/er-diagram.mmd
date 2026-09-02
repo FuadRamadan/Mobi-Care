@@ -1,0 +1,378 @@
+erDiagram
+  api_connections {
+    text id PK
+    text provider
+    text display_name
+    text category
+    text credentials_encrypted
+    jsonb public_config
+    bool is_enabled
+    timestamptz last_tested_at
+    text last_test_status
+    text last_test_message
+    uuid updated_by FK
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  audit_log {
+    uuid id PK
+    text actor_type
+    uuid actor_id
+    text actor_name
+    text action
+    text entity_type
+    uuid entity_id
+    jsonb details
+    timestamptz created_at
+  }
+  courier_settlements {
+    uuid id PK
+    uuid courier_id FK
+    int4 amount_leones
+    timestamptz period_start
+    timestamptz period_end
+    int4 delivery_count
+    settlement_status status
+    timestamptz paid_at
+    text reference
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  couriers {
+    uuid id PK
+    text name
+    text phone
+    text vehicle_type
+    bool is_active
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  drug_catalogue {
+    uuid id PK
+    text name
+    text generic_name
+    text description
+    drug_tier tier
+    text unit
+    bool is_approved
+    uuid proposed_by_pharmacy_id FK
+    timestamptz created_at
+    timestamptz updated_at
+    int4 max_units_per_order
+    _text common_strengths
+    _text common_forms
+    drug_primary_category primary_category
+    drug_subcategory subcategory
+    drug_review_status review_status
+    text rejection_reason
+    timestamptz reviewed_at
+    uuid reviewed_by_hq_staff_id FK
+  }
+  flags {
+    uuid id PK
+    uuid order_id FK
+    flag_type type
+    text reason
+    jsonb details
+    flag_status status
+    uuid reviewed_by_hq_staff_id
+    text review_note
+    timestamptz reviewed_at
+    timestamptz created_at
+  }
+  hq_notifications {
+    uuid id PK
+    uuid hq_staff_id FK
+    text title
+    text body
+    text type
+    uuid reference_id
+    timestamptz read_at
+    timestamptz created_at
+  }
+  hq_refresh_tokens {
+    uuid id PK
+    uuid hq_staff_id FK
+    text token_hash
+    timestamptz expires_at
+    timestamptz revoked_at
+    timestamptz created_at
+  }
+  hq_staff {
+    uuid id PK
+    text name
+    text username
+    text phone
+    bool is_active
+    text password_hash
+    timestamptz created_at
+    timestamptz updated_at
+    bool can_manage_integrations
+  }
+  notifications {
+    uuid id PK
+    uuid pharmacy_id FK
+    text title
+    text body
+    text type
+    uuid reference_id
+    timestamptz read_at
+    timestamptz created_at
+  }
+  order_items {
+    uuid id PK
+    uuid order_id FK
+    uuid drug_id FK
+    text drug_name
+    int4 quantity
+    numeric unit_price_leones
+    uuid prescription_id
+    timestamptz created_at
+    uuid inventory_id FK
+  }
+  orders {
+    uuid id PK
+    uuid pharmacy_id FK
+    text patient_name
+    text patient_phone
+    order_status status
+    fulfillment_type fulfillment_type
+    bool id_checked
+    numeric total_leones
+    uuid prescription_id
+    timestamptz created_at
+    timestamptz updated_at
+    uuid courier_id
+    bool cash_collected
+    timestamptz cash_collected_at
+    text payment_method
+    uuid patient_id
+    text delivery_address
+  }
+  patient_notifications {
+    uuid id PK
+    uuid patient_id FK
+    text title
+    text body
+    text type
+    uuid reference_id
+    timestamptz read_at
+    timestamptz created_at
+  }
+  patient_password_reset_codes {
+    uuid id PK
+    uuid patient_id FK
+    text phone_hash
+    text requester_hash
+    text code_hash
+    int4 attempt_count
+    timestamptz expires_at
+    timestamptz used_at
+    timestamptz created_at
+  }
+  patient_refresh_tokens {
+    uuid id PK
+    uuid patient_id FK
+    text token_hash
+    timestamptz expires_at
+    timestamptz revoked_at
+    timestamptz created_at
+  }
+  patients {
+    uuid id PK
+    text name
+    text phone
+    text password_hash
+    bool is_active
+    timestamptz created_at
+    timestamptz updated_at
+    text expo_push_token
+    int4 session_version
+  }
+  pharmacies {
+    uuid id PK
+    text name
+    text username
+    text phone
+    text address
+    text location_lat
+    text location_lng
+    bool is_active
+    bool controlled_substance_authorized
+    text password_hash
+    timestamptz created_at
+    timestamptz updated_at
+    bool must_change_password
+    timestamptz password_last_changed_at
+    timestamptz temporary_password_expires_at
+    int4 session_version
+  }
+  pharmacy_inventory {
+    uuid id PK
+    uuid pharmacy_id FK
+    uuid drug_id FK
+    numeric price_leones
+    int4 stock_quantity
+    bool available_for_delivery
+    bool available_for_collection
+    bool is_active
+    timestamptz created_at
+    timestamptz updated_at
+    varchar brand
+    varchar country_of_origin
+    int4 low_stock_alert_at
+    varchar strength
+    varchar form
+    varchar unit_of_sale
+    date expiry_date
+    varchar manufacturer
+    drug_primary_category primary_category
+    drug_subcategory subcategory
+    text other_category_text
+    bool requires_hq_review
+    inventory_completion_status completion_status
+  }
+  pharmacy_password_history {
+    uuid id PK
+    uuid pharmacy_id FK
+    text password_hash
+    timestamptz created_at
+    int4 sequence
+  }
+  pharmacy_password_policy {
+    int4 id PK
+    int4 max_password_age_days
+    int4 min_password_length
+    bool require_uppercase
+    bool require_lowercase
+    bool require_number
+    bool require_symbol
+    int4 password_history_count
+    int4 temporary_password_expiry_hours
+    timestamptz created_at
+    timestamptz updated_at
+    int4 password_expiry_warning_days
+  }
+  prescription_uploads {
+    uuid id PK
+    uuid patient_id FK
+    text image_key
+    timestamptz consumed_at
+    timestamptz created_at
+  }
+  prescriptions {
+    uuid id PK
+    uuid pharmacy_id FK
+    text patient_name
+    text patient_phone
+    text image_key
+    prescription_status status
+    _uuid approved_drug_ids
+    prescription_reject_reason reject_reason
+    text reject_note
+    timestamptz reviewed_at
+    uuid order_id
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  refresh_tokens {
+    uuid id PK
+    uuid pharmacy_id FK
+    text token_hash
+    timestamptz expires_at
+    timestamptz revoked_at
+    timestamptz created_at
+    int4 session_version
+  }
+  saved_api_request_history {
+    uuid id PK
+    uuid request_id FK
+    uuid actor_id FK
+    text method
+    text url
+    int4 status
+    int4 duration_ms
+    jsonb response_headers
+    text response_body
+    text error
+    timestamptz created_at
+  }
+  saved_api_requests {
+    uuid id PK
+    text name
+    text url
+    text method
+    text auth_type
+    text auth_config_encrypted
+    jsonb params
+    jsonb headers
+    text body
+    uuid created_by FK
+    uuid updated_by FK
+    timestamptz created_at
+    timestamptz updated_at
+    text params_encrypted
+    text headers_encrypted
+  }
+  settlements {
+    uuid id PK
+    uuid pharmacy_id FK
+    int4 amount_leones
+    timestamptz period_start
+    timestamptz period_end
+    int4 order_count
+    settlement_status status
+    timestamptz paid_at
+    text reference
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  team_members {
+    uuid id PK
+    text slug
+    text name
+    text role
+    text photo_path
+    int4 sort_order
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  team_photo_uploads {
+    uuid id PK
+    uuid team_member_id FK
+    uuid requested_by_hq_staff_id FK
+    text object_path
+    text content_type
+    int4 file_size
+    timestamptz expires_at
+    timestamptz consumed_at
+    timestamptz created_at
+  }
+  hq_staff ||--o{ api_connections : "updated_by"
+  couriers ||--o{ courier_settlements : "courier_id"
+  pharmacies ||--o{ drug_catalogue : "proposed_by_pharmacy_id"
+  hq_staff ||--o{ drug_catalogue : "reviewed_by_hq_staff_id"
+  orders ||--o{ flags : "order_id"
+  hq_staff ||--o{ hq_notifications : "hq_staff_id"
+  hq_staff ||--o{ hq_refresh_tokens : "hq_staff_id"
+  pharmacies ||--o{ notifications : "pharmacy_id"
+  drug_catalogue ||--o{ order_items : "drug_id"
+  pharmacy_inventory ||--o{ order_items : "inventory_id"
+  orders ||--o{ order_items : "order_id"
+  pharmacies ||--o{ orders : "pharmacy_id"
+  patients ||--o{ patient_notifications : "patient_id"
+  patients ||--o{ patient_password_reset_codes : "patient_id"
+  patients ||--o{ patient_refresh_tokens : "patient_id"
+  drug_catalogue ||--o{ pharmacy_inventory : "drug_id"
+  pharmacies ||--o{ pharmacy_inventory : "pharmacy_id"
+  pharmacies ||--o{ pharmacy_password_history : "pharmacy_id"
+  patients ||--o{ prescription_uploads : "patient_id"
+  pharmacies ||--o{ prescriptions : "pharmacy_id"
+  pharmacies ||--o{ refresh_tokens : "pharmacy_id"
+  hq_staff ||--o{ saved_api_request_history : "actor_id"
+  saved_api_requests ||--o{ saved_api_request_history : "request_id"
+  hq_staff ||--o{ saved_api_requests : "created_by"
+  hq_staff ||--o{ saved_api_requests : "updated_by"
+  pharmacies ||--o{ settlements : "pharmacy_id"
+  hq_staff ||--o{ team_photo_uploads : "requested_by_hq_staff_id"
+  team_members ||--o{ team_photo_uploads : "team_member_id"

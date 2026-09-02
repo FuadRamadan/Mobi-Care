@@ -28,3 +28,45 @@ mtime_ms = 1787753909430
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/ec13e16c-c4e8-4b66-8e83-e3d8d9c34cb3/8d8332c9-b688-42f7-907f-4e9e7c25d923"
 storage_version_token = "1787753913931924"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JQM9Qzit1_pR_1Vrq7Hy0"
+uri = "file://exports/mobicare-database-documentation.zip"
+type = "unspecified"
+title = "MobiCare Database Documentation Package"
+description = "Complete schema-only database package: PostgreSQL DDL, ER diagram, data dictionary, metadata CSVs, migration history, and Drizzle model sources. Contains no row data."
+logical_id = "295364a5-70f5-4ec6-84af-571316bb25d4"
+content_hash = "sha256:35e9687d71bf9fdd07cb522b526e50f3ec00e56d90458b57926ed4c75b1f04a1"
+size = 68558
+mtime_ms = 1788357163721
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/295364a5-70f5-4ec6-84af-571316bb25d4/13e32d4e-3f12-4dec-9e7f-78079b549573"
+storage_version_token = "1788357170353106"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "vd8MhXNiTlW4HBHeF30JZ"
+uri = "file://exports/mobicare-database-documentation/diagrams/er-diagram.svg"
+type = "image"
+title = "MobiCare ER Diagram"
+description = "Standalone scalable entity-relationship diagram for the 28-table MobiCare database."
+logical_id = "e7eae57e-10f5-4818-926e-45a7113d102b"
+content_hash = "sha256:af2fecfea30c229424cff01edaa9328174668c501232c8afd7cd49c68086633c"
+size = 93051
+mtime_ms = 1788357140936
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/e7eae57e-10f5-4818-926e-45a7113d102b/786aaf89-5ac0-4374-bd82-033a3d75d1e5"
+storage_version_token = "1788357170915321"
+content_type = "image/svg+xml"
+
+[[outputs]]
+id = "aBCabhXQOrslIrqKDZEy9"
+uri = "file://exports/mobicare-database-documentation/database-reference.html"
+type = "text"
+title = "MobiCare Database Reference"
+description = "Self-contained browsable database reference with the ER diagram and full table/column dictionary."
+logical_id = "c358958a-2335-4917-a467-d61564675731"
+content_hash = "sha256:7a66c1913d79f8116cff25543b5aa0f15eac069badc5e54a7d2b98502c5b0b42"
+size = 129473
+mtime_ms = 1788357140937
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/c358958a-2335-4917-a467-d61564675731/68f34faa-7860-44a8-8f04-5eac01b3863e"
+storage_version_token = "1788357171449608"
+content_type = "text/html"
