@@ -78,6 +78,9 @@ import type {
   PatientPasswordResetConfirm,
   PatientPasswordResetRequest,
   PatientPasswordResetRequested,
+  PatientProfile,
+  PatientProfilePhotoInput,
+  PatientProfileUpdate,
   PatientRegisterInput,
   PatientSearchDrugsParams,
   PharmacyOnboardInput,
@@ -2354,6 +2357,77 @@ export const useConfirmPatientOrderReceipt = <TError = ErrorType<void>,
       return useMutation(getConfirmPatientOrderReceiptMutationOptions(options));
     }
 
+export const getCancelPatientOrderUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/orders/${id}/cancel`
+}
+
+/**
+ * @summary Cancel the authenticated patient's order before courier assignment
+ */
+export const cancelPatientOrder = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PatientOrder> => {
+
+  return customFetch<PatientOrder>(getCancelPatientOrderUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelPatientOrderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPatientOrder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelPatientOrder>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cancelPatientOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelPatientOrder>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelPatientOrder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelPatientOrderMutationResult = NonNullable<Awaited<ReturnType<typeof cancelPatientOrder>>>
+
+    export type CancelPatientOrderMutationError = ErrorType<void>
+
+    /**
+ * @summary Cancel the authenticated patient's order before courier assignment
+ */
+export const useCancelPatientOrder = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPatientOrder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelPatientOrder>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCancelPatientOrderMutationOptions(options));
+    }
+
 export const getPatientPayOrderUrl = (id: string,) => {
 
 
@@ -2494,6 +2568,225 @@ export const usePatientUploadPrescription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatientUploadPrescriptionMutationOptions(options));
+    }
+
+export const getGetPatientProfileUrl = () => {
+
+
+
+
+  return `/api/patient/profile`
+}
+
+/**
+ * @summary Get the authenticated patient's profile
+ */
+export const getPatientProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<PatientProfile> => {
+
+  return customFetch<PatientProfile>(getGetPatientProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPatientProfileQueryKey = () => {
+    return [
+    `/api/patient/profile`
+    ] as const;
+    }
+
+
+export const getGetPatientProfileQueryOptions = <TData = Awaited<ReturnType<typeof getPatientProfile>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPatientProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPatientProfile>>> = ({ signal }) => getPatientProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPatientProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPatientProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getPatientProfile>>>
+export type GetPatientProfileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the authenticated patient's profile
+ */
+
+export function useGetPatientProfile<TData = Awaited<ReturnType<typeof getPatientProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPatientProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePatientProfileUrl = () => {
+
+
+
+
+  return `/api/patient/profile`
+}
+
+/**
+ * @summary Update the authenticated patient's name
+ */
+export const updatePatientProfile = async (patientProfileUpdate: PatientProfileUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PatientProfile> => {
+
+  return customFetch<PatientProfile>(getUpdatePatientProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientProfileUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePatientProfileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfile>>, TError,{data: BodyType<PatientProfileUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfile>>, TError,{data: BodyType<PatientProfileUpdate>}, TContext> => {
+
+const mutationKey = ['updatePatientProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePatientProfile>>, {data: BodyType<PatientProfileUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePatientProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePatientProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updatePatientProfile>>>
+    export type UpdatePatientProfileMutationBody = BodyType<PatientProfileUpdate>
+    export type UpdatePatientProfileMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update the authenticated patient's name
+ */
+export const useUpdatePatientProfile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfile>>, TError,{data: BodyType<PatientProfileUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePatientProfile>>,
+        TError,
+        {data: BodyType<PatientProfileUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePatientProfileMutationOptions(options));
+    }
+
+export const getUpdatePatientProfilePhotoUrl = () => {
+
+
+
+
+  return `/api/patient/profile/photo`
+}
+
+/**
+ * @summary Upload or replace the authenticated patient's profile photo
+ */
+export const updatePatientProfilePhoto = async (patientProfilePhotoInput: PatientProfilePhotoInput, options?: Parameters<typeof customFetch>[1]): Promise<PatientProfile> => {
+
+  return customFetch<PatientProfile>(getUpdatePatientProfilePhotoUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientProfilePhotoInput)
+  }
+);}
+
+
+
+
+
+export const getUpdatePatientProfilePhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfilePhoto>>, TError,{data: BodyType<PatientProfilePhotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfilePhoto>>, TError,{data: BodyType<PatientProfilePhotoInput>}, TContext> => {
+
+const mutationKey = ['updatePatientProfilePhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePatientProfilePhoto>>, {data: BodyType<PatientProfilePhotoInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePatientProfilePhoto(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePatientProfilePhotoMutationResult = NonNullable<Awaited<ReturnType<typeof updatePatientProfilePhoto>>>
+    export type UpdatePatientProfilePhotoMutationBody = BodyType<PatientProfilePhotoInput>
+    export type UpdatePatientProfilePhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload or replace the authenticated patient's profile photo
+ */
+export const useUpdatePatientProfilePhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfilePhoto>>, TError,{data: BodyType<PatientProfilePhotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePatientProfilePhoto>>,
+        TError,
+        {data: BodyType<PatientProfilePhotoInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePatientProfilePhotoMutationOptions(options));
     }
 
 export const getListPatientNotificationsUrl = () => {

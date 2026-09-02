@@ -22,6 +22,7 @@ import {
   notifyPharmacyOfNewOrder,
   notifyPharmacyOfPaidOrder,
   notifyPharmacyOfSubmittedPrescription,
+  notifyPharmacyOfPatientCancellation,
 } from "../../lib/pharmacyNotifications.js";
 import {
   createPatientNotification,
@@ -204,6 +205,113 @@ router.post("/:id/confirm-receipt", async (req: AuthRequest, res) => {
   }
 
   res.json((await hydratePatientOrders([updated]))[0]);
+});
+
+// ── POST /patient/orders/:id/cancel ──────────────────────────────────────────
+// The row lock and courierId predicate make cancellation safe against an HQ
+// assignment that happens at the same time as the patient's tap.
+router.post("/:id/cancel", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const id = req.params.id as string;
+  const cancellableStatuses = [
+    "awaiting_payment",
+    "paid",
+    "confirmed",
+    "packaging",
+    "ready",
+  ] as const;
+
+  let cancelled: typeof ordersTable.$inferSelect;
+  let previous: typeof ordersTable.$inferSelect;
+  try {
+    ({ cancelled, previous } = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(ordersTable)
+        .where(and(eq(ordersTable.id, id), eq(ordersTable.patientId, patientId)))
+        .for("update")
+        .limit(1);
+      if (!locked) {
+        throw Object.assign(new Error("ORDER_NOT_FOUND"), { code: "ORDER_NOT_FOUND" });
+      }
+      if (locked.courierId) {
+        throw Object.assign(new Error("COURIER_ASSIGNED"), { code: "COURIER_ASSIGNED" });
+      }
+      if (!cancellableStatuses.includes(locked.status as (typeof cancellableStatuses)[number])) {
+        throw Object.assign(new Error("ORDER_NOT_CANCELLABLE"), { code: "ORDER_NOT_CANCELLABLE" });
+      }
+
+      const [updated] = await tx
+        .update(ordersTable)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(
+          and(
+            eq(ordersTable.id, id),
+            eq(ordersTable.patientId, patientId),
+            isNull(ordersTable.courierId),
+            eq(ordersTable.status, locked.status),
+          ),
+        )
+        .returning();
+      if (!updated) {
+        throw Object.assign(new Error("ORDER_CHANGED"), { code: "ORDER_CHANGED" });
+      }
+
+      // Payment deducts inventory, so return paid-order quantities when a
+      // patient cancels before dispatch.
+      if (locked.status !== "awaiting_payment") {
+        const items = await tx
+          .select({
+            inventoryId: orderItemsTable.inventoryId,
+            quantity: orderItemsTable.quantity,
+          })
+          .from(orderItemsTable)
+          .where(eq(orderItemsTable.orderId, id));
+        for (const item of items) {
+          if (!item.inventoryId) continue;
+          await tx
+            .update(pharmacyInventoryTable)
+            .set({
+              stockQuantity: sql`${pharmacyInventoryTable.stockQuantity} + ${item.quantity}`,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(pharmacyInventoryTable.id, item.inventoryId),
+                eq(pharmacyInventoryTable.pharmacyId, locked.pharmacyId),
+              ),
+            );
+        }
+      }
+      return { cancelled: updated, previous: locked };
+    }));
+  } catch (error: any) {
+    if (error?.code === "ORDER_NOT_FOUND") {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+    if (error?.code === "COURIER_ASSIGNED") {
+      res.status(409).json({ error: "This order cannot be cancelled after a courier has been assigned" });
+      return;
+    }
+    if (error?.code === "ORDER_NOT_CANCELLABLE" || error?.code === "ORDER_CHANGED") {
+      res.status(409).json({ error: "This order can no longer be cancelled" });
+      return;
+    }
+    throw error;
+  }
+
+  await writeAudit({
+    actorType: "patient",
+    actorId: patientId,
+    actorName: req.pharmacy!.name,
+    action: "order.cancelled_by_patient",
+    entityType: "order",
+    entityId: id,
+    details: { from: previous.status, to: cancelled.status },
+  });
+  void notifyPharmacyOfPatientCancellation(cancelled);
+  res.json((await hydratePatientOrders([cancelled]))[0]);
 });
 
 // ── POST /patient/orders — place an order ─────────────────────────────────────

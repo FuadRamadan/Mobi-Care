@@ -268,6 +268,7 @@ router.post("/register", async (req, res) => {
       name: z.string().min(2),
       phone: z.string().min(5),
       password: z.string().min(8),
+        age: z.number().int().min(0).max(120),
     })
     .safeParse(req.body);
 
@@ -276,8 +277,15 @@ router.post("/register", async (req, res) => {
       .status(400)
       .json({
         error:
-          "name (min 2), phone (min 5) and password (min 8 chars) are required",
+          "name (min 2), phone (min 5), password (min 8 chars) and age are required",
       });
+    return;
+  }
+
+  if (body.data.age < 18) {
+    res
+      .status(400)
+      .json({ error: "You must be 18 or older to register for MobiCare" });
     return;
   }
 
@@ -296,7 +304,12 @@ router.post("/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(body.data.password, 12);
   const [created] = await db
     .insert(patientsTable)
-    .values({ name: body.data.name, phone: body.data.phone, passwordHash })
+    .values({
+      name: body.data.name,
+      phone: body.data.phone,
+      passwordHash,
+      age: body.data.age,
+    })
     .onConflictDoNothing({ target: patientsTable.phone })
     .returning();
   if (!created) {

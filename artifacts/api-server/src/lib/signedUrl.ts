@@ -45,3 +45,27 @@ export function verifyImageToken(
     .digest("hex");
   return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
+
+export function mintProfileImageToken(patientId: string): { token: string; expiresAt: number } {
+  const expiresAt = Date.now() + SIGNED_URL_TTL_MS;
+  const token = crypto
+    .createHmac("sha256", SECRET)
+    .update(`${patientId}:profile:${expiresAt}`)
+    .digest("hex");
+  return { token, expiresAt };
+}
+
+export function verifyProfileImageToken(
+  patientId: string,
+  expiresAt: number,
+  token: string,
+): boolean {
+  if (Date.now() > expiresAt) return false;
+  const expected = crypto
+    .createHmac("sha256", SECRET)
+    .update(`${patientId}:profile:${expiresAt}`)
+    .digest("hex");
+  const actual = Buffer.from(token);
+  const wanted = Buffer.from(expected);
+  return actual.length === wanted.length && crypto.timingSafeEqual(actual, wanted);
+}

@@ -15,9 +15,19 @@ import {
 } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 
+// Expo packages currently ship React declarations from slightly different
+// patch versions in this workspace. These aliases preserve the runtime
+// components while keeping the app on one React 19 type surface.
+const NativeTabsCompat = NativeTabs as unknown as React.ComponentType<React.PropsWithChildren>;
+const BlurViewCompat = BlurView as unknown as React.ComponentType<{
+  intensity?: number;
+  tint?: 'light' | 'dark' | 'default';
+  style?: object;
+}>;
+
 function NativeTabLayout({ itemCount, unreadCount }: { itemCount: number; unreadCount: number }) {
   return (
-    <NativeTabs>
+    <NativeTabsCompat>
       <NativeTabs.Trigger name="index" role="search">
         <Icon sf={{ default: 'magnifyingglass', selected: 'magnifyingglass' }} />
         <Label>Search</Label>
@@ -36,7 +46,11 @@ function NativeTabLayout({ itemCount, unreadCount }: { itemCount: number; unread
         <Label>Alerts</Label>
         {unreadCount > 0 && <Badge>{String(unreadCount)}</Badge>}
       </NativeTabs.Trigger>
-    </NativeTabs>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
+    </NativeTabsCompat>
   );
 }
 
@@ -64,7 +78,7 @@ function ClassicTabLayout({ itemCount, unreadCount }: { itemCount: number; unrea
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
+              <BlurViewCompat
               intensity={100}
               tint={isDark ? 'dark' : 'light'}
               style={StyleSheet.absoluteFill}
@@ -128,6 +142,18 @@ function ClassicTabLayout({ itemCount, unreadCount }: { itemCount: number; unrea
               <SymbolView name="bell" tintColor={color} size={22} />
             ) : (
               <Feather name="bell" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="person.crop.circle" tintColor={color} size={22} />
+            ) : (
+              <Feather name="user" size={22} color={color} />
             ),
         }}
       />

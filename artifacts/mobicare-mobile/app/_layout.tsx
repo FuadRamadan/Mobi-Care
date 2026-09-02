@@ -45,6 +45,11 @@ const queryClient = new QueryClient({
   },
 });
 
+const GestureHandlerRootViewCompat =
+  GestureHandlerRootView as unknown as React.ComponentType<
+    React.PropsWithChildren<{ style?: object }>
+  >;
+
 function RootLayoutNav() {
   // Deep-link into the screen referenced by a tapped push notification
   // (e.g. { url: "/order/<id>" } → order detail screen).
@@ -110,7 +115,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
+          <GestureHandlerRootViewCompat style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
                 <CartBridge>
@@ -118,7 +123,7 @@ export default function RootLayout() {
                 </CartBridge>
               </AuthProvider>
             </KeyboardProvider>
-          </GestureHandlerRootView>
+          </GestureHandlerRootViewCompat>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

@@ -6,16 +6,11 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface PatientRegisterInput {
-  /** @minLength 2 */
+export interface PatientProfile {
+  id: string;
   name: string;
-  /** @minLength 5 */
   phone: string;
-  /** @minLength 8 */
-  password: string;
-  /**
-     * @minimum 0
-     * @maximum 120
-     */
   age: number;
+  /** @nullable */
+  profileImageUrl: string | null;
 }

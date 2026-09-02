@@ -705,12 +705,17 @@ export const registerPatientBodyPhoneMin = 5;
 
 export const registerPatientBodyPasswordMin = 8;
 
+export const registerPatientBodyAgeMin = 0;
+export const registerPatientBodyAgeMax = 120;
+export const registerPatientBodyAgeMultipleOf = 1;
+
 
 
 export const RegisterPatientBody = zod.object({
   "name": zod.string().min(registerPatientBodyNameMin),
   "phone": zod.string().min(registerPatientBodyPhoneMin),
-  "password": zod.string().min(registerPatientBodyPasswordMin)
+  "password": zod.string().min(registerPatientBodyPasswordMin),
+  "age": zod.number().min(registerPatientBodyAgeMin).max(registerPatientBodyAgeMax).multipleOf(registerPatientBodyAgeMultipleOf)
 })
 
 export const RegisterPatientResponse = zod.object({
@@ -1012,6 +1017,57 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
 
 
 /**
+ * @summary Cancel the authenticated patient's order before courier assignment
+ */
+export const CancelPatientOrderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelPatientOrderResponse = zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "patientName": zod.string(),
+  "patientPhone": zod.string(),
+  "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
+  "fulfillmentType": zod.enum(['delivery', 'collection']),
+  "idChecked": zod.boolean(),
+  "totalLeones": zod.number(),
+  "prescriptionId": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "orderId": zod.string(),
+  "drugId": zod.string(),
+  "inventoryId": zod.string().nullish(),
+  "drugName": zod.string(),
+  "quantity": zod.number(),
+  "unitPriceLeones": zod.number(),
+  "prescriptionId": zod.string().nullish()
+}))
+}).and(zod.object({
+  "deliveryAddress": zod.string().nullish(),
+  "paymentMethod": zod.string().optional(),
+  "pharmacy": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "phone": zod.string().nullish()
+}),zod.null()]).optional(),
+  "courier": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string().nullish()
+}),zod.null()]).optional(),
+  "prescription": zod.union([zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "rejectReason": zod.string().nullish()
+}),zod.null()]).optional()
+}))
+
+
+/**
  * @summary Record mobile-money payment (no live gateway yet)
  */
 export const PatientPayOrderParams = zod.object({
@@ -1071,6 +1127,54 @@ export const PatientUploadPrescriptionBody = zod.object({
 
 export const PatientUploadPrescriptionResponse = zod.object({
   "imageKey": zod.string()
+})
+
+
+/**
+ * @summary Get the authenticated patient's profile
+ */
+export const GetPatientProfileResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "age": zod.number(),
+  "profileImageUrl": zod.string().nullable()
+})
+
+
+/**
+ * @summary Update the authenticated patient's name
+ */
+export const updatePatientProfileBodyNameMin = 2;
+
+
+
+export const UpdatePatientProfileBody = zod.object({
+  "name": zod.string().min(updatePatientProfileBodyNameMin)
+})
+
+export const UpdatePatientProfileResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "age": zod.number(),
+  "profileImageUrl": zod.string().nullable()
+})
+
+
+/**
+ * @summary Upload or replace the authenticated patient's profile photo
+ */
+export const UpdatePatientProfilePhotoBody = zod.object({
+  "image": zod.string().describe('Base64 data URL (PNG, JPEG, or WebP, max 5 MB)')
+})
+
+export const UpdatePatientProfilePhotoResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "age": zod.number(),
+  "profileImageUrl": zod.string().nullable()
 })
 
 

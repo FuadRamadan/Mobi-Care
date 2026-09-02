@@ -22,7 +22,8 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (phone: string, password: string) => Promise<void>;
-  register: (name: string, phone: string, password: string) => Promise<void>;
+  register: (name: string, phone: string, password: string, age: number) => Promise<void>;
+  updateUser: (updates: Pick<PatientUser, 'name'>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -194,8 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncPushToken();
   }, [applyTokens, syncPushToken]);
 
-  const register = useCallback(async (name: string, phone: string, password: string) => {
-    const result = await apiRegisterPatient({ name, phone, password });
+  const register = useCallback(async (name: string, phone: string, password: string, age: number) => {
+    const result = await apiRegisterPatient({ name, phone, password, age });
     await applyTokens(result.accessToken, result.refreshToken, {
       id: result.user.id,
       name: result.user.name,
@@ -205,12 +206,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncPushToken();
   }, [applyTokens, syncPushToken]);
 
+  const updateUser = useCallback(async (updates: Pick<PatientUser, 'name'>) => {
+    if (!user) return;
+    const next = { ...user, ...updates };
+    setUser(next);
+    await AsyncStorage.setItem(ASYNC_KEY_USER, JSON.stringify(next));
+  }, [user]);
+
   const logout = useCallback(async () => {
     await clearSession(refreshTokenRef.current);
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

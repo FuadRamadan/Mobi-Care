@@ -18,11 +18,13 @@ import {
   PatientOrder,
   getPatientGetOrderQueryKey,
   getPatientListOrdersQueryKey,
+  useCancelPatientOrder,
   useConfirmPatientOrderReceipt,
   usePatientGetOrder,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
+import { MobiCareHeader } from '@/components/MobiCareHeader';
 
 type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
 
@@ -175,6 +177,21 @@ export default function OrderDetailScreen() {
       },
     },
   });
+  const cancelOrder = useCancelPatientOrder({
+    mutation: {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getPatientGetOrderQueryKey(id ?? ''), updated);
+        queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() });
+        Alert.alert('Order cancelled', 'Your order has been cancelled.');
+      },
+      onError: (error) => {
+        Alert.alert(
+          'Could not cancel order',
+          error instanceof Error ? error.message : 'Please refresh and try again.',
+        );
+      },
+    },
+  });
 
   const s = makeStyles(colors, insets);
   const topPad = isWeb ? insets.top + 67 : insets.top;
@@ -201,6 +218,9 @@ export default function OrderDetailScreen() {
 
   const pharmacy = (order as { pharmacy?: { id: string; name: string; address?: string | null; phone?: string | null } }).pharmacy;
   const courier = (order as { courier?: { id: string; name: string; phone?: string | null } }).courier;
+  const cancellableStatuses = ['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready'];
+  const canCancel = !courier && cancellableStatuses.includes(order.status);
+  const cancellationLocked = !!courier && ['assigned', 'picked_up', 'delivering'].includes(order.status);
 
   const callPhone = (phone: string) => {
     Linking.openURL(`tel:${phone}`).catch(() => {});
@@ -216,6 +236,7 @@ export default function OrderDetailScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
+      <MobiCareHeader />
       {/* Back button */}
       <Pressable style={s.backRow} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={22} color={colors.darkGreen} />
@@ -243,6 +264,47 @@ export default function OrderDetailScreen() {
 
       {/* Timeline */}
       <Timeline order={order} colors={colors} />
+
+      {(canCancel || cancellationLocked) && (
+        <View style={s.section} testID="card-cancel-order">
+          <Text style={s.sectionTitle}>Order Cancellation</Text>
+          <Text style={s.cancelHint}>
+            {cancellationLocked
+              ? 'A courier has been assigned, so this order can no longer be cancelled.'
+              : 'You can cancel this order until a courier is assigned.'}
+          </Text>
+          <Pressable
+            style={[
+              s.cancelButton,
+              (!canCancel || cancelOrder.isPending) && s.cancelButtonDisabled,
+            ]}
+            disabled={!canCancel || cancelOrder.isPending}
+            testID="button-cancel-order"
+            onPress={() =>
+              Alert.alert(
+                'Cancel this order?',
+                'This action cannot be undone.',
+                [
+                  { text: 'Keep Order', style: 'cancel' },
+                  {
+                    text: 'Cancel Order',
+                    style: 'destructive',
+                    onPress: () => cancelOrder.mutate({ id: order.id }),
+                  },
+                ],
+              )
+            }
+          >
+            {cancelOrder.isPending ? (
+              <ActivityIndicator size="small" color={colors.destructive} />
+            ) : (
+              <Text style={[s.cancelButtonText, !canCancel && s.cancelButtonTextDisabled]}>
+                {cancellationLocked ? 'Cancellation Unavailable' : 'Cancel Order'}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {order.fulfillmentType === 'delivery' && order.status === 'delivering' && (
         <View style={[s.section, s.confirmSection]} testID="card-confirm-receipt">
@@ -396,6 +458,11 @@ function makeStyles(colors: Colors, insets: { top: number; bottom: number }) {
       paddingHorizontal: 16,
     },
     confirmButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    cancelHint: { fontSize: 13, color: colors.mutedForeground, lineHeight: 19, marginBottom: 12 },
+    cancelButton: { minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: colors.radius, borderWidth: 1, borderColor: colors.destructive, backgroundColor: '#FFF5F5' },
+    cancelButtonDisabled: { borderColor: colors.border, backgroundColor: colors.muted, opacity: 0.75 },
+    cancelButtonText: { color: colors.destructive, fontSize: 14, fontWeight: '800' },
+    cancelButtonTextDisabled: { color: colors.mutedForeground },
     // Timeline
     timelineItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 0 },
     timelineLine: { width: 20, alignItems: 'center' },

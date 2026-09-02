@@ -197,6 +197,30 @@ export interface PatientRegisterInput {
   phone: string;
   /** @minLength 8 */
   password: string;
+  /**
+     * @minimum 0
+     * @maximum 120
+     */
+  age: number;
+}
+
+export interface PatientProfile {
+  id: string;
+  name: string;
+  phone: string;
+  age: number;
+  /** @nullable */
+  profileImageUrl: string | null;
+}
+
+export interface PatientProfileUpdate {
+  /** @minLength 2 */
+  name: string;
+}
+
+export interface PatientProfilePhotoInput {
+  /** Base64 data URL (PNG, JPEG, or WebP, max 5 MB) */
+  image: string;
 }
 
 export interface DrugOffer {

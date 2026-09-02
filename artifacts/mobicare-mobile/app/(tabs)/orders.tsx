@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PatientOrder, getPatientListOrdersQueryKey, usePatientListOrders } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { MobiCareHeader } from '@/components/MobiCareHeader';
 
 type StatusColor = { bg: string; text: string };
 
@@ -96,6 +97,7 @@ export default function OrdersScreen() {
 
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
+      <MobiCareHeader />
       <View style={s.titleRow}>
         <Text style={s.title}>Orders</Text>
         {isFetching && <Feather name="refresh-cw" size={16} color={colors.mutedForeground} />}

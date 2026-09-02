@@ -30,6 +30,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
+  const [age, setAge] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +41,7 @@ export default function LoginScreen() {
   const [retryAfter, setRetryAfter] = useState(0);
 
   const phoneRef = useRef<TextInput>(null);
+  const ageRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -63,6 +65,13 @@ export default function LoginScreen() {
       return null;
     }
     if (mode === 'register' && name.trim().length < 2) return 'Name must be at least 2 characters.';
+    if (mode === 'register') {
+      const numericAge = Number(age);
+      if (!Number.isInteger(numericAge) || numericAge < 0 || numericAge > 120) {
+        return 'Enter a valid age.';
+      }
+      if (numericAge < 18) return 'You must be 18 or older to register for MobiCare.';
+    }
     if (phone.trim().length < 5) return 'Enter a valid phone number.';
     if (password.length < 8) return 'Password must be at least 8 characters.';
     return null;
@@ -101,7 +110,7 @@ export default function LoginScreen() {
           Alert.alert('Password reset', 'Sign in with your new password.');
         }
       } else {
-        await register(name.trim(), phone.trim(), password);
+        await register(name.trim(), phone.trim(), password, Number(age));
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: unknown) {
@@ -124,6 +133,7 @@ export default function LoginScreen() {
   const switchMode = (m: Mode) => {
     setMode(m);
     setName('');
+    setAge('');
     setPhone('');
     setPassword('');
     setRequestId(null);
@@ -174,9 +184,28 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="words"
                 returnKeyType="next"
+                onSubmitEditing={() => ageRef.current?.focus()}
+                blurOnSubmit={false}
+              />
+            </View>
+          )}
+          {mode === 'register' && (
+            <View style={s.field}>
+              <Text style={s.label}>Age</Text>
+              <TextInput
+                ref={ageRef}
+                style={s.input}
+                value={age}
+                onChangeText={(value) => setAge(value.replace(/\D/g, '').slice(0, 3))}
+                placeholder="You must be 18 or older"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="number-pad"
+                maxLength={3}
+                returnKeyType="next"
                 onSubmitEditing={() => phoneRef.current?.focus()}
                 blurOnSubmit={false}
               />
+              <Text style={s.fieldHint}>MobiCare patient accounts are available to adults aged 18 and above.</Text>
             </View>
           )}
           <View style={s.field}>
@@ -353,6 +382,7 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     },
     field: { marginBottom: 16 },
     label: { fontSize: 13, fontWeight: '600', color: colors.foreground, marginBottom: 6 },
+    fieldHint: { fontSize: 11, lineHeight: 16, color: colors.mutedForeground, marginTop: 6 },
     input: {
       borderWidth: 1.5,
       borderColor: colors.border,

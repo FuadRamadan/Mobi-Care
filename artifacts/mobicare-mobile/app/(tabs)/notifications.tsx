@@ -22,6 +22,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
+import { MobiCareHeader } from '@/components/MobiCareHeader';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -127,6 +128,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
+      <MobiCareHeader />
       <View style={s.headerRow}>
         <Text style={s.screenTitle}>Notifications</Text>
         {(unreadData?.unreadCount ?? 0) > 0 && (

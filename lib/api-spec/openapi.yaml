@@ -703,6 +703,31 @@ paths:
         "409":
           description: Order is not a delivery currently in progress
 
+  /patient/orders/{id}/cancel:
+    post:
+      operationId: cancelPatientOrder
+      tags: [patient]
+      summary: Cancel the authenticated patient's order before courier assignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientOrder"
+        "404":
+          description: Order does not belong to the authenticated patient
+        "409":
+          description: Order already has a courier or cannot be cancelled
+
   /patient/orders/{id}/pay:
     post:
       operationId: patientPayOrder
@@ -746,6 +771,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PrescriptionUploadResponse"
+
+  /patient/profile:
+    get:
+      operationId: getPatientProfile
+      tags: [patient]
+      summary: Get the authenticated patient's profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Patient profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientProfile"
+    patch:
+      operationId: updatePatientProfile
+      tags: [patient]
+      summary: Update the authenticated patient's name
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientProfileUpdate"
+      responses:
+        "200":
+          description: Updated patient profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientProfile"
+
+  /patient/profile/photo:
+    put:
+      operationId: updatePatientProfilePhoto
+      tags: [patient]
+      summary: Upload or replace the authenticated patient's profile photo
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientProfilePhotoInput"
+      responses:
+        "200":
+          description: Updated patient profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientProfile"
 
   # ── Patient notifications ─────────────────────────────────────────────────
   /patient/notifications:
@@ -2030,7 +2110,7 @@ components:
     # ── Patient schemas ────────────────────────────────────────────────────
     PatientRegisterInput:
       type: object
-      required: [name, phone, password]
+      required: [name, phone, password, age]
       properties:
         name:
           type: string
@@ -2041,6 +2121,42 @@ components:
         password:
           type: string
           minLength: 8
+        age:
+          type: number
+          multipleOf: 1
+          minimum: 0
+          maximum: 120
+
+    PatientProfile:
+      type: object
+      required: [id, name, phone, age, profileImageUrl]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        age:
+          type: number
+        profileImageUrl:
+          type: ["string", "null"]
+
+    PatientProfileUpdate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+
+    PatientProfilePhotoInput:
+      type: object
+      required: [image]
+      properties:
+        image:
+          type: string
+          description: Base64 data URL (PNG, JPEG, or WebP, max 5 MB)
 
     DrugOffer:
       type: object

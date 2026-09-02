@@ -79,3 +79,13 @@ export async function notifyPharmacyOfExpiredOrder(input: {
     referenceId: input.orderId,
   });
 }
+
+export async function notifyPharmacyOfPatientCancellation(order: Order): Promise<void> {
+  await createPharmacyNotification({
+    pharmacyId: order.pharmacyId,
+    title: "Patient cancelled an order",
+    body: `${order.patientName} cancelled order #${order.id.slice(0, 8).toUpperCase()}.`,
+    type: "order_cancelled",
+    referenceId: order.id,
+  });
+}

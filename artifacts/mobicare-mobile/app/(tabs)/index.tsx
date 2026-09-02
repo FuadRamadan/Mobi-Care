@@ -26,6 +26,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
 import { useDebounce } from "@/hooks/useDebounce";
+import { MobiCareHeader } from "@/components/MobiCareHeader";
 
 const TIER_LABELS: Record<string, string> = {
   "1": "Rx Only",
@@ -293,6 +294,7 @@ export default function SearchScreen() {
 
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
+      <MobiCareHeader />
       {/* Search bar */}
       <View style={s.searchBar}>
         <Feather

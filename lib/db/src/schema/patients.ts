@@ -9,6 +9,8 @@ export const patientsTable = pgTable("patients", {
   name: text("name").notNull(),
   phone: text("phone").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  age: integer("age").notNull().default(18),
+  profileImageKey: text("profile_image_key"),
   sessionVersion: integer("session_version").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
   // Expo push token for the patient's most recent device (null = push not enabled)

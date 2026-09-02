@@ -25,6 +25,7 @@ import {
 } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
+import { MobiCareHeader } from "@/components/MobiCareHeader";
 
 type Fulfillment = "delivery" | "collection";
 
@@ -222,6 +223,7 @@ export default function CartScreen() {
   if (cart.items.length === 0) {
     return (
       <View style={[s.container, { paddingTop: topPad }]}>
+        <MobiCareHeader />
         <View style={s.screenTitle}>
           <Text style={s.screenTitleText}>Cart</Text>
         </View>
@@ -253,6 +255,7 @@ export default function CartScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      <MobiCareHeader />
       {/* Header */}
       <View style={s.screenTitle}>
         <Text style={s.screenTitleText}>Cart</Text>
