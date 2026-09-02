@@ -28,6 +28,12 @@ import {
   createPatientNotification,
   notificationForStatus,
 } from "../../lib/patientNotifications.js";
+import {
+  decimalLeonesToMinor,
+  getFinancialSettings,
+  minorToLeones,
+} from "../../lib/financialSettings.js";
+import { allocatePatientPrices } from "../../lib/financialAllocation.js";
 
 const router = safeRouter();
 
@@ -64,6 +70,7 @@ async function hydratePatientOrders(
           id: couriersTable.id,
           name: couriersTable.name,
           phone: couriersTable.phone,
+          photoPath: couriersTable.photoPath,
         })
         .from(couriersTable)
         .where(inArray(couriersTable.id, courierIds))
@@ -94,7 +101,12 @@ async function hydratePatientOrders(
       })),
     pharmacy: pharmacies.find((p) => p.id === o.pharmacyId) ?? null,
     courier: o.courierId
-      ? (couriers.find((c) => c.id === o.courierId) ?? null)
+      ? (() => {
+          const courier = couriers.find((c) => c.id === o.courierId);
+          return courier
+            ? { id: courier.id, name: courier.name, phone: courier.phone, photoUrl: courier.photoPath ? `/api/couriers/${courier.id}/photo` : null }
+            : null;
+        })()
       : null,
     prescription: o.prescriptionId
       ? (prescriptions.find((p) => p.id === o.prescriptionId) ?? null)
@@ -161,7 +173,13 @@ router.post("/:id/confirm-receipt", async (req: AuthRequest, res) => {
 
   const [updated] = await db
     .update(ordersTable)
-    .set({ status: "delivered", updatedAt: new Date() })
+    .set({
+      status: "delivered",
+      completedAt: new Date(),
+      deliveryConfirmedAt: new Date(),
+      deliveryConfirmationMethod: "patient",
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(ordersTable.id, id),
@@ -415,7 +433,7 @@ router.post("/", async (req: AuthRequest, res) => {
     listings.map((listing) => [listing.inventoryId, listing]),
   );
   let prescriptionRequired = false;
-  let totalCents = 0;
+  let pharmacyMedicineTotalMinor = 0;
 
   for (const item of input.items) {
     const l = byInventory.get(item.inventoryId);
@@ -482,9 +500,41 @@ router.post("/", async (req: AuthRequest, res) => {
       }
     }
     if (l.tier === "1" || l.tier === "2") prescriptionRequired = true;
-    totalCents += Math.round(Number(l.priceLeones) * 100) * item.quantity;
+    pharmacyMedicineTotalMinor +=
+      decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
-  const total = (totalCents / 100).toFixed(2);
+  const financialSettings = await getFinancialSettings();
+  const allocatedPrices = allocatePatientPrices(
+    input.items.map((item) => {
+      const listing = byInventory.get(item.inventoryId)!;
+      return {
+        key: item.inventoryId,
+        baseUnitPriceMinor: decimalLeonesToMinor(listing.priceLeones),
+        quantity: item.quantity,
+      };
+    }),
+    financialSettings.medicineMarkupBasisPoints,
+  );
+  const allocatedByInventory = new Map(
+    allocatedPrices.map((line) => [line.key, line]),
+  );
+  const medicineCommissionMinor = allocatedPrices.reduce(
+    (total, line) => total + line.medicineCommissionMinor,
+    0,
+  );
+  const patientMedicineTotalMinor =
+    pharmacyMedicineTotalMinor + medicineCommissionMinor;
+  const deliveryFeeMinor =
+    input.fulfillmentType === "delivery"
+      ? financialSettings.deliveryFeeMinor
+      : 0;
+  const courierPayoutMinor =
+    input.fulfillmentType === "delivery"
+      ? financialSettings.courierPayoutMinor
+      : 0;
+  const deliveryCommissionMinor = deliveryFeeMinor - courierPayoutMinor;
+  const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
+  const total = minorToLeones(totalMinor);
 
   if (prescriptionRequired && !input.prescriptionImageKey) {
     res.status(400).json({
@@ -515,6 +565,14 @@ router.post("/", async (req: AuthRequest, res) => {
           status: "awaiting_payment",
           paymentMethod: "orange_money",
           totalLeones: total,
+          medicineMarkupBasisPoints:
+            financialSettings.medicineMarkupBasisPoints,
+          pharmacyMedicineTotalMinor,
+          medicineCommissionMinor,
+          patientMedicineTotalMinor,
+          deliveryFeeMinor,
+          courierPayoutMinor,
+          deliveryCommissionMinor,
         })
         .returning();
 
@@ -559,13 +617,17 @@ router.post("/", async (req: AuthRequest, res) => {
       await tx.insert(orderItemsTable).values(
         input.items.map((item) => {
           const l = byInventory.get(item.inventoryId)!;
+          const allocated = allocatedByInventory.get(item.inventoryId)!;
           return {
             orderId: order!.id,
             inventoryId: item.inventoryId,
             drugId: l.drugId,
             drugName: l.drugName,
             quantity: item.quantity,
-            unitPriceLeones: l.priceLeones,
+            unitPriceLeones: minorToLeones(allocated.patientUnitPriceMinor),
+            baseUnitPriceMinor: allocated.baseUnitPriceMinor,
+            patientUnitPriceMinor: allocated.patientUnitPriceMinor,
+            patientLineTotalMinor: allocated.patientLineTotalMinor,
             prescriptionId:
               l.tier === "1" || l.tier === "2" ? prescriptionId : null,
           };

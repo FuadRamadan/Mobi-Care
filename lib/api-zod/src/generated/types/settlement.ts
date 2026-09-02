@@ -18,6 +18,7 @@ export interface Settlement {
   /** @nullable */
   courierName?: string | null;
   amountLeones: number;
+  amountMinor?: number;
   periodStart: string;
   periodEnd: string;
   /** @nullable */

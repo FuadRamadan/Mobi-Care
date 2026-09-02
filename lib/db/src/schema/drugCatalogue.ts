@@ -29,106 +29,94 @@ export const drugTierEnum = pgEnum("drug_tier", ["1", "2", "3"]);
 
 export const DRUG_CATEGORY_TAXONOMY = [
   {
-    value: "pain_fever",
-    label: "Pain & fever",
+    value: "cardiovascular",
+    label: "Cardiovascular",
     subcategories: [
-      { value: "analgesics_antipyretics", label: "Pain and fever relief" },
-      { value: "anti_inflammatory", label: "Anti-inflammatory medicines" },
+      { value: "antihypertensives", label: "Antihypertensives" },
+      { value: "antianginals", label: "Antianginals" },
+      { value: "anticoagulants", label: "Anticoagulants & antiplatelets" },
+      { value: "lipid_lowering", label: "Lipid-lowering medicines" },
+      { value: "diuretics", label: "Diuretics" },
     ],
   },
   {
-    value: "infection",
-    label: "Infections",
+    value: "pain_inflammation",
+    label: "Pain, inflammation & anaesthesia",
+    subcategories: [
+      { value: "analgesics_antipyretics", label: "Analgesics & antipyretics" },
+      { value: "anti_inflammatory", label: "Anti-inflammatory medicines" },
+      { value: "anaesthetics", label: "Anaesthetics" },
+      { value: "muscle_relaxants", label: "Muscle relaxants" },
+      { value: "gout_medicines", label: "Gout medicines" },
+    ],
+  },
+  {
+    value: "anti_infectives",
+    label: "Anti-infectives",
     subcategories: [
       { value: "antibiotics", label: "Antibiotics" },
-      {
-        value: "antifungal_antiparasitic",
-        label: "Antifungal & antiparasitic",
-      },
+      { value: "antimalarials", label: "Antimalarials" },
+      { value: "antifungals", label: "Antifungals" },
+      { value: "antivirals", label: "Antivirals" },
+      { value: "antiparasitics", label: "Antiparasitics" },
     ],
   },
   {
-    value: "malaria",
-    label: "Malaria",
-    subcategories: [{ value: "antimalarials", label: "Antimalarials" }],
+    value: "gastrointestinal_nutrition",
+    label: "Gastrointestinal & nutrition",
+    subcategories: [
+      { value: "antacids_antiulcer", label: "Antacids & anti-ulcer" },
+      { value: "antiemetics", label: "Antiemetics" },
+      { value: "laxatives", label: "Laxatives" },
+      { value: "antidiarrheals_ors", label: "Antidiarrheals & oral rehydration" },
+      { value: "vitamins_minerals", label: "Vitamins & minerals" },
+    ],
+  },
+  {
+    value: "endocrine_reproductive",
+    label: "Endocrine & reproductive health",
+    subcategories: [
+      { value: "diabetes", label: "Diabetes care" },
+      { value: "thyroid_medicines", label: "Thyroid medicines" },
+      { value: "corticosteroids", label: "Corticosteroids" },
+      { value: "contraceptives", label: "Contraceptives" },
+      { value: "maternal_health", label: "Maternal health" },
+    ],
   },
   {
     value: "respiratory_allergy",
     label: "Respiratory & allergy",
     subcategories: [
+      { value: "asthma_copd", label: "Asthma & COPD" },
       { value: "cough_cold", label: "Cough & cold" },
-      { value: "allergy", label: "Allergy relief" },
+      { value: "antihistamines", label: "Antihistamines & allergy relief" },
+      { value: "nasal_preparations", label: "Nasal preparations" },
+      { value: "respiratory_other", label: "Other respiratory medicines" },
     ],
   },
   {
-    value: "digestive",
-    label: "Digestive health",
+    value: "psychiatric_mental_health",
+    label: "Psychiatric & mental health",
     subcategories: [
-      { value: "gastrointestinal", label: "Gastrointestinal medicines" },
-      { value: "oral_rehydration", label: "Oral rehydration" },
+      { value: "controlled_sedatives", label: "Controlled sedatives & anxiolytics" },
+      { value: "antidepressants", label: "Antidepressants" },
+      { value: "antipsychotics", label: "Antipsychotics" },
+      { value: "antiepileptics", label: "Antiepileptics" },
+      { value: "neurological_medicines", label: "Other neurological medicines" },
     ],
   },
   {
-    value: "cardiovascular",
-    label: "Heart & blood pressure",
+    value: "blood_products_plasma_expanders",
+    label: "Blood Products & Plasma Expanders",
     subcategories: [
-      { value: "hypertension", label: "Blood pressure" },
-      { value: "heart_health", label: "Heart health" },
+      { value: "blood_products", label: "Blood products" },
+      { value: "plasma_expanders", label: "Plasma expanders" },
+      { value: "human_albumin", label: "Human albumin" },
+      { value: "haematinics", label: "Haematinics" },
+      // "Other" is intentionally a review-only escape hatch, never a new
+      // taxonomy value. The caller must supply an explanation.
+      { value: "other", label: "Other (HQ review required)" },
     ],
-  },
-  {
-    value: "diabetes_endocrine",
-    label: "Diabetes & endocrine",
-    subcategories: [{ value: "diabetes", label: "Diabetes care" }],
-  },
-  {
-    value: "womens_reproductive",
-    label: "Women's & reproductive health",
-    subcategories: [
-      { value: "reproductive_health", label: "Reproductive health" },
-      { value: "maternal_health", label: "Maternal health" },
-    ],
-  },
-  {
-    value: "child_health",
-    label: "Child health",
-    subcategories: [{ value: "pediatric", label: "Paediatric medicines" }],
-  },
-  {
-    value: "mental_neurological",
-    label: "Mental & neurological health",
-    subcategories: [
-      { value: "neurological", label: "Neurological medicines" },
-      { value: "mental_health", label: "Mental health medicines" },
-    ],
-  },
-  {
-    value: "skin_wound",
-    label: "Skin & wound care",
-    subcategories: [
-      { value: "dermatology", label: "Skin care" },
-      { value: "wound_care", label: "Wound care" },
-    ],
-  },
-  {
-    value: "eye_ear",
-    label: "Eye & ear care",
-    subcategories: [
-      { value: "eye_care", label: "Eye care" },
-      { value: "ear_care", label: "Ear care" },
-    ],
-  },
-  {
-    value: "vitamins_nutrition",
-    label: "Vitamins & nutrition",
-    subcategories: [
-      { value: "vitamins_minerals", label: "Vitamins & minerals" },
-    ],
-  },
-  {
-    value: "other",
-    label: "Other",
-    subcategories: [{ value: "other", label: "Other" }],
   },
 ] as const;
 

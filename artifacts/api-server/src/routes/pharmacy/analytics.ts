@@ -6,21 +6,23 @@ import {
   pharmacyInventoryTable as pharmacyInventory,
   prescriptionsTable as prescriptions,
 } from "@workspace/db";
-import { eq, and, gte, sql, count, sum } from "drizzle-orm";
+import { eq, and, gte, sql, count, sum, inArray } from "drizzle-orm";
 
 const router = safeRouter();
 
 // GET /analytics/overview
 router.get("/overview", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
 
-  const [ordersResult, inventoryResult, prescriptionsResult] =
+  const [ordersResult, inventoryResult, [dailyRevenue], prescriptionsResult] =
     await Promise.all([
       db
         .select({
           status: orders.status,
           cnt: count(),
-          rev: sum(orders.totalLeones),
+          rev: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}), 0)::int`,
         })
         .from(orders)
         .where(eq(orders.pharmacyId, pharmacyId))
@@ -34,6 +36,18 @@ router.get("/overview", async (req: AuthRequest, res) => {
             eq(pharmacyInventory.pharmacyId, pharmacyId),
             eq(pharmacyInventory.isActive, true),
             sql`${pharmacyInventory.stockQuantity} <= 5`,
+          ),
+        ),
+      db
+        .select({
+          value: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}), 0)::int`,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.pharmacyId, pharmacyId),
+            inArray(orders.status, ["delivered", "collected"]),
+            gte(orders.completedAt, startOfToday),
           ),
         ),
 
@@ -62,13 +76,14 @@ router.get("/overview", async (req: AuthRequest, res) => {
     ordersByStatus[row.status] = n;
     if (PENDING_STATUSES.has(row.status)) pendingOrders += n;
     if (COMPLETED_STATUSES.has(row.status))
-      revenueLeones += Number(row.rev ?? 0);
+      revenueLeones += Number(row.rev ?? 0) / 100;
   }
 
   res.json({
     totalOrders,
     pendingOrders,
     revenueLeones,
+    dailyRevenueLeones: (dailyRevenue?.value ?? 0) / 100,
     pendingPrescriptions: Number(prescriptionsResult[0]?.cnt ?? 0),
     lowStockItems: Number(inventoryResult[0]?.cnt ?? 0),
     ordersByStatus,
@@ -84,10 +99,16 @@ router.get("/orders-by-day", async (req: AuthRequest, res) => {
     .select({
       date: sql<string>`date_trunc('day', ${orders.createdAt})::date::text`,
       orders: count(),
-      revenueLeones: sum(orders.totalLeones),
+      revenueLeones: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}), 0)::int`,
     })
     .from(orders)
-    .where(and(eq(orders.pharmacyId, pharmacyId), gte(orders.createdAt, since)))
+    .where(
+      and(
+        eq(orders.pharmacyId, pharmacyId),
+        inArray(orders.status, ["delivered", "collected"]),
+        gte(orders.completedAt, since),
+      ),
+    )
     .groupBy(sql`date_trunc('day', ${orders.createdAt})`)
     .orderBy(sql`date_trunc('day', ${orders.createdAt})`);
 
@@ -95,7 +116,7 @@ router.get("/orders-by-day", async (req: AuthRequest, res) => {
     rows.map((r) => ({
       date: r.date,
       orders: Number(r.orders),
-      revenueLeones: Number(r.revenueLeones ?? 0),
+      revenueLeones: Number(r.revenueLeones ?? 0) / 100,
     })),
   );
 });

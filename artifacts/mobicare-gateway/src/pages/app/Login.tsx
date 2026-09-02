@@ -17,6 +17,7 @@ export default function PatientLogin() {
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export default function PatientLogin() {
     setBusy(true);
     try {
       if (mode === 'login') await login(phone, password);
-      else await register(name, phone, password);
+      else await register(name, phone, password, dateOfBirth);
       navigate('/app/search');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -167,18 +168,35 @@ export default function PatientLogin() {
           name={mode === 'recover' ? 'patient-password-reset' : 'patient-auth'}
         >
           {mode === 'register' && (
-            <div className="space-y-1.5">
-              <Label htmlFor="pt-name">Full name</Label>
-              <Input
-                id="pt-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                required
-                minLength={2}
-                data-testid="input-name"
-              />
-            </div>
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="pt-name">Full name</Label>
+                <Input
+                  id="pt-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  required
+                  minLength={2}
+                  data-testid="input-name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pt-date-of-birth">Date of birth</Label>
+                <Input
+                  id="pt-date-of-birth"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  required
+                  data-testid="input-date-of-birth"
+                />
+                <p className="text-xs text-muted-foreground">
+                  You must be at least 18 years old to register.
+                </p>
+              </div>
+            </>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="pt-phone">Phone number</Label>

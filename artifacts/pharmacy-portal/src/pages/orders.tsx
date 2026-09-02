@@ -291,24 +291,37 @@ function OrderDetailsSheet({
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="h-8 py-2 text-xs">Item</TableHead>
                     <TableHead className="h-8 py-2 text-xs text-right">Qty</TableHead>
-                    <TableHead className="h-8 py-2 text-xs text-right">Total</TableHead>
+                    <TableHead className="h-8 py-2 text-xs text-right">Base</TableHead>
+                    <TableHead className="h-8 py-2 text-xs text-right">Commission</TableHead>
+                    <TableHead className="h-8 py-2 text-xs text-right">Patient price</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order.items.map(item => (
-                    <TableRow key={item.id} className="hover:bg-transparent">
-                      <TableCell className="py-2 text-sm">{item.drugName}</TableCell>
-                      <TableCell className="py-2 text-sm text-right">x{item.quantity}</TableCell>
-                      <TableCell className="py-2 text-sm text-right font-medium">
-                        {formatLeones(item.unitPriceLeones * item.quantity)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {order.items.map(item => {
+                    const baseLineTotalMinor =
+                      (item.baseUnitPriceMinor ?? 0) * item.quantity;
+                    const patientLineTotalMinor =
+                      item.patientLineTotalMinor ??
+                      (item.patientUnitPriceMinor ?? 0) * item.quantity;
+                    return (
+                      <TableRow key={item.id} className="hover:bg-transparent">
+                        <TableCell className="py-2 text-sm">{item.drugName}</TableCell>
+                        <TableCell className="py-2 text-sm text-right">x{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-sm text-right">{formatLeones(baseLineTotalMinor / 100)}</TableCell>
+                        <TableCell className="py-2 text-sm text-right">{formatLeones((patientLineTotalMinor - baseLineTotalMinor) / 100)}</TableCell>
+                        <TableCell className="py-2 text-sm text-right font-medium">{formatLeones(patientLineTotalMinor / 100)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                   <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={2} className="py-3 font-semibold">Order Total</TableCell>
+                    <TableCell colSpan={3} className="py-3 font-semibold">Patient medicine total</TableCell>
                     <TableCell className="py-3 text-right font-bold text-primary">
-                      {formatLeones(order.totalLeones)}
+                      {formatLeones((order.patientMedicineTotalMinor ?? 0) / 100)}
                     </TableCell>
+                  </TableRow>
+                  <TableRow className="bg-muted/10 hover:bg-muted/10">
+                    <TableCell colSpan={3} className="py-2 font-medium">Pharmacy earnings</TableCell>
+                    <TableCell className="py-2 text-right font-semibold">{formatLeones((order.pharmacyMedicineTotalMinor ?? 0) / 100)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

@@ -8,6 +8,7 @@ import notificationsRouter from "./pharmacy/notifications.js";
 import prescriptionImagesRouter from "./prescriptionImages.js";
 import patientProfileImagesRouter from "./patientProfileImages.js";
 import teamRouter from "./team.js";
+import courierPhotosRouter from "./courierPhotos.js";
 import { pharmacy } from "../middlewares/auth.js";
 
 const router = safeRouter();
@@ -25,5 +26,6 @@ router.use("/notifications", ...pharmacy, notificationsRouter);
 router.use("/prescription-images", prescriptionImagesRouter);
 router.use("/patient-profile-images", patientProfileImagesRouter);
 router.use("/team", teamRouter);
+router.use("/couriers", courierPhotosRouter);
 
 export default router;

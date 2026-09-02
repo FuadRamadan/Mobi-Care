@@ -71,6 +71,12 @@ router.post("/", async (req: AuthRequest, res) => {
       });
     return;
   }
+  if (body.data.suggestedSubcategory === "other" && !body.data.description?.trim()) {
+    res.status(400).json({
+      error: "An explanation is required when selecting Other; HQ will review the request.",
+    });
+    return;
+  }
 
   const [inserted] = await db
     .insert(drugCatalogueTable)
@@ -104,6 +110,8 @@ router.post("/", async (req: AuthRequest, res) => {
       form: body.data.form,
       suggestedCategory: body.data.suggestedCategory,
       suggestedSubcategory: body.data.suggestedSubcategory,
+      otherCategoryExplanation:
+        body.data.suggestedSubcategory === "other" ? body.data.description : undefined,
     },
   });
 

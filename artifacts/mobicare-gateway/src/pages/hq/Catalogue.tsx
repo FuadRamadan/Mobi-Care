@@ -3,6 +3,7 @@ import {
   useListHqDrugs,
   useCreateHqDrug,
   useUpdateHqDrug,
+  useListDrugCategories,
   getListHqDrugsQueryKey,
   type HqDrug,
 } from "@workspace/api-client-react";
@@ -109,6 +110,7 @@ export default function HqCatalogue() {
   const { data, isLoading } = useListHqDrugs(
     tab === "held" ? { status: "held" } : undefined,
   );
+  const { data: categories = [] } = useListDrugCategories();
   const drugs = data ?? [];
 
   const refresh = () =>
@@ -125,6 +127,7 @@ export default function HqCatalogue() {
   const [open, setOpen] = useState(false);
   const [editDrug, setEditDrug] = useState<HqDrug | null>(null);
   const [form, setForm] = useState(DEFAULT_FORM);
+  const selectedCategory = categories.find((category) => category.value === form.primaryCategory);
 
   const [rejectDrug, setRejectDrug] = useState<HqDrug | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -292,9 +295,9 @@ export default function HqCatalogue() {
                       <SelectValue placeholder="Select category..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>
-                          {v}
+                      {categories.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -305,14 +308,15 @@ export default function HqCatalogue() {
                   <Select
                     value={form.subcategory}
                     onValueChange={(v) => setForm({ ...form, subcategory: v })}
+                    disabled={!form.primaryCategory}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select subcategory..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(SUBCATEGORY_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>
-                          {v}
+                      {selectedCategory?.subcategories.map((subcategory) => (
+                        <SelectItem key={subcategory.value} value={subcategory.value}>
+                          {subcategory.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

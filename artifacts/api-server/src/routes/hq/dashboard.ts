@@ -7,26 +7,18 @@ import {
   flagsTable,
   drugCatalogueTable,
   settlementsTable,
+  prescriptionsTable,
 } from "@workspace/db/schema";
-import { eq, gt, inArray, desc, and, sql } from "drizzle-orm";
+import { eq, gt, inArray, desc, and, sql, isNull } from "drizzle-orm";
 
 const router = safeRouter();
 
-// GET /hq/dashboard — aggregate counts, live order feed, confirmed revenue.
+// GET /hq/dashboard — aggregate counts, live order feed, completed revenue.
 router.get("/", async (_req, res) => {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const REVENUE_STATUSES = [
-    "confirmed",
-    "packaging",
-    "ready",
-    "assigned",
-    "picked_up",
-    "delivering",
-    "delivered",
-    "collected",
-  ] as const;
+  const REVENUE_STATUSES = ["delivered", "collected"] as const;
 
   const [
     [orderCounts],
@@ -37,6 +29,8 @@ router.get("/", async (_req, res) => {
     [pendingSettlements],
     [revenue],
     [todayOrders],
+    [pendingPrescriptions],
+    [unconfirmedDeliveries],
     recentOrders,
   ] = await Promise.all([
     db.select({ total: sql<number>`count(*)::int` }).from(ordersTable),
@@ -69,11 +63,19 @@ router.get("/", async (_req, res) => {
         total: sql<number>`coalesce(sum(${ordersTable.totalLeones}), 0)::int`,
       })
       .from(ordersTable)
-      .where(inArray(ordersTable.status, [...REVENUE_STATUSES])),
+       .where(and(inArray(ordersTable.status, [...REVENUE_STATUSES]), sql`${ordersTable.completedAt} is not null`)),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(ordersTable)
       .where(gt(ordersTable.createdAt, startOfToday)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(prescriptionsTable)
+      .where(eq(prescriptionsTable.status, "pending")),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(ordersTable)
+      .where(and(eq(ordersTable.status, "delivering"), isNull(ordersTable.deliveryConfirmedAt))),
     db
       .select({
         id: ordersTable.id,
@@ -118,7 +120,9 @@ router.get("/", async (_req, res) => {
       heldDrugs: heldDrugs?.count ?? 0,
       pendingSettlements: pendingSettlements?.count ?? 0,
       awaitingDispatch: awaitingDispatch[0]?.count ?? 0,
-      confirmedRevenueLeones: revenue?.total ?? 0,
+      pendingPrescriptions: pendingPrescriptions?.count ?? 0,
+      unconfirmedDeliveries: unconfirmedDeliveries?.count ?? 0,
+      completedRevenueLeones: revenue?.total ?? 0,
     },
     ordersByStatus: statusRows,
     recentOrders,

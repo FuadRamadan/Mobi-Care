@@ -20,6 +20,8 @@ export interface HqUser {
   name: string;
   username: string;
   canManageIntegrations: boolean;
+  canManageSettlements: boolean;
+  canViewDataInsights: boolean;
 }
 
 interface HqAuthValue {
@@ -63,6 +65,8 @@ export function HqAuthProvider({ children }: { children: ReactNode }) {
         name: u.name,
         username: u.username,
         canManageIntegrations: u.canManageIntegrations === true,
+        canManageSettlements: u.canManageSettlements === true,
+        canViewDataInsights: u.canViewDataInsights === true,
       };
       localStorage.setItem(USER_KEY, JSON.stringify(hqUser));
       setUser(hqUser);

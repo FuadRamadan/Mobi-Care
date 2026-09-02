@@ -7,11 +7,22 @@ import {
   DRUG_CATEGORY_TAXONOMY,
   DRUG_PRIMARY_CATEGORIES,
   DRUG_SUBCATEGORIES,
+  searchEventsTable,
+  patientsTable,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
 import { and, eq, gt, ilike, or, type SQL } from "drizzle-orm";
+import type { AuthRequest } from "../../middlewares/auth.js";
 
 const router = safeRouter();
+const DISTRICTS = ["bo", "bombali", "bonthe", "falaba", "freetown", "kailahun", "kambia", "kenema", "koinadugu", "kono", "moyamba", "port loko", "karene", "pujehun", "tonkolili", "western area"];
+
+function coarseDistrict(address: string | null | undefined): string {
+  const normalized = address?.toLocaleLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Unknown";
+  const district = DISTRICTS.find((item) => normalized.includes(item));
+  return district ? district.replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Unknown";
+}
 
 router.get("/categories", (_req, res) => {
   res.json(DRUG_CATEGORY_TAXONOMY);
@@ -24,7 +35,7 @@ router.get("/categories", (_req, res) => {
  * inventory. Returns one entry per drug with a list of price offers so the
  * patient can compare pharmacies.
  */
-router.get("/", async (req, res) => {
+router.get("/", async (req: AuthRequest, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const category =
     typeof req.query.category === "string" ? req.query.category : "";
@@ -175,6 +186,16 @@ router.get("/", async (req, res) => {
     offers: d.offers.sort((a: any, b: any) => a.priceLeones - b.priceLeones),
   }));
 
+  // Analytics is intentionally anonymous: only the normalized search and
+  // aggregate-safe result count are retained, never patient/session/IP data.
+  const [patient] = await db.select({ address: patientsTable.address }).from(patientsTable).where(eq(patientsTable.id, req.pharmacy!.sub)).limit(1);
+  await db.insert(searchEventsTable).values({
+    normalizedQuery: q ? q.toLocaleLowerCase() : null,
+    primaryCategory: category || null,
+    subcategory: subcategory || null,
+    areaDistrict: coarseDistrict(patient?.address),
+    resultCount: results.length,
+  });
   res.json(results);
 });
 

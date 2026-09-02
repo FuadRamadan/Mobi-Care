@@ -10,18 +10,12 @@ export type DrugPrimaryCategory = typeof DrugPrimaryCategory[keyof typeof DrugPr
 
 
 export const DrugPrimaryCategory = {
-  pain_fever: 'pain_fever',
-  infection: 'infection',
-  malaria: 'malaria',
-  respiratory_allergy: 'respiratory_allergy',
-  digestive: 'digestive',
   cardiovascular: 'cardiovascular',
-  diabetes_endocrine: 'diabetes_endocrine',
-  womens_reproductive: 'womens_reproductive',
-  child_health: 'child_health',
-  mental_neurological: 'mental_neurological',
-  skin_wound: 'skin_wound',
-  eye_ear: 'eye_ear',
-  vitamins_nutrition: 'vitamins_nutrition',
-  other: 'other',
+  pain_inflammation: 'pain_inflammation',
+  anti_infectives: 'anti_infectives',
+  gastrointestinal_nutrition: 'gastrointestinal_nutrition',
+  endocrine_reproductive: 'endocrine_reproductive',
+  respiratory_allergy: 'respiratory_allergy',
+  psychiatric_mental_health: 'psychiatric_mental_health',
+  blood_products_plasma_expanders: 'blood_products_plasma_expanders',
 } as const;

@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -29,6 +30,9 @@ import { MobiCareHeader } from '@/components/MobiCareHeader';
 type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
 
 function formatLeones(n: number) { return `Le ${n.toLocaleString()}`; }
+function imageUrl(path: string) {
+  return path.startsWith("http") ? path : `https://${process.env.EXPO_PUBLIC_DOMAIN}${path}`;
+}
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return '—';
@@ -217,7 +221,7 @@ export default function OrderDetailScreen() {
   }
 
   const pharmacy = (order as { pharmacy?: { id: string; name: string; address?: string | null; phone?: string | null } }).pharmacy;
-  const courier = (order as { courier?: { id: string; name: string; phone?: string | null } }).courier;
+  const courier = (order as { courier?: { id: string; name: string; phone?: string | null; photoUrl?: string | null } }).courier;
   const cancellableStatuses = ['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready'];
   const canCancel = !courier && cancellableStatuses.includes(order.status);
   const cancellationLocked = !!courier && ['assigned', 'picked_up', 'delivering'].includes(order.status);
@@ -404,7 +408,11 @@ export default function OrderDetailScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Courier</Text>
           <View style={s.infoRow}>
-            <MaterialCommunityIcons name="motorbike" size={16} color={colors.primary} />
+            {courier.photoUrl ? (
+              <Image source={{ uri: imageUrl(courier.photoUrl) }} style={s.courierPhoto} />
+            ) : (
+              <MaterialCommunityIcons name="motorbike" size={16} color={colors.primary} />
+            )}
             <Text style={s.infoText}>{courier.name}</Text>
           </View>
           {courier.phone && (
@@ -489,6 +497,7 @@ function makeStyles(colors: Colors, insets: { top: number; bottom: number }) {
     totalValue: { fontSize: 16, fontWeight: '800', color: colors.darkGreen },
     // Info
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+    courierPhoto: { width: 32, height: 32, borderRadius: 16 },
     infoText: { flex: 1, fontSize: 14, color: colors.foreground },
   });
 }

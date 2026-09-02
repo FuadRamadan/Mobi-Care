@@ -5,6 +5,7 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { OrderDeliveryConfirmationMethod } from './orderDeliveryConfirmationMethod';
 import type { OrderFulfillmentType } from './orderFulfillmentType';
 import type { OrderItem } from './orderItem';
 import type { OrderStatus } from './orderStatus';
@@ -18,6 +19,21 @@ export interface Order {
   fulfillmentType: OrderFulfillmentType;
   idChecked: boolean;
   totalLeones: number;
+  medicineMarkupBasisPoints?: number;
+  pharmacyMedicineTotalMinor?: number;
+  medicineCommissionMinor?: number;
+  patientMedicineTotalMinor?: number;
+  deliveryFeeMinor?: number;
+  courierPayoutMinor?: number;
+  deliveryCommissionMinor?: number;
+  /** @nullable */
+  completedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmationMethod?: OrderDeliveryConfirmationMethod;
+  /** @nullable */
+  deliveryConfirmedByHqUserId?: string | null;
   /** @nullable */
   prescriptionId?: string | null;
   createdAt: string;

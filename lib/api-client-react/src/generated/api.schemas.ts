@@ -67,14 +67,19 @@ export interface PharmacyUser {
   username: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
   /** Present for pharmacy accounts only */
   controlledSubstanceAuthorized?: boolean;
   /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
   mustChangePassword?: boolean;
   /** ISO timestamp of the pharmacy account's most recent password change */
   passwordLastChangedAt?: string;
-  /** Present for HQ accounts; controls access to API connection management */
   canManageIntegrations?: boolean;
+  /** Present for HQ accounts; controls access to API connection management */
+  canManageSettlements?: boolean;
+  /** Present for HQ accounts; controls access to aggregate-only Data & Insights */
+  canViewDataInsights?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -145,6 +150,9 @@ export interface OrderItem {
   drugName: string;
   quantity: number;
   unitPriceLeones: number;
+  baseUnitPriceMinor: number;
+  patientUnitPriceMinor: number;
+  patientLineTotalMinor: number;
   /** @nullable */
   prescriptionId?: string | null;
 }
@@ -174,6 +182,17 @@ export const OrderFulfillmentType = {
   collection: 'collection',
 } as const;
 
+/**
+ * @nullable
+ */
+export type OrderDeliveryConfirmationMethod = typeof OrderDeliveryConfirmationMethod[keyof typeof OrderDeliveryConfirmationMethod] | null;
+
+
+export const OrderDeliveryConfirmationMethod = {
+  patient: 'patient',
+  hq: 'hq',
+} as const;
+
 export interface Order {
   id: string;
   pharmacyId: string;
@@ -183,6 +202,21 @@ export interface Order {
   fulfillmentType: OrderFulfillmentType;
   idChecked: boolean;
   totalLeones: number;
+  medicineMarkupBasisPoints?: number;
+  pharmacyMedicineTotalMinor?: number;
+  medicineCommissionMinor?: number;
+  patientMedicineTotalMinor?: number;
+  deliveryFeeMinor?: number;
+  courierPayoutMinor?: number;
+  deliveryCommissionMinor?: number;
+  /** @nullable */
+  completedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmationMethod?: OrderDeliveryConfirmationMethod;
+  /** @nullable */
+  deliveryConfirmedByHqUserId?: string | null;
   /** @nullable */
   prescriptionId?: string | null;
   createdAt: string;
@@ -281,48 +315,59 @@ export type DrugPrimaryCategory = typeof DrugPrimaryCategory[keyof typeof DrugPr
 
 
 export const DrugPrimaryCategory = {
-  pain_fever: 'pain_fever',
-  infection: 'infection',
-  malaria: 'malaria',
-  respiratory_allergy: 'respiratory_allergy',
-  digestive: 'digestive',
   cardiovascular: 'cardiovascular',
-  diabetes_endocrine: 'diabetes_endocrine',
-  womens_reproductive: 'womens_reproductive',
-  child_health: 'child_health',
-  mental_neurological: 'mental_neurological',
-  skin_wound: 'skin_wound',
-  eye_ear: 'eye_ear',
-  vitamins_nutrition: 'vitamins_nutrition',
-  other: 'other',
+  pain_inflammation: 'pain_inflammation',
+  anti_infectives: 'anti_infectives',
+  gastrointestinal_nutrition: 'gastrointestinal_nutrition',
+  endocrine_reproductive: 'endocrine_reproductive',
+  respiratory_allergy: 'respiratory_allergy',
+  psychiatric_mental_health: 'psychiatric_mental_health',
+  blood_products_plasma_expanders: 'blood_products_plasma_expanders',
 } as const;
 
 export type DrugSubcategory = typeof DrugSubcategory[keyof typeof DrugSubcategory];
 
 
 export const DrugSubcategory = {
+  antihypertensives: 'antihypertensives',
+  antianginals: 'antianginals',
+  anticoagulants: 'anticoagulants',
+  lipid_lowering: 'lipid_lowering',
+  diuretics: 'diuretics',
   analgesics_antipyretics: 'analgesics_antipyretics',
   anti_inflammatory: 'anti_inflammatory',
+  anaesthetics: 'anaesthetics',
+  muscle_relaxants: 'muscle_relaxants',
+  gout_medicines: 'gout_medicines',
   antibiotics: 'antibiotics',
-  antifungal_antiparasitic: 'antifungal_antiparasitic',
   antimalarials: 'antimalarials',
-  cough_cold: 'cough_cold',
-  allergy: 'allergy',
-  gastrointestinal: 'gastrointestinal',
-  oral_rehydration: 'oral_rehydration',
-  hypertension: 'hypertension',
-  heart_health: 'heart_health',
-  diabetes: 'diabetes',
-  reproductive_health: 'reproductive_health',
-  maternal_health: 'maternal_health',
-  pediatric: 'pediatric',
-  neurological: 'neurological',
-  mental_health: 'mental_health',
-  dermatology: 'dermatology',
-  wound_care: 'wound_care',
-  eye_care: 'eye_care',
-  ear_care: 'ear_care',
+  antifungals: 'antifungals',
+  antivirals: 'antivirals',
+  antiparasitics: 'antiparasitics',
+  antacids_antiulcer: 'antacids_antiulcer',
+  antiemetics: 'antiemetics',
+  laxatives: 'laxatives',
+  antidiarrheals_ors: 'antidiarrheals_ors',
   vitamins_minerals: 'vitamins_minerals',
+  diabetes: 'diabetes',
+  thyroid_medicines: 'thyroid_medicines',
+  corticosteroids: 'corticosteroids',
+  contraceptives: 'contraceptives',
+  maternal_health: 'maternal_health',
+  asthma_copd: 'asthma_copd',
+  cough_cold: 'cough_cold',
+  antihistamines: 'antihistamines',
+  nasal_preparations: 'nasal_preparations',
+  respiratory_other: 'respiratory_other',
+  controlled_sedatives: 'controlled_sedatives',
+  antidepressants: 'antidepressants',
+  antipsychotics: 'antipsychotics',
+  antiepileptics: 'antiepileptics',
+  neurological_medicines: 'neurological_medicines',
+  blood_products: 'blood_products',
+  plasma_expanders: 'plasma_expanders',
+  human_albumin: 'human_albumin',
+  haematinics: 'haematinics',
   other: 'other',
 } as const;
 
@@ -384,6 +429,8 @@ export interface OrderCourierInfo {
   name: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
 }
 
 export type OrderPrescriptionInfoStatus = typeof OrderPrescriptionInfoStatus[keyof typeof OrderPrescriptionInfoStatus];
@@ -724,8 +771,10 @@ export interface AnalyticsOverview {
   totalOrders: number;
   /** Orders needing pharmacy action (paid, confirmed, packaging) */
   pendingOrders: number;
-  /** Total revenue from completed orders */
+  /** Pharmacy earnings from completed orders */
   revenueLeones: number;
+  /** Today's pharmacy earnings from completed orders */
+  dailyRevenueLeones: number;
   pendingPrescriptions: number;
   /** Inventory items with stockQuantity <= 5 */
   lowStockItems: number;
@@ -752,6 +801,34 @@ export interface HqNotification {
   createdAt: string;
 }
 
+export type HqInsightsDateRange = { [key: string]: unknown };
+
+export type HqInsightsTotals = {[key: string]: number | null};
+
+export type HqInsightsTrendsItem = { [key: string]: unknown };
+
+export type HqInsightsTrends = {[key: string]: HqInsightsTrendsItem[]};
+
+export type HqInsightsRankingsItem = { [key: string]: unknown };
+
+export type HqInsightsRankings = {[key: string]: HqInsightsRankingsItem[]};
+
+/**
+ * Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.
+ */
+export type HqInsightsSuppression = {[key: string]: string};
+
+export interface HqInsights {
+  /** @minimum 10 */
+  minimumGroupSize: number;
+  dateRange: HqInsightsDateRange;
+  totals: HqInsightsTotals;
+  trends: HqInsightsTrends;
+  rankings: HqInsightsRankings;
+  /** Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted. */
+  suppression: HqInsightsSuppression;
+}
+
 export type HqDashboardTotals = {
   orders: number;
   ordersToday: number;
@@ -763,7 +840,10 @@ export type HqDashboardTotals = {
   heldDrugs: number;
   pendingSettlements: number;
   awaitingDispatch: number;
-  confirmedRevenueLeones: number;
+  pendingPrescriptions: number;
+  unconfirmedDeliveries: number;
+  /** Sum of orders in delivered or collected status with a completed_at timestamp. */
+  completedRevenueLeones: number;
 };
 
 export type HqDashboardOrdersByStatusItem = {
@@ -819,6 +899,17 @@ export const HqOrderFulfillmentType = {
   collection: 'collection',
 } as const;
 
+/**
+ * @nullable
+ */
+export type HqOrderDeliveryConfirmationMethod = typeof HqOrderDeliveryConfirmationMethod[keyof typeof HqOrderDeliveryConfirmationMethod] | null;
+
+
+export const HqOrderDeliveryConfirmationMethod = {
+  patient: 'patient',
+  hq: 'hq',
+} as const;
+
 export interface HqOrder {
   id: string;
   pharmacyId: string;
@@ -830,6 +921,21 @@ export interface HqOrder {
   fulfillmentType: HqOrderFulfillmentType;
   idChecked: boolean;
   totalLeones: number;
+  medicineMarkupBasisPoints?: number;
+  pharmacyMedicineTotalMinor?: number;
+  medicineCommissionMinor?: number;
+  patientMedicineTotalMinor?: number;
+  deliveryFeeMinor?: number;
+  courierPayoutMinor?: number;
+  deliveryCommissionMinor?: number;
+  /** @nullable */
+  completedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmationMethod?: HqOrderDeliveryConfirmationMethod;
+  /** @nullable */
+  deliveryConfirmedByHqUserId?: string | null;
   /** @nullable */
   prescriptionId?: string | null;
   /** @nullable */
@@ -1297,9 +1403,13 @@ export interface Courier {
   id: string;
   name: string;
   phone: string;
+  /** @nullable */
+  photoUrl?: string | null;
   vehicleType: string;
   isActive: boolean;
   activeDeliveries?: number;
+  completedDeliveries?: number;
+  completedPayoutMinor?: number;
   createdAt: string;
 }
 
@@ -1336,6 +1446,33 @@ export interface CourierUpdate {
   phone?: string;
   vehicleType?: CourierUpdateVehicleType;
   isActive?: boolean;
+}
+
+export type CourierPhotoUploadRequestContentType = typeof CourierPhotoUploadRequestContentType[keyof typeof CourierPhotoUploadRequestContentType];
+
+
+export const CourierPhotoUploadRequestContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface CourierPhotoUploadRequest {
+  contentType: CourierPhotoUploadRequestContentType;
+  /**
+     * @minimum 1
+     * @maximum 5242880
+     */
+  fileSize: number;
+}
+
+export interface CourierPhotoAttach {
+  objectPath: string;
+}
+
+export interface PresignedUpload {
+  uploadUrl: string;
+  objectPath: string;
 }
 
 export type HqFlagType = typeof HqFlagType[keyof typeof HqFlagType];
@@ -1403,6 +1540,7 @@ export interface Settlement {
   /** @nullable */
   courierName?: string | null;
   amountLeones: number;
+  amountMinor?: number;
   periodStart: string;
   periodEnd: string;
   /** @nullable */
@@ -1417,15 +1555,38 @@ export interface Settlement {
   createdAt: string;
 }
 
+export interface SettlementMetrics {
+  rangeStart: string;
+  rangeEndExclusive: string;
+  medicineCommissionMinor: number;
+  deliveryCommissionMinor: number;
+  commissionIncomeMinor: number;
+  owedPharmacyMinor: number;
+  owedCourierMinor: number;
+  completedOrders: number;
+  completedDeliveries: number;
+}
+
+export interface PharmacySettlementMetrics {
+  pharmacyId: string;
+  /** @nullable */
+  pharmacyName?: string | null;
+  orderCount: number;
+  pharmacyEarningsMinor: number;
+  medicineCommissionMinor: number;
+}
+
 export interface SettlementsResponse {
   pharmacy: Settlement[];
   courier: Settlement[];
+  metrics: SettlementMetrics;
+  pharmacyBreakdown: PharmacySettlementMetrics[];
 }
 
 export interface GenerateSettlementsInput {
   /** ISO date-time (inclusive) */
   periodStart: string;
-  /** ISO date-time (exclusive) */
+  /** Inclusive calendar date, or exclusive ISO date-time */
   periodEnd: string;
 }
 
@@ -1494,6 +1655,26 @@ category?: DrugPrimaryCategory;
 subcategory?: DrugSubcategory;
 };
 
+export type GetHqInsightsParams = {
+start?: string;
+end?: string;
+interval?: GetHqInsightsInterval;
+};
+
+export type GetHqInsightsInterval = typeof GetHqInsightsInterval[keyof typeof GetHqInsightsInterval];
+
+
+export const GetHqInsightsInterval = {
+  day: 'day',
+  week: 'week',
+  month: 'month',
+} as const;
+
+export type ExportHqInsightsCsvParams = {
+start?: string;
+end?: string;
+};
+
 export type ListHqOrdersParams = {
 status?: string;
 };
@@ -1521,6 +1702,17 @@ export const ListFlagsStatus = {
   open: 'open',
   reviewed: 'reviewed',
 } as const;
+
+export type ListSettlementsParams = {
+/**
+ * Inclusive ISO date or date-time for financial metrics
+ */
+start?: string;
+/**
+ * Inclusive ISO date, or an exclusive ISO date-time
+ */
+end?: string;
+};
 
 export type ListAuditLogParams = {
 entityType?: string;

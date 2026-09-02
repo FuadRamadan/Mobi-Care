@@ -209,7 +209,11 @@ export default function OrderDetail() {
           </div>
           {o.courier && (
             <div className="flex items-center gap-3 border-t pt-3">
-              <Phone className="w-4 h-4 text-primary shrink-0" />
+              {o.courier.photoUrl ? (
+                <img src={o.courier.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <Phone className="w-4 h-4 text-primary shrink-0" />
+              )}
               <div className="text-xs">
                 Rider: <span className="font-medium">{o.courier.name}</span>
                 {o.courier.phone ? ` · ${o.courier.phone}` : ''}

@@ -7,7 +7,7 @@ import {
   drugCatalogueTable,
   prescriptionsTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
@@ -84,7 +84,7 @@ router.get("/", async (req: AuthRequest, res) => {
     );
   }
 
-  const orders = await query.orderBy(ordersTable.createdAt);
+  const orders = await query.orderBy(desc(ordersTable.createdAt));
 
   // Attach items with drug context to each order
   const orderIds = orders.map((o) => o.id);
@@ -98,6 +98,9 @@ router.get("/", async (req: AuthRequest, res) => {
             drugName: orderItemsTable.drugName,
             quantity: orderItemsTable.quantity,
             unitPriceLeones: orderItemsTable.unitPriceLeones,
+             baseUnitPriceMinor: orderItemsTable.baseUnitPriceMinor,
+             patientUnitPriceMinor: orderItemsTable.patientUnitPriceMinor,
+             patientLineTotalMinor: orderItemsTable.patientLineTotalMinor,
             prescriptionId: orderItemsTable.prescriptionId,
           })
           .from(orderItemsTable)
@@ -268,7 +271,12 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
 
   const [updated] = await db
     .update(ordersTable)
-    .set({ status: "collected", idChecked: true, updatedAt: new Date() })
+    .set({
+      status: "collected",
+      idChecked: true,
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(ordersTable.id, id),

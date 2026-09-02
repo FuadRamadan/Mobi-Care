@@ -1027,7 +1027,7 @@ paths:
     get:
       operationId: getHqDashboard
       tags: [hq]
-      summary: HQ command centre — aggregates, live feed, revenue
+      summary: HQ command centre — aggregates, live feed, and completed delivered/collected revenue
       security:
         - BearerAuth: []
       responses:
@@ -1037,6 +1037,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HqDashboard"
+
+  /hq/insights:
+    get:
+      operationId: getHqInsights
+      tags: [hq]
+      summary: Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+        - name: interval
+          in: query
+          schema: { type: string, enum: [day, week, month] }
+      responses:
+        "200":
+          description: Aggregate metrics only; small groups are suppressed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqInsights"
+        "403": { description: Data & Insights permission required }
+
+  /hq/insights/export.csv:
+    get:
+      operationId: exportHqInsightsCsv
+      tags: [hq]
+      summary: Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: CSV containing aggregate metrics only. Buckets under 10 are omitted and suppressed totals are marked SUPPRESSED.
+          content:
+            text/csv:
+              schema: { type: string }
 
   /hq/notifications:
     get:
@@ -1211,6 +1258,29 @@ paths:
                 $ref: "#/components/schemas/HqOrder"
         "409":
           description: Invalid state
+
+  /hq/orders/{id}/confirm-delivery:
+    post:
+      operationId: confirmDeliveryByHq
+      tags: [hq]
+      summary: Confirm a delivering order was delivered as an HQ fallback
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delivered order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqOrder"
+        "409":
+          description: Order is not an eligible delivering delivery order
 
   /hq/pharmacies:
     get:
@@ -1701,6 +1771,71 @@ paths:
         "409":
           description: Courier has active deliveries
 
+  /hq/couriers/{id}/photo-upload:
+    post:
+      operationId: requestCourierPhotoUpload
+      tags: [hq]
+      summary: Request a direct upload URL for a courier portrait
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourierPhotoUploadRequest" }
+      responses:
+        "200":
+          description: Signed upload target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PresignedUpload" }
+
+  /hq/couriers/{id}/photo:
+    patch:
+      operationId: attachCourierPhoto
+      tags: [hq]
+      summary: Attach a completed courier portrait upload
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourierPhotoAttach" }
+      responses:
+        "200":
+          description: Updated courier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Courier" }
+    delete:
+      operationId: removeCourierPhoto
+      tags: [hq]
+      summary: Remove a courier portrait
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Updated courier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Courier" }
+
   /hq/flags:
     get:
       operationId: listFlags
@@ -1759,6 +1894,17 @@ paths:
       summary: Pharmacy and courier settlements
       security:
         - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+          description: Inclusive ISO date or date-time for financial metrics
+        - name: end
+          in: query
+          schema:
+            type: string
+          description: Inclusive ISO date, or an exclusive ISO date-time
       responses:
         "200":
           description: Settlements
@@ -1968,6 +2114,8 @@ components:
           type: string
         phone:
           type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
         controlledSubstanceAuthorized:
           type: boolean
           description: Present for pharmacy accounts only
@@ -1979,7 +2127,12 @@ components:
           description: ISO timestamp of the pharmacy account's most recent password change
         canManageIntegrations:
           type: boolean
+        canManageSettlements:
+          type: boolean
           description: Present for HQ accounts; controls access to API connection management
+        canViewDataInsights:
+          type: boolean
+          description: Present for HQ accounts; controls access to aggregate-only Data & Insights
 
     TokenPair:
       type: object
@@ -2021,7 +2174,18 @@ components:
 
     OrderItem:
       type: object
-      required: [id, orderId, drugId, drugName, quantity, unitPriceLeones]
+      required:
+        [
+          id,
+          orderId,
+          drugId,
+          drugName,
+          quantity,
+          unitPriceLeones,
+          baseUnitPriceMinor,
+          patientUnitPriceMinor,
+          patientLineTotalMinor,
+        ]
       properties:
         id:
           type: string
@@ -2039,6 +2203,12 @@ components:
         quantity:
           type: number
         unitPriceLeones:
+          type: number
+        baseUnitPriceMinor:
+          type: number
+        patientUnitPriceMinor:
+          type: number
+        patientLineTotalMinor:
           type: number
         prescriptionId:
           type: ["string", "null"]
@@ -2093,6 +2263,29 @@ components:
           type: boolean
         totalLeones:
           type: number
+        medicineMarkupBasisPoints:
+          type: number
+        pharmacyMedicineTotalMinor:
+          type: number
+        medicineCommissionMinor:
+          type: number
+        patientMedicineTotalMinor:
+          type: number
+        deliveryFeeMinor:
+          type: number
+        courierPayoutMinor:
+          type: number
+        deliveryCommissionMinor:
+          type: number
+        completedAt:
+          type: ["string", "null"]
+        deliveryConfirmedAt:
+          type: ["string", "null"]
+        deliveryConfirmationMethod:
+          type: ["string", "null"]
+          enum: [patient, hq, null]
+        deliveryConfirmedByHqUserId:
+          type: ["string", "null"]
         prescriptionId:
           type: ["string", "null"]
 
@@ -2324,6 +2517,8 @@ components:
         name:
           type: string
         phone:
+          type: ["string", "null"]
+        photoUrl:
           type: ["string", "null"]
 
     OrderPrescriptionInfo:
@@ -2668,48 +2863,36 @@ components:
       type: string
       enum:
         [
-          pain_fever,
-          infection,
-          malaria,
-          respiratory_allergy,
-          digestive,
           cardiovascular,
-          diabetes_endocrine,
-          womens_reproductive,
-          child_health,
-          mental_neurological,
-          skin_wound,
-          eye_ear,
-          vitamins_nutrition,
-          other,
+          pain_inflammation,
+          anti_infectives,
+          gastrointestinal_nutrition,
+          endocrine_reproductive,
+          respiratory_allergy,
+          psychiatric_mental_health,
+          blood_products_plasma_expanders,
         ]
 
     DrugSubcategory:
       type: string
       enum:
         [
+          antihypertensives, antianginals, anticoagulants, lipid_lowering, diuretics,
           analgesics_antipyretics,
           anti_inflammatory,
+          anaesthetics, muscle_relaxants, gout_medicines,
           antibiotics,
-          antifungal_antiparasitic,
           antimalarials,
-          cough_cold,
-          allergy,
-          gastrointestinal,
-          oral_rehydration,
-          hypertension,
-          heart_health,
-          diabetes,
-          reproductive_health,
-          maternal_health,
-          pediatric,
-          neurological,
-          mental_health,
-          dermatology,
-          wound_care,
-          eye_care,
-          ear_care,
+          antifungals, antivirals, antiparasitics,
+          antacids_antiulcer, antiemetics, laxatives, antidiarrheals_ors,
           vitamins_minerals,
+          diabetes, thyroid_medicines, corticosteroids, contraceptives, maternal_health,
+          asthma_copd,
+          cough_cold,
+          antihistamines, nasal_preparations, respiratory_other,
+          controlled_sedatives, antidepressants, antipsychotics, antiepileptics,
+          neurological_medicines,
+          blood_products, plasma_expanders, human_albumin, haematinics,
           other,
         ]
 
@@ -2897,6 +3080,7 @@ components:
           totalOrders,
           pendingOrders,
           revenueLeones,
+          dailyRevenueLeones,
           pendingPrescriptions,
           lowStockItems,
           ordersByStatus,
@@ -2909,7 +3093,10 @@ components:
           description: Orders needing pharmacy action (paid, confirmed, packaging)
         revenueLeones:
           type: number
-          description: Total revenue from completed orders
+          description: Pharmacy earnings from completed orders
+        dailyRevenueLeones:
+          type: number
+          description: Today's pharmacy earnings from completed orders
         pendingPrescriptions:
           type: number
         lowStockItems:
@@ -2954,6 +3141,38 @@ components:
         createdAt:
           type: string
 
+    HqInsights:
+      type: object
+      required: [minimumGroupSize, dateRange, totals, trends, rankings, suppression]
+      properties:
+        minimumGroupSize: { type: number, minimum: 10 }
+        dateRange:
+          type: object
+          additionalProperties: true
+        totals:
+          type: object
+          additionalProperties:
+            type: [number, "null"]
+        trends:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        rankings:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        suppression:
+          type: object
+          additionalProperties:
+            type: string
+          description: Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.
+
     HqDashboard:
       type: object
       required: [totals, ordersByStatus, recentOrders]
@@ -2972,7 +3191,9 @@ components:
               heldDrugs,
               pendingSettlements,
               awaitingDispatch,
-              confirmedRevenueLeones,
+              pendingPrescriptions,
+              unconfirmedDeliveries,
+              completedRevenueLeones,
             ]
           properties:
             orders:
@@ -2995,8 +3216,13 @@ components:
               type: number
             awaitingDispatch:
               type: number
-            confirmedRevenueLeones:
+            pendingPrescriptions:
               type: number
+            unconfirmedDeliveries:
+              type: number
+            completedRevenueLeones:
+              type: number
+              description: Sum of orders in delivered or collected status with a completed_at timestamp.
         ordersByStatus:
           type: array
           items:
@@ -3092,6 +3318,29 @@ components:
           type: boolean
         totalLeones:
           type: number
+        medicineMarkupBasisPoints:
+          type: number
+        pharmacyMedicineTotalMinor:
+          type: number
+        medicineCommissionMinor:
+          type: number
+        patientMedicineTotalMinor:
+          type: number
+        deliveryFeeMinor:
+          type: number
+        courierPayoutMinor:
+          type: number
+        deliveryCommissionMinor:
+          type: number
+        completedAt:
+          type: ["string", "null"]
+        deliveryConfirmedAt:
+          type: ["string", "null"]
+        deliveryConfirmationMethod:
+          type: ["string", "null"]
+          enum: [patient, hq, null]
+        deliveryConfirmedByHqUserId:
+          type: ["string", "null"]
         prescriptionId:
           type: ["string", "null"]
         courierId:
@@ -3640,11 +3889,17 @@ components:
           type: string
         phone:
           type: string
+        photoUrl:
+          type: ["string", "null"]
         vehicleType:
           type: string
         isActive:
           type: boolean
         activeDeliveries:
+          type: number
+        completedDeliveries:
+          type: number
+        completedPayoutMinor:
           type: number
         createdAt:
           type: string
@@ -3675,6 +3930,34 @@ components:
           enum: [motorbike, bicycle, car, van]
         isActive:
           type: boolean
+
+    CourierPhotoUploadRequest:
+      type: object
+      required: [contentType, fileSize]
+      properties:
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        fileSize:
+          type: number
+          minimum: 1
+          maximum: 5242880
+
+    CourierPhotoAttach:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+
+    PresignedUpload:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl:
+          type: string
+        objectPath:
+          type: string
 
     HqFlag:
       type: object
@@ -3734,6 +4017,8 @@ components:
           type: ["string", "null"]
         amountLeones:
           type: number
+        amountMinor:
+          type: number
         periodStart:
           type: string
         periodEnd:
@@ -3754,7 +4039,7 @@ components:
 
     SettlementsResponse:
       type: object
-      required: [pharmacy, courier]
+      required: [pharmacy, courier, metrics, pharmacyBreakdown]
       properties:
         pharmacy:
           type: array
@@ -3764,6 +4049,37 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Settlement"
+        metrics:
+          $ref: "#/components/schemas/SettlementMetrics"
+        pharmacyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacySettlementMetrics"
+
+    SettlementMetrics:
+      type: object
+      required:
+        [rangeStart, rangeEndExclusive, medicineCommissionMinor, deliveryCommissionMinor, commissionIncomeMinor, owedPharmacyMinor, owedCourierMinor, completedOrders, completedDeliveries]
+      properties:
+        rangeStart: { type: string }
+        rangeEndExclusive: { type: string }
+        medicineCommissionMinor: { type: number }
+        deliveryCommissionMinor: { type: number }
+        commissionIncomeMinor: { type: number }
+        owedPharmacyMinor: { type: number }
+        owedCourierMinor: { type: number }
+        completedOrders: { type: number }
+        completedDeliveries: { type: number }
+
+    PharmacySettlementMetrics:
+      type: object
+      required: [pharmacyId, orderCount, pharmacyEarningsMinor, medicineCommissionMinor]
+      properties:
+        pharmacyId: { type: string }
+        pharmacyName: { type: ["string", "null"] }
+        orderCount: { type: number }
+        pharmacyEarningsMinor: { type: number }
+        medicineCommissionMinor: { type: number }
 
     GenerateSettlementsInput:
       type: object
@@ -3774,7 +4090,7 @@ components:
           description: ISO date-time (inclusive)
         periodEnd:
           type: string
-          description: ISO date-time (exclusive)
+          description: Inclusive calendar date, or exclusive ISO date-time
 
     MarkPaidInput:
       type: object

@@ -16,15 +16,43 @@ const router = safeRouter();
 
 const COMPLETED_STATUSES = ["delivered", "collected"] as const;
 
+function periodBounds(startInput: string, endInput: string) {
+  const start = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(startInput)
+      ? `${startInput}T00:00:00.000Z`
+      : startInput,
+  );
+  const end = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(endInput)
+      ? `${endInput}T00:00:00.000Z`
+      : endInput,
+  );
+  if (/^\d{4}-\d{2}-\d{2}$/.test(endInput)) {
+    end.setUTCDate(end.getUTCDate() + 1);
+  }
+  return { start, end };
+}
+
 // ── GET /hq/settlements — pharmacy + courier settlements ─────────────────────
-router.get("/", async (_req, res) => {
-  const [pharmacyRows, courierRows] = await Promise.all([
+router.get("/", async (req, res) => {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const requestedStart = typeof req.query.start === "string" ? req.query.start : today.toISOString();
+  const requestedEnd = typeof req.query.end === "string" ? req.query.end : new Date().toISOString();
+  const range = periodBounds(requestedStart, requestedEnd);
+  const completedInRange = and(
+    inArray(ordersTable.status, [...COMPLETED_STATUSES]),
+    gte(ordersTable.completedAt, range.start),
+    lt(ordersTable.completedAt, range.end),
+  );
+  const [pharmacyRows, courierRows, [metrics], pharmacyBreakdown] = await Promise.all([
     db
       .select({
         id: settlementsTable.id,
         pharmacyId: settlementsTable.pharmacyId,
         pharmacyName: pharmaciesTable.name,
         amountLeones: settlementsTable.amountLeones,
+        amountMinor: settlementsTable.amountMinor,
         periodStart: settlementsTable.periodStart,
         periodEnd: settlementsTable.periodEnd,
         orderCount: settlementsTable.orderCount,
@@ -45,6 +73,7 @@ router.get("/", async (_req, res) => {
         courierId: courierSettlementsTable.courierId,
         courierName: couriersTable.name,
         amountLeones: courierSettlementsTable.amountLeones,
+        amountMinor: courierSettlementsTable.amountMinor,
         periodStart: courierSettlementsTable.periodStart,
         periodEnd: courierSettlementsTable.periodEnd,
         deliveryCount: courierSettlementsTable.deliveryCount,
@@ -59,17 +88,55 @@ router.get("/", async (_req, res) => {
         eq(courierSettlementsTable.courierId, couriersTable.id),
       )
       .orderBy(desc(courierSettlementsTable.createdAt)),
+    db
+      .select({
+        medicineCommissionMinor: sql<number>`coalesce(sum(${ordersTable.medicineCommissionMinor}), 0)::int`,
+        deliveryCommissionMinor: sql<number>`coalesce(sum(${ordersTable.deliveryCommissionMinor}), 0)::int`,
+        owedPharmacyMinor: sql<number>`coalesce(sum(${ordersTable.pharmacyMedicineTotalMinor}), 0)::int`,
+        owedCourierMinor: sql<number>`coalesce(sum(${ordersTable.courierPayoutMinor}) filter (where ${ordersTable.status} = 'delivered'), 0)::int`,
+        completedOrders: sql<number>`count(*)::int`,
+        completedDeliveries: sql<number>`count(*) filter (where ${ordersTable.status} = 'delivered')::int`,
+      })
+      .from(ordersTable)
+      .where(completedInRange),
+    db
+      .select({
+        pharmacyId: ordersTable.pharmacyId,
+        pharmacyName: pharmaciesTable.name,
+        orderCount: sql<number>`count(*)::int`,
+        pharmacyEarningsMinor: sql<number>`coalesce(sum(${ordersTable.pharmacyMedicineTotalMinor}), 0)::int`,
+        medicineCommissionMinor: sql<number>`coalesce(sum(${ordersTable.medicineCommissionMinor}), 0)::int`,
+      })
+      .from(ordersTable)
+      .leftJoin(pharmaciesTable, eq(ordersTable.pharmacyId, pharmaciesTable.id))
+      .where(completedInRange)
+      .groupBy(ordersTable.pharmacyId, pharmaciesTable.name),
   ]);
 
-  res.json({ pharmacy: pharmacyRows, courier: courierRows });
+  res.json({
+    pharmacy: pharmacyRows,
+    courier: courierRows,
+    metrics: {
+      rangeStart: range.start,
+      rangeEndExclusive: range.end,
+      medicineCommissionMinor: metrics?.medicineCommissionMinor ?? 0,
+      deliveryCommissionMinor: metrics?.deliveryCommissionMinor ?? 0,
+      commissionIncomeMinor:
+        (metrics?.medicineCommissionMinor ?? 0) +
+        (metrics?.deliveryCommissionMinor ?? 0),
+      owedPharmacyMinor: metrics?.owedPharmacyMinor ?? 0,
+      owedCourierMinor: metrics?.owedCourierMinor ?? 0,
+      completedOrders: metrics?.completedOrders ?? 0,
+      completedDeliveries: metrics?.completedDeliveries ?? 0,
+    },
+    pharmacyBreakdown,
+  });
 });
 
 // ── POST /hq/settlements/generate — build settlements for a period ───────────
 // Aggregates completed orders in [periodStart, periodEnd) into pending
 // settlements: one per pharmacy (order totals) and one per courier
 // (flat delivery fee per completed delivery).
-const COURIER_FEE_LEONES = 25_000;
-
 router.post("/generate", async (req: AuthRequest, res) => {
   const body = z
     .object({
@@ -84,8 +151,10 @@ router.post("/generate", async (req: AuthRequest, res) => {
     return;
   }
 
-  const periodStart = new Date(body.data.periodStart);
-  const periodEnd = new Date(body.data.periodEnd);
+  const { start: periodStart, end: periodEnd } = periodBounds(
+    body.data.periodStart,
+    body.data.periodEnd,
+  );
   if (
     isNaN(periodStart.getTime()) ||
     isNaN(periodEnd.getTime()) ||
@@ -99,15 +168,15 @@ router.post("/generate", async (req: AuthRequest, res) => {
 
   const completed = and(
     inArray(ordersTable.status, [...COMPLETED_STATUSES]),
-    gte(ordersTable.updatedAt, periodStart),
-    lt(ordersTable.updatedAt, periodEnd),
+    gte(ordersTable.completedAt, periodStart),
+    lt(ordersTable.completedAt, periodEnd),
   );
 
   const [byPharmacy, byCourier] = await Promise.all([
     db
       .select({
         pharmacyId: ordersTable.pharmacyId,
-        total: sql<number>`sum(${ordersTable.totalLeones})::int`,
+        total: sql<number>`coalesce(sum(${ordersTable.pharmacyMedicineTotalMinor}), 0)::int`,
         count: sql<number>`count(*)::int`,
       })
       .from(ordersTable)
@@ -117,6 +186,7 @@ router.post("/generate", async (req: AuthRequest, res) => {
       .select({
         courierId: ordersTable.courierId,
         count: sql<number>`count(*)::int`,
+        total: sql<number>`coalesce(sum(${ordersTable.courierPayoutMinor}), 0)::int`,
       })
       .from(ordersTable)
       .where(and(completed, eq(ordersTable.status, "delivered")))
@@ -135,7 +205,8 @@ router.post("/generate", async (req: AuthRequest, res) => {
       .insert(settlementsTable)
       .values({
         pharmacyId: row.pharmacyId,
-        amountLeones: row.total,
+        amountLeones: Math.round(row.total / 100),
+        amountMinor: row.total,
         periodStart,
         periodEnd,
         orderCount: row.count,
@@ -150,7 +221,8 @@ router.post("/generate", async (req: AuthRequest, res) => {
       .insert(courierSettlementsTable)
       .values({
         courierId: row.courierId,
-        amountLeones: row.count * COURIER_FEE_LEONES,
+        amountLeones: Math.round(row.total / 100),
+        amountMinor: row.total,
         periodStart,
         periodEnd,
         deliveryCount: row.count,

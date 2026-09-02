@@ -211,6 +211,8 @@ function RequestMissingDrugModal({
     if (!form.trim()) newErrors.form = "Form is required";
     if (!category) newErrors.category = "Category is required";
     if (!subcategory) newErrors.subcategory = "Subcategory is required";
+    if (subcategory === "other" && !description.trim())
+      newErrors.description = "Explain the Other category for HQ review";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -227,9 +229,7 @@ function RequestMissingDrugModal({
           form,
           suggestedCategory: category as DrugPrimaryCategory,
           suggestedSubcategory:
-            category === "other"
-              ? "other"
-              : (subcategory as DrugSubcategory),
+            subcategory as DrugSubcategory,
           unit: unit || undefined,
           description: description || undefined,
         },
@@ -362,7 +362,7 @@ function RequestMissingDrugModal({
                 onChange={(e) => {
                   const next = e.target.value as DrugPrimaryCategory | "";
                   setCategory(next);
-                  setSubcategory(next === "other" ? "other" : "");
+                   setSubcategory("");
                 }}
                 className={selectClass}
                 data-testid="select-propose-category"
@@ -413,6 +413,9 @@ function RequestMissingDrugModal({
               placeholder="Any helpful details..."
               data-testid="input-propose-desc"
             />
+            {errors.description && (
+              <p className="text-xs text-destructive">{errors.description}</p>
+            )}
           </div>
         </div>
 
@@ -546,7 +549,7 @@ function ListingModal({
     if (isNaN(stockNum) || stockNum < 0)
       newErrors.stockQuantity = "Valid stock is required";
 
-    if (primaryCategory === "other" && !otherCategoryText.trim()) {
+    if (subcategory === "other" && !otherCategoryText.trim()) {
       newErrors.otherCategoryText =
         "Explanation is required for 'Other' category";
     }
@@ -965,7 +968,7 @@ function ListingModal({
                     setSubcategory(e.target.value as DrugSubcategory | "")
                   }
                   className={selectClass}
-                  disabled={!primaryCategory || primaryCategory === "other"}
+                  disabled={!primaryCategory}
                   data-testid="select-subcategory"
                 >
                   <option value="">Select subcategory...</option>
@@ -978,7 +981,7 @@ function ListingModal({
               </div>
             </div>
 
-            {primaryCategory === "other" && (
+            {subcategory === "other" && (
               <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-200 mt-2">
                 <Label className="text-amber-900">
                   Category Explanation{" "}

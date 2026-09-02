@@ -5,6 +5,7 @@ import {
   useAssignCourier,
   useUpdateCourierStatus,
   useMarkCashCollected,
+  useConfirmDeliveryByHq,
   getListDispatchOrdersQueryKey,
   getGetHqDashboardQueryKey,
 } from '@workspace/api-client-react';
@@ -45,6 +46,9 @@ export default function HqDispatch() {
   const assign = useAssignCourier({ mutation: { onSuccess: refresh, onError } });
   const advance = useUpdateCourierStatus({ mutation: { onSuccess: refresh, onError } });
   const cash = useMarkCashCollected({ mutation: { onSuccess: refresh, onError } });
+  const confirmDelivery = useConfirmDeliveryByHq({
+    mutation: { onSuccess: refresh, onError },
+  });
 
   return (
     <HqLayout title="Dispatch">
@@ -117,12 +121,23 @@ export default function HqDispatch() {
                   )}
 
                   {o.status === 'delivering' && (
-                    <span
-                      className="text-xs text-muted-foreground max-w-48"
-                      data-testid={`text-awaiting-customer-${o.id}`}
-                    >
-                      Awaiting customer receipt confirmation
-                    </span>
+                    <>
+                      <span
+                        className="text-xs text-muted-foreground max-w-48"
+                        data-testid={`text-awaiting-customer-${o.id}`}
+                      >
+                        Awaiting customer receipt confirmation
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={confirmDelivery.isPending}
+                        onClick={() => confirmDelivery.mutate({ id: o.id })}
+                        data-testid={`button-confirm-delivery-hq-${o.id}`}
+                      >
+                        Confirm delivered (HQ)
+                      </Button>
+                    </>
                   )}
 
                   {o.status === 'delivered' && !o.cashCollected && (

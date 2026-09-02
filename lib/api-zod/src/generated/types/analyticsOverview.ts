@@ -11,8 +11,10 @@ export interface AnalyticsOverview {
   totalOrders: number;
   /** Orders needing pharmacy action (paid, confirmed, packaging) */
   pendingOrders: number;
-  /** Total revenue from completed orders */
+  /** Pharmacy earnings from completed orders */
   revenueLeones: number;
+  /** Today's pharmacy earnings from completed orders */
+  dailyRevenueLeones: number;
   pendingPrescriptions: number;
   /** Inventory items with stockQuantity <= 5 */
   lowStockItems: number;

@@ -1,8 +1,7 @@
 import { useGetAnalyticsOverview, useGetOrdersByDay } from "@workspace/api-client-react";
 import { formatLeones } from "@/lib/format";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, parseISO } from "date-fns";
-import { Activity, Clock, Package, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { Activity, Clock, Package, AlertTriangle, TrendingUp, ArrowRight, type LucideIcon } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -25,6 +24,10 @@ export default function Dashboard() {
   }
 
   if (!analytics) return null;
+  const maxDailyOrders = Math.max(
+    1,
+    ...(chartData ?? []).map((day) => day.orders),
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -34,6 +37,12 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Daily Revenue"
+          value={formatLeones(analytics.dailyRevenueLeones)}
+          icon={TrendingUp}
+          trend="Today's pharmacy earnings"
+        />
         <MetricCard 
           title="Pending Orders" 
           value={analytics.pendingOrders} 
@@ -51,7 +60,7 @@ export default function Dashboard() {
           linkTo="/prescriptions"
         />
         <MetricCard 
-          title="Revenue (30d)" 
+          title="Pharmacy earnings"
           value={formatLeones(analytics.revenueLeones)} 
           icon={TrendingUp} 
           trend="Completed orders" 
@@ -86,48 +95,33 @@ export default function Dashboard() {
         </div>
         <div className="h-[350px] w-full">
           {chartData && chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(val) => format(parseISO(val), 'MMM d')}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  dx={-10}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', padding: '12px' }}
-                  labelFormatter={(val) => format(parseISO(val as string), 'MMM d, yyyy')}
-                  formatter={(value: number, name: string) => [
-                    name === 'revenueLeones' ? formatLeones(value) : value,
-                    name === 'revenueLeones' ? 'Revenue' : 'Orders'
-                  ]}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorOrders)" 
-                  activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div
+              className="flex h-full min-w-[680px] items-end gap-1 overflow-x-auto border-b border-border px-2 pt-8"
+              role="img"
+              aria-label="Daily order volume for the last 30 days"
+            >
+              {chartData.map((day, index) => (
+                <div
+                  key={day.date}
+                  className="group flex h-full min-w-5 flex-1 flex-col items-center justify-end gap-2"
+                  title={`${format(parseISO(day.date), 'MMM d, yyyy')}: ${day.orders} orders, ${formatLeones(day.revenueLeones)}`}
+                >
+                  <span className="pointer-events-none hidden rounded bg-popover px-2 py-1 text-xs shadow group-hover:block">
+                    {day.orders}
+                  </span>
+                  <div
+                    className="w-full min-h-1 rounded-t bg-primary/80 transition-colors group-hover:bg-primary"
+                    style={{ height: `${Math.max(2, (day.orders / maxDailyOrders) * 85)}%` }}
+                    aria-hidden="true"
+                  />
+                  <span className="h-5 text-[10px] text-muted-foreground">
+                    {index % 5 === 0 || index === chartData.length - 1
+                      ? format(parseISO(day.date), 'MMM d')
+                      : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
               No data available for the last 30 days
@@ -149,7 +143,7 @@ function MetricCard({
 }: { 
   title: string; 
   value: string | number; 
-  icon: any; 
+  icon: LucideIcon;
   trend?: string;
   urgent?: boolean;
   linkTo?: string;

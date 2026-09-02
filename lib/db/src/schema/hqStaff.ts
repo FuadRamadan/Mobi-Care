@@ -14,6 +14,13 @@ export const hqStaffTable = pgTable("hq_staff", {
   canManageIntegrations: boolean("can_manage_integrations")
     .notNull()
     .default(false),
+  canManageSettlements: boolean("can_manage_settlements")
+    .notNull()
+    .default(false),
+  /** Access to privacy-safe, aggregate-only platform reporting. */
+  canViewDataInsights: boolean("can_view_data_insights")
+    .notNull()
+    .default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

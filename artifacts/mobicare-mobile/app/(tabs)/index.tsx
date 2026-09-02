@@ -218,6 +218,8 @@ export default function SearchScreen() {
   const { addItem, replaceCart, cart } = useCart();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const debouncedQuery = useDebounce(query, 350);
   const isWeb = Platform.OS === "web";
 
@@ -228,6 +230,7 @@ export default function SearchScreen() {
   const searchParams = {
     ...(debouncedQuery.trim().length >= 2 ? { q: debouncedQuery } : {}),
     ...(selectedCategory ? { category: selectedCategory } : {}),
+    ...(selectedSubcategory ? { subcategory: selectedSubcategory } : {}),
   };
 
   const hasSearch = Object.keys(searchParams).length > 0;
@@ -329,7 +332,7 @@ export default function SearchScreen() {
         >
           <TouchableOpacity
             style={[s.categoryChip, !selectedCategory && s.categoryChipActive]}
-            onPress={() => setSelectedCategory(null)}
+            onPress={() => { setSelectedCategory(null); setSelectedSubcategory(null); }}
             activeOpacity={0.7}
             testID="category-all"
           >
@@ -342,13 +345,19 @@ export default function SearchScreen() {
               All
             </Text>
           </TouchableOpacity>
-          {categoriesData?.map((cat) => {
-            const isActive = selectedCategory === cat.value;
+          {(showAllCategories
+            ? categoriesData?.flatMap((group) => group.subcategories.map((category) => ({ ...category, group: group.value })))
+            : categoriesData?.flatMap((group) => group.subcategories.map((category) => ({ ...category, group: group.value }))).slice(0, 8)
+          )?.map((cat) => {
+            const isActive = selectedSubcategory === cat.value;
             return (
               <TouchableOpacity
                 key={cat.value}
                 style={[s.categoryChip, isActive && s.categoryChipActive]}
-                onPress={() => setSelectedCategory(isActive ? null : cat.value)}
+                onPress={() => {
+                  setSelectedCategory(isActive ? null : cat.group);
+                  setSelectedSubcategory(isActive ? null : cat.value);
+                }}
                 activeOpacity={0.7}
                 testID={`category-${cat.value}`}
               >
@@ -363,6 +372,18 @@ export default function SearchScreen() {
               </TouchableOpacity>
             );
           })}
+          {(categoriesData?.flatMap((group) => group.subcategories).length ?? 0) > 8 && (
+            <TouchableOpacity
+              style={s.categoryChip}
+              onPress={() => setShowAllCategories((value) => !value)}
+              activeOpacity={0.7}
+              testID="category-more"
+            >
+              <Text style={s.categoryChipText}>
+                {showAllCategories ? "Less" : "More categories"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
 

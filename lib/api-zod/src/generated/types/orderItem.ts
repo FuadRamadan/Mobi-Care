@@ -15,6 +15,9 @@ export interface OrderItem {
   drugName: string;
   quantity: number;
   unitPriceLeones: number;
+  baseUnitPriceMinor: number;
+  patientUnitPriceMinor: number;
+  patientLineTotalMinor: number;
   /** @nullable */
   prescriptionId?: string | null;
 }

@@ -1,4 +1,4 @@
-import { ShieldCheck, UserCheck, AlertCircle, Truck } from "lucide-react";
+import { ShieldCheck, UserCheck, AlertCircle, Truck, Database } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,20 @@ export default function PolicyHighlights({ className, showTiers = true }: Props)
           <h3 className="font-display font-semibold text-lg text-dark-green mb-2">Fast, Honest Delivery</h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
             No inflated estimates, no silent delays. Just a real courier, on a real route, bringing real medicine to your door.
+          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 20 }}
+          viewport={{ once: true }}
+          className="bg-card p-6 rounded-2xl border shadow-sm border-border"
+        >
+          <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4 text-primary">
+            <Database className="w-6 h-6" />
+          </div>
+          <h3 className="font-display font-semibold text-lg text-dark-green mb-2">How aggregated data is used</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            By using MobiCare, you consent to our use of aggregated and anonymized service data for funding, research, and carefully governed data partnerships. We never share individual-level patient data, identities, contact details, prescriptions, or order records.
           </p>
         </motion.div>
       </div>

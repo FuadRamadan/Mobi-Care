@@ -24,6 +24,7 @@ export const settlementsTable = pgTable(
       .notNull()
       .references(() => pharmaciesTable.id, { onDelete: "restrict" }),
     amountLeones: integer("amount_leones").notNull(),
+    amountMinor: integer("amount_minor").notNull().default(0),
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
     orderCount: integer("order_count").notNull().default(0),
@@ -58,6 +59,7 @@ export const courierSettlementsTable = pgTable(
       .notNull()
       .references(() => couriersTable.id, { onDelete: "restrict" }),
     amountLeones: integer("amount_leones").notNull(),
+    amountMinor: integer("amount_minor").notNull().default(0),
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
     deliveryCount: integer("delivery_count").notNull().default(0),

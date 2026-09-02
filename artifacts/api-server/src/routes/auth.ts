@@ -214,7 +214,9 @@ router.post("/login", async (req, res) => {
           name: staff.name,
           username: staff.username,
           phone: staff.phone,
-           canManageIntegrations: staff.canManageIntegrations,
+          canManageIntegrations: staff.canManageIntegrations,
+          canManageSettlements: staff.canManageSettlements,
+          canViewDataInsights: staff.canViewDataInsights,
         },
       });
       return;

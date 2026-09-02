@@ -21,7 +21,13 @@ type Kind = 'pharmacy' | 'courier';
 export default function HqSettlements() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data, isLoading } = useListSettlements();
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
+  const [period, setPeriod] = useState({ start: weekAgo, end: today });
+  const { data, isLoading } = useListSettlements({
+    start: period.start,
+    end: period.end,
+  });
   const settlements = data;
 
   const refresh = () => {
@@ -41,10 +47,6 @@ export default function HqSettlements() {
     },
   });
   const markPaid = useMarkSettlementPaid({ mutation: { onSuccess: refresh, onError } });
-
-  const today = new Date().toISOString().slice(0, 10);
-  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
-  const [period, setPeriod] = useState({ start: weekAgo, end: today });
 
   const renderTable = (rows: NonNullable<typeof settlements>['pharmacy'], kind: Kind) =>
     rows.length === 0 ? (
@@ -72,7 +74,7 @@ export default function HqSettlements() {
                   {formatDate(s.periodStart)} → {formatDate(s.periodEnd)}
                 </TableCell>
                 <TableCell>{kind === 'pharmacy' ? s.orderCount ?? 0 : s.deliveryCount ?? 0}</TableCell>
-                <TableCell>{formatLeones(s.amountLeones)}</TableCell>
+                <TableCell>{formatLeones((s.amountMinor ?? s.amountLeones * 100) / 100)}</TableCell>
                 <TableCell>
                   <StatusBadge status={s.status} />
                   {s.paidAt && <div className="text-[11px] text-muted-foreground mt-0.5">{formatDate(s.paidAt)}</div>}
@@ -108,7 +110,7 @@ export default function HqSettlements() {
             <Input type="date" value={period.start} onChange={(e) => setPeriod({ ...period, start: e.target.value })} data-testid="input-period-start" />
           </div>
           <div className="space-y-1.5">
-            <Label>Period end (exclusive)</Label>
+            <Label>Period end (inclusive)</Label>
             <Input type="date" value={period.end} onChange={(e) => setPeriod({ ...period, end: e.target.value })} data-testid="input-period-end" />
           </div>
           <Button
@@ -116,8 +118,8 @@ export default function HqSettlements() {
             onClick={() =>
               generate.mutate({
                 data: {
-                  periodStart: new Date(period.start).toISOString(),
-                  periodEnd: new Date(period.end).toISOString(),
+                  periodStart: period.start,
+                  periodEnd: period.end,
                 },
               })
             }
@@ -126,7 +128,7 @@ export default function HqSettlements() {
             {generate.isPending ? 'Generating…' : 'Generate'}
           </Button>
           <p className="text-xs text-muted-foreground w-full">
-            Aggregates completed orders into pending payouts: order totals per pharmacy, Le 25,000 per completed delivery per courier.
+            Aggregates completed orders into immutable pharmacy earnings and courier payouts. The selected end day is included.
           </p>
         </CardContent>
       </Card>
@@ -135,6 +137,23 @@ export default function HqSettlements() {
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : settlements ? (
         <div className="space-y-8">
+          <section>
+            <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Financial overview</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission income</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.commissionIncomeMinor / 100)}</p><p className="text-xs text-muted-foreground">Medicine {formatLeones(settlements.metrics.medicineCommissionMinor / 100)} · Delivery {formatLeones(settlements.metrics.deliveryCommissionMinor / 100)}</p></CardContent></Card>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Owed pharmacies</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.owedPharmacyMinor / 100)}</p></CardContent></Card>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Owed couriers</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.owedCourierMinor / 100)}</p></CardContent></Card>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Completed deliveries</p><p className="text-xl font-semibold">{settlements.metrics.completedDeliveries}</p></CardContent></Card>
+            </div>
+          </section>
+          <section>
+            <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Pharmacy breakdown</h2>
+            <div className="border rounded-xl bg-card overflow-x-auto">
+              <Table><TableHeader><TableRow><TableHead>Pharmacy</TableHead><TableHead>Orders</TableHead><TableHead>Earnings</TableHead><TableHead>Commission</TableHead></TableRow></TableHeader>
+                <TableBody>{settlements.pharmacyBreakdown.map((row) => <TableRow key={row.pharmacyId}><TableCell>{row.pharmacyName ?? '—'}</TableCell><TableCell>{row.orderCount}</TableCell><TableCell>{formatLeones(row.pharmacyEarningsMinor / 100)}</TableCell><TableCell>{formatLeones(row.medicineCommissionMinor / 100)}</TableCell></TableRow>)}</TableBody>
+              </Table>
+            </div>
+          </section>
           <section>
             <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Pharmacy payouts</h2>
             {renderTable(settlements.pharmacy, 'pharmacy')}

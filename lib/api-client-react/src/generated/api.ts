@@ -28,6 +28,8 @@ import type {
   CollectedConfirmation,
   Courier,
   CourierInput,
+  CourierPhotoAttach,
+  CourierPhotoUploadRequest,
   CourierStatusUpdate,
   CourierUpdate,
   DailyOrderStat,
@@ -35,14 +37,17 @@ import type {
   DrugCategory,
   DrugProposal,
   DrugSearchResult,
+  ExportHqInsightsCsvParams,
   FlagReviewInput,
   GenerateSettlementsInput,
+  GetHqInsightsParams,
   HealthStatus,
   HqDashboard,
   HqDrug,
   HqDrugInput,
   HqDrugUpdate,
   HqFlag,
+  HqInsights,
   HqNotification,
   HqOrder,
   HqPharmacy,
@@ -58,6 +63,7 @@ import type {
   ListHqOrdersParams,
   ListOrdersParams,
   ListPrescriptionsParams,
+  ListSettlementsParams,
   LoginInput,
   MarkPaidInput,
   MarkReadInput,
@@ -91,6 +97,7 @@ import type {
   PrescriptionRejection,
   PrescriptionUploadInput,
   PrescriptionUploadResponse,
+  PresignedUpload,
   PushTokenInput,
   RefreshInput,
   SavedApiExecution,
@@ -3627,7 +3634,7 @@ export const getGetHqDashboardUrl = () => {
 }
 
 /**
- * @summary HQ command centre — aggregates, live feed, revenue
+ * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
  */
 export const getHqDashboard = async ( options?: Parameters<typeof customFetch>[1]): Promise<HqDashboard> => {
 
@@ -3674,7 +3681,7 @@ export type GetHqDashboardQueryError = ErrorType<unknown>
 
 
 /**
- * @summary HQ command centre — aggregates, live feed, revenue
+ * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
  */
 
 export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboard>>, TError = ErrorType<unknown>>(
@@ -3683,6 +3690,174 @@ export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboa
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHqDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqInsightsUrl = (params?: GetHqInsightsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/insights?${stringifiedParams}` : `/api/hq/insights`
+}
+
+/**
+ * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+ */
+export const getHqInsights = async (params?: GetHqInsightsParams, options?: Parameters<typeof customFetch>[1]): Promise<HqInsights> => {
+
+  return customFetch<HqInsights>(getGetHqInsightsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqInsightsQueryKey = (params?: GetHqInsightsParams,) => {
+    return [
+    `/api/hq/insights`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqInsightsQueryOptions = <TData = Awaited<ReturnType<typeof getHqInsights>>, TError = ErrorType<void>>(params?: GetHqInsightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqInsights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqInsightsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqInsights>>> = ({ signal }) => getHqInsights(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqInsights>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqInsightsQueryResult = NonNullable<Awaited<ReturnType<typeof getHqInsights>>>
+export type GetHqInsightsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+ */
+
+export function useGetHqInsights<TData = Awaited<ReturnType<typeof getHqInsights>>, TError = ErrorType<void>>(
+ params?: GetHqInsightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqInsights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqInsightsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportHqInsightsCsvUrl = (params?: ExportHqInsightsCsvParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/insights/export.csv?${stringifiedParams}` : `/api/hq/insights/export.csv`
+}
+
+/**
+ * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+ */
+export const exportHqInsightsCsv = async (params?: ExportHqInsightsCsvParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportHqInsightsCsvUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportHqInsightsCsvQueryKey = (params?: ExportHqInsightsCsvParams,) => {
+    return [
+    `/api/hq/insights/export.csv`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportHqInsightsCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError = ErrorType<unknown>>(params?: ExportHqInsightsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportHqInsightsCsvQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportHqInsightsCsv>>> = ({ signal }) => exportHqInsightsCsv(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportHqInsightsCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportHqInsightsCsv>>>
+export type ExportHqInsightsCsvQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+ */
+
+export function useExportHqInsightsCsv<TData = Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError = ErrorType<unknown>>(
+ params?: ExportHqInsightsCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportHqInsightsCsvQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4294,6 +4469,77 @@ export const useMarkCashCollected = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMarkCashCollectedMutationOptions(options));
+    }
+
+export const getConfirmDeliveryByHqUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/orders/${id}/confirm-delivery`
+}
+
+/**
+ * @summary Confirm a delivering order was delivered as an HQ fallback
+ */
+export const confirmDeliveryByHq = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<HqOrder> => {
+
+  return customFetch<HqOrder>(getConfirmDeliveryByHqUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getConfirmDeliveryByHqMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['confirmDeliveryByHq'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmDeliveryByHq>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  confirmDeliveryByHq(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmDeliveryByHqMutationResult = NonNullable<Awaited<ReturnType<typeof confirmDeliveryByHq>>>
+
+    export type ConfirmDeliveryByHqMutationError = ErrorType<void>
+
+    /**
+ * @summary Confirm a delivering order was delivered as an HQ fallback
+ */
+export const useConfirmDeliveryByHq = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmDeliveryByHq>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getConfirmDeliveryByHqMutationOptions(options));
     }
 
 export const getListHqPharmaciesUrl = () => {
@@ -6232,6 +6478,221 @@ export const useDeleteCourier = <TError = ErrorType<void>,
       return useMutation(getDeleteCourierMutationOptions(options));
     }
 
+export const getRequestCourierPhotoUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/couriers/${id}/photo-upload`
+}
+
+/**
+ * @summary Request a direct upload URL for a courier portrait
+ */
+export const requestCourierPhotoUpload = async (id: string,
+    courierPhotoUploadRequest: CourierPhotoUploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<PresignedUpload> => {
+
+  return customFetch<PresignedUpload>(getRequestCourierPhotoUploadUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(courierPhotoUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestCourierPhotoUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCourierPhotoUpload>>, TError,{id: string;data: BodyType<CourierPhotoUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestCourierPhotoUpload>>, TError,{id: string;data: BodyType<CourierPhotoUploadRequest>}, TContext> => {
+
+const mutationKey = ['requestCourierPhotoUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestCourierPhotoUpload>>, {id: string;data: BodyType<CourierPhotoUploadRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  requestCourierPhotoUpload(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestCourierPhotoUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestCourierPhotoUpload>>>
+    export type RequestCourierPhotoUploadMutationBody = BodyType<CourierPhotoUploadRequest>
+    export type RequestCourierPhotoUploadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Request a direct upload URL for a courier portrait
+ */
+export const useRequestCourierPhotoUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCourierPhotoUpload>>, TError,{id: string;data: BodyType<CourierPhotoUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestCourierPhotoUpload>>,
+        TError,
+        {id: string;data: BodyType<CourierPhotoUploadRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestCourierPhotoUploadMutationOptions(options));
+    }
+
+export const getAttachCourierPhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/couriers/${id}/photo`
+}
+
+/**
+ * @summary Attach a completed courier portrait upload
+ */
+export const attachCourierPhoto = async (id: string,
+    courierPhotoAttach: CourierPhotoAttach, options?: Parameters<typeof customFetch>[1]): Promise<Courier> => {
+
+  return customFetch<Courier>(getAttachCourierPhotoUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(courierPhotoAttach)
+  }
+);}
+
+
+
+
+
+export const getAttachCourierPhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachCourierPhoto>>, TError,{id: string;data: BodyType<CourierPhotoAttach>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof attachCourierPhoto>>, TError,{id: string;data: BodyType<CourierPhotoAttach>}, TContext> => {
+
+const mutationKey = ['attachCourierPhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof attachCourierPhoto>>, {id: string;data: BodyType<CourierPhotoAttach>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  attachCourierPhoto(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AttachCourierPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof attachCourierPhoto>>>
+    export type AttachCourierPhotoMutationBody = BodyType<CourierPhotoAttach>
+    export type AttachCourierPhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Attach a completed courier portrait upload
+ */
+export const useAttachCourierPhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachCourierPhoto>>, TError,{id: string;data: BodyType<CourierPhotoAttach>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof attachCourierPhoto>>,
+        TError,
+        {id: string;data: BodyType<CourierPhotoAttach>},
+        TContext
+      > => {
+      return useMutation(getAttachCourierPhotoMutationOptions(options));
+    }
+
+export const getRemoveCourierPhotoUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/couriers/${id}/photo`
+}
+
+/**
+ * @summary Remove a courier portrait
+ */
+export const removeCourierPhoto = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Courier> => {
+
+  return customFetch<Courier>(getRemoveCourierPhotoUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveCourierPhotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeCourierPhoto>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeCourierPhoto>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['removeCourierPhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeCourierPhoto>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeCourierPhoto(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveCourierPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof removeCourierPhoto>>>
+
+    export type RemoveCourierPhotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove a courier portrait
+ */
+export const useRemoveCourierPhoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeCourierPhoto>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeCourierPhoto>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRemoveCourierPhotoMutationOptions(options));
+    }
+
 export const getListFlagsUrl = (params?: ListFlagsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -6388,20 +6849,27 @@ export const useReviewFlag = <TError = ErrorType<unknown>,
       return useMutation(getReviewFlagMutationOptions(options));
     }
 
-export const getListSettlementsUrl = () => {
+export const getListSettlementsUrl = (params?: ListSettlementsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/hq/settlements`
+  return stringifiedParams.length > 0 ? `/api/hq/settlements?${stringifiedParams}` : `/api/hq/settlements`
 }
 
 /**
  * @summary Pharmacy and courier settlements
  */
-export const listSettlements = async ( options?: Parameters<typeof customFetch>[1]): Promise<SettlementsResponse> => {
+export const listSettlements = async (params?: ListSettlementsParams, options?: Parameters<typeof customFetch>[1]): Promise<SettlementsResponse> => {
 
-  return customFetch<SettlementsResponse>(getListSettlementsUrl(),
+  return customFetch<SettlementsResponse>(getListSettlementsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -6414,23 +6882,23 @@ export const listSettlements = async ( options?: Parameters<typeof customFetch>[
 
 
 
-export const getListSettlementsQueryKey = () => {
+export const getListSettlementsQueryKey = (params?: ListSettlementsParams,) => {
     return [
-    `/api/hq/settlements`
+    `/api/hq/settlements`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListSettlementsQueryOptions = <TData = Awaited<ReturnType<typeof listSettlements>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSettlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListSettlementsQueryOptions = <TData = Awaited<ReturnType<typeof listSettlements>>, TError = ErrorType<unknown>>(params?: ListSettlementsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSettlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListSettlementsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListSettlementsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSettlements>>> = ({ signal }) => listSettlements({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSettlements>>> = ({ signal }) => listSettlements(params, { signal, ...requestOptions });
 
 
 
@@ -6448,11 +6916,11 @@ export type ListSettlementsQueryError = ErrorType<unknown>
  */
 
 export function useListSettlements<TData = Awaited<ReturnType<typeof listSettlements>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSettlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListSettlementsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSettlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListSettlementsQueryOptions(options)
+  const queryOptions = getListSettlementsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

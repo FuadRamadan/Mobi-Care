@@ -19,3 +19,5 @@ export * from "./patientNotifications";
 export * from "./teamMembers";
 export * from "./apiConnections";
 export * from "./savedApiRequests";
+export * from "./platformSettings";
+export * from "./searchEvents";

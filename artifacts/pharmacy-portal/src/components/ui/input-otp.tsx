@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { OTPInput, OTPInputContext } from 'input-otp';
+import {
+  OTPInput,
+  OTPInputContext,
+  type RenderProps as OTPRenderProps,
+} from 'input-otp';
 import { Minus } from 'lucide-react';
 
 const InputOTP = React.forwardRef<
@@ -31,7 +35,12 @@ const InputOTPSlot = React.forwardRef<
   React.ElementRef<'div'>,
   React.ComponentPropsWithoutRef<'div'> & { index: number }
 >(({ index, className, ...props }, ref) => {
-  const inputOTPContext = React.useContext(OTPInputContext);
+  // input-otp's context is created with the same public RenderProps contract.
+  // Providing that contract explicitly avoids pnpm peer-type identity leaking
+  // into consumers when multiple React declaration snapshots are installed.
+  const inputOTPContext = React.useContext(
+    OTPInputContext as React.Context<OTPRenderProps>,
+  );
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index];
 
   return (

@@ -5,9 +5,13 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { PharmacySettlementMetrics } from './pharmacySettlementMetrics';
 import type { Settlement } from './settlement';
+import type { SettlementMetrics } from './settlementMetrics';
 
 export interface SettlementsResponse {
   pharmacy: Settlement[];
   courier: Settlement[];
+  metrics: SettlementMetrics;
+  pharmacyBreakdown: PharmacySettlementMetrics[];
 }

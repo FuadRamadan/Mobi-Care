@@ -7,7 +7,7 @@
     "dev": "export NODE_ENV=development SMS_TRANSPORT=test && pnpm run build && node --enable-source-maps ./dist/index.mjs",
     "build": "node ./build.mjs",
     "start": "export NODE_ENV=production SMS_TRANSPORT=orange && node --enable-source-maps ./dist/index.mjs",
-    "test": "JWT_SECRET=test-secret esbuild src/error-boundary.test.ts src/lib/sms.test.ts src/routes/hq/apiConnections.test.ts src/routes/hq/pharmacies.test.ts src/routes/pharmacy/inventory.test.ts --bundle --platform=node --format=cjs --out-extension:.js=.cjs --external:pg-native --outdir=dist/tests --log-level=warning && NODE_ENV=production LOG_LEVEL=silent JWT_SECRET=test-secret node --test $(find dist/tests -name '*.test.cjs' -type f)",
+    "test": "JWT_SECRET=test-secret esbuild src/error-boundary.test.ts src/lib/sms.test.ts src/lib/financialAllocation.test.ts src/routes/hq/apiConnections.test.ts src/routes/hq/pharmacies.test.ts src/routes/pharmacy/inventory.test.ts --bundle --platform=node --format=cjs --out-extension:.js=.cjs --external:pg-native --outdir=dist/tests --log-level=warning && NODE_ENV=production LOG_LEVEL=silent JWT_SECRET=test-secret node --test $(find dist/tests -name '*.test.cjs' -type f)",
     "bootstrap-hq": "esbuild scripts/bootstrap-hq.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/bootstrap-hq.cjs --log-level=warning && node dist/bootstrap-hq.cjs",
     "seed-team-photos": "esbuild scripts/seed-team-photos.ts --bundle --platform=node --format=cjs --external:pg-native --outfile=dist/seed-team-photos.cjs --log-level=warning && node dist/seed-team-photos.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",

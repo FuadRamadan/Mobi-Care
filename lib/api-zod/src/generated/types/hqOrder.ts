@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { HqCourierSummary } from './hqCourierSummary';
+import type { HqOrderDeliveryConfirmationMethod } from './hqOrderDeliveryConfirmationMethod';
 import type { HqOrderFulfillmentType } from './hqOrderFulfillmentType';
 import type { HqOrderStatus } from './hqOrderStatus';
 import type { OrderItem } from './orderItem';
@@ -21,6 +22,21 @@ export interface HqOrder {
   fulfillmentType: HqOrderFulfillmentType;
   idChecked: boolean;
   totalLeones: number;
+  medicineMarkupBasisPoints?: number;
+  pharmacyMedicineTotalMinor?: number;
+  medicineCommissionMinor?: number;
+  patientMedicineTotalMinor?: number;
+  deliveryFeeMinor?: number;
+  courierPayoutMinor?: number;
+  deliveryCommissionMinor?: number;
+  /** @nullable */
+  completedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmedAt?: string | null;
+  /** @nullable */
+  deliveryConfirmationMethod?: HqOrderDeliveryConfirmationMethod;
+  /** @nullable */
+  deliveryConfirmedByHqUserId?: string | null;
   /** @nullable */
   prescriptionId?: string | null;
   /** @nullable */

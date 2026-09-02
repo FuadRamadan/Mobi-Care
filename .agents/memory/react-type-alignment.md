@@ -8,3 +8,9 @@ Keep `@types/react` and `@types/react-dom` on one React 19.1-compatible release 
 **Why:** pnpm hoists declarations imported by third-party component packages. If web packages use React 19.2 declarations while Expo uses React 19.1 declarations, TypeScript can load both identities and reject otherwise identical callback refs in calendar, icon, and other shared UI types.
 
 **How to apply:** When updating React declarations, check the Expo/React Native compatibility line first, update the shared catalog in lockstep, regenerate the lockfile, and confirm each web artifact resolves only that compatible declaration version.
+
+If pnpm's virtual store still leaks a second React type identity after catalog and override alignment, do not weaken TypeScript or add broad `any` casts.
+
+**Why:** Published component declarations may resolve React through a physical virtual-store ancestor even when the consumer and lockfile show the intended version.
+
+**How to apply:** Prefer the package's exported prop/context contract explicitly at the narrow boundary. For fragile class-component chart declarations, a small native CSS/SVG visualization can be safer than carrying an incompatible type identity.

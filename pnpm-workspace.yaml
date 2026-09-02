@@ -44,6 +44,8 @@ onlyBuiltDependencies:
 
 overrides:
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
+  '@types/react': 19.1.17
+  '@types/react-dom': 19.1.11
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32': '-'

@@ -37,6 +37,7 @@ const HqAudit = lazy(() => import('@/pages/hq/Audit'));
 const HqSettings = lazy(() => import('@/pages/hq/Settings'));
 const HqTeam = lazy(() => import('@/pages/hq/Team'));
 const HqApiConnections = lazy(() => import('@/pages/hq/ApiConnections'));
+const HqInsights = lazy(() => import('@/pages/hq/Insights'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,6 +92,7 @@ function Router() {
             <Route path="/hq/settings" component={HqSettings} />
             <Route path="/hq/team" component={HqTeam} />
             <Route path="/hq/api-connections" component={HqApiConnections} />
+            <Route path="/hq/insights" component={HqInsights} />
             {/* Patient app — same site, own shell (Layout renders bare for /app*) */}
             <Route path="/app" component={PatientLogin} />
             <Route path="/app/search">

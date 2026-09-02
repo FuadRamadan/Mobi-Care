@@ -1,8 +1,12 @@
 import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import { prescriptionsTable, ordersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  prescriptionsTable,
+  ordersTable,
+  orderItemsTable,
+} from "@workspace/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
@@ -38,8 +42,24 @@ router.get("/", async (req: AuthRequest, res) => {
     )
     .orderBy(prescriptionsTable.createdAt);
 
-  // Strip the raw image key — never expose it
-  res.json(rows.map(({ imageKey: _k, ...r }) => r));
+  const orderIds = rows.map((row) => row.orderId).filter(Boolean) as string[];
+  const requested = orderIds.length
+    ? await db
+        .select({
+          orderId: orderItemsTable.orderId,
+          drugId: orderItemsTable.drugId,
+          drugName: orderItemsTable.drugName,
+          quantity: orderItemsTable.quantity,
+        })
+        .from(orderItemsTable)
+        .where(inArray(orderItemsTable.orderId, orderIds))
+    : [];
+  res.json(
+    rows.map(({ imageKey: _k, ...r }) => ({
+      ...r,
+      requestedItems: requested.filter((item) => item.orderId === r.orderId),
+    })),
+  );
 });
 
 // ── Get single prescription ───────────────────────────────────────────────────
@@ -62,8 +82,19 @@ router.get("/:id", async (req: AuthRequest, res) => {
     res.status(404).json({ error: "Prescription not found" });
     return;
   }
+  const requestedItems = row.orderId
+    ? await db
+        .select({
+          orderId: orderItemsTable.orderId,
+          drugId: orderItemsTable.drugId,
+          drugName: orderItemsTable.drugName,
+          quantity: orderItemsTable.quantity,
+        })
+        .from(orderItemsTable)
+        .where(eq(orderItemsTable.orderId, row.orderId))
+    : [];
   const { imageKey: _k, ...safe } = row;
-  res.json(safe);
+  res.json({ ...safe, requestedItems });
 });
 
 // ── Mint signed image URL ─────────────────────────────────────────────────────
@@ -119,14 +150,12 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
 
   const body = z
     .object({
-      approvedDrugIds: z.array(z.string().uuid()).min(1),
+      approvedDrugIds: z.array(z.string().uuid()).min(1).optional(),
     })
     .safeParse(req.body);
 
   if (!body.success) {
-    res
-      .status(400)
-      .json({ error: "approvedDrugIds (non-empty array of UUIDs) required" });
+    res.status(400).json({ error: "approvedDrugIds must be UUIDs when supplied" });
     return;
   }
 
@@ -150,11 +179,24 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
     return;
   }
 
+  const requestedItems = row.orderId
+    ? await db
+        .select({ drugId: orderItemsTable.drugId })
+        .from(orderItemsTable)
+        .where(eq(orderItemsTable.orderId, row.orderId))
+    : [];
+  const requestedDrugIds = [...new Set(requestedItems.map((item) => item.drugId))];
+  const approvedDrugIds = body.data.approvedDrugIds ?? requestedDrugIds;
+  if (approvedDrugIds.length === 0) {
+    res.status(409).json({ error: "No requested medicines are linked to this prescription" });
+    return;
+  }
+
   const [updated] = await db
     .update(prescriptionsTable)
     .set({
       status: "approved",
-      approvedDrugIds: body.data.approvedDrugIds,
+      approvedDrugIds,
       reviewedAt: new Date(),
       updatedAt: new Date(),
     })
@@ -168,7 +210,7 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
     action: "prescription.approve",
     entityType: "prescription",
     entityId: id,
-    details: { approvedDrugIds: body.data.approvedDrugIds },
+    details: { approvedDrugIds },
   });
 
   const { imageKey: _k, ...safe } = updated;

@@ -16,6 +16,7 @@ import {
   Bell,
   CheckCheck,
   Cable,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -25,6 +26,8 @@ import {
   useGetHqUnreadCount,
   useListHqNotifications,
   useMarkHqNotificationsRead,
+  useGetHqDashboard,
+  getGetHqDashboardQueryKey,
 } from '@workspace/api-client-react';
 import { toast } from 'sonner';
 import { useHqAuth } from '@/hq/auth';
@@ -37,15 +40,19 @@ const NAV: Array<{
   label: string;
   icon: LucideIcon;
   requiresIntegrations?: boolean;
+  requiresSettlements?: boolean;
+  requiresInsights?: boolean;
+  badge?: 'pendingPrescriptions' | 'unconfirmedDeliveries' | 'pendingSettlements';
 }> = [
   { href: '/hq/dashboard', label: 'Command Centre', icon: LayoutDashboard },
-  { href: '/hq/orders', label: 'All Orders', icon: Package },
-  { href: '/hq/dispatch', label: 'Dispatch', icon: Truck },
+  { href: '/hq/orders', label: 'All Orders', icon: Package, badge: 'pendingPrescriptions' },
+  { href: '/hq/dispatch', label: 'Dispatch', icon: Truck, badge: 'unconfirmedDeliveries' },
   { href: '/hq/pharmacies', label: 'Pharmacies', icon: Building2 },
   { href: '/hq/catalogue', label: 'Catalogue', icon: Pill },
   { href: '/hq/couriers', label: 'Couriers', icon: Bike },
   { href: '/hq/flags', label: 'Flags', icon: Flag },
-  { href: '/hq/settlements', label: 'Settlements', icon: Wallet },
+  { href: '/hq/settlements', label: 'Settlements', icon: Wallet, requiresSettlements: true, badge: 'pendingSettlements' },
+  { href: '/hq/insights', label: 'Data & Insights', icon: BarChart3, requiresInsights: true },
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
   { href: '/hq/team', label: 'Team Profiles', icon: Users },
   { href: '/hq/settings', label: 'Security & Settings', icon: ShieldCheck },
@@ -73,6 +80,10 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
   });
   const markRead = useMarkHqNotificationsRead();
   const unreadCount = unread?.unreadCount ?? 0;
+  const { data: dashboard } = useGetHqDashboard({
+    query: { queryKey: getGetHqDashboardQueryKey(), enabled: !!user, refetchInterval: 30_000 },
+  });
+  const queueCounts = dashboard?.totals;
 
   useEffect(() => {
     document.title = `${title} — MobiCare HQ`;
@@ -122,9 +133,12 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
         <nav className="flex-1 py-4 space-y-0.5 px-2 overflow-y-auto">
           {NAV.filter(
             (item) =>
-              !item.requiresIntegrations ||
-              user.canManageIntegrations !== false,
-          ).map(({ href, label, icon: Icon }) => (
+              (!item.requiresIntegrations ||
+                user.canManageIntegrations !== false) &&
+              (!item.requiresSettlements ||
+                user.canManageSettlements !== false) &&
+               (!item.requiresInsights || user.canViewDataInsights === true),
+          ).map(({ href, label, icon: Icon, badge }) => (
             <Link
               key={href}
               href={href}
@@ -136,7 +150,8 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
               )}
             >
               <Icon className="w-4 h-4" />
-              {label}
+               <span className="flex-1">{label}</span>
+               {badge && (queueCounts?.[badge] ?? 0) > 0 && <span className="min-w-5 rounded-full bg-amber-400 px-1.5 text-center text-[10px] font-bold text-dark-green">{queueCounts![badge] > 99 ? '99+' : queueCounts![badge]}</span>}
             </Link>
           ))}
         </nav>
@@ -166,8 +181,11 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
           >
             {NAV.filter(
               (item) =>
-                !item.requiresIntegrations ||
-                user.canManageIntegrations !== false,
+                (!item.requiresIntegrations ||
+                  user.canManageIntegrations !== false) &&
+                (!item.requiresSettlements ||
+                   user.canManageSettlements !== false) &&
+                (!item.requiresInsights || user.canViewDataInsights === true),
             ).map(({ href, label }) => (
               <option key={href} value={href} className="text-foreground">
                 {label}

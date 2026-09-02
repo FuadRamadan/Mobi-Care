@@ -32,6 +32,15 @@ export const orderItemsTable = pgTable("order_items", {
     precision: 12,
     scale: 2,
   }).notNull(),
+  baseUnitPriceMinor: integer("base_unit_price_minor").notNull().default(0),
+  patientUnitPriceMinor: integer("patient_unit_price_minor")
+    .notNull()
+    .default(0),
+  // Exact patient line total. This captures basis-point rounding remainders
+  // that cannot be represented by an integer per-unit price.
+  patientLineTotalMinor: integer("patient_line_total_minor")
+    .notNull()
+    .default(0),
   // If this line item required a prescription
   prescriptionId: uuid("prescription_id"),
   createdAt: timestamp("created_at", { withTimezone: true })

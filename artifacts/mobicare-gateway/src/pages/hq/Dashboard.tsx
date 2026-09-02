@@ -26,7 +26,7 @@ export default function HqDashboard() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <StatCard label="Orders (all time)" value={t.orders} hint={`${t.ordersToday} today`} icon={<Package />} />
-            <StatCard label="Confirmed revenue" value={formatLeones(t.confirmedRevenueLeones)} icon={<Banknote />} />
+            <StatCard label="Completed revenue" value={formatLeones(t.completedRevenueLeones)} hint="Delivered or collected orders" icon={<Banknote />} />
             <StatCard label="Pharmacies" value={t.activePharmacies} hint={`${t.pharmacies} total`} icon={<Building2 />} />
             <StatCard label="Couriers" value={t.activeCouriers} hint={`${t.couriers} total`} icon={<Bike />} />
             <StatCard label="Awaiting dispatch" value={t.awaitingDispatch} icon={<Truck />} />

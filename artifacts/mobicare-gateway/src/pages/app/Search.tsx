@@ -61,12 +61,8 @@ export default function PatientSearch() {
     },
   );
 
-  const popularCats =
-    categories?.filter((c) =>
-      ["pain_fever", "malaria", "infection", "vitamins_nutrition"].includes(
-        c.value,
-      ),
-    ) || [];
+  // Keep this compact on first view; the selector exposes every appendix group.
+  const popularCats = categories?.slice(0, 8) || [];
 
   return (
     <div className="space-y-5">
@@ -117,12 +113,12 @@ export default function PatientSearch() {
               {cat.label}
             </Badge>
           ))}
-          {categories && categories.length > popularCats.length && (
+          {categories && categories.flatMap((group) => group.subcategories).length > popularCats.length && (
             <Select
               value={category || "all"}
               onValueChange={(value) =>
                 setCategory(
-                  value === "all" ? "" : (value as DrugPrimaryCategory),
+                  value === "all" ? "" : (value.split(":")[0] as DrugPrimaryCategory),
                 )
               }
             >
@@ -131,13 +127,13 @@ export default function PatientSearch() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories
-                  .filter((c) => !popularCats.find((p) => p.value === c.value))
-                  .map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                {categories.flatMap((group) =>
+                  group.subcategories.map((subcategory) => (
+                    <SelectItem key={`${group.value}:${subcategory.value}`} value={`${group.value}:${subcategory.value}`}>
+                      {group.label} · {subcategory.label}
                     </SelectItem>
-                  ))}
+                  )),
+                )}
               </SelectContent>
             </Select>
           )}

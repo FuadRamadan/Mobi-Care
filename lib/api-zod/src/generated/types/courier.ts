@@ -10,8 +10,12 @@ export interface Courier {
   id: string;
   name: string;
   phone: string;
+  /** @nullable */
+  photoUrl?: string | null;
   vehicleType: string;
   isActive: boolean;
   activeDeliveries?: number;
+  completedDeliveries?: number;
+  completedPayoutMinor?: number;
   createdAt: string;
 }

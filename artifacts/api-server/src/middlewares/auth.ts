@@ -174,6 +174,38 @@ export function requireHqRole(
 /** Convenience: combine both middleware in one array */
 export const hq = [requireAuth, requireHqRole] as const;
 
+export async function requireManageSettlements(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.pharmacy?.role !== "hq") {
+    res.status(403).json({ error: "HQ role required" });
+    return;
+  }
+  try {
+    const [staff] = await db
+      .select({
+        isActive: hqStaffTable.isActive,
+        canManageSettlements: hqStaffTable.canManageSettlements,
+      })
+      .from(hqStaffTable)
+      .where(eq(hqStaffTable.id, req.pharmacy.sub))
+      .limit(1);
+    if (!staff?.isActive) {
+      res.status(401).json({ error: "Account inactive or not found" });
+      return;
+    }
+    if (!staff.canManageSettlements) {
+      res.status(403).json({ error: "Settlement management permission required" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Permission check failed" });
+  }
+}
+
 export async function requireManageIntegrations(
   req: AuthRequest,
   res: Response,
@@ -198,6 +230,39 @@ export async function requireManageIntegrations(
     }
     if (!staff.canManageIntegrations) {
       res.status(403).json({ error: "Integration management permission required" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Permission check failed" });
+  }
+}
+
+/** Require the distinct HQ Data & Insights permission. */
+export async function requireViewDataInsights(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.pharmacy?.role !== "hq") {
+    res.status(403).json({ error: "HQ role required" });
+    return;
+  }
+  try {
+    const [staff] = await db
+      .select({
+        isActive: hqStaffTable.isActive,
+        canViewDataInsights: hqStaffTable.canViewDataInsights,
+      })
+      .from(hqStaffTable)
+      .where(eq(hqStaffTable.id, req.pharmacy.sub))
+      .limit(1);
+    if (!staff?.isActive) {
+      res.status(401).json({ error: "Account inactive or not found" });
+      return;
+    }
+    if (!staff.canViewDataInsights) {
+      res.status(403).json({ error: "Data & Insights permission required" });
       return;
     }
     next();

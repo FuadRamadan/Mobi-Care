@@ -33,10 +33,13 @@ export const LoginResponse = zod.object({
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
-  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -133,10 +136,13 @@ export const ChangePasswordResponse = zod.object({
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
-  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
 }).optional(),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -183,6 +189,17 @@ export const ListOrdersResponseItem = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -194,6 +211,9 @@ export const ListOrdersResponseItem = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -220,6 +240,17 @@ export const UpdateOrderStatusResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -231,6 +262,9 @@ export const UpdateOrderStatusResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -256,6 +290,17 @@ export const MarkOrderCollectedResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -267,6 +312,9 @@ export const MarkOrderCollectedResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -288,6 +336,17 @@ export const MarkOrderPickedUpResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -299,6 +358,9 @@ export const MarkOrderPickedUpResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -317,8 +379,8 @@ export const ListInventoryResponseItem = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -336,8 +398,8 @@ export const ListInventoryResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional()
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
 })
 })
 export const ListInventoryResponse = zod.array(ListInventoryResponseItem)
@@ -365,8 +427,8 @@ export const AddInventoryItemBody = zod.object({
   "brand": zod.string().optional(),
   "manufacturer": zod.string().optional(),
   "countryOfOrigin": zod.string().optional(),
-  "primaryCategory": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']).optional(),
-  "subcategory": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']).optional(),
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional(),
   "otherCategoryText": zod.string().optional(),
   "priceLeones": zod.number().min(1),
   "stockQuantity": zod.number().min(addInventoryItemBodyStockQuantityMin),
@@ -385,8 +447,8 @@ export const AddInventoryItemResponse = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -404,8 +466,8 @@ export const AddInventoryItemResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional()
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
 })
 })
 
@@ -435,8 +497,8 @@ export const UpdateInventoryItemBody = zod.object({
   "form": zod.string().min(1).optional(),
   "unitOfSale": zod.string().min(1).optional(),
   "expiryDate": zod.string().optional(),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "priceLeones": zod.number().min(1).optional(),
   "stockQuantity": zod.number().min(updateInventoryItemBodyStockQuantityMin).optional(),
@@ -456,8 +518,8 @@ export const UpdateInventoryItemResponse = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -475,8 +537,8 @@ export const UpdateInventoryItemResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional()
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
 })
 })
 
@@ -505,8 +567,8 @@ export const ListCatalogueResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -533,8 +595,8 @@ export const ProposeDrugBody = zod.object({
   "genericName": zod.string().min(proposeDrugBodyGenericNameMin),
   "strength": zod.string().min(1),
   "form": zod.string().min(1),
-  "suggestedCategory": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),
-  "suggestedSubcategory": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),
+  "suggestedCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "suggestedSubcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
   "description": zod.string().optional(),
   "unit": zod.string().optional()
 })
@@ -548,8 +610,8 @@ export const ProposeDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -563,10 +625,10 @@ export const ProposeDrugResponse = zod.object({
  * @summary List the HQ-controlled medicine category taxonomy
  */
 export const ListDrugCategoriesResponseItem = zod.object({
-  "value": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
   "label": zod.string(),
   "subcategories": zod.array(zod.object({
-  "value": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
   "label": zod.string()
 }))
 })
@@ -723,10 +785,13 @@ export const RegisterPatientResponse = zod.object({
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
   "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
   "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
-  "canManageIntegrations": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management')
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -750,8 +815,8 @@ export const RegisterPatientResponse = zod.object({
  */
 export const PatientSearchDrugsQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
-  "category": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']).optional(),
-  "subcategory": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']).optional()
+  "category": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional()
 })
 
 export const PatientSearchDrugsResponseItem = zod.object({
@@ -765,8 +830,8 @@ export const PatientSearchDrugsResponseItem = zod.object({
   "strength": zod.string(),
   "form": zod.string(),
   "unitOfSale": zod.string(),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "maxUnitsPerOrder": zod.number().nullish(),
   "prescriptionRequired": zod.boolean(),
   "collectionOnly": zod.boolean(),
@@ -791,10 +856,10 @@ export const PatientSearchDrugsResponse = zod.array(PatientSearchDrugsResponseIt
  * @summary List medicine categories available for patient search
  */
 export const ListPatientDrugCategoriesResponseItem = zod.object({
-  "value": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
   "label": zod.string(),
   "subcategories": zod.array(zod.object({
-  "value": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
   "label": zod.string()
 }))
 })
@@ -813,6 +878,17 @@ export const PatientListOrdersResponseItem = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -824,6 +900,9 @@ export const PatientListOrdersResponseItem = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -838,7 +917,8 @@ export const PatientListOrdersResponseItem = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -875,6 +955,17 @@ export const PatientCreateOrderResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -886,6 +977,9 @@ export const PatientCreateOrderResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -900,7 +994,8 @@ export const PatientCreateOrderResponse = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -926,6 +1021,17 @@ export const PatientGetOrderResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -937,6 +1043,9 @@ export const PatientGetOrderResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -951,7 +1060,8 @@ export const PatientGetOrderResponse = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -977,6 +1087,17 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -988,6 +1109,9 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -1002,7 +1126,8 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -1028,6 +1153,17 @@ export const CancelPatientOrderResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -1039,6 +1175,9 @@ export const CancelPatientOrderResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -1053,7 +1192,8 @@ export const CancelPatientOrderResponse = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -1079,6 +1219,17 @@ export const PatientPayOrderResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string(),
@@ -1090,6 +1241,9 @@ export const PatientPayOrderResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 }).and(zod.object({
@@ -1104,7 +1258,8 @@ export const PatientPayOrderResponse = zod.object({
   "courier": zod.union([zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish()
 }),zod.null()]).optional(),
   "prescription": zod.union([zod.object({
   "id": zod.string(),
@@ -1293,7 +1448,8 @@ export const MarkNotificationsReadResponse = zod.object({
 export const GetAnalyticsOverviewResponse = zod.object({
   "totalOrders": zod.number(),
   "pendingOrders": zod.number().describe('Orders needing pharmacy action (paid, confirmed, packaging)'),
-  "revenueLeones": zod.number().describe('Total revenue from completed orders'),
+  "revenueLeones": zod.number().describe('Pharmacy earnings from completed orders'),
+  "dailyRevenueLeones": zod.number().describe('Today\'s pharmacy earnings from completed orders'),
   "pendingPrescriptions": zod.number(),
   "lowStockItems": zod.number().describe('Inventory items with stockQuantity <= 5'),
   "ordersByStatus": zod.record(zod.string(), zod.number())
@@ -1334,7 +1490,7 @@ export const GetTeamMemberPhotoResponse = zod.unknown()
 
 
 /**
- * @summary HQ command centre — aggregates, live feed, revenue
+ * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
  */
 export const GetHqDashboardResponse = zod.object({
   "totals": zod.object({
@@ -1348,7 +1504,9 @@ export const GetHqDashboardResponse = zod.object({
   "heldDrugs": zod.number(),
   "pendingSettlements": zod.number(),
   "awaitingDispatch": zod.number(),
-  "confirmedRevenueLeones": zod.number()
+  "pendingPrescriptions": zod.number(),
+  "unconfirmedDeliveries": zod.number(),
+  "completedRevenueLeones": zod.number().describe('Sum of orders in delivered or collected status with a completed_at timestamp.')
 }),
   "ordersByStatus": zod.array(zod.object({
   "status": zod.string(),
@@ -1364,6 +1522,40 @@ export const GetHqDashboardResponse = zod.object({
   "createdAt": zod.string()
 }))
 })
+
+
+/**
+ * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+ */
+export const GetHqInsightsQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional(),
+  "interval": zod.enum(['day', 'week', 'month']).optional()
+})
+
+export const getHqInsightsResponseMinimumGroupSizeMin = 10;
+
+
+
+export const GetHqInsightsResponse = zod.object({
+  "minimumGroupSize": zod.number().min(getHqInsightsResponseMinimumGroupSizeMin),
+  "dateRange": zod.record(zod.string(), zod.unknown()),
+  "totals": zod.record(zod.string(), zod.number().nullable()),
+  "trends": zod.record(zod.string(), zod.array(zod.record(zod.string(), zod.unknown()))),
+  "rankings": zod.record(zod.string(), zod.array(zod.record(zod.string(), zod.unknown()))),
+  "suppression": zod.record(zod.string(), zod.string()).describe('Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.')
+})
+
+
+/**
+ * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+ */
+export const ExportHqInsightsCsvQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional()
+})
+
+export const ExportHqInsightsCsvResponse = zod.unknown()
 
 
 /**
@@ -1419,6 +1611,17 @@ export const ListHqOrdersResponseItem = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "courierId": zod.string().nullish(),
   "courier": zod.union([zod.object({
@@ -1439,6 +1642,9 @@ export const ListHqOrdersResponseItem = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -1458,6 +1664,17 @@ export const ListDispatchOrdersResponseItem = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "courierId": zod.string().nullish(),
   "courier": zod.union([zod.object({
@@ -1478,6 +1695,9 @@ export const ListDispatchOrdersResponseItem = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -1505,6 +1725,17 @@ export const AssignCourierResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "courierId": zod.string().nullish(),
   "courier": zod.union([zod.object({
@@ -1525,6 +1756,9 @@ export const AssignCourierResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -1551,6 +1785,17 @@ export const UpdateCourierStatusResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "courierId": zod.string().nullish(),
   "courier": zod.union([zod.object({
@@ -1571,6 +1816,9 @@ export const UpdateCourierStatusResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -1593,6 +1841,17 @@ export const MarkCashCollectedResponse = zod.object({
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
   "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
   "prescriptionId": zod.string().nullish(),
   "courierId": zod.string().nullish(),
   "courier": zod.union([zod.object({
@@ -1613,6 +1872,65 @@ export const MarkCashCollectedResponse = zod.object({
   "drugName": zod.string(),
   "quantity": zod.number(),
   "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
+  "prescriptionId": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Confirm a delivering order was delivered as an HQ fallback
+ */
+export const ConfirmDeliveryByHqParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ConfirmDeliveryByHqResponse = zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string().nullish(),
+  "patientName": zod.string(),
+  "patientPhone": zod.string(),
+  "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
+  "fulfillmentType": zod.enum(['delivery', 'collection']),
+  "idChecked": zod.boolean(),
+  "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
+  "prescriptionId": zod.string().nullish(),
+  "courierId": zod.string().nullish(),
+  "courier": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string()
+}),zod.null()]).optional(),
+  "cashCollected": zod.boolean(),
+  "cashCollectedAt": zod.string().nullish(),
+  "paymentMethod": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "orderId": zod.string(),
+  "drugId": zod.string(),
+  "inventoryId": zod.string().nullish(),
+  "drugName": zod.string(),
+  "quantity": zod.number(),
+  "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
   "prescriptionId": zod.string().nullish()
 }))
 })
@@ -2376,8 +2694,8 @@ export const ListHqDrugsResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -2405,8 +2723,8 @@ export const CreateHqDrugBody = zod.object({
   "unit": zod.string().optional(),
   "commonStrengths": zod.array(zod.string()).min(1),
   "commonForms": zod.array(zod.string()).min(1),
-  "primaryCategory": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),
-  "subcategory": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
   "maxUnitsPerOrder": zod.number().nullish()
 })
 
@@ -2419,8 +2737,8 @@ export const CreateHqDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -2454,8 +2772,8 @@ export const UpdateHqDrugBody = zod.object({
   "unit": zod.string().optional(),
   "commonStrengths": zod.array(zod.string()).min(1).optional(),
   "commonForms": zod.array(zod.string()).min(1).optional(),
-  "primaryCategory": zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']).optional(),
-  "subcategory": zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']).optional()
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional()
 })
 
 export const UpdateHqDrugResponse = zod.object({
@@ -2467,8 +2785,8 @@ export const UpdateHqDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['pain_fever', 'infection', 'malaria', 'respiratory_allergy', 'digestive', 'cardiovascular', 'diabetes_endocrine', 'womens_reproductive', 'child_health', 'mental_neurological', 'skin_wound', 'eye_ear', 'vitamins_nutrition', 'other']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['analgesics_antipyretics', 'anti_inflammatory', 'antibiotics', 'antifungal_antiparasitic', 'antimalarials', 'cough_cold', 'allergy', 'gastrointestinal', 'oral_rehydration', 'hypertension', 'heart_health', 'diabetes', 'reproductive_health', 'maternal_health', 'pediatric', 'neurological', 'mental_health', 'dermatology', 'wound_care', 'eye_care', 'ear_care', 'vitamins_minerals', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -2486,9 +2804,12 @@ export const ListCouriersResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "phone": zod.string(),
+  "photoUrl": zod.string().nullish(),
   "vehicleType": zod.string(),
   "isActive": zod.boolean(),
   "activeDeliveries": zod.number().optional(),
+  "completedDeliveries": zod.number().optional(),
+  "completedPayoutMinor": zod.number().optional(),
   "createdAt": zod.string()
 })
 export const ListCouriersResponse = zod.array(ListCouriersResponseItem)
@@ -2512,9 +2833,12 @@ export const CreateCourierResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "phone": zod.string(),
+  "photoUrl": zod.string().nullish(),
   "vehicleType": zod.string(),
   "isActive": zod.boolean(),
   "activeDeliveries": zod.number().optional(),
+  "completedDeliveries": zod.number().optional(),
+  "completedPayoutMinor": zod.number().optional(),
   "createdAt": zod.string()
 })
 
@@ -2537,9 +2861,12 @@ export const UpdateCourierResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "phone": zod.string(),
+  "photoUrl": zod.string().nullish(),
   "vehicleType": zod.string(),
   "isActive": zod.boolean(),
   "activeDeliveries": zod.number().optional(),
+  "completedDeliveries": zod.number().optional(),
+  "completedPayoutMinor": zod.number().optional(),
   "createdAt": zod.string()
 })
 
@@ -2553,6 +2880,74 @@ export const DeleteCourierParams = zod.object({
 
 export const DeleteCourierResponse = zod.object({
   "message": zod.string()
+})
+
+
+/**
+ * @summary Request a direct upload URL for a courier portrait
+ */
+export const RequestCourierPhotoUploadParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const requestCourierPhotoUploadBodyFileSizeMax = 5242880;
+
+
+
+export const RequestCourierPhotoUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "fileSize": zod.number().min(1).max(requestCourierPhotoUploadBodyFileSizeMax)
+})
+
+export const RequestCourierPhotoUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Attach a completed courier portrait upload
+ */
+export const AttachCourierPhotoParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AttachCourierPhotoBody = zod.object({
+  "objectPath": zod.string()
+})
+
+export const AttachCourierPhotoResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "vehicleType": zod.string(),
+  "isActive": zod.boolean(),
+  "activeDeliveries": zod.number().optional(),
+  "completedDeliveries": zod.number().optional(),
+  "completedPayoutMinor": zod.number().optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Remove a courier portrait
+ */
+export const RemoveCourierPhotoParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RemoveCourierPhotoResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string(),
+  "photoUrl": zod.string().nullish(),
+  "vehicleType": zod.string(),
+  "isActive": zod.boolean(),
+  "activeDeliveries": zod.number().optional(),
+  "completedDeliveries": zod.number().optional(),
+  "completedPayoutMinor": zod.number().optional(),
+  "createdAt": zod.string()
 })
 
 
@@ -2617,6 +3012,11 @@ export const ReviewFlagResponse = zod.object({
 /**
  * @summary Pharmacy and courier settlements
  */
+export const ListSettlementsQueryParams = zod.object({
+  "start": zod.coerce.string().optional().describe('Inclusive ISO date or date-time for financial metrics'),
+  "end": zod.coerce.string().optional().describe('Inclusive ISO date, or an exclusive ISO date-time')
+})
+
 export const ListSettlementsResponse = zod.object({
   "pharmacy": zod.array(zod.object({
   "id": zod.string(),
@@ -2625,6 +3025,7 @@ export const ListSettlementsResponse = zod.object({
   "courierId": zod.string().nullish(),
   "courierName": zod.string().nullish(),
   "amountLeones": zod.number(),
+  "amountMinor": zod.number().optional(),
   "periodStart": zod.string(),
   "periodEnd": zod.string(),
   "orderCount": zod.number().nullish(),
@@ -2641,6 +3042,7 @@ export const ListSettlementsResponse = zod.object({
   "courierId": zod.string().nullish(),
   "courierName": zod.string().nullish(),
   "amountLeones": zod.number(),
+  "amountMinor": zod.number().optional(),
   "periodStart": zod.string(),
   "periodEnd": zod.string(),
   "orderCount": zod.number().nullish(),
@@ -2649,6 +3051,24 @@ export const ListSettlementsResponse = zod.object({
   "paidAt": zod.string().nullish(),
   "reference": zod.string().nullish(),
   "createdAt": zod.string()
+})),
+  "metrics": zod.object({
+  "rangeStart": zod.string(),
+  "rangeEndExclusive": zod.string(),
+  "medicineCommissionMinor": zod.number(),
+  "deliveryCommissionMinor": zod.number(),
+  "commissionIncomeMinor": zod.number(),
+  "owedPharmacyMinor": zod.number(),
+  "owedCourierMinor": zod.number(),
+  "completedOrders": zod.number(),
+  "completedDeliveries": zod.number()
+}),
+  "pharmacyBreakdown": zod.array(zod.object({
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string().nullish(),
+  "orderCount": zod.number(),
+  "pharmacyEarningsMinor": zod.number(),
+  "medicineCommissionMinor": zod.number()
 }))
 })
 
@@ -2658,7 +3078,7 @@ export const ListSettlementsResponse = zod.object({
  */
 export const GenerateSettlementsBody = zod.object({
   "periodStart": zod.string().describe('ISO date-time (inclusive)'),
-  "periodEnd": zod.string().describe('ISO date-time (exclusive)')
+  "periodEnd": zod.string().describe('Inclusive calendar date, or exclusive ISO date-time')
 })
 
 export const GenerateSettlementsResponse = zod.object({
@@ -2685,6 +3105,7 @@ export const MarkSettlementPaidResponse = zod.object({
   "courierId": zod.string().nullish(),
   "courierName": zod.string().nullish(),
   "amountLeones": zod.number(),
+  "amountMinor": zod.number().optional(),
   "periodStart": zod.string(),
   "periodEnd": zod.string(),
   "orderCount": zod.number().nullish(),

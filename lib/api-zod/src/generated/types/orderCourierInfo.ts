@@ -11,4 +11,6 @@ export interface OrderCourierInfo {
   name: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
 }

@@ -9,6 +9,6 @@
 export interface GenerateSettlementsInput {
   /** ISO date-time (inclusive) */
   periodStart: string;
-  /** ISO date-time (exclusive) */
+  /** Inclusive calendar date, or exclusive ISO date-time */
   periodEnd: string;
 }

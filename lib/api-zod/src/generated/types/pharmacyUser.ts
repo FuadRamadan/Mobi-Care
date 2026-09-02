@@ -14,12 +14,17 @@ export interface PharmacyUser {
   username: string;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
   /** Present for pharmacy accounts only */
   controlledSubstanceAuthorized?: boolean;
   /** Pharmacy accounts onboarded with a temp password must change it before using the portal API */
   mustChangePassword?: boolean;
   /** ISO timestamp of the pharmacy account's most recent password change */
   passwordLastChangedAt?: string;
-  /** Present for HQ accounts; controls access to API connection management */
   canManageIntegrations?: boolean;
+  /** Present for HQ accounts; controls access to API connection management */
+  canManageSettlements?: boolean;
+  /** Present for HQ accounts; controls access to aggregate-only Data & Insights */
+  canViewDataInsights?: boolean;
 }

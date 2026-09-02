@@ -9,6 +9,12 @@ import {
   numeric,
 } from "drizzle-orm/pg-core";
 import { pharmaciesTable } from "./pharmacies";
+import { hqStaffTable } from "./hqStaff";
+
+export const deliveryConfirmationMethodEnum = pgEnum(
+  "delivery_confirmation_method",
+  ["patient", "hq"],
+);
 
 /**
  * Full order status lifecycle:
@@ -70,8 +76,27 @@ export const ordersTable = pgTable("orders", {
   // For Tier-1 (controlled) collection orders: confirmed that ID was checked in person.
   idChecked: boolean("id_checked").notNull().default(false),
 
-  // Exact decimal total in Leone units.
+  // Exact decimal total in Leone units (kept for backwards compatibility).
   totalLeones: numeric("total_leones", { precision: 14, scale: 2 }).notNull(),
+
+  // Immutable checkout financial snapshot. All amounts are integer cents.
+  medicineMarkupBasisPoints: integer("medicine_markup_basis_points")
+    .notNull()
+    .default(500),
+  pharmacyMedicineTotalMinor: integer("pharmacy_medicine_total_minor")
+    .notNull()
+    .default(0),
+  medicineCommissionMinor: integer("medicine_commission_minor")
+    .notNull()
+    .default(0),
+  patientMedicineTotalMinor: integer("patient_medicine_total_minor")
+    .notNull()
+    .default(0),
+  deliveryFeeMinor: integer("delivery_fee_minor").notNull().default(0),
+  courierPayoutMinor: integer("courier_payout_minor").notNull().default(0),
+  deliveryCommissionMinor: integer("delivery_commission_minor")
+    .notNull()
+    .default(0),
 
   // Optional: reference to a prescription that was reviewed for this order.
   prescriptionId: uuid("prescription_id"),
@@ -84,6 +109,16 @@ export const ordersTable = pgTable("orders", {
   cashCollectedAt: timestamp("cash_collected_at", { withTimezone: true }),
   // Payment method snapshot (e.g. "orange_money", "cash_on_delivery").
   paymentMethod: text("payment_method").notNull().default("orange_money"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  deliveryConfirmedAt: timestamp("delivery_confirmed_at", {
+    withTimezone: true,
+  }),
+  deliveryConfirmationMethod: deliveryConfirmationMethodEnum(
+    "delivery_confirmation_method",
+  ),
+  deliveryConfirmedByHqUserId: uuid(
+    "delivery_confirmed_by_hq_user_id",
+  ).references(() => hqStaffTable.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

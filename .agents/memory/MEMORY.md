@@ -17,3 +17,5 @@
 - [Courier retirement](courier-retirement.md) — deleting a courier retires them from fleet views while preserving historical order and settlement attribution.
 - [Patient eligibility and cancellation](patient-eligibility-cancellation.md) — adult registration is enforced server-side; patients may cancel only before courier assignment.
 - [Catalogue replacement safety](catalogue-replacement-safety.md) — aggregate variant files by generic drug and preserve referenced IDs or remap aliases before retiring old rows.
+- [Financial snapshot integrity](financial-snapshot-integrity.md) — reconcile exact line totals, settlement uniqueness, and legacy obligations at a persisted rollout boundary.
+- [Aggregate insights privacy](aggregate-insights-privacy.md) — enforce minimum cohorts on every JSON/CSV metric and keep location telemetry coarse and identity-free.

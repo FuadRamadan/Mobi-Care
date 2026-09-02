@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   useListCouriers,
   useCreateCourier,
   useUpdateCourier,
   useDeleteCourier,
+  useRequestCourierPhotoUpload,
+  useAttachCourierPhoto,
+  useRemoveCourierPhoto,
   getListCouriersQueryKey,
   getListHqOrdersQueryKey,
   getListDispatchOrdersQueryKey,
@@ -33,7 +36,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Upload, X } from 'lucide-react';
 
 const emptyForm = { name: '', phone: '', vehicleType: 'motorbike' };
 
@@ -96,16 +99,42 @@ export default function HqCouriers() {
       onError,
     },
   });
+  const photoUpload = useRequestCourierPhotoUpload({ mutation: { onError } });
+  const photoAttach = useAttachCourierPhoto({ mutation: { onError, onSuccess: () => refresh() } });
+  const photoRemove = useRemoveCourierPhoto({ mutation: { onError, onSuccess: () => refresh() } });
+  const photoInput = useRef<HTMLInputElement>(null);
 
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingCourier, setEditingCourier] = useState<Courier | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Courier | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [photoCourier, setPhotoCourier] = useState<Courier | null>(null);
+
+  const uploadPhoto = async (file: File) => {
+    if (!photoCourier) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Invalid photo', description: 'Choose a JPG, PNG, or WebP image no larger than 5 MB.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const target = await photoUpload.mutateAsync({ id: photoCourier.id, data: { contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp', fileSize: file.size } });
+      const response = await fetch(target.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!response.ok) throw new Error('Photo upload failed. Please try again.');
+      await photoAttach.mutateAsync({ id: photoCourier.id, data: { objectPath: target.objectPath } });
+      toast({ title: 'Courier photo updated' });
+    } catch (error) {
+      onError(error);
+    } finally {
+      if (photoInput.current) photoInput.current.value = '';
+    }
+  };
 
   return (
     <HqLayout title="Courier Fleet">
       <div className="mb-4">
+        <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+          onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadPhoto(file); }} />
         <Dialog
           open={open || editOpen}
           onOpenChange={(value) => {
@@ -218,7 +247,12 @@ export default function HqCouriers() {
             <TableBody>
               {couriers.map((c) => (
                 <TableRow key={c.id} data-testid={`row-courier-${c.id}`}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {c.photoUrl ? <img src={c.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <div className="h-9 w-9 rounded-full bg-muted" />}
+                      {c.name}
+                    </div>
+                  </TableCell>
                   <TableCell>{c.phone}</TableCell>
                   <TableCell className="capitalize">{c.vehicleType}</TableCell>
                   <TableCell>{c.activeDeliveries ?? 0}</TableCell>
@@ -252,6 +286,20 @@ export default function HqCouriers() {
                          <Pencil className="w-3.5 h-3.5" />
                          Edit
                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1.5"
+                          disabled={photoUpload.isPending || photoAttach.isPending}
+                          onClick={() => { setPhotoCourier(c); setTimeout(() => photoInput.current?.click(), 0); }}
+                          data-testid={`button-upload-courier-photo-${c.id}`}>
+                          <Upload className="w-3.5 h-3.5" /> {c.photoUrl ? 'Replace photo' : 'Upload photo'}
+                        </Button>
+                        {c.photoUrl && (
+                          <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive"
+                            disabled={photoRemove.isPending}
+                            onClick={() => photoRemove.mutate({ id: c.id })}
+                            data-testid={`button-remove-courier-photo-${c.id}`}>
+                            <X className="w-3.5 h-3.5" /> Remove photo
+                          </Button>
+                        )}
                        <Button
                          variant="outline"
                          size="sm"

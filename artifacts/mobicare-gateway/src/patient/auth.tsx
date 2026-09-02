@@ -24,7 +24,12 @@ export interface PatientUser {
 interface PatientAuthValue {
   user: PatientUser | null;
   login: (phone: string, password: string) => Promise<void>;
-  register: (name: string, phone: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    phone: string,
+    password: string,
+    dateOfBirth: string,
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -73,9 +78,14 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (name: string, phone: string, password: string) => {
+    async (
+      name: string,
+      phone: string,
+      password: string,
+      dateOfBirth: string,
+    ) => {
       const res = await registerMutation
-        .mutateAsync({ data: { name, phone, password } })
+        .mutateAsync({ data: { name, phone, password, dateOfBirth } })
         .catch((err: any) => {
           throw new Error(
             err?.status === 409 || /exists/i.test(String(err?.message))

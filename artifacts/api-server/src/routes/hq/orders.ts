@@ -45,6 +45,7 @@ async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
             id: couriersTable.id,
             name: couriersTable.name,
             phone: couriersTable.phone,
+            photoPath: couriersTable.photoPath,
           })
           .from(couriersTable)
           .where(inArray(couriersTable.id, courierIds))
@@ -65,7 +66,12 @@ async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
     ...o,
     items: itemsByOrder[o.id] ?? [],
     pharmacyName: pharmacyById[o.pharmacyId] ?? null,
-    courier: o.courierId ? (courierById[o.courierId] ?? null) : null,
+    courier: o.courierId
+      ? (() => {
+          const courier = courierById[o.courierId];
+          return courier ? { id: courier.id, name: courier.name, phone: courier.phone, photoUrl: courier.photoPath ? `/api/couriers/${courier.id}/photo` : null } : null;
+        })()
+      : null,
   }));
 }
 
@@ -307,6 +313,47 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   }
 
   res.json((await hydrateOrders([updated!]))[0]);
+});
+
+// ── POST /hq/orders/:id/confirm-delivery — receipt fallback ──────────────────
+router.post("/:id/confirm-delivery", async (req: AuthRequest, res) => {
+  const id = req.params.id as string;
+  const now = new Date();
+  const [updated] = await db
+    .update(ordersTable)
+    .set({
+      status: "delivered",
+      completedAt: now,
+      deliveryConfirmedAt: now,
+      deliveryConfirmationMethod: "hq",
+      deliveryConfirmedByHqUserId: req.pharmacy!.sub,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.fulfillmentType, "delivery"),
+        eq(ordersTable.status, "delivering"),
+      ),
+    )
+    .returning();
+  if (!updated) {
+    res.status(409).json({
+      error: "Only a delivering delivery order can be confirmed by HQ",
+    });
+    return;
+  }
+  await writeAudit({
+    actorType: "hq",
+    actorId: req.pharmacy!.sub,
+    actorName: req.pharmacy!.name,
+    action: "order.delivery_confirmed_by_hq",
+    entityType: "order",
+    entityId: id,
+    details: { method: "hq", confirmedAt: now.toISOString() },
+  });
+  await checkOrderFlags(updated);
+  res.json((await hydrateOrders([updated]))[0]);
 });
 
 // ── POST /hq/orders/:id/cash-collected — COD reconciliation ─────────────────

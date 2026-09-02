@@ -1,5 +1,10 @@
 import { safeRouter } from "../../lib/safeRouter.js";
-import { hq, requireManageIntegrations } from "../../middlewares/auth.js";
+import {
+  hq,
+  requireManageIntegrations,
+  requireManageSettlements,
+  requireViewDataInsights,
+} from "../../middlewares/auth.js";
 import dashboardRouter from "./dashboard.js";
 import ordersRouter, { dispatchHandler } from "./orders.js";
 import pharmaciesRouter from "./pharmacies.js";
@@ -12,6 +17,7 @@ import notificationsRouter from "./notifications.js";
 import passwordPolicyRouter from "./passwordPolicy.js";
 import teamRouter from "./team.js";
 import apiConnectionsRouter from "./apiConnections.js";
+import insightsRouter from "./insights.js";
 
 const router = safeRouter();
 
@@ -27,7 +33,8 @@ router.use("/pharmacies", pharmaciesRouter);
 router.use("/drugs", drugsRouter);
 router.use("/couriers", couriersRouter);
 router.use("/flags", flagsRouter);
-router.use("/settlements", settlementsRouter);
+router.use("/settlements", requireManageSettlements, settlementsRouter);
+router.use("/insights", requireViewDataInsights, insightsRouter);
 router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/password-policy", passwordPolicyRouter);
