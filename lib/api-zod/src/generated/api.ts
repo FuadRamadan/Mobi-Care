@@ -2416,6 +2416,18 @@ export const UpdateCourierResponse = zod.object({
 
 
 /**
+ * @summary Remove a courier from the fleet
+ */
+export const DeleteCourierParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteCourierResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
  * @summary Fraud/anomaly flags queue
  */
 export const ListFlagsQueryParams = zod.object({

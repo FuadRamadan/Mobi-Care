@@ -1597,6 +1597,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Courier"
+    delete:
+      operationId: deleteCourier
+      tags: [hq]
+      summary: Remove a courier from the fleet
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted courier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          description: Courier not found
+        "409":
+          description: Courier has active deliveries
 
   /hq/flags:
     get:

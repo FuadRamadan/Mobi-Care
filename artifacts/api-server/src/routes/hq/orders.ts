@@ -7,7 +7,7 @@ import {
   pharmaciesTable,
   couriersTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray, desc, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { checkOrderFlags } from "../../lib/flags.js";
@@ -142,29 +142,46 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
     return;
   }
 
-  const [courier] = await db
-    .select()
-    .from(couriersTable)
-    .where(eq(couriersTable.id, body.data.courierId))
-    .limit(1);
-  if (!courier || !courier.isActive) {
+  const assignment = await db.transaction(async (tx) => {
+    // Courier retirement locks the same row, preventing assign-vs-delete races.
+    const [courier] = await tx
+      .select()
+      .from(couriersTable)
+      .where(
+        and(
+          eq(couriersTable.id, body.data.courierId),
+          eq(couriersTable.isActive, true),
+          isNull(couriersTable.deletedAt),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!courier) return { kind: "courier_unavailable" as const };
+
+    // Conditional update — status re-checked in WHERE so two concurrent
+    // assignments cannot both win.
+    const [updated] = await tx
+      .update(ordersTable)
+      .set({ courierId: courier.id, status: "assigned", updatedAt: new Date() })
+      .where(and(eq(ordersTable.id, id), eq(ordersTable.status, "ready")))
+      .returning();
+
+    return updated
+      ? { kind: "assigned" as const, courier, updated }
+      : { kind: "order_conflict" as const };
+  });
+
+  if (assignment.kind === "courier_unavailable") {
     res.status(404).json({ error: "Courier not found or inactive" });
     return;
   }
-
-  // Conditional update — status re-checked in WHERE so two concurrent
-  // assignments can't both win.
-  const [updated] = await db
-    .update(ordersTable)
-    .set({ courierId: courier.id, status: "assigned", updatedAt: new Date() })
-    .where(and(eq(ordersTable.id, id), eq(ordersTable.status, "ready")))
-    .returning();
-  if (!updated) {
+  if (assignment.kind === "order_conflict") {
     res
       .status(409)
       .json({ error: "Order status changed concurrently — refresh and retry" });
     return;
   }
+  const { courier, updated } = assignment;
 
   await writeAudit({
     actorType: "hq",
@@ -175,7 +192,7 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
     entityId: id,
     details: { courierId: courier.id, courierName: courier.name },
   });
-  await checkOrderFlags(updated!);
+  await checkOrderFlags(updated);
 
   // Notify patient that a courier has been assigned
   if (order.patientId) {

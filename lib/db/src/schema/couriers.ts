@@ -13,6 +13,8 @@ export const couriersTable = pgTable("couriers", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  // Soft deletion preserves courier attribution on historical orders and settlements.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export type Courier = typeof couriersTable.$inferSelect;

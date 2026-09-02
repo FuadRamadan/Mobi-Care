@@ -14,3 +14,4 @@
 - [Password-manager handoff](password-manager-handoff.md) — retain reset credentials only in live form state long enough for browser/OS save prompts; never app-persist plaintext.
 - [React type alignment](react-type-alignment.md) — keep web and Expo declaration types on one React 19.1 line to prevent pnpm hoisting incompatible ref identities.
 - [Delivery receipt ownership](delivery-receipt-ownership.md) — HQ may advance delivery only to delivering; the owning customer alone confirms receipt and sets delivered.
+- [Courier retirement](courier-retirement.md) — deleting a courier retires them from fleet views while preserving historical order and settlement attribution.

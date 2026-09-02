@@ -5868,6 +5868,77 @@ export const useUpdateCourier = <TError = ErrorType<unknown>,
       return useMutation(getUpdateCourierMutationOptions(options));
     }
 
+export const getDeleteCourierUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/couriers/${id}`
+}
+
+/**
+ * @summary Remove a courier from the fleet
+ */
+export const deleteCourier = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getDeleteCourierUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCourierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCourier>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCourier>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteCourier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCourier>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteCourier(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCourierMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCourier>>>
+
+    export type DeleteCourierMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove a courier from the fleet
+ */
+export const useDeleteCourier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCourier>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCourier>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteCourierMutationOptions(options));
+    }
+
 export const getListFlagsUrl = (params?: ListFlagsParams,) => {
   const normalizedParams = new URLSearchParams();
 
