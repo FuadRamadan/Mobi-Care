@@ -19,7 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 export default function HqDispatch() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data, isLoading } = useListDispatchOrders();
+  const { data, isLoading } = useListDispatchOrders({
+    query: {
+      queryKey: getListDispatchOrdersQueryKey(),
+      refetchInterval: 10_000,
+    },
+  });
   const { data: couriersData } = useListCouriers();
   const orders = data ?? [];
   const couriers = (couriersData ?? []).filter((c) => c.isActive);
@@ -109,14 +114,12 @@ export default function HqDispatch() {
                   )}
 
                   {o.status === 'delivering' && (
-                    <Button
-                      size="sm"
-                      disabled={advance.isPending}
-                      onClick={() => advance.mutate({ id: o.id, data: { status: 'delivered' } })}
-                      data-testid={`button-delivered-${o.id}`}
+                    <span
+                      className="text-xs text-muted-foreground max-w-48"
+                      data-testid={`text-awaiting-customer-${o.id}`}
                     >
-                      Mark delivered
-                    </Button>
+                      Awaiting customer receipt confirmation
+                    </span>
                   )}
 
                   {o.status === 'delivered' && !o.cashCollected && (

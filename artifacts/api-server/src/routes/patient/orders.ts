@@ -23,6 +23,10 @@ import {
   notifyPharmacyOfPaidOrder,
   notifyPharmacyOfSubmittedPrescription,
 } from "../../lib/pharmacyNotifications.js";
+import {
+  createPatientNotification,
+  notificationForStatus,
+} from "../../lib/patientNotifications.js";
 
 const router = safeRouter();
 
@@ -122,6 +126,84 @@ router.get("/:id", async (req: AuthRequest, res) => {
     return;
   }
   res.json((await hydratePatientOrders([order]))[0]);
+});
+
+// ── POST /patient/orders/:id/confirm-receipt ─────────────────────────────────
+// Only the authenticated customer can confirm delivery. The conditional
+// update makes this one-time and safe when the customer taps twice or multiple
+// devices submit at the same time.
+router.post("/:id/confirm-receipt", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const id = req.params.id as string;
+
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.id, id), eq(ordersTable.patientId, patientId)))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.fulfillmentType !== "delivery") {
+    res
+      .status(409)
+      .json({ error: "Only delivery orders require receipt confirmation" });
+    return;
+  }
+  if (order.status !== "delivering") {
+    res.status(409).json({
+      error: `Receipt can only be confirmed while the order is 'delivering'`,
+    });
+    return;
+  }
+
+  const [updated] = await db
+    .update(ordersTable)
+    .set({ status: "delivered", updatedAt: new Date() })
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.patientId, patientId),
+        eq(ordersTable.fulfillmentType, "delivery"),
+        eq(ordersTable.status, "delivering"),
+      ),
+    )
+    .returning();
+  if (!updated) {
+    res.status(409).json({
+      error: "Order status changed before receipt could be confirmed",
+    });
+    return;
+  }
+
+  await writeAudit({
+    actorType: "patient",
+    actorId: patientId,
+    actorName: req.pharmacy!.name,
+    action: "order.receipt_confirmed",
+    entityType: "order",
+    entityId: id,
+    details: { from: order.status, to: updated.status },
+  });
+  await checkOrderFlags(updated);
+
+  const notif = notificationForStatus(
+    "delivered",
+    updated.fulfillmentType,
+  );
+  if (notif) {
+    void createPatientNotification({
+      patientId,
+      patientPhone: updated.patientPhone,
+      title: notif.title,
+      body: notif.body,
+      type: notif.type,
+      referenceId: updated.id,
+    });
+  }
+
+  res.json((await hydratePatientOrders([updated]))[0]);
 });
 
 // ── POST /patient/orders — place an order ─────────────────────────────────────

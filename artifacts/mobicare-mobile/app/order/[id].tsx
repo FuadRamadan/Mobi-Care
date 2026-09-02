@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   Pressable,
@@ -13,7 +14,14 @@ import {
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PatientOrder, getPatientGetOrderQueryKey, usePatientGetOrder } from '@workspace/api-client-react';
+import {
+  PatientOrder,
+  getPatientGetOrderQueryKey,
+  getPatientListOrdersQueryKey,
+  useConfirmPatientOrderReceipt,
+  usePatientGetOrder,
+} from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 
 type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
@@ -146,11 +154,27 @@ export default function OrderDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
+  const queryClient = useQueryClient();
 
   const { data: order, isLoading, isError } = usePatientGetOrder(
     id ?? '',
     { query: { queryKey: getPatientGetOrderQueryKey(id ?? ''), refetchInterval: 10_000, enabled: !!id } }
   );
+  const confirmReceipt = useConfirmPatientOrderReceipt({
+    mutation: {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getPatientGetOrderQueryKey(id ?? ''), updated);
+        queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() });
+        Alert.alert('Receipt confirmed', 'Your order is now marked as delivered.');
+      },
+      onError: (error) => {
+        Alert.alert(
+          'Could not confirm receipt',
+          error instanceof Error ? error.message : 'Please refresh and try again.',
+        );
+      },
+    },
+  });
 
   const s = makeStyles(colors, insets);
   const topPad = isWeb ? insets.top + 67 : insets.top;
@@ -219,6 +243,44 @@ export default function OrderDetailScreen() {
 
       {/* Timeline */}
       <Timeline order={order} colors={colors} />
+
+      {order.fulfillmentType === 'delivery' && order.status === 'delivering' && (
+        <View style={[s.section, s.confirmSection]} testID="card-confirm-receipt">
+          <View style={s.confirmHeader}>
+            <Ionicons name="checkmark-done-circle-outline" size={24} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.sectionTitle, { marginBottom: 4 }]}>Have you received your order?</Text>
+              <Text style={s.confirmHint}>
+                Confirm only after the medicines are in your hands. This cannot be undone.
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            style={[s.confirmButton, confirmReceipt.isPending && { opacity: 0.6 }]}
+            disabled={confirmReceipt.isPending}
+            testID="button-confirm-receipt"
+            onPress={() =>
+              Alert.alert(
+                'Confirm receipt?',
+                'Only continue if you have received the medicines in this order.',
+                [
+                  { text: 'Not yet', style: 'cancel' },
+                  {
+                    text: 'Yes, I received it',
+                    onPress: () => confirmReceipt.mutate({ id: order.id }),
+                  },
+                ],
+              )
+            }
+          >
+            {confirmReceipt.isPending ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={s.confirmButtonText}>Confirm Delivery</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {/* Prescription */}
       <PrescriptionBlock order={order} colors={colors} />
@@ -321,6 +383,19 @@ function makeStyles(colors: Colors, insets: { top: number; bottom: number }) {
       gap: 0,
     },
     sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.foreground, marginBottom: 12 },
+    confirmSection: { borderColor: colors.primary, backgroundColor: colors.secondary },
+    confirmHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    confirmHint: { fontSize: 12, color: colors.mutedForeground, lineHeight: 18 },
+    confirmButton: {
+      marginTop: 14,
+      minHeight: 46,
+      borderRadius: colors.radius,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    confirmButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
     // Timeline
     timelineItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 0 },
     timelineLine: { width: 20, alignItems: 'center' },

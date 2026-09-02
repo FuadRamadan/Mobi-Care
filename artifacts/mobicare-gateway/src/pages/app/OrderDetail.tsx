@@ -1,11 +1,16 @@
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Check, Truck, Store, Phone, FileText } from 'lucide-react';
+import { ArrowLeft, Check, Truck, Store, Phone, FileText, PackageCheck } from 'lucide-react';
 import {
   usePatientGetOrder,
+  useConfirmPatientOrderReceipt,
   getPatientGetOrderQueryKey,
+  getPatientListOrdersQueryKey,
   type PatientOrder,
 } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { formatLeones, formatDate, StatusBadge, EmptyState } from '@/pages/hq/shared';
 
 const DELIVERY_STEPS: { key: string; label: string; hint: string }[] = [
@@ -34,8 +39,29 @@ const STATUS_ORDER = [
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: order, isLoading, error } = usePatientGetOrder(id!, {
     query: { refetchInterval: 10_000, queryKey: getPatientGetOrderQueryKey(id!) },
+  });
+  const confirmReceipt = useConfirmPatientOrderReceipt({
+    mutation: {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getPatientGetOrderQueryKey(id!), updated);
+        queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() });
+        toast({
+          title: 'Receipt confirmed',
+          description: 'Your order is now marked as delivered.',
+        });
+      },
+      onError: (err) => {
+        toast({
+          title: 'Could not confirm receipt',
+          description: err instanceof Error ? err.message : 'Please refresh and try again.',
+          variant: 'destructive',
+        });
+      },
+    },
   });
 
   if (isLoading) return <EmptyState>Loading order…</EmptyState>;
@@ -108,6 +134,34 @@ export default function OrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      {o.fulfillmentType === 'delivery' && o.status === 'delivering' && (
+        <Card className="border-primary/40 bg-primary/5" data-testid="card-confirm-receipt">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex gap-3 flex-1">
+              <PackageCheck className="w-6 h-6 text-primary shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-dark-green">Have you received your order?</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Confirm only after the medicines are in your hands. This will mark the order as delivered.
+                </p>
+              </div>
+            </div>
+            <Button
+              className="shrink-0"
+              disabled={confirmReceipt.isPending}
+              onClick={() => {
+                if (window.confirm('Confirm that you have received this order? This cannot be undone.')) {
+                  confirmReceipt.mutate({ id: o.id });
+                }
+              }}
+              data-testid="button-confirm-receipt"
+            >
+              {confirmReceipt.isPending ? 'Confirming…' : 'Confirm Delivery'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Prescription status */}
       {o.prescription && (

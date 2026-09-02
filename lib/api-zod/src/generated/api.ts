@@ -961,6 +961,57 @@ export const PatientGetOrderResponse = zod.object({
 
 
 /**
+ * @summary Confirm receipt of the authenticated patient's delivery order
+ */
+export const ConfirmPatientOrderReceiptParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ConfirmPatientOrderReceiptResponse = zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "patientName": zod.string(),
+  "patientPhone": zod.string(),
+  "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
+  "fulfillmentType": zod.enum(['delivery', 'collection']),
+  "idChecked": zod.boolean(),
+  "totalLeones": zod.number(),
+  "prescriptionId": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "orderId": zod.string(),
+  "drugId": zod.string(),
+  "inventoryId": zod.string().nullish(),
+  "drugName": zod.string(),
+  "quantity": zod.number(),
+  "unitPriceLeones": zod.number(),
+  "prescriptionId": zod.string().nullish()
+}))
+}).and(zod.object({
+  "deliveryAddress": zod.string().nullish(),
+  "paymentMethod": zod.string().optional(),
+  "pharmacy": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "phone": zod.string().nullish()
+}),zod.null()]).optional(),
+  "courier": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string().nullish()
+}),zod.null()]).optional(),
+  "prescription": zod.union([zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "rejectReason": zod.string().nullish()
+}),zod.null()]).optional()
+}))
+
+
+/**
  * @summary Record mobile-money payment (no live gateway yet)
  */
 export const PatientPayOrderParams = zod.object({
@@ -1351,14 +1402,14 @@ export const AssignCourierResponse = zod.object({
 
 
 /**
- * @summary Advance courier status (delivering / delivered)
+ * @summary Mark an assigned or picked-up delivery as delivering
  */
 export const UpdateCourierStatusParams = zod.object({
   "id": zod.coerce.string()
 })
 
 export const UpdateCourierStatusBody = zod.object({
-  "status": zod.enum(['delivering', 'delivered'])
+  "status": zod.enum(['delivering'])
 })
 
 export const UpdateCourierStatusResponse = zod.object({

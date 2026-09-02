@@ -678,6 +678,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/PatientOrder"
 
+  /patient/orders/{id}/confirm-receipt:
+    post:
+      operationId: confirmPatientOrderReceipt
+      tags: [patient]
+      summary: Confirm receipt of the authenticated patient's delivery order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order moved from delivering to delivered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientOrder"
+        "404":
+          description: Order does not belong to the authenticated patient
+        "409":
+          description: Order is not a delivery currently in progress
+
   /patient/orders/{id}/pay:
     post:
       operationId: patientPayOrder
@@ -1059,7 +1084,7 @@ paths:
     patch:
       operationId: updateCourierStatus
       tags: [hq]
-      summary: Advance courier status (delivering / delivered)
+      summary: Mark an assigned or picked-up delivery as delivering
       security:
         - BearerAuth: []
       parameters:
@@ -2941,7 +2966,7 @@ components:
       properties:
         status:
           type: string
-          enum: [delivering, delivered]
+          enum: [delivering]
 
     HqPharmacy:
       type: object

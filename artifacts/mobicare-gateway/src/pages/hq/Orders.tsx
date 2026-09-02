@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { useListHqOrders } from '@workspace/api-client-react';
+import {
+  getListHqOrdersQueryKey,
+  useListHqOrders,
+} from '@workspace/api-client-react';
 import HqLayout from './HqLayout';
 import { StatusBadge, formatLeones, formatDate, EmptyState } from './shared';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,8 +15,15 @@ const STATUSES = [
 
 export default function HqOrders() {
   const [status, setStatus] = useState('all');
+  const params = status === 'all' ? undefined : { status };
   const { data, isLoading } = useListHqOrders(
-    status === 'all' ? undefined : { status },
+    params,
+    {
+      query: {
+        queryKey: getListHqOrdersQueryKey(params),
+        refetchInterval: 10_000,
+      },
+    },
   );
   const orders = data ?? [];
 

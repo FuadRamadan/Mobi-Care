@@ -196,23 +196,22 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
 });
 
 // ── PATCH /hq/orders/:id/courier-status ──────────────────────────────────────
-// HQ drives courier-side statuses: assigned → delivering → delivered
-// (pharmacy hands off at ready/picked_up).
+// HQ drives courier-side statuses through delivering. The customer confirms
+// receipt, which is the only path that moves a delivery to delivered.
 const COURIER_TRANSITIONS: Record<string, string[]> = {
   assigned: ["delivering"],
   picked_up: ["delivering"],
-  delivering: ["delivered"],
 };
 
 router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
   const body = z
-    .object({ status: z.enum(["delivering", "delivered"]) })
+    .object({ status: z.enum(["delivering"]) })
     .safeParse(req.body);
   if (!body.success) {
     res
       .status(400)
-      .json({ error: "status must be 'delivering' or 'delivered'" });
+      .json({ error: "status must be 'delivering'" });
     return;
   }
 

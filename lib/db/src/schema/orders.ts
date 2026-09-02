@@ -14,13 +14,14 @@ import { pharmaciesTable } from "./pharmacies";
  * Full order status lifecycle:
  *   awaiting_payment → paid → confirmed → packaging → ready
  *   ready → collected            (collection path — pharmacy drives)
- *   ready → assigned → picked_up → delivering → delivered  (delivery path — dispatch drives)
+ *   ready → assigned → picked_up → delivering               (dispatch drives)
+ *   delivering → delivered                                  (customer confirms receipt)
  *   * → cancelled
  *
  * Pharmacy may only write: confirmed, packaging, ready (via PATCH /pharmacy/orders/:id/status)
  *   and collected (via POST /pharmacy/orders/:id/collected)
  *   and picked_up (via POST /pharmacy/orders/:id/picked-up, marks courier handoff)
- * Everything past picked_up (delivering, delivered) is written by dispatch/HQ, not this API.
+ * Dispatch/HQ may write delivering, but only the customer may confirm delivered.
  */
 export const orderStatusEnum = pgEnum("order_status", [
   "awaiting_payment",

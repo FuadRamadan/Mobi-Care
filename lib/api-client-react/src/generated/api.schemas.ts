@@ -801,7 +801,6 @@ export type CourierStatusUpdateStatus = typeof CourierStatusUpdateStatus[keyof t
 
 export const CourierStatusUpdateStatus = {
   delivering: 'delivering',
-  delivered: 'delivered',
 } as const;
 
 export interface CourierStatusUpdate {

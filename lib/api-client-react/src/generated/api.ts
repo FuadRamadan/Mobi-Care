@@ -2283,6 +2283,77 @@ export function usePatientGetOrder<TData = Awaited<ReturnType<typeof patientGetO
 
 
 
+export const getConfirmPatientOrderReceiptUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/orders/${id}/confirm-receipt`
+}
+
+/**
+ * @summary Confirm receipt of the authenticated patient's delivery order
+ */
+export const confirmPatientOrderReceipt = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PatientOrder> => {
+
+  return customFetch<PatientOrder>(getConfirmPatientOrderReceiptUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getConfirmPatientOrderReceiptMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPatientOrderReceipt>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmPatientOrderReceipt>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['confirmPatientOrderReceipt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPatientOrderReceipt>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  confirmPatientOrderReceipt(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmPatientOrderReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPatientOrderReceipt>>>
+
+    export type ConfirmPatientOrderReceiptMutationError = ErrorType<void>
+
+    /**
+ * @summary Confirm receipt of the authenticated patient's delivery order
+ */
+export const useConfirmPatientOrderReceipt = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPatientOrderReceipt>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmPatientOrderReceipt>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getConfirmPatientOrderReceiptMutationOptions(options));
+    }
+
 export const getPatientPayOrderUrl = (id: string,) => {
 
 
@@ -3798,7 +3869,7 @@ export const getUpdateCourierStatusUrl = (id: string,) => {
 }
 
 /**
- * @summary Advance courier status (delivering / delivered)
+ * @summary Mark an assigned or picked-up delivery as delivering
  */
 export const updateCourierStatus = async (id: string,
     courierStatusUpdate: CourierStatusUpdate, options?: Parameters<typeof customFetch>[1]): Promise<HqOrder> => {
@@ -3848,7 +3919,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateCourierStatusMutationError = ErrorType<void>
 
     /**
- * @summary Advance courier status (delivering / delivered)
+ * @summary Mark an assigned or picked-up delivery as delivering
  */
 export const useUpdateCourierStatus = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCourierStatus>>, TError,{id: string;data: BodyType<CourierStatusUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
