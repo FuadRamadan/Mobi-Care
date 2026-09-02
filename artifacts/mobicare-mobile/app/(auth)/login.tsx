@@ -24,13 +24,38 @@ import {
 
 type Mode = 'login' | 'register' | 'recover';
 
+function calculateAge(dateOfBirth: string, now = new Date()): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const dob = new Date(year, month - 1, day);
+  if (
+    dob.getFullYear() !== year ||
+    dob.getMonth() !== month - 1 ||
+    dob.getDate() !== day ||
+    dob > now
+  ) {
+    return null;
+  }
+  let age = now.getFullYear() - year;
+  if (
+    now.getMonth() < month - 1 ||
+    (now.getMonth() === month - 1 && now.getDate() < day)
+  ) {
+    age -= 1;
+  }
+  return age;
+}
+
 export default function LoginScreen() {
   const { login, register, isAuthenticated } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +66,7 @@ export default function LoginScreen() {
   const [retryAfter, setRetryAfter] = useState(0);
 
   const phoneRef = useRef<TextInput>(null);
-  const ageRef = useRef<TextInput>(null);
+  const dateOfBirthRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -66,11 +91,9 @@ export default function LoginScreen() {
     }
     if (mode === 'register' && name.trim().length < 2) return 'Name must be at least 2 characters.';
     if (mode === 'register') {
-      const numericAge = Number(age);
-      if (!Number.isInteger(numericAge) || numericAge < 0 || numericAge > 120) {
-        return 'Enter a valid age.';
-      }
-      if (numericAge < 18) return 'You must be 18 or older to register for MobiCare.';
+      const calculatedAge = calculateAge(dateOfBirth);
+      if (calculatedAge === null) return 'Enter your date of birth as YYYY-MM-DD.';
+      if (calculatedAge < 18) return 'You must be 18 or older to register for MobiCare.';
     }
     if (phone.trim().length < 5) return 'Enter a valid phone number.';
     if (password.length < 8) return 'Password must be at least 8 characters.';
@@ -110,7 +133,7 @@ export default function LoginScreen() {
           Alert.alert('Password reset', 'Sign in with your new password.');
         }
       } else {
-        await register(name.trim(), phone.trim(), password, Number(age));
+        await register(name.trim(), phone.trim(), password, dateOfBirth);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: unknown) {
@@ -133,7 +156,7 @@ export default function LoginScreen() {
   const switchMode = (m: Mode) => {
     setMode(m);
     setName('');
-    setAge('');
+    setDateOfBirth('');
     setPhone('');
     setPassword('');
     setRequestId(null);
@@ -184,28 +207,32 @@ export default function LoginScreen() {
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="words"
                 returnKeyType="next"
-                onSubmitEditing={() => ageRef.current?.focus()}
+                onSubmitEditing={() => dateOfBirthRef.current?.focus()}
                 blurOnSubmit={false}
               />
             </View>
           )}
           {mode === 'register' && (
             <View style={s.field}>
-              <Text style={s.label}>Age</Text>
+              <Text style={s.label}>Date of Birth</Text>
               <TextInput
-                ref={ageRef}
+                ref={dateOfBirthRef}
                 style={s.input}
-                value={age}
-                onChangeText={(value) => setAge(value.replace(/\D/g, '').slice(0, 3))}
-                placeholder="You must be 18 or older"
+                value={dateOfBirth}
+                onChangeText={(value) =>
+                  setDateOfBirth(value.replace(/[^\d-]/g, '').slice(0, 10))
+                }
+                placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.mutedForeground}
-                keyboardType="number-pad"
-                maxLength={3}
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+                autoComplete="birthdate-full"
+                textContentType="none"
+                maxLength={10}
                 returnKeyType="next"
                 onSubmitEditing={() => phoneRef.current?.focus()}
                 blurOnSubmit={false}
               />
-              <Text style={s.fieldHint}>MobiCare patient accounts are available to adults aged 18 and above.</Text>
+              <Text style={s.fieldHint}>Your age is calculated automatically. Date of birth and age cannot be changed later.</Text>
             </View>
           )}
           <View style={s.field}>

@@ -12,5 +12,16 @@ export interface PatientProfile {
   phone: string;
   age: number;
   /** @nullable */
+  dateOfBirth: Date | null;
+  /** @nullable */
+  nin: string | null;
+  /** @nullable */
+  address: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  nationality: string | null;
+  /** @nullable */
   profileImageUrl: string | null;
+  profileComplete: boolean;
 }

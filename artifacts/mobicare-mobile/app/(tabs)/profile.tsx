@@ -40,6 +40,10 @@ export default function ProfileScreen() {
   const queryClient = useQueryClient();
   const { user, updateUser } = useAuth();
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [ninDraft, setNinDraft] = useState<string | null>(null);
+  const [addressDraft, setAddressDraft] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const [nationalityDraft, setNationalityDraft] = useState<string | null>(null);
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? insets.top + 67 : insets.top;
 
@@ -53,8 +57,12 @@ export default function ProfileScreen() {
         queryClient.setQueryData(getGetPatientProfileQueryKey(), updated);
         await updateUser({ name: updated.name });
         setNameDraft(null);
+        setNinDraft(null);
+        setAddressDraft(null);
+        setEmailDraft(null);
+        setNationalityDraft(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Profile updated", "Your name has been saved.");
+        Alert.alert("Profile updated", "Your patient information has been saved.");
       },
       onError: (error) => {
         Alert.alert("Could not update profile", error instanceof Error ? error.message : "Please try again.");
@@ -127,7 +135,31 @@ export default function ProfileScreen() {
 
   const s = makeStyles(colors);
   const currentName = nameDraft ?? profile?.name ?? user?.name ?? "";
+  const currentNin = ninDraft ?? profile?.nin ?? "";
+  const currentAddress = addressDraft ?? profile?.address ?? "";
+  const currentEmail = emailDraft ?? profile?.email ?? "";
+  const currentNationality = nationalityDraft ?? profile?.nationality ?? "";
   const photoUrl = absoluteImageUrl(profile?.profileImageUrl);
+  const hasChanges = Boolean(
+    profile &&
+      (currentName.trim() !== profile.name ||
+        currentNin.trim() !== (profile.nin ?? "") ||
+        currentAddress.trim() !== (profile.address ?? "") ||
+        currentEmail.trim() !== (profile.email ?? "") ||
+        currentNationality.trim() !== (profile.nationality ?? "")),
+  );
+
+  const saveProfile = () => {
+    updateProfile.mutate({
+      data: {
+        name: currentName.trim(),
+        nin: currentNin.trim() || null,
+        address: currentAddress.trim() || null,
+        email: currentEmail.trim() || null,
+        nationality: currentNationality.trim() || null,
+      },
+    });
+  };
 
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
@@ -197,23 +229,72 @@ export default function ProfileScreen() {
                 <Feather name="phone" size={17} color={colors.mutedForeground} />
                 <Text style={s.readOnlyText}>{profile.phone}</Text>
               </View>
+              <Text style={s.label}>Date of Birth</Text>
+              <View style={s.readOnlyRow}>
+                <Feather name="calendar" size={17} color={colors.mutedForeground} />
+                <Text style={s.readOnlyText}>{profile.dateOfBirth ?? "Not available"}</Text>
+              </View>
               <Text style={s.label}>Age</Text>
               <View style={s.readOnlyRow}>
                 <Feather name="calendar" size={17} color={colors.mutedForeground} />
                 <Text style={s.readOnlyText}>{profile.age}</Text>
               </View>
+              <Text style={s.immutableHint}>Date of birth and age are fixed at registration.</Text>
+              <Text style={s.label}>NIN (Optional)</Text>
+              <TextInput
+                style={s.input}
+                value={currentNin}
+                onChangeText={setNinDraft}
+                autoCapitalize="characters"
+                placeholder="National identification number"
+                placeholderTextColor={colors.mutedForeground}
+                maxLength={40}
+              />
+              <Text style={s.label}>Address</Text>
+              <TextInput
+                style={[s.input, s.addressInput]}
+                value={currentAddress}
+                onChangeText={setAddressDraft}
+                autoCapitalize="sentences"
+                placeholder="Your home address"
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                maxLength={300}
+              />
+              <Text style={s.label}>Email</Text>
+              <TextInput
+                style={s.input}
+                value={currentEmail}
+                onChangeText={setEmailDraft}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                autoComplete="email"
+                placeholder="you@example.com"
+                placeholderTextColor={colors.mutedForeground}
+              />
+              <Text style={s.label}>Nationality</Text>
+              <TextInput
+                style={s.input}
+                value={currentNationality}
+                onChangeText={setNationalityDraft}
+                autoCapitalize="words"
+                placeholder="Your nationality"
+                placeholderTextColor={colors.mutedForeground}
+                maxLength={80}
+              />
               <Pressable
                 style={[
                   s.saveButton,
-                  (updateProfile.isPending || currentName.trim().length < 2 || currentName.trim() === profile.name) &&
+                  (updateProfile.isPending || currentName.trim().length < 2 || !hasChanges) &&
                     s.saveButtonDisabled,
                 ]}
                 disabled={
                   updateProfile.isPending ||
                   currentName.trim().length < 2 ||
-                  currentName.trim() === profile.name
+                  !hasChanges
                 }
-                onPress={() => updateProfile.mutate({ data: { name: currentName.trim() } })}
+                onPress={saveProfile}
               >
                 {updateProfile.isPending ? (
                   <ActivityIndicator size="small" color="#FFF" />
@@ -253,8 +334,10 @@ function makeStyles(colors: Colors) {
     card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: colors.radius + 4, padding: 18, gap: 9 },
     label: { color: colors.foreground, fontSize: 13, fontWeight: "700", marginTop: 4 },
     input: { height: 50, borderWidth: 1, borderColor: colors.input, borderRadius: colors.radius, paddingHorizontal: 14, fontSize: 16, color: colors.foreground, backgroundColor: colors.background },
+    addressInput: { minHeight: 86, height: "auto", paddingTop: 14, textAlignVertical: "top" },
     readOnlyRow: { height: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderRadius: colors.radius, backgroundColor: colors.muted },
     readOnlyText: { color: colors.mutedForeground, fontSize: 15 },
+    immutableHint: { color: colors.mutedForeground, fontSize: 12, lineHeight: 17 },
     saveButton: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: colors.radius, backgroundColor: colors.primary, marginTop: 12 },
     saveButtonDisabled: { opacity: 0.45 },
     saveText: { color: "#FFF", fontSize: 15, fontWeight: "800" },

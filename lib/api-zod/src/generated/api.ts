@@ -705,17 +705,13 @@ export const registerPatientBodyPhoneMin = 5;
 
 export const registerPatientBodyPasswordMin = 8;
 
-export const registerPatientBodyAgeMin = 0;
-export const registerPatientBodyAgeMax = 120;
-export const registerPatientBodyAgeMultipleOf = 1;
-
 
 
 export const RegisterPatientBody = zod.object({
   "name": zod.string().min(registerPatientBodyNameMin),
   "phone": zod.string().min(registerPatientBodyPhoneMin),
   "password": zod.string().min(registerPatientBodyPasswordMin),
-  "age": zod.number().min(registerPatientBodyAgeMin).max(registerPatientBodyAgeMax).multipleOf(registerPatientBodyAgeMultipleOf)
+  "dateOfBirth": zod.coerce.date().describe('Date of birth in YYYY-MM-DD format; patient must be 18 or older')
 })
 
 export const RegisterPatientResponse = zod.object({
@@ -1138,19 +1134,36 @@ export const GetPatientProfileResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string(),
   "age": zod.number(),
-  "profileImageUrl": zod.string().nullable()
+  "dateOfBirth": zod.coerce.date().nullable(),
+  "nin": zod.string().nullable(),
+  "address": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "profileComplete": zod.boolean()
 })
 
 
 /**
- * @summary Update the authenticated patient's name
+ * @summary Update editable patient profile fields
  */
 export const updatePatientProfileBodyNameMin = 2;
+
+export const updatePatientProfileBodyNinMax = 40;
+
+export const updatePatientProfileBodyAddressMax = 300;
+
+export const updatePatientProfileBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const updatePatientProfileBodyNationalityMax = 80;
 
 
 
 export const UpdatePatientProfileBody = zod.object({
-  "name": zod.string().min(updatePatientProfileBodyNameMin)
+  "name": zod.string().min(updatePatientProfileBodyNameMin).optional(),
+  "nin": zod.string().max(updatePatientProfileBodyNinMax).nullish(),
+  "address": zod.string().max(updatePatientProfileBodyAddressMax).nullish(),
+  "email": zod.string().regex(updatePatientProfileBodyEmailRegExp).nullish(),
+  "nationality": zod.string().max(updatePatientProfileBodyNationalityMax).nullish()
 })
 
 export const UpdatePatientProfileResponse = zod.object({
@@ -1158,7 +1171,13 @@ export const UpdatePatientProfileResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string(),
   "age": zod.number(),
-  "profileImageUrl": zod.string().nullable()
+  "dateOfBirth": zod.coerce.date().nullable(),
+  "nin": zod.string().nullable(),
+  "address": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "profileComplete": zod.boolean()
 })
 
 
@@ -1174,7 +1193,13 @@ export const UpdatePatientProfilePhotoResponse = zod.object({
   "name": zod.string(),
   "phone": zod.string(),
   "age": zod.number(),
-  "profileImageUrl": zod.string().nullable()
+  "dateOfBirth": zod.coerce.date().nullable(),
+  "nin": zod.string().nullable(),
+  "address": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable(),
+  "profileComplete": zod.boolean()
 })
 
 

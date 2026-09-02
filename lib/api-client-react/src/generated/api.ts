@@ -2656,7 +2656,7 @@ export const getUpdatePatientProfileUrl = () => {
 }
 
 /**
- * @summary Update the authenticated patient's name
+ * @summary Update editable patient profile fields
  */
 export const updatePatientProfile = async (patientProfileUpdate: PatientProfileUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PatientProfile> => {
 
@@ -2705,7 +2705,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdatePatientProfileMutationError = ErrorType<unknown>
 
     /**
- * @summary Update the authenticated patient's name
+ * @summary Update editable patient profile fields
  */
 export const useUpdatePatientProfile = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePatientProfile>>, TError,{data: BodyType<PatientProfileUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}

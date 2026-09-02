@@ -197,11 +197,8 @@ export interface PatientRegisterInput {
   phone: string;
   /** @minLength 8 */
   password: string;
-  /**
-     * @minimum 0
-     * @maximum 120
-     */
-  age: number;
+  /** Date of birth in YYYY-MM-DD format; patient must be 18 or older */
+  dateOfBirth: string;
 }
 
 export interface PatientProfile {
@@ -210,12 +207,43 @@ export interface PatientProfile {
   phone: string;
   age: number;
   /** @nullable */
+  dateOfBirth: string | null;
+  /** @nullable */
+  nin: string | null;
+  /** @nullable */
+  address: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  nationality: string | null;
+  /** @nullable */
   profileImageUrl: string | null;
+  profileComplete: boolean;
 }
 
 export interface PatientProfileUpdate {
   /** @minLength 2 */
-  name: string;
+  name?: string;
+  /**
+     * @maxLength 40
+     * @nullable
+     */
+  nin?: string | null;
+  /**
+     * @maxLength 300
+     * @nullable
+     */
+  address?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email?: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  nationality?: string | null;
 }
 
 export interface PatientProfilePhotoInput {

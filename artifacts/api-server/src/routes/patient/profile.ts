@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { mintProfileImageToken } from "../../lib/signedUrl.js";
 import { objectStorageClient } from "../../lib/objectStorage.js";
+import { calculatePatientAge } from "../../lib/patientAge.js";
 
 const router = safeRouter();
 const PROFILE_UPLOAD_DIR = path.resolve(process.cwd(), "uploads/profiles");
@@ -62,10 +63,22 @@ function profileResponse(patient: typeof patientsTable.$inferSelect) {
     id: patient.id,
     name: patient.name,
     phone: patient.phone,
-    age: patient.age,
+    dateOfBirth: patient.dateOfBirth,
+    age: patient.dateOfBirth
+      ? calculatePatientAge(patient.dateOfBirth) ?? patient.age
+      : patient.age,
+    nin: patient.nin,
+    address: patient.address,
+    email: patient.email,
+    nationality: patient.nationality,
     profileImageUrl: signed
       ? `/api/patient-profile-images/${patient.id}?expires=${signed.expiresAt}&sig=${signed.token}`
       : null,
+    profileComplete: Boolean(
+      patient.address?.trim() &&
+        patient.email?.trim() &&
+        patient.nationality?.trim(),
+    ),
   };
 }
 
@@ -83,14 +96,37 @@ router.get("/", async (req: AuthRequest, res) => {
 });
 
 router.patch("/", async (req: AuthRequest, res) => {
-  const body = z.object({ name: z.string().trim().min(2).max(120) }).safeParse(req.body);
+  const body = z
+    .object({
+      name: z.string().trim().min(2).max(120).optional(),
+      nin: z.string().trim().max(40).nullable().optional(),
+      address: z.string().trim().max(300).nullable().optional(),
+      email: z.string().trim().email().max(254).nullable().optional(),
+      nationality: z.string().trim().max(80).nullable().optional(),
+    })
+    .strict()
+    .refine((value) => Object.values(value).some((field) => field !== undefined))
+    .safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Name must be at least 2 characters" });
+    res.status(400).json({
+      error:
+        "Provide at least one valid editable profile field. Date of birth and age cannot be changed.",
+    });
     return;
   }
+  const values = body.data;
   const [updated] = await db
     .update(patientsTable)
-    .set({ name: body.data.name, updatedAt: new Date() })
+    .set({
+      ...(values.name !== undefined ? { name: values.name } : {}),
+      ...(values.nin !== undefined ? { nin: values.nin || null } : {}),
+      ...(values.address !== undefined ? { address: values.address || null } : {}),
+      ...(values.email !== undefined ? { email: values.email || null } : {}),
+      ...(values.nationality !== undefined
+        ? { nationality: values.nationality || null }
+        : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(patientsTable.id, req.pharmacy!.sub))
     .returning();
   if (!updated) {

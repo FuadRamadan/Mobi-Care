@@ -13,9 +13,6 @@ export interface PatientRegisterInput {
   phone: string;
   /** @minLength 8 */
   password: string;
-  /**
-     * @minimum 0
-     * @maximum 120
-     */
-  age: number;
+  /** Date of birth in YYYY-MM-DD format; patient must be 18 or older */
+  dateOfBirth: Date;
 }

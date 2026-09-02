@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, integer, date, index } from "drizzle-orm/pg-core";
 
 /**
  * Patient accounts for the unified-site patient experience.
@@ -10,6 +10,11 @@ export const patientsTable = pgTable("patients", {
   phone: text("phone").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   age: integer("age").notNull().default(18),
+  dateOfBirth: date("date_of_birth", { mode: "string" }),
+  nin: text("nin"),
+  address: text("address"),
+  email: text("email"),
+  nationality: text("nationality"),
   profileImageKey: text("profile_image_key"),
   sessionVersion: integer("session_version").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),

@@ -8,5 +8,25 @@
 
 export interface PatientProfileUpdate {
   /** @minLength 2 */
-  name: string;
+  name?: string;
+  /**
+     * @maxLength 40
+     * @nullable
+     */
+  nin?: string | null;
+  /**
+     * @maxLength 300
+     * @nullable
+     */
+  address?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email?: string | null;
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  nationality?: string | null;
 }

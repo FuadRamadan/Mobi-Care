@@ -34,6 +34,7 @@ import {
   serializePasswordPolicy,
 } from "../lib/passwordPolicy.js";
 import { sendSms } from "../lib/configuredSms.js";
+import { calculatePatientAge } from "../lib/patientAge.js";
 
 const router = safeRouter();
 const RESET_TTL_MS = 10 * 60 * 1000;
@@ -268,7 +269,7 @@ router.post("/register", async (req, res) => {
       name: z.string().min(2),
       phone: z.string().min(5),
       password: z.string().min(8),
-        age: z.number().int().min(0).max(120),
+      dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     })
     .safeParse(req.body);
 
@@ -277,12 +278,17 @@ router.post("/register", async (req, res) => {
       .status(400)
       .json({
         error:
-          "name (min 2), phone (min 5), password (min 8 chars) and age are required",
+          "name (min 2), phone (min 5), password (min 8 chars) and a valid date of birth are required",
       });
     return;
   }
 
-  if (body.data.age < 18) {
+  const age = calculatePatientAge(body.data.dateOfBirth);
+  if (age === null) {
+    res.status(400).json({ error: "Enter a valid date of birth" });
+    return;
+  }
+  if (age < 18) {
     res
       .status(400)
       .json({ error: "You must be 18 or older to register for MobiCare" });
@@ -308,7 +314,8 @@ router.post("/register", async (req, res) => {
       name: body.data.name,
       phone: body.data.phone,
       passwordHash,
-      age: body.data.age,
+      age,
+      dateOfBirth: body.data.dateOfBirth,
     })
     .onConflictDoNothing({ target: patientsTable.phone })
     .returning();

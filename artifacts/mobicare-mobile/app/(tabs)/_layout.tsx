@@ -14,6 +14,7 @@ import {
   useGetPatientUnreadCount,
 } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
+import { CompleteRegistrationModal } from '@/components/CompleteRegistrationModal';
 
 // Expo packages currently ship React declarations from slightly different
 // patch versions in this workspace. These aliases preserve the runtime
@@ -176,8 +177,14 @@ export default function TabLayout() {
   if (isLoading) return null;
   if (!isLoading && !isAuthenticated) return <Redirect href="/(auth)/login" />;
 
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout itemCount={itemCount} unreadCount={unreadCount} />;
-  }
-  return <ClassicTabLayout itemCount={itemCount} unreadCount={unreadCount} />;
+  return (
+    <>
+      {isLiquidGlassAvailable() ? (
+        <NativeTabLayout itemCount={itemCount} unreadCount={unreadCount} />
+      ) : (
+        <ClassicTabLayout itemCount={itemCount} unreadCount={unreadCount} />
+      )}
+      <CompleteRegistrationModal />
+    </>
+  );
 }

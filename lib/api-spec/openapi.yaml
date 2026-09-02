@@ -789,7 +789,7 @@ paths:
     patch:
       operationId: updatePatientProfile
       tags: [patient]
-      summary: Update the authenticated patient's name
+      summary: Update editable patient profile fields
       security:
         - BearerAuth: []
       requestBody:
@@ -2110,7 +2110,7 @@ components:
     # ── Patient schemas ────────────────────────────────────────────────────
     PatientRegisterInput:
       type: object
-      required: [name, phone, password, age]
+      required: [name, phone, password, dateOfBirth]
       properties:
         name:
           type: string
@@ -2121,15 +2121,14 @@ components:
         password:
           type: string
           minLength: 8
-        age:
-          type: number
-          multipleOf: 1
-          minimum: 0
-          maximum: 120
+        dateOfBirth:
+          type: string
+          format: date
+          description: Date of birth in YYYY-MM-DD format; patient must be 18 or older
 
     PatientProfile:
       type: object
-      required: [id, name, phone, age, profileImageUrl]
+      required: [id, name, phone, dateOfBirth, age, nin, address, email, nationality, profileImageUrl, profileComplete]
       properties:
         id:
           type: string
@@ -2139,16 +2138,40 @@ components:
           type: string
         age:
           type: number
+        dateOfBirth:
+          type: ["string", "null"]
+          format: date
+        nin:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
         profileImageUrl:
           type: ["string", "null"]
+        profileComplete:
+          type: boolean
 
     PatientProfileUpdate:
       type: object
-      required: [name]
       properties:
         name:
           type: string
           minLength: 2
+        nin:
+          type: ["string", "null"]
+          maxLength: 40
+        address:
+          type: ["string", "null"]
+          maxLength: 300
+        email:
+          type: ["string", "null"]
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        nationality:
+          type: ["string", "null"]
+          maxLength: 80
 
     PatientProfilePhotoInput:
       type: object

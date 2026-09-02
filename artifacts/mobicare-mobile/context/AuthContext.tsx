@@ -15,6 +15,7 @@ interface PatientUser {
   name: string;
   phone?: string | null;
   role: string;
+  profileCompletionPending?: boolean;
 }
 
 interface AuthContextValue {
@@ -22,8 +23,9 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (phone: string, password: string) => Promise<void>;
-  register: (name: string, phone: string, password: string, age: number) => Promise<void>;
+  register: (name: string, phone: string, password: string, dateOfBirth: string) => Promise<void>;
   updateUser: (updates: Pick<PatientUser, 'name'>) => Promise<void>;
+  dismissProfileCompletion: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -191,17 +193,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: result.user.name,
       phone: result.user.phone ?? null,
       role: result.user.role,
+      profileCompletionPending: false,
     });
     syncPushToken();
   }, [applyTokens, syncPushToken]);
 
-  const register = useCallback(async (name: string, phone: string, password: string, age: number) => {
-    const result = await apiRegisterPatient({ name, phone, password, age });
+  const register = useCallback(async (name: string, phone: string, password: string, dateOfBirth: string) => {
+    const result = await apiRegisterPatient({ name, phone, password, dateOfBirth });
     await applyTokens(result.accessToken, result.refreshToken, {
       id: result.user.id,
       name: result.user.name,
       phone: result.user.phone ?? null,
       role: result.user.role,
+      profileCompletionPending: true,
     });
     syncPushToken();
   }, [applyTokens, syncPushToken]);
@@ -213,12 +217,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(ASYNC_KEY_USER, JSON.stringify(next));
   }, [user]);
 
+  const dismissProfileCompletion = useCallback(async () => {
+    if (!user) return;
+    const next = { ...user, profileCompletionPending: false };
+    setUser(next);
+    await AsyncStorage.setItem(ASYNC_KEY_USER, JSON.stringify(next));
+  }, [user]);
+
   const logout = useCallback(async () => {
     await clearSession(refreshTokenRef.current);
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, updateUser, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, updateUser, dismissProfileCompletion, logout }}>
       {children}
     </AuthContext.Provider>
   );
