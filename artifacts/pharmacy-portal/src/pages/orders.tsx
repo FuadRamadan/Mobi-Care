@@ -205,11 +205,18 @@ function OrderDetailsSheet({
   if (!order) return <Sheet open={false} onOpenChange={onClose}><SheetContent /></Sheet>;
 
   const statusInfo = statusConfigFor(order);
+  const mergeUpdatedOrder = (updated: Order): Order => ({
+    ...order,
+    ...updated,
+    // Pharmacy status endpoints return the order record without its nested
+    // items. Preserve the open panel's details while applying the new status.
+    items: updated.items ?? order.items,
+  });
 
   const handleStatusUpdate = async (newStatus: "confirmed" | "ready") => {
     try {
       const updated = await updateStatus.mutateAsync({ id: order.id, data: { status: newStatus } });
-      onOrderUpdated(updated);
+      onOrderUpdated(mergeUpdatedOrder(updated));
       toast.success(newStatus === "ready" ? "Order marked as packaged" : "Order confirmed");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
@@ -221,7 +228,7 @@ function OrderDetailsSheet({
   const handleCollected = async () => {
     try {
       const updated = await markCollected.mutateAsync({ id: order.id, data: { idChecked: true } });
-      onOrderUpdated(updated);
+      onOrderUpdated(mergeUpdatedOrder(updated));
       toast.success("Patient handover completed");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
@@ -233,7 +240,7 @@ function OrderDetailsSheet({
   const handlePickedUp = async () => {
     try {
       const updated = await markPickedUp.mutateAsync({ id: order.id });
-      onOrderUpdated(updated);
+      onOrderUpdated(mergeUpdatedOrder(updated));
       toast.success("Order marked as collected by courier");
       queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/orders"] });
       queryClient.invalidateQueries({ queryKey: getGetAnalyticsOverviewQueryKey() });
