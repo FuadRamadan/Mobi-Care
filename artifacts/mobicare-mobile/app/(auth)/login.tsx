@@ -421,7 +421,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
           {mode === 'login' && (
             <Pressable style={s.linkButton} onPress={() => switchMode('recover')}>
-              <Text style={s.linkText}>Forgot password?</Text>
+                <Text style={s.linkText}>Reset password via email</Text>
             </Pressable>
           )}
           {mode === 'recover' && (

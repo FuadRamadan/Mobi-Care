@@ -213,7 +213,7 @@ export default function PatientLogin() {
           {error && <p className="text-sm text-destructive" data-testid="text-login-error">{error}</p>}
           {notice && <p className="text-sm text-primary" role="status" data-testid="text-login-notice">{notice}</p>}
           <Button type="submit" className="w-full rounded-full" disabled={busy} data-testid="button-submit">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : recoveryStage === 'email' ? 'Send verification code' : recoveryStage === 'otp' ? 'Verify code' : 'Reset password'}</Button>
-          {mode === 'login' && <button type="button" onClick={() => { clearRecoveryState(); setMode('recover'); setError(null); setNotice(null); }} className="w-full text-sm font-medium text-primary hover:underline" data-testid="button-forgot-password">Forgot password?</button>}
+          {mode === 'login' && <button type="button" onClick={() => { clearRecoveryState(); setMode('recover'); setError(null); setNotice(null); }} className="w-full text-sm font-medium text-primary hover:underline" data-testid="button-forgot-password">Reset password via email</button>}
           {mode === 'recover' && <div className="flex justify-between gap-4 text-sm"><button type="button" onClick={leaveRecovery} className="font-medium text-primary hover:underline">Back to sign in</button>{recoveryStage === 'otp' && <button type="button" onClick={sendResetCode} disabled={busy || retryAfter > 0} className="font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline">{retryAfter > 0 ? `Resend in ${retryAfter}s` : 'Resend code'}</button>}</div>}
         </form>
       </div>
