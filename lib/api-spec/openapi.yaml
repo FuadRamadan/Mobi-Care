@@ -678,6 +678,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/PatientOrder"
 
+  /patient/orders/{id}/history:
+    delete:
+      operationId: removePatientOrderFromHistory
+      tags: [patient]
+      summary: Remove a completed or cancelled order from the patient's history
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order hidden from this patient's history without deleting it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemovalResult"
+        "409":
+          description: Order is not yet in a removable terminal state
+
   /patient/orders/{id}/confirm-receipt:
     post:
       operationId: confirmPatientOrderReceipt
@@ -844,6 +867,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PatientNotification"
+    delete:
+      operationId: clearPatientNotifications
+      tags: [patient]
+      summary: Delete all notifications owned by the authenticated patient
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Deleted notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionResult"
+
+  /patient/notifications/{id}:
+    delete:
+      operationId: deletePatientNotification
+      tags: [patient]
+      summary: Delete one notification owned by the authenticated patient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionResult"
 
   /patient/notifications/unread-count:
     get:
@@ -919,6 +976,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Notification"
+    delete:
+      operationId: clearNotifications
+      tags: [notifications]
+      summary: Delete all notifications owned by the authenticated pharmacy
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Deleted notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionResult"
+
+  /notifications/{id}:
+    delete:
+      operationId: deleteNotification
+      tags: [notifications]
+      summary: Delete one notification owned by the authenticated pharmacy
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionResult"
 
   /notifications/unread-count:
     get:
@@ -1553,6 +1644,33 @@ paths:
                 items:
                   $ref: "#/components/schemas/TeamMember"
 
+  /hq/team/{id}:
+    patch:
+      operationId: updateHqTeamMember
+      tags: [hq]
+      summary: Update a team member's complete public profile information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberUpdate"
+      responses:
+        "200":
+          description: Updated team member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+
   /hq/team/{id}/photo-upload:
     post:
       operationId: requestHqTeamPhotoUpload
@@ -1684,6 +1802,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HqDrug"
+    delete:
+      operationId: deleteHqDrug
+      tags: [hq]
+      summary: Remove a drug from the active MobiCare catalogue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Drug deleted or safely retired when historical references exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrugRemovalResult"
+
+  /hq/exports/{resource}.csv:
+    get:
+      operationId: exportHqCurrentDataCsv
+      tags: [hq]
+      summary: Export current database records as CSV
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [orders, patients, notifications, catalogue, inventory]
+      responses:
+        "200":
+          description: Current records in CSV format
+          content:
+            text/csv:
+              schema:
+                type: string
 
   /hq/couriers:
     get:
@@ -3711,13 +3870,35 @@ components:
       properties:
         id:
           type: string
+        slug:
+          type: string
         name:
           type: string
         role:
           type: string
+        sortOrder:
+          type: number
+        updatedAt:
+          type: string
         photoUrl:
           type: ["string", "null"]
           description: Public profile-photo URL, null only before the first photo is uploaded
+
+    TeamMemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        role:
+          type: string
+          minLength: 2
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        sortOrder:
+          type: number
+          minimum: 0
 
     TeamPhotoUploadRequest:
       type: object
@@ -3746,6 +3927,30 @@ components:
       properties:
         objectPath:
           type: string
+
+    DeletionResult:
+      type: object
+      required: [deletedCount]
+      properties:
+        deletedCount:
+          type: number
+
+    RemovalResult:
+      type: object
+      required: [removed]
+      properties:
+        removed:
+          type: boolean
+
+    DrugRemovalResult:
+      type: object
+      required: [removed, mode]
+      properties:
+        removed:
+          type: boolean
+        mode:
+          type: string
+          enum: [deleted, retired]
 
     HqDrug:
       type: object

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   FlatList,
+  Alert,
   Platform,
   Pressable,
   RefreshControl,
@@ -11,7 +12,8 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PatientOrder, getPatientListOrdersQueryKey, usePatientListOrders } from '@workspace/api-client-react';
+import { PatientOrder, getPatientListOrdersQueryKey, usePatientListOrders, useRemovePatientOrderFromHistory } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareHeader } from '@/components/MobiCareHeader';
 
@@ -48,7 +50,17 @@ function formatLeones(n: number) {
   return `Le ${n.toLocaleString()}`;
 }
 
-function OrderCard({ order, colors }: { order: PatientOrder; colors: ReturnType<typeof import('@/hooks/useColors').useColors> }) {
+const REMOVABLE_STATUSES = new Set(['delivered', 'collected', 'cancelled']);
+
+function OrderCard({
+  order,
+  colors,
+  onRemove,
+}: {
+  order: PatientOrder;
+  colors: ReturnType<typeof import('@/hooks/useColors').useColors>;
+  onRemove: (id: string) => void;
+}) {
   const s = makeStyles(colors);
   const st = statusStyle(order.status, colors);
   const names = order.items.map((i) => i.drugName).join(', ');
@@ -67,6 +79,19 @@ function OrderCard({ order, colors }: { order: PatientOrder; colors: ReturnType<
         <View style={[s.statusBadge, { backgroundColor: st.bg }]}>
           <Text style={[s.statusText, { color: st.text }]}>{statusLabel(order.status)}</Text>
         </View>
+        {REMOVABLE_STATUSES.has(order.status) && (
+          <Pressable
+            style={s.removeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Remove order from history"
+            onPress={(event) => {
+              event.stopPropagation();
+              onRemove(order.id);
+            }}
+          >
+            <Ionicons name="close-circle-outline" size={21} color={colors.destructive} />
+          </Pressable>
+        )}
       </View>
       <Text style={s.itemNames} numberOfLines={2}>{names}</Text>
       <View style={s.cardFooter}>
@@ -88,10 +113,36 @@ export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
   const topPad = isWeb ? insets.top + 67 : insets.top;
+  const queryClient = useQueryClient();
 
   const { data: orders, isFetching, isError, refetch } = usePatientListOrders({
     query: { queryKey: getPatientListOrdersQueryKey(), refetchInterval: 15_000 },
   });
+  const removeFromHistory = useRemovePatientOrderFromHistory();
+  const removeOrder = (id: string) => {
+    Alert.alert(
+      'Remove order from history?',
+      'The order record will remain securely stored in MobiCare.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeFromHistory.mutate(
+              { id },
+              {
+                onSuccess: () =>
+                  queryClient.invalidateQueries({
+                    queryKey: getPatientListOrdersQueryKey(),
+                  }),
+              },
+            );
+          },
+        },
+      ],
+    );
+  };
 
   const s = makeStyles(colors);
 
@@ -106,7 +157,7 @@ export default function OrdersScreen() {
       <FlatList
         data={orders ?? []}
         keyExtractor={(o) => o.id}
-        renderItem={({ item }) => <OrderCard order={item} colors={colors} />}
+        renderItem={({ item }) => <OrderCard order={item} colors={colors} onRemove={removeOrder} />}
         contentContainerStyle={[
           s.list,
           isWeb ? { paddingBottom: insets.bottom + 34 } : {},
@@ -144,11 +195,12 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
       borderColor: colors.border,
       gap: 10,
     },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     fulfillmentRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     fulfillmentText: { fontSize: 13, fontWeight: '600', color: colors.primary },
     statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
     statusText: { fontSize: 12, fontWeight: '700' },
+    removeButton: { padding: 2, marginLeft: 'auto' },
     itemNames: { fontSize: 15, fontWeight: '600', color: colors.foreground, lineHeight: 20 },
     cardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
     pharmacyName: { fontSize: 13, color: colors.primary, fontWeight: '600' },

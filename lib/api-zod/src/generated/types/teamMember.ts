@@ -8,8 +8,11 @@
 
 export interface TeamMember {
   id: string;
+  slug?: string;
   name: string;
   role: string;
+  sortOrder?: number;
+  updatedAt?: string;
   /**
      * Public profile-photo URL, null only before the first photo is uploaded
      * @nullable

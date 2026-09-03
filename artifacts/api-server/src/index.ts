@@ -45,6 +45,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "orders.patient_hidden_at column",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'orders'
+            AND column_name = 'patient_hidden_at'
+        ) AS exists
+      `,
+    },
+    {
       label: "patient_password_reset_codes table",
       query: sql`
         SELECT EXISTS (

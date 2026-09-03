@@ -1254,13 +1254,27 @@ export interface HqPharmacyUpdate {
 
 export interface TeamMember {
   id: string;
+  slug?: string;
   name: string;
   role: string;
+  sortOrder?: number;
+  updatedAt?: string;
   /**
      * Public profile-photo URL, null only before the first photo is uploaded
      * @nullable
      */
   photoUrl: string | null;
+}
+
+export interface TeamMemberUpdate {
+  /** @minLength 2 */
+  name?: string;
+  /** @minLength 2 */
+  role?: string;
+  /** @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$ */
+  slug?: string;
+  /** @minimum 0 */
+  sortOrder?: number;
 }
 
 export type TeamPhotoUploadRequestContentType = typeof TeamPhotoUploadRequestContentType[keyof typeof TeamPhotoUploadRequestContentType];
@@ -1288,6 +1302,27 @@ export interface TeamPhotoUploadResponse {
 
 export interface TeamPhotoUpdate {
   objectPath: string;
+}
+
+export interface DeletionResult {
+  deletedCount: number;
+}
+
+export interface RemovalResult {
+  removed: boolean;
+}
+
+export type DrugRemovalResultMode = typeof DrugRemovalResultMode[keyof typeof DrugRemovalResultMode];
+
+
+export const DrugRemovalResultMode = {
+  deleted: 'deleted',
+  retired: 'retired',
+} as const;
+
+export interface DrugRemovalResult {
+  removed: boolean;
+  mode: DrugRemovalResultMode;
 }
 
 export type HqDrugTier = typeof HqDrugTier[keyof typeof HqDrugTier];

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   FlatList,
+  Alert,
   Platform,
   Pressable,
   RefreshControl,
@@ -18,6 +19,8 @@ import {
   useGetPatientUnreadCount,
   useListPatientNotifications,
   useMarkPatientNotificationsRead,
+  useClearPatientNotifications,
+  useDeletePatientNotification,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
@@ -43,7 +46,15 @@ function notifIcon(type: string | null | undefined): { name: string; color: (c: 
   }
 }
 
-function NotifCard({ notif, colors }: { notif: PatientNotification; colors: ReturnType<typeof import('@/hooks/useColors').useColors> }) {
+function NotifCard({
+  notif,
+  colors,
+  onDelete,
+}: {
+  notif: PatientNotification;
+  colors: ReturnType<typeof import('@/hooks/useColors').useColors>;
+  onDelete: (id: string) => void;
+}) {
   const s = makeStyles(colors);
   const icon = notifIcon(notif.type);
   const isUnread = !notif.readAt;
@@ -71,6 +82,17 @@ function NotifCard({ notif, colors }: { notif: PatientNotification; colors: Retu
           </View>
         )}
       </View>
+      <Pressable
+        style={s.deleteButton}
+        accessibilityRole="button"
+        accessibilityLabel="Delete notification"
+        onPress={(event) => {
+          event.stopPropagation();
+          onDelete(notif.id);
+        }}
+      >
+        <Ionicons name="trash-outline" size={19} color={colors.destructive} />
+      </Pressable>
     </Pressable>
   );
 }
@@ -101,6 +123,38 @@ export default function NotificationsScreen() {
   });
 
   const markRead = useMarkPatientNotificationsRead();
+  const clearNotifications = useClearPatientNotifications();
+  const deleteNotification = useDeletePatientNotification();
+  const refreshNotifications = () => {
+    queryClient.invalidateQueries({ queryKey: getListPatientNotificationsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetPatientUnreadCountQueryKey() });
+  };
+
+  const deleteOne = (id: string) => {
+    Alert.alert('Delete notification?', 'This notification will be removed permanently.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteNotification.mutate({ id }, { onSuccess: refreshNotifications });
+        },
+      },
+    ]);
+  };
+
+  const clearAll = () => {
+    Alert.alert('Clear all notifications?', 'All notifications will be removed permanently.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear all',
+        style: 'destructive',
+        onPress: () => {
+          clearNotifications.mutate(undefined, { onSuccess: refreshNotifications });
+        },
+      },
+    ]);
+  };
 
   // Mark all as read when tab comes into focus
   useFocusEffect(
@@ -126,12 +180,23 @@ export default function NotificationsScreen() {
             <Text style={s.badgeText}>{unreadData!.unreadCount}</Text>
           </View>
         )}
+        {!!notifications?.length && (
+          <Pressable
+            style={s.clearButton}
+            onPress={clearAll}
+            disabled={clearNotifications.isPending}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.destructive} />
+            <Text style={s.clearButtonText}>Clear all</Text>
+          </Pressable>
+        )}
       </View>
 
       <FlatList
         data={notifications ?? []}
         keyExtractor={(n) => n.id}
-        renderItem={({ item }) => <NotifCard notif={item} colors={colors} />}
+        renderItem={({ item }) => <NotifCard notif={item} colors={colors} onDelete={deleteOne} />}
         contentContainerStyle={[
           s.list,
           isWeb ? { paddingBottom: insets.bottom + 34 } : {},
@@ -161,6 +226,8 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     screenTitle: { fontSize: 26, fontWeight: '800', color: colors.darkGreen },
     badge: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
     badgeText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+    clearButton: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5, padding: 8 },
+    clearButtonText: { color: colors.destructive, fontSize: 13, fontWeight: '700' },
     list: { paddingHorizontal: 16, paddingBottom: 120, gap: 8 },
     listEmpty: { flex: 1 },
     card: {
@@ -175,6 +242,7 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     cardUnread: { borderColor: colors.primary, backgroundColor: '#F0FBF5' },
     iconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     content: { flex: 1, gap: 4 },
+    deleteButton: { alignSelf: 'flex-start', padding: 4 },
     cardTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
     title: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.foreground },
     titleUnread: { fontWeight: '700' },

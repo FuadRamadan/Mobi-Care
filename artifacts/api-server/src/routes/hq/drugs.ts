@@ -3,11 +3,13 @@ import { z } from "zod";
 import { db } from "@workspace/db";
 import {
   drugCatalogueTable,
+  pharmacyInventoryTable,
+  orderItemsTable,
   DRUG_PRIMARY_CATEGORIES,
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
@@ -285,6 +287,69 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   });
 
   res.json(withReviewDueAt(updated!));
+});
+
+// ── DELETE /hq/drugs/:id — remove from active catalogue safely ──────────────
+router.delete("/:id", async (req: AuthRequest, res) => {
+  const id = req.params.id as string;
+  const [existing] = await db
+    .select()
+    .from(drugCatalogueTable)
+    .where(eq(drugCatalogueTable.id, id))
+    .limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Drug not found" });
+    return;
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [[inventoryRefs], [orderRefs]] = await Promise.all([
+      tx
+        .select({ count: count() })
+        .from(pharmacyInventoryTable)
+        .where(eq(pharmacyInventoryTable.drugId, id)),
+      tx
+        .select({ count: count() })
+        .from(orderItemsTable)
+        .where(eq(orderItemsTable.drugId, id)),
+    ]);
+    const referenced =
+      Number(inventoryRefs?.count ?? 0) > 0 ||
+      Number(orderRefs?.count ?? 0) > 0;
+    if (referenced) {
+      await tx
+        .update(pharmacyInventoryTable)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(pharmacyInventoryTable.drugId, id));
+      await tx
+        .update(drugCatalogueTable)
+        .set({
+          isApproved: false,
+          reviewStatus: "rejected",
+          rejectionReason: "Removed from the MobiCare catalogue by HQ",
+          reviewedAt: new Date(),
+          reviewedByHqStaffId: req.pharmacy!.sub,
+          updatedAt: new Date(),
+        })
+        .where(eq(drugCatalogueTable.id, id));
+      return "retired" as const;
+    }
+    await tx
+      .delete(drugCatalogueTable)
+      .where(eq(drugCatalogueTable.id, id));
+    return "deleted" as const;
+  });
+
+  await writeAudit({
+    actorType: "hq",
+    actorId: req.pharmacy!.sub,
+    actorName: req.pharmacy!.name,
+    action: `drug.${result}`,
+    entityType: "drug",
+    entityId: id,
+    details: { name: existing.name },
+  });
+  res.json({ removed: true, mode: result });
 });
 
 export default router;

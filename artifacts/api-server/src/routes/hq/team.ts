@@ -23,8 +23,11 @@ const UPLOAD_TTL_MS = 15 * 60 * 1000;
 function publicMember(member: typeof teamMembersTable.$inferSelect) {
   return {
     id: member.id,
+    slug: member.slug,
     name: member.name,
     role: member.role,
+    sortOrder: member.sortOrder,
+    updatedAt: member.updatedAt,
     photoUrl: member.photoPath
       ? `/api/team/${member.id}/photo?v=${member.updatedAt.getTime()}`
       : null,
@@ -81,6 +84,64 @@ router.get("/", async (_req, res) => {
     .from(teamMembersTable)
     .orderBy(asc(teamMembersTable.sortOrder));
   res.json(members.map(publicMember));
+});
+
+// ── PATCH /hq/team/:id — update all editable profile information ────────────
+router.patch("/:id", async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      name: z.string().trim().min(2).max(120).optional(),
+      role: z.string().trim().min(2).max(160).optional(),
+      slug: z
+        .string()
+        .trim()
+        .min(2)
+        .max(100)
+        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+        .optional(),
+      sortOrder: z.number().int().min(0).max(999).optional(),
+    })
+    .refine((value) => Object.keys(value).length > 0, "No changes provided")
+    .safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({
+      error: body.error.issues[0]?.message ?? "Invalid team profile",
+    });
+    return;
+  }
+
+  const member = await findMember(req.params.id as string);
+  if (!member) {
+    res.status(404).json({ error: "Team member not found" });
+    return;
+  }
+
+  try {
+    const [updated] = await db
+      .update(teamMembersTable)
+      .set({ ...body.data, updatedAt: new Date() })
+      .where(eq(teamMembersTable.id, member.id))
+      .returning();
+    await writeAudit({
+      actorType: "hq",
+      actorId: req.pharmacy!.sub,
+      actorName: req.pharmacy!.name,
+      action: "team_member.profile_update",
+      entityType: "team_member",
+      entityId: member.id,
+      details: { fields: Object.keys(body.data), name: updated!.name },
+    });
+    res.json(publicMember(updated!));
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /unique|duplicate/i.test(error.message)
+    ) {
+      res.status(409).json({ error: "That profile slug is already in use" });
+      return;
+    }
+    throw error;
+  }
 });
 
 // ── POST /hq/team/:id/photo-upload — request direct object-storage upload ─

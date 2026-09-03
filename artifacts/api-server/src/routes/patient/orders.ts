@@ -120,7 +120,12 @@ router.get("/", async (req: AuthRequest, res) => {
   const orders = await db
     .select()
     .from(ordersTable)
-    .where(eq(ordersTable.patientId, patientId))
+    .where(
+      and(
+        eq(ordersTable.patientId, patientId),
+        isNull(ordersTable.patientHiddenAt),
+      ),
+    )
     .orderBy(desc(ordersTable.createdAt));
   res.json(await hydratePatientOrders(orders));
 });
@@ -132,13 +137,54 @@ router.get("/:id", async (req: AuthRequest, res) => {
   const [order] = await db
     .select()
     .from(ordersTable)
-    .where(and(eq(ordersTable.id, id), eq(ordersTable.patientId, patientId)))
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.patientId, patientId),
+        isNull(ordersTable.patientHiddenAt),
+      ),
+    )
     .limit(1);
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
   res.json((await hydratePatientOrders([order]))[0]);
+});
+
+// ── DELETE /patient/orders/:id/history — hide a terminal order from history ─
+router.delete("/:id/history", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const id = req.params.id as string;
+  const removableStatuses = ["delivered", "collected", "cancelled"] as const;
+  const [updated] = await db
+    .update(ordersTable)
+    .set({ patientHiddenAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.patientId, patientId),
+        isNull(ordersTable.patientHiddenAt),
+        inArray(ordersTable.status, removableStatuses),
+      ),
+    )
+    .returning({ id: ordersTable.id });
+  if (!updated) {
+    res.status(409).json({
+      error:
+        "Only delivered, collected, or cancelled orders can be removed from history",
+    });
+    return;
+  }
+  await writeAudit({
+    actorType: "patient",
+    actorId: patientId,
+    actorName: req.pharmacy!.name,
+    action: "order.hidden_from_patient_history",
+    entityType: "order",
+    entityId: id,
+  });
+  res.json({ removed: true });
 });
 
 // ── POST /patient/orders/:id/confirm-receipt ─────────────────────────────────

@@ -1,8 +1,8 @@
-import { useListNotifications, useMarkNotificationsRead, getListNotificationsQueryKey } from "@workspace/api-client-react";
+import { useListNotifications, useMarkNotificationsRead, getListNotificationsQueryKey, getGetUnreadCountQueryKey, useClearNotifications, useDeleteNotification } from "@workspace/api-client-react";
 import { formatDateTime } from "@/lib/format";
 import { markNotificationsReadAndRefresh } from "@/lib/notification-read";
 import { Button } from "@/components/ui/button";
-import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText } from "lucide-react";
+import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import clsx from "clsx";
@@ -26,7 +26,13 @@ export default function Notifications() {
     query: { refetchInterval: 15_000, queryKey: getListNotificationsQueryKey() },
   });
   const markRead = useMarkNotificationsRead();
+  const clearNotifications = useClearNotifications();
+  const deleteNotification = useDeleteNotification();
   const queryClient = useQueryClient();
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetUnreadCountQueryKey() });
+  };
 
   const handleMarkAllRead = async () => {
     try {
@@ -52,6 +58,27 @@ export default function Notifications() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNotification.mutateAsync({ id });
+      refresh();
+      toast.success("Notification deleted");
+    } catch {
+      toast.error("Failed to delete notification");
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm("Delete all notifications? This cannot be undone.")) return;
+    try {
+      await clearNotifications.mutateAsync();
+      refresh();
+      toast.success("Notifications cleared");
+    } catch {
+      toast.error("Failed to clear notifications");
+    }
+  };
+
   const hasUnread = notifications?.some(n => !n.readAt);
 
   return (
@@ -61,11 +88,18 @@ export default function Notifications() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
           <p className="text-muted-foreground mt-1 text-sm">Updates on orders, prescriptions, and system alerts.</p>
         </div>
-        {hasUnread && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={markRead.isPending}>
-            <Check className="w-4 h-4 mr-2" /> Mark all as read
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {hasUnread && (
+            <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={markRead.isPending}>
+              <Check className="w-4 h-4 mr-2" /> Mark all as read
+            </Button>
+          )}
+          {!!notifications?.length && (
+            <Button variant="outline" size="sm" onClick={handleClearAll} disabled={clearNotifications.isPending}>
+              <Trash2 className="w-4 h-4 mr-2" /> Clear all
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="bg-card border rounded-xl shadow-sm flex-1 overflow-hidden flex flex-col">
@@ -132,7 +166,7 @@ export default function Notifications() {
                       </p>
                     </div>
 
-                    <div className="shrink-0 flex items-center justify-center w-6 sm:w-8">
+                    <div className="shrink-0 flex items-center justify-center gap-1">
                       {isUnread ? (
                         <button 
                           onClick={(event) => {
@@ -148,6 +182,18 @@ export default function Notifications() {
                       ) : (
                         <CheckCircle2 className="w-5 h-5 text-muted-foreground/30" />
                       )}
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDelete(notification.id);
+                        }}
+                        className="p-1 text-muted-foreground hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete notification"
+                        title="Delete"
+                        disabled={deleteNotification.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 );

@@ -38,6 +38,35 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
   res.json({ unreadCount: rows.length });
 });
 
+// ── DELETE /patient/notifications — clear this patient's notifications ──────
+router.delete("/", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const deleted = await db
+    .delete(patientNotificationsTable)
+    .where(eq(patientNotificationsTable.patientId, patientId))
+    .returning({ id: patientNotificationsTable.id });
+  res.json({ deletedCount: deleted.length });
+});
+
+// ── DELETE /patient/notifications/:id — delete one owned notification ───────
+router.delete("/:id", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  const [deleted] = await db
+    .delete(patientNotificationsTable)
+    .where(
+      and(
+        eq(patientNotificationsTable.id, req.params.id as string),
+        eq(patientNotificationsTable.patientId, patientId),
+      ),
+    )
+    .returning({ id: patientNotificationsTable.id });
+  if (!deleted) {
+    res.status(404).json({ error: "Notification not found" });
+    return;
+  }
+  res.json({ deletedCount: 1 });
+});
+
 // ── PUT /patient/notifications/push-token — register/clear device push token ─
 router.put("/push-token", async (req: AuthRequest, res) => {
   const patientId = req.pharmacy!.sub;

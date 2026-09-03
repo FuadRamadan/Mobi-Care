@@ -19,3 +19,4 @@
 - [Catalogue replacement safety](catalogue-replacement-safety.md) — aggregate variant files by generic drug and preserve referenced IDs or remap aliases before retiring old rows.
 - [Financial snapshot integrity](financial-snapshot-integrity.md) — reconcile exact line totals, settlement uniqueness, and legacy obligations at a persisted rollout boundary.
 - [Aggregate insights privacy](aggregate-insights-privacy.md) — enforce minimum cohorts on every JSON/CSV metric and keep location telemetry coarse and identity-free.
+- [User removal and data exports](user-removal-and-data-exports.md) — delete only owned notifications; hide terminal patient orders; retire referenced drugs; gate current-record exports.

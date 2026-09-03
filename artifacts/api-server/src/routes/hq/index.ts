@@ -18,6 +18,7 @@ import passwordPolicyRouter from "./passwordPolicy.js";
 import teamRouter from "./team.js";
 import apiConnectionsRouter from "./apiConnections.js";
 import insightsRouter from "./insights.js";
+import exportsRouter from "./exports.js";
 
 const router = safeRouter();
 
@@ -35,6 +36,7 @@ router.use("/couriers", couriersRouter);
 router.use("/flags", flagsRouter);
 router.use("/settlements", requireManageSettlements, settlementsRouter);
 router.use("/insights", requireViewDataInsights, insightsRouter);
+router.use("/exports", requireViewDataInsights, exportsRouter);
 router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/password-policy", passwordPolicyRouter);

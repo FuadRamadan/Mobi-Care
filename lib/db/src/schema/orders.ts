@@ -120,6 +120,10 @@ export const ordersTable = pgTable("orders", {
     "delivery_confirmed_by_hq_user_id",
   ).references(() => hqStaffTable.id, { onDelete: "set null" }),
 
+  // Patient-only history visibility. The order and all operational/financial
+  // records remain intact for pharmacies, HQ, audits, and settlements.
+  patientHiddenAt: timestamp("patient_hidden_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

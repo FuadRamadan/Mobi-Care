@@ -1072,6 +1072,18 @@ export const PatientGetOrderResponse = zod.object({
 
 
 /**
+ * @summary Remove a completed or cancelled order from the patient's history
+ */
+export const RemovePatientOrderFromHistoryParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RemovePatientOrderFromHistoryResponse = zod.object({
+  "removed": zod.boolean()
+})
+
+
+/**
  * @summary Confirm receipt of the authenticated patient's delivery order
  */
 export const ConfirmPatientOrderReceiptParams = zod.object({
@@ -1375,6 +1387,26 @@ export const ListPatientNotificationsResponse = zod.array(ListPatientNotificatio
 
 
 /**
+ * @summary Delete all notifications owned by the authenticated patient
+ */
+export const ClearPatientNotificationsResponse = zod.object({
+  "deletedCount": zod.number()
+})
+
+
+/**
+ * @summary Delete one notification owned by the authenticated patient
+ */
+export const DeletePatientNotificationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeletePatientNotificationResponse = zod.object({
+  "deletedCount": zod.number()
+})
+
+
+/**
  * @summary Get unread notification count for the authenticated patient
  */
 export const GetPatientUnreadCountResponse = zod.object({
@@ -1420,6 +1452,26 @@ export const ListNotificationsResponseItem = zod.object({
   "createdAt": zod.string()
 })
 export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Delete all notifications owned by the authenticated pharmacy
+ */
+export const ClearNotificationsResponse = zod.object({
+  "deletedCount": zod.number()
+})
+
+
+/**
+ * @summary Delete one notification owned by the authenticated pharmacy
+ */
+export const DeleteNotificationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteNotificationResponse = zod.object({
+  "deletedCount": zod.number()
+})
 
 
 /**
@@ -1472,8 +1524,11 @@ export const GetOrdersByDayResponse = zod.array(GetOrdersByDayResponseItem)
  */
 export const ListTeamMembersResponseItem = zod.object({
   "id": zod.string(),
+  "slug": zod.string().optional(),
   "name": zod.string(),
   "role": zod.string(),
+  "sortOrder": zod.number().optional(),
+  "updatedAt": zod.string().optional(),
   "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
 })
 export const ListTeamMembersResponse = zod.array(ListTeamMembersResponseItem)
@@ -2630,11 +2685,48 @@ export const GetSavedApiRequestHistoryResponse = zod.array(GetSavedApiRequestHis
  */
 export const ListHqTeamMembersResponseItem = zod.object({
   "id": zod.string(),
+  "slug": zod.string().optional(),
   "name": zod.string(),
   "role": zod.string(),
+  "sortOrder": zod.number().optional(),
+  "updatedAt": zod.string().optional(),
   "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
 })
 export const ListHqTeamMembersResponse = zod.array(ListHqTeamMembersResponseItem)
+
+
+/**
+ * @summary Update a team member's complete public profile information
+ */
+export const UpdateHqTeamMemberParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateHqTeamMemberBodyNameMin = 2;
+
+export const updateHqTeamMemberBodyRoleMin = 2;
+
+export const updateHqTeamMemberBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a-z0-9]+)*$');
+export const updateHqTeamMemberBodySortOrderMin = 0;
+
+
+
+export const UpdateHqTeamMemberBody = zod.object({
+  "name": zod.string().min(updateHqTeamMemberBodyNameMin).optional(),
+  "role": zod.string().min(updateHqTeamMemberBodyRoleMin).optional(),
+  "slug": zod.string().regex(updateHqTeamMemberBodySlugRegExp).optional(),
+  "sortOrder": zod.number().min(updateHqTeamMemberBodySortOrderMin).optional()
+})
+
+export const UpdateHqTeamMemberResponse = zod.object({
+  "id": zod.string(),
+  "slug": zod.string().optional(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "sortOrder": zod.number().optional(),
+  "updatedAt": zod.string().optional(),
+  "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
+})
 
 
 /**
@@ -2672,8 +2764,11 @@ export const UpdateHqTeamMemberPhotoBody = zod.object({
 
 export const UpdateHqTeamMemberPhotoResponse = zod.object({
   "id": zod.string(),
+  "slug": zod.string().optional(),
   "name": zod.string(),
   "role": zod.string(),
+  "sortOrder": zod.number().optional(),
+  "updatedAt": zod.string().optional(),
   "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
 })
 
@@ -2795,6 +2890,29 @@ export const UpdateHqDrugResponse = zod.object({
   "proposedByPharmacyId": zod.string().nullish(),
   "createdAt": zod.string()
 })
+
+
+/**
+ * @summary Remove a drug from the active MobiCare catalogue
+ */
+export const DeleteHqDrugParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteHqDrugResponse = zod.object({
+  "removed": zod.boolean(),
+  "mode": zod.enum(['deleted', 'retired'])
+})
+
+
+/**
+ * @summary Export current database records as CSV
+ */
+export const ExportHqCurrentDataCsvParams = zod.object({
+  "resource": zod.enum(['orders', 'patients', 'notifications', 'catalogue', 'inventory'])
+})
+
+export const ExportHqCurrentDataCsvResponse = zod.unknown()
 
 
 /**

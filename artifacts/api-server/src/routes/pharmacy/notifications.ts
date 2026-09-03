@@ -37,6 +37,35 @@ router.get("/unread-count", async (req: AuthRequest, res) => {
   res.json({ unreadCount: Number(result?.count ?? 0) });
 });
 
+// ── Clear notifications for this pharmacy only ───────────────────────────────
+router.delete("/", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const deleted = await db
+    .delete(notificationsTable)
+    .where(eq(notificationsTable.pharmacyId, pharmacyId))
+    .returning({ id: notificationsTable.id });
+  res.json({ deletedCount: deleted.length });
+});
+
+// ── Delete one notification owned by this pharmacy ──────────────────────────
+router.delete("/:id", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const [deleted] = await db
+    .delete(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.id, req.params.id as string),
+        eq(notificationsTable.pharmacyId, pharmacyId),
+      ),
+    )
+    .returning({ id: notificationsTable.id });
+  if (!deleted) {
+    res.status(404).json({ error: "Notification not found" });
+    return;
+  }
+  res.json({ deletedCount: 1 });
+});
+
 // ── Mark as read ──────────────────────────────────────────────────────────────
 router.post("/mark-read", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;

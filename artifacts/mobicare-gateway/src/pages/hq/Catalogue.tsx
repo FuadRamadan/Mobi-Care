@@ -3,6 +3,7 @@ import {
   useListHqDrugs,
   useCreateHqDrug,
   useUpdateHqDrug,
+  useDeleteHqDrug,
   useListDrugCategories,
   getListHqDrugsQueryKey,
   type HqDrug,
@@ -41,6 +42,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { format, isPast, parseISO } from "date-fns";
+import { Trash2 } from "lucide-react";
 
 const TIER_LABEL: Record<string, string> = {
   "1": "Tier 1 · Controlled",
@@ -107,8 +109,15 @@ export default function HqCatalogue() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "held">("all");
+  const drugParams = tab === "held" ? { status: "held" as const } : undefined;
   const { data, isLoading } = useListHqDrugs(
-    tab === "held" ? { status: "held" } : undefined,
+    drugParams,
+    {
+      query: {
+        queryKey: getListHqDrugsQueryKey(drugParams),
+        refetchInterval: 15_000,
+      },
+    },
   );
   const { data: categories = [] } = useListDrugCategories();
   const drugs = data ?? [];
@@ -123,6 +132,7 @@ export default function HqCatalogue() {
     });
   const create = useCreateHqDrug({ mutation: { onSuccess: refresh, onError } });
   const update = useUpdateHqDrug({ mutation: { onSuccess: refresh, onError } });
+  const deleteDrug = useDeleteHqDrug();
 
   const [open, setOpen] = useState(false);
   const [editDrug, setEditDrug] = useState<HqDrug | null>(null);
@@ -131,6 +141,29 @@ export default function HqCatalogue() {
 
   const [rejectDrug, setRejectDrug] = useState<HqDrug | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  const handleDelete = async (drug: HqDrug) => {
+    if (
+      !window.confirm(
+        `Delete ${drug.name} from the MobiCare catalogue? Existing historical order records will be preserved.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const result = await deleteDrug.mutateAsync({ id: drug.id });
+      refresh();
+      toast({
+        title: "Drug removed",
+        description:
+          result.mode === "retired"
+            ? "The drug and linked pharmacy listings were retired while historical records were preserved."
+            : "The unused drug was deleted from the catalogue.",
+      });
+    } catch (error) {
+      onError(error);
+    }
+  };
 
   useEffect(() => {
     if (editDrug) {
@@ -555,14 +588,26 @@ export default function HqCatalogue() {
                       })()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditDrug(d)}
-                      data-testid={`button-edit-${d.id}`}
-                    >
-                      {d.reviewStatus === "pending" ? "Review" : "Edit"}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditDrug(d)}
+                        data-testid={`button-edit-${d.id}`}
+                      >
+                        {d.reviewStatus === "pending" ? "Review" : "Edit"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => void handleDelete(d)}
+                        disabled={deleteDrug.isPending}
+                        data-testid={`button-delete-${d.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1.5" />
+                        Delete Drug
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
