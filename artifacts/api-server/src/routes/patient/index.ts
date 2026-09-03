@@ -5,8 +5,12 @@ import ordersRouter from "./orders.js";
 import uploadsRouter from "./uploads.js";
 import notificationsRouter from "./notifications.js";
 import profileRouter from "./profile.js";
+import emailAuthRouter from "./emailAuth.js";
 
 const router = safeRouter();
+
+// Recovery starts unauthenticated, unlike all other patient routes.
+router.use("/auth", emailAuthRouter);
 
 // All /patient/* routes require a valid patient-role access token.
 // Data is always scoped to req.pharmacy.sub (the patient id) — a patient can

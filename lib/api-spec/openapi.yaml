@@ -569,6 +569,75 @@ paths:
         "409":
           description: Phone already registered
 
+  /patient/auth/forgot-password:
+    post:
+      operationId: requestPatientEmailPasswordReset
+      tags: [patient]
+      summary: Send a password reset code to a patient's registered email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientEmailInput"
+      responses:
+        "200":
+          description: Generic acknowledgement that does not reveal account existence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientEmailPasswordResetRequested"
+        "400":
+          description: Invalid email
+        "429":
+          description: Recovery request rate limit or resend cooldown reached
+
+  /patient/auth/verify-otp:
+    post:
+      operationId: verifyPatientEmailPasswordResetOtp
+      tags: [patient]
+      summary: Verify a patient email reset code and receive a single-use reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientEmailOtpInput"
+      responses:
+        "200":
+          description: A short-lived password reset token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientPasswordResetToken"
+        "400":
+          description: Invalid, expired, or previously used code
+        "429":
+          description: Too many incorrect verification attempts
+
+  /patient/auth/reset-password:
+    post:
+      operationId: resetPatientEmailPassword
+      tags: [patient]
+      summary: Reset a patient password using a verified email reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset and all existing sessions revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid, expired, or used reset token
+        "422":
+          description: Password does not meet policy requirements
+
   /patient/search:
     get:
       operationId: patientSearchDrugs
@@ -2052,6 +2121,62 @@ components:
           type: string
           minLength: 8
       required: [requestId, code, newPassword]
+
+    PatientEmailInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+          maxLength: 320
+
+    PatientEmailPasswordResetRequested:
+      type: object
+      required: [message, retryAfterSeconds, passwordPolicy]
+      properties:
+        message:
+          type: string
+        retryAfterSeconds:
+          type: number
+          minimum: 0
+        passwordPolicy:
+          $ref: "#/components/schemas/PasswordPolicy"
+
+    PatientEmailOtpInput:
+      type: object
+      required: [email, otp]
+      properties:
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+          maxLength: 320
+        otp:
+          type: string
+          pattern: '^[0-9]{6}$'
+
+    PatientPasswordResetToken:
+      type: object
+      required: [resetToken, expiresInSeconds]
+      properties:
+        resetToken:
+          type: string
+        expiresInSeconds:
+          type: number
+          minimum: 1
+
+    PatientResetPasswordInput:
+      type: object
+      required: [resetToken, newPassword]
+      properties:
+        resetToken:
+          type: string
+          minLength: 32
+          maxLength: 512
+        newPassword:
+          type: string
+          minLength: 1
+          maxLength: 200
 
     # ── Auth schemas ───────────────────────────────────────────────────────
     LoginInput:

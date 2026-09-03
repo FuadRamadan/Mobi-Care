@@ -78,6 +78,45 @@ export type PatientPasswordResetCode =
   typeof patientPasswordResetCodesTable.$inferSelect;
 
 /**
+ * Password recovery records keyed by hashes only. The registered email,
+ * one-time code, and reset credential are never persisted in plaintext.
+ */
+export const patientEmailPasswordResetsTable = pgTable(
+  "patient_email_password_resets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    patientId: uuid("patient_id").references(() => patientsTable.id, {
+      onDelete: "cascade",
+    }),
+    emailHash: text("email_hash").notNull(),
+    requesterHash: text("requester_hash").notNull(),
+    otpHash: text("otp_hash").notNull(),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }).notNull(),
+    otpUsedAt: timestamp("otp_used_at", { withTimezone: true }),
+    resetTokenHash: text("reset_token_hash").unique(),
+    resetExpiresAt: timestamp("reset_expires_at", { withTimezone: true }),
+    resetUsedAt: timestamp("reset_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("patient_email_password_reset_email_created_idx").on(
+      table.emailHash,
+      table.createdAt,
+    ),
+    index("patient_email_password_reset_requester_created_idx").on(
+      table.requesterHash,
+      table.createdAt,
+    ),
+  ],
+);
+
+export type PatientEmailPasswordReset =
+  typeof patientEmailPasswordResetsTable.$inferSelect;
+
+/**
  * Ownership + single-use ledger for prescription image uploads.
  * Order creation must verify the key belongs to the ordering patient and is
  * unconsumed, then consume it in the same transaction — prevents forging a
