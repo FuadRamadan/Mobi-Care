@@ -17,6 +17,10 @@
  *
  * Optional env overrides:
  *   TEST_API_BASE_URL   default: http://localhost:$PORT (or :4000)
+ *
+ * Safety:
+ *   This flow is test-only. It accepts localhost and Replit development
+ *   targets, but refuses production mode and production hostnames.
  */
 
 import bcrypt from "bcryptjs";
@@ -38,6 +42,29 @@ const BASE_URL =
     /\/$/,
     "",
   ) + "/api";
+
+function assertSafeTestEnvironment(): void {
+  const nodeEnvironment = process.env["NODE_ENV"];
+  if (nodeEnvironment !== "development" && nodeEnvironment !== "test") {
+    throw new Error(
+      `Refusing to run patient order flow with NODE_ENV=${nodeEnvironment ?? "unset"}; use NODE_ENV=development or NODE_ENV=test.`,
+    );
+  }
+
+  const target = new URL(BASE_URL);
+  const hostname = target.hostname.toLowerCase();
+  const isLocalhost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1";
+  const isReplitDevelopmentHost = hostname.endsWith(".replit.dev");
+
+  if (!isLocalhost && !isReplitDevelopmentHost) {
+    throw new Error(
+      `Refusing to run patient order flow against ${target.origin}; only localhost and *.replit.dev development targets are allowed.`,
+    );
+  }
+}
 
 /**
  * One-time HQ credentials generated fresh every run.
@@ -963,6 +990,8 @@ async function cleanup(
 
 // ─── main ────────────────────────────────────────────────────────────────────
 async function main() {
+  assertSafeTestEnvironment();
+
   console.log(
     "\n═══════════════════════════════════════════════════════════════",
   );
