@@ -5,6 +5,7 @@ import {
   useAssignCourier,
   useUpdateCourierStatus,
   useMarkCashCollected,
+  useConfirmDeliveryByHq,
   getListDispatchOrdersQueryKey,
   getGetHqDashboardQueryKey,
 } from '@workspace/api-client-react';
@@ -45,6 +46,11 @@ export default function HqDispatch() {
   const assign = useAssignCourier({ mutation: { onSuccess: refresh, onError } });
   const advance = useUpdateCourierStatus({ mutation: { onSuccess: refresh, onError } });
   const cash = useMarkCashCollected({ mutation: { onSuccess: refresh, onError } });
+  const confirmDelivery = useConfirmDeliveryByHq({ mutation: { onSuccess: refresh, onError } });
+  const markDelivered = (orderId: string) => {
+    if (!window.confirm('Mark this order as delivered? Use this only when the patient has received the order but cannot confirm delivery.')) return;
+    confirmDelivery.mutate({ id: orderId });
+  };
   return (
     <HqLayout title="Dispatch">
       <p className="text-sm text-muted-foreground mb-4">
@@ -125,12 +131,23 @@ export default function HqDispatch() {
                   )}
 
                   {o.status === 'delivering' && (
-                     <span
-                       className="text-xs text-muted-foreground max-w-48"
-                       data-testid={`text-awaiting-customer-${o.id}`}
-                     >
-                       Awaiting patient delivery confirmation
-                     </span>
+                     <>
+                       <span
+                         className="text-xs text-muted-foreground max-w-48"
+                         data-testid={`text-awaiting-customer-${o.id}`}
+                       >
+                         Awaiting patient delivery confirmation
+                       </span>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         disabled={confirmDelivery.isPending}
+                         onClick={() => markDelivered(o.id)}
+                         data-testid={`button-mark-delivered-hq-${o.id}`}
+                       >
+                         Mark as Delivered
+                       </Button>
+                     </>
                   )}
 
                   {o.status === 'delivered' && !o.cashCollected && (

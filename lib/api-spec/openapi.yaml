@@ -1327,6 +1327,29 @@ paths:
         "409":
           description: Invalid transition
 
+  /hq/orders/{id}/confirm-delivery:
+    post:
+      operationId: confirmDeliveryByHq
+      tags: [hq]
+      summary: Mark a delivering order as delivered when the patient cannot confirm
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delivered order confirmed by HQ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqOrder"
+        "409":
+          description: Order is not an eligible delivering delivery order
+
   /hq/orders/{id}/cash-collected:
     post:
       operationId: markCashCollected

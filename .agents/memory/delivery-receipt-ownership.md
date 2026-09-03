@@ -3,8 +3,8 @@ name: Delivery receipt ownership
 description: Authority boundary for completing MobiCare delivery orders.
 ---
 
-HQ and dispatch may move a delivery into `delivering` only after the pharmacy has recorded the assigned courier handoff. Courier assignment alone is not enough. HQ must never set it to `delivered`; only the authenticated customer who owns the order may confirm receipt while it is in `delivering`.
+HQ and dispatch may move a delivery into `delivering` only after the pharmacy has recorded the assigned courier handoff. Courier assignment alone is not enough. Once delivering, the owning patient normally confirms receipt, while HQ may use the explicit backup confirmation only when the patient cannot confirm.
 
-**Why:** Delivery completion represents the customer's acknowledgement that the medicines are physically in their hands. Allowing HQ to assert receipt defeats that trust boundary and can prematurely trigger completed-order reporting and settlement workflows.
+**Why:** Delivery completion normally represents the customer's acknowledgement, but operations need a controlled recovery path for a delivered order when the patient is unavailable. The HQ fallback must be deliberate, auditable, and limited to an already-delivering delivery.
 
-**How to apply:** Enforce `assigned → pharmacy collected/picked_up → delivering` server-side, not only in the UI. Any future HQ, courier, automation, callback, or bulk feature must stop at `delivering`; keep final confirmation scoped to the owning patient.
+**How to apply:** Enforce `assigned → pharmacy collected/picked_up → delivering` server-side, not only in the UI. Patient confirmation and HQ backup confirmation must both require current `delivering` plus delivery fulfillment; HQ confirmation records the staff actor and method in the order and audit trail.

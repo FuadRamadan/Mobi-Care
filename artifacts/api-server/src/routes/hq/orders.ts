@@ -318,11 +318,61 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   res.json((await hydrateOrders([updated!]))[0]);
 });
 
-// ── POST /hq/orders/:id/confirm-delivery — retired HQ fallback ────────────────
-router.post("/:id/confirm-delivery", async (_req: AuthRequest, res) => {
-  res.status(403).json({
-    error: "Only the patient can confirm receipt and mark a delivery as delivered",
+// ── POST /hq/orders/:id/confirm-delivery — HQ backup confirmation ──────────────
+router.post("/:id/confirm-delivery", async (req: AuthRequest, res) => {
+  const id = req.params.id as string;
+  const now = new Date();
+  const [updated] = await db
+    .update(ordersTable)
+    .set({
+      status: "delivered",
+      completedAt: now,
+      deliveryConfirmedAt: now,
+      deliveryConfirmationMethod: "hq",
+      deliveryConfirmedByHqUserId: req.pharmacy!.sub,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(ordersTable.id, id),
+        eq(ordersTable.fulfillmentType, "delivery"),
+        eq(ordersTable.status, "delivering"),
+      ),
+    )
+    .returning();
+  if (!updated) {
+    res.status(409).json({
+      error: "Only a delivering delivery order can be marked as delivered by HQ",
+    });
+    return;
+  }
+
+  await writeAudit({
+    actorType: "hq",
+    actorId: req.pharmacy!.sub,
+    actorName: req.pharmacy!.name,
+    action: "order.delivery_confirmed_by_hq",
+    entityType: "order",
+    entityId: id,
+    details: { method: "hq", confirmedAt: now.toISOString() },
   });
+  await checkOrderFlags(updated);
+
+  if (updated.patientId) {
+    const notif = notificationForStatus("delivered", updated.fulfillmentType);
+    if (notif) {
+      void createPatientNotification({
+        patientId: updated.patientId,
+        patientPhone: updated.patientPhone,
+        title: notif.title,
+        body: notif.body,
+        type: notif.type,
+        referenceId: updated.id,
+      });
+    }
+  }
+
+  res.json((await hydrateOrders([updated]))[0]);
 });
 
 // ── POST /hq/orders/:id/cash-collected — COD reconciliation ─────────────────

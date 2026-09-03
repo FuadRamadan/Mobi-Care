@@ -1880,6 +1880,62 @@ export const UpdateCourierStatusResponse = zod.object({
 
 
 /**
+ * @summary Mark a delivering order as delivered when the patient cannot confirm
+ */
+export const ConfirmDeliveryByHqParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ConfirmDeliveryByHqResponse = zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string().nullish(),
+  "patientName": zod.string(),
+  "patientPhone": zod.string(),
+  "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
+  "fulfillmentType": zod.enum(['delivery', 'collection']),
+  "idChecked": zod.boolean(),
+  "totalLeones": zod.number(),
+  "medicineMarkupBasisPoints": zod.number().optional(),
+  "pharmacyMedicineTotalMinor": zod.number().optional(),
+  "medicineCommissionMinor": zod.number().optional(),
+  "patientMedicineTotalMinor": zod.number().optional(),
+  "deliveryFeeMinor": zod.number().optional(),
+  "courierPayoutMinor": zod.number().optional(),
+  "deliveryCommissionMinor": zod.number().optional(),
+  "completedAt": zod.string().nullish(),
+  "deliveryConfirmedAt": zod.string().nullish(),
+  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
+  "deliveryConfirmedByHqUserId": zod.string().nullish(),
+  "prescriptionId": zod.string().nullish(),
+  "courierId": zod.string().nullish(),
+  "courier": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string()
+}),zod.null()]).optional(),
+  "cashCollected": zod.boolean(),
+  "cashCollectedAt": zod.string().nullish(),
+  "paymentMethod": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "orderId": zod.string(),
+  "drugId": zod.string(),
+  "inventoryId": zod.string().nullish(),
+  "drugName": zod.string(),
+  "quantity": zod.number(),
+  "unitPriceLeones": zod.number(),
+  "baseUnitPriceMinor": zod.number(),
+  "patientUnitPriceMinor": zod.number(),
+  "patientLineTotalMinor": zod.number(),
+  "prescriptionId": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary Reconcile cash-on-delivery for a delivered order
  */
 export const MarkCashCollectedParams = zod.object({

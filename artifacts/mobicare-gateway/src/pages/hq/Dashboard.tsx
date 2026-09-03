@@ -1,4 +1,4 @@
-import { getGetHqDashboardQueryKey, useGetHqDashboard } from '@workspace/api-client-react';
+import { getGetHqDashboardQueryKey, useGetHqDashboard, useConfirmDeliveryByHq } from '@workspace/api-client-react';
 import {
   Package,
   Building2,
@@ -12,12 +12,36 @@ import {
 import HqLayout from './HqLayout';
 import { StatCard, StatusBadge, formatLeones, formatDate, EmptyState } from './shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 export default function HqDashboard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: d, isLoading } = useGetHqDashboard({
     query: { queryKey: getGetHqDashboardQueryKey(), refetchInterval: 10_000 },
   });
   const t = d?.totals;
+  const confirmDelivery = useConfirmDeliveryByHq({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetHqDashboardQueryKey() });
+        toast({ title: 'Order marked as delivered' });
+      },
+      onError: (error) => {
+        toast({
+          title: 'Could not mark order as delivered',
+          description: error instanceof Error ? error.message : 'Please refresh and try again.',
+          variant: 'destructive',
+        });
+      },
+    },
+  });
+  const markDelivered = (orderId: string) => {
+    if (!window.confirm('Mark this order as delivered? Use this only when the patient has received the order but cannot confirm delivery.')) return;
+    confirmDelivery.mutate({ id: orderId });
+  };
 
   return (
     <HqLayout title="Command Centre">
@@ -57,6 +81,17 @@ export default function HqDashboard() {
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-muted-foreground">{formatLeones(o.totalLeones)}</span>
                       <StatusBadge status={o.status} />
+                      {o.status === 'delivering' && o.fulfillmentType === 'delivery' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={confirmDelivery.isPending}
+                          onClick={() => markDelivered(o.id)}
+                          data-testid={`button-mark-delivered-dashboard-${o.id}`}
+                        >
+                          Mark as Delivered
+                        </Button>
+                      )}
                       <span className="text-xs text-muted-foreground hidden sm:inline">{formatDate(o.createdAt)}</span>
                     </div>
                   </div>
