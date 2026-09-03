@@ -19,21 +19,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareLogo } from '@/components/MobiCareLogo';
 import {
-  requestPatientEmailPasswordReset,
-  resetPatientEmailPassword,
-  verifyPatientEmailPasswordResetOtp,
+  confirmPatientPasswordReset,
+  requestPatientPasswordReset,
 } from '@workspace/api-client-react';
 
 type Mode = 'login' | 'register' | 'recover';
-type RecoveryStage = 'email' | 'otp' | 'password';
-
-const DEFAULT_PASSWORD_POLICY = {
-  minPasswordLength: 12,
-  requireUppercase: true,
-  requireLowercase: true,
-  requireNumber: true,
-  requireSymbol: true,
-};
 
 function calculateAge(dateOfBirth: string, now = new Date()): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
@@ -71,13 +61,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [recoveryStage, setRecoveryStage] = useState<RecoveryStage>('email');
-  const [otp, setOtp] = useState('');
-  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [code, setCode] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [retryAfter, setRetryAfter] = useState(0);
-  const [passwordPolicy, setPasswordPolicy] = useState(DEFAULT_PASSWORD_POLICY);
 
   const phoneRef = useRef<TextInput>(null);
   const dateOfBirthRef = useRef<TextInput>(null);
@@ -94,30 +81,12 @@ export default function LoginScreen() {
 
   if (isAuthenticated) return <Redirect href="/(tabs)" />;
 
-  const passwordValidationMessage = (value: string): string | null => {
-    if (value.length < passwordPolicy.minPasswordLength) {
-      return `Password must be at least ${passwordPolicy.minPasswordLength} characters.`;
-    }
-    if (passwordPolicy.requireUppercase && !/[A-Z]/.test(value)) return 'Password must include an uppercase letter.';
-    if (passwordPolicy.requireLowercase && !/[a-z]/.test(value)) return 'Password must include a lowercase letter.';
-    if (passwordPolicy.requireNumber && !/[0-9]/.test(value)) return 'Password must include a number.';
-    if (passwordPolicy.requireSymbol && !/[^A-Za-z0-9]/.test(value)) return 'Password must include a symbol.';
-    return null;
-  };
-
   const validate = (): string | null => {
     if (mode === 'recover') {
-      if (recoveryStage === 'email') {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Enter a valid email address.';
-        return null;
-      }
-      if (recoveryStage === 'otp') {
-        if (!/^\d{6}$/.test(otp)) return 'Enter the six-digit verification code.';
-        return null;
-      }
-      if (!resetToken) return 'Your reset session has expired. Please request a new code.';
-      const passwordError = passwordValidationMessage(password);
-      if (passwordError) return passwordError;
+      if (phone.trim().length < 5) return 'Enter your registered phone number.';
+      if (!requestId) return null;
+      if (!/^\d{6}$/.test(code)) return 'Enter the six-digit verification code.';
+      if (password.length < 8) return 'Password must be at least 8 characters.';
       if (password !== confirmPassword) return 'The passwords do not match.';
       return null;
     }
@@ -128,37 +97,8 @@ export default function LoginScreen() {
       if (calculatedAge < 18) return 'You must be 18 or older to register for MobiCare.';
     }
     if (phone.trim().length < 5) return 'Enter a valid phone number.';
-    const passwordError = passwordValidationMessage(password);
-    if (passwordError) return passwordError;
+    if (password.length < 8) return 'Password must be at least 8 characters.';
     return null;
-  };
-
-  const requestResetCode = async () => {
-    const result = await requestPatientEmailPasswordReset({ email: email.trim() });
-    setRecoveryStage('otp');
-    setOtp('');
-    setResetToken(null);
-    setRetryAfter(Math.ceil(result.retryAfterSeconds));
-    setPasswordPolicy(result.passwordPolicy);
-    Alert.alert(
-      'Check your email',
-      'If this email belongs to an active patient account, we sent a six-digit verification code.',
-    );
-  };
-
-  const recoveryErrorMessage = (error: unknown): string => {
-    const message = error instanceof Error ? error.message : '';
-    const normalized = message.toLowerCase();
-    if (
-      normalized.includes('invalid') ||
-      normalized.includes('expired') ||
-      normalized.includes('used') ||
-      normalized.includes('otp') ||
-      normalized.includes('code')
-    ) {
-      return 'That verification code is invalid, expired, or has already been used. Request a new code and try again.';
-    }
-    return message || 'Something went wrong. Please try again.';
   };
 
   const handleSubmit = async () => {
@@ -169,21 +109,27 @@ export default function LoginScreen() {
       if (mode === 'login') {
         await login(phone.trim(), password);
       } else if (mode === 'recover') {
-        if (recoveryStage === 'email') {
-          await requestResetCode();
-        } else if (recoveryStage === 'otp') {
-          const result = await verifyPatientEmailPasswordResetOtp({ email: email.trim(), otp });
-          setResetToken(result.resetToken);
-          setRecoveryStage('password');
-          setOtp('');
-        } else if (resetToken) {
-          await resetPatientEmailPassword({ resetToken, newPassword: password });
+        if (!requestId) {
+          const result = await requestPatientPasswordReset({ phone: phone.trim() });
+          setRequestId(result.requestId);
+          setRetryAfter(Math.ceil(result.retryAfterSeconds));
+          Alert.alert(
+            'Check your messages',
+            'If this number belongs to an active patient account, we sent a six-digit SMS code.',
+          );
+        } else {
+          const resetPassword = password;
+          await confirmPatientPasswordReset({
+            requestId,
+            code,
+            newPassword: resetPassword,
+          });
           setMode('login');
-          setEmail('');
-          setRecoveryStage('email');
-          setOtp('');
-          setResetToken(null);
-          setPassword('');
+          setRequestId(null);
+          setCode('');
+          // Retain the credential only in the live sign-in form so the OS can
+          // offer to save/update it. It is never written to app-managed storage.
+          setPassword(resetPassword);
           setConfirmPassword('');
           Alert.alert('Password reset', 'Sign in with your new password.');
         }
@@ -194,11 +140,9 @@ export default function LoginScreen() {
     } catch (e: unknown) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = e instanceof Error ? e.message : 'Something went wrong. Please try again.';
-      const friendly = mode === 'recover'
-        ? recoveryErrorMessage(e)
-        : mode === 'login' && (msg.includes('401') || msg.includes('Invalid'))
+      const friendly = msg.includes('401') || msg.includes('Invalid')
         ? 'Incorrect phone number or password.'
-        : mode === 'register' && (msg.includes('409') || msg.includes('already'))
+        : msg.includes('409') || msg.includes('already')
         ? 'That phone number is already registered.'
         : msg;
       Alert.alert(
@@ -216,12 +160,9 @@ export default function LoginScreen() {
     setDateOfBirth('');
     setPhone('');
     setPassword('');
-    setEmail('');
-    setRecoveryStage('email');
-    setOtp('');
-    setResetToken(null);
+    setRequestId(null);
+    setCode('');
     setConfirmPassword('');
-    setRetryAfter(0);
   };
 
   const s = makeStyles(colors, insets);
@@ -292,7 +233,7 @@ export default function LoginScreen() {
               <Text style={s.fieldHint}>Your age is calculated automatically. Date of birth and age cannot be changed later.</Text>
             </View>
           )}
-          {mode !== 'recover' && <View style={s.field}>
+          <View style={s.field}>
             <Text style={s.label}>Phone Number</Text>
             <TextInput
               ref={phoneRef}
@@ -309,34 +250,14 @@ export default function LoginScreen() {
               onSubmitEditing={() => passwordRef.current?.focus()}
               blurOnSubmit={false}
             />
-          </View>}
-          {mode === 'recover' && recoveryStage === 'email' && (
+          </View>
+          {mode === 'recover' && requestId && (
             <View style={s.field}>
-              <Text style={s.label}>Email address</Text>
+              <Text style={s.label}>Six-digit verification code</Text>
               <TextInput
                 style={s.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                textContentType="emailAddress"
-                importantForAutofill="yes"
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-              />
-            </View>
-          )}
-          {mode === 'recover' && recoveryStage === 'otp' && (
-            <View style={s.field}>
-              <Text style={s.label}>Six-digit email verification code</Text>
-              <TextInput
-                style={s.input}
-                value={otp}
-                onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+                value={code}
+                onChangeText={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
                 placeholderTextColor={colors.mutedForeground}
                 keyboardType="number-pad"
@@ -345,11 +266,11 @@ export default function LoginScreen() {
                 importantForAutofill="yes"
                 maxLength={6}
                 returnKeyType="next"
-                onSubmitEditing={handleSubmit}
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
             </View>
           )}
-          {(mode !== 'recover' || recoveryStage === 'password') && <View style={s.field}>
+          {(mode !== 'recover' || requestId) && <View style={s.field}>
             <Text style={s.label}>{mode === 'recover' ? 'New Password' : 'Password'}</Text>
             <View style={s.passwordRow}>
               <TextInput
@@ -370,27 +291,8 @@ export default function LoginScreen() {
                 <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            {mode === 'recover' && (
-              <View>
-                <Text style={s.fieldHint}>
-                  {password.length >= passwordPolicy.minPasswordLength ? '✓' : '○'} At least {passwordPolicy.minPasswordLength} characters
-                </Text>
-                {passwordPolicy.requireUppercase && <Text style={s.fieldHint}>
-                  {/[A-Z]/.test(password) ? '✓' : '○'} Uppercase letter
-                </Text>}
-                {passwordPolicy.requireLowercase && <Text style={s.fieldHint}>
-                  {/[a-z]/.test(password) ? '✓' : '○'} Lowercase letter
-                </Text>}
-                {passwordPolicy.requireNumber && <Text style={s.fieldHint}>
-                  {/[0-9]/.test(password) ? '✓' : '○'} Number
-                </Text>}
-                {passwordPolicy.requireSymbol && <Text style={s.fieldHint}>
-                  {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} Symbol
-                </Text>}
-              </View>
-            )}
           </View>}
-          {mode === 'recover' && recoveryStage === 'password' && (
+          {mode === 'recover' && requestId && (
             <View style={s.field}>
               <Text style={s.label}>Confirm New Password</Text>
               <TextInput
@@ -416,12 +318,12 @@ export default function LoginScreen() {
             activeOpacity={0.85}
           >
             <Text style={s.submitText}>
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : recoveryStage === 'email' ? 'Send Email Code' : recoveryStage === 'otp' ? 'Verify Code' : 'Reset Password'}
+              {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : requestId ? 'Reset Password' : 'Send Verification Code'}
             </Text>
           </TouchableOpacity>
           {mode === 'login' && (
             <Pressable style={s.linkButton} onPress={() => switchMode('recover')}>
-                <Text style={s.linkText}>Reset password via email</Text>
+              <Text style={s.linkText}>Forgot password?</Text>
             </Pressable>
           )}
           {mode === 'recover' && (
@@ -429,17 +331,20 @@ export default function LoginScreen() {
               <Pressable onPress={() => switchMode('login')}>
                 <Text style={s.linkText}>Back to sign in</Text>
               </Pressable>
-              {recoveryStage === 'otp' && (
+              {requestId && (
                 <Pressable
                   disabled={loading || retryAfter > 0}
                   onPress={async () => {
                     setLoading(true);
                     try {
-                      await requestResetCode();
+                      const result = await requestPatientPasswordReset({ phone: phone.trim() });
+                      setRequestId(result.requestId);
+                      setCode('');
+                      setRetryAfter(Math.ceil(result.retryAfterSeconds));
                     } catch (error) {
                       Alert.alert(
                         'Could not resend code',
-                        recoveryErrorMessage(error),
+                        error instanceof Error ? error.message : 'Please try again later.',
                       );
                     } finally {
                       setLoading(false);

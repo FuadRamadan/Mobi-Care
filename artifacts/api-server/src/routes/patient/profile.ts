@@ -115,37 +115,20 @@ router.patch("/", async (req: AuthRequest, res) => {
     return;
   }
   const values = body.data;
-  let updated: typeof patientsTable.$inferSelect | undefined;
-  try {
-    [updated] = await db
-      .update(patientsTable)
-      .set({
-        ...(values.name !== undefined ? { name: values.name } : {}),
-        ...(values.nin !== undefined ? { nin: values.nin || null } : {}),
-        ...(values.address !== undefined ? { address: values.address || null } : {}),
-        ...(values.email !== undefined
-          ? { email: values.email?.toLowerCase() || null }
-          : {}),
-        ...(values.nationality !== undefined
-          ? { nationality: values.nationality || null }
-          : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(patientsTable.id, req.pharmacy!.sub))
-      .returning();
-  } catch (error) {
-    const candidate = error as { code?: string; constraint?: string };
-    if (
-      candidate.code === "23505" &&
-      candidate.constraint === "patients_email_normalized_unique"
-    ) {
-      res.status(409).json({
-        error: "That email address is already linked to another patient account.",
-      });
-      return;
-    }
-    throw error;
-  }
+  const [updated] = await db
+    .update(patientsTable)
+    .set({
+      ...(values.name !== undefined ? { name: values.name } : {}),
+      ...(values.nin !== undefined ? { nin: values.nin || null } : {}),
+      ...(values.address !== undefined ? { address: values.address || null } : {}),
+      ...(values.email !== undefined ? { email: values.email || null } : {}),
+      ...(values.nationality !== undefined
+        ? { nationality: values.nationality || null }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(patientsTable.id, req.pharmacy!.sub))
+    .returning();
   if (!updated) {
     res.status(404).json({ error: "Patient profile not found" });
     return;

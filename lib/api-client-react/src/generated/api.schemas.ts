@@ -35,70 +35,6 @@ export interface PatientPasswordResetConfirm {
   newPassword: string;
 }
 
-export interface PatientEmailInput {
-  /**
-     * @maxLength 320
-     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
-     */
-  email: string;
-}
-
-export interface PasswordPolicy {
-  id: number;
-  /** Number of days before a password must be changed */
-  maxPasswordAgeDays: number;
-  /** Number of days before expiry when pharmacies may proactively change their password */
-  passwordExpiryWarningDays: number;
-  /** Minimum number of characters required */
-  minPasswordLength: number;
-  requireUppercase: boolean;
-  requireLowercase: boolean;
-  requireNumber: boolean;
-  requireSymbol: boolean;
-  /** Number of previous passwords that cannot be reused */
-  passwordHistoryCount: number;
-  /** Hours until a temporary password expires */
-  temporaryPasswordExpiryHours: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PatientEmailPasswordResetRequested {
-  message: string;
-  /** @minimum 0 */
-  retryAfterSeconds: number;
-  passwordPolicy: PasswordPolicy;
-}
-
-export interface PatientEmailOtpInput {
-  /**
-     * @maxLength 320
-     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
-     */
-  email: string;
-  /** @pattern ^[0-9]{6}$ */
-  otp: string;
-}
-
-export interface PatientPasswordResetToken {
-  resetToken: string;
-  /** @minimum 1 */
-  expiresInSeconds: number;
-}
-
-export interface PatientResetPasswordInput {
-  /**
-     * @minLength 32
-     * @maxLength 512
-     */
-  resetToken: string;
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  newPassword: string;
-}
-
 export interface LoginInput {
   /** Username or phone number */
   identifier: string;
@@ -144,6 +80,26 @@ export interface PharmacyUser {
   canManageSettlements?: boolean;
   /** Present for HQ accounts; controls access to aggregate-only Data & Insights */
   canViewDataInsights?: boolean;
+}
+
+export interface PasswordPolicy {
+  id: number;
+  /** Number of days before a password must be changed */
+  maxPasswordAgeDays: number;
+  /** Number of days before expiry when pharmacies may proactively change their password */
+  passwordExpiryWarningDays: number;
+  /** Minimum number of characters required */
+  minPasswordLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumber: boolean;
+  requireSymbol: boolean;
+  /** Number of previous passwords that cannot be reused */
+  passwordHistoryCount: number;
+  /** Hours until a temporary password expires */
+  temporaryPasswordExpiryHours: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PasswordChangeResult {
