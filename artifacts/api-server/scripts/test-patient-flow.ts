@@ -1,9 +1,10 @@
 /**
  * Integration test: full patient order flow end-to-end
  *
- * Covers: HQ bootstrap → create pharmacy + drug + inventory → patient register
- *         → search → upload prescription → create order → pay → list orders
- *         → token refresh edge-case (rotation + revocation)
+ * Covers: HQ bootstrap → approved pharmacy listing → patient register/search
+ *         → 5% checkout pricing + stale/offline guards → payment → pharmacy
+ *         fulfilment → HQ dispatch → patient receipt confirmation → exact
+ *         settlement reconciliation → token rotation and revocation
  *
  * Security model:
  *   - Creates a one-time HQ account with a cryptographically-random username
@@ -26,6 +27,7 @@ import {
   auditLogTable,
   pharmacyInventoryTable,
   ordersTable,
+  pharmaciesTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -61,8 +63,11 @@ const PHARMACY_USERNAME = `testph${RUN_DIGITS}`.toLowerCase().slice(0, 30);
 
 const DRUG_NAME = `TestDrug ${RUN_ID}`;
 const TEST_STRENGTH = "500 mg";
-const TEST_FORM = "tablet";
-const TEST_UNIT_OF_SALE = "box of 10 tablets";
+const TEST_FORM = "Tablet";
+const TEST_UNIT_OF_SALE = "Box";
+const TEST_PRICE_LEONES = 5000.25;
+const TEST_ORDER_QUANTITY = 2;
+const SERVICE_FEE_BASIS_POINTS = 500;
 
 // 1×1 transparent PNG — smallest valid image for prescription upload
 const MOCK_PRESCRIPTION_B64 =
@@ -147,7 +152,12 @@ async function bootstrapHQ(): Promise<{ hqToken: string; hqId: string }> {
   const hash = await bcrypt.hash(HQ_PASSWORD, 10);
   const [created] = await db
     .insert(hqStaffTable)
-    .values({ username: HQ_USERNAME, name: HQ_NAME, passwordHash: hash })
+    .values({
+      username: HQ_USERNAME,
+      name: HQ_NAME,
+      passwordHash: hash,
+      canManageSettlements: true,
+    })
     .returning({ id: hqStaffTable.id });
   await db.insert(auditLogTable).values({
     actorType: "system",
@@ -229,10 +239,10 @@ async function createTestDrug(hqToken: string): Promise<string> {
       genericName: "Testamol",
       description: "A harmless test-only drug entry",
       tier: "3",
-      unit: "tablets",
+      unit: "Tablet",
       commonStrengths: [TEST_STRENGTH],
       commonForms: [TEST_FORM],
-      primaryCategory: "pain_fever",
+      primaryCategory: "pain_inflammation",
       subcategory: "analgesics_antipyretics",
     },
   });
@@ -282,6 +292,7 @@ async function registerPatient(): Promise<{
       name: PATIENT_NAME,
       phone: PATIENT_PHONE,
       password: PATIENT_PASSWORD,
+      dateOfBirth: "1990-01-01",
     },
   });
   const body = expect("Register patient", res, 201) as {
@@ -350,6 +361,18 @@ async function searchDrug(
   };
 }
 
+function expectedOrderTotals(priceLeones: number, quantity: number) {
+  const drugTotalMinor = Math.round(priceLeones * 100) * quantity;
+  const serviceFeeMinor = Math.round(
+    (drugTotalMinor * SERVICE_FEE_BASIS_POINTS) / 10_000,
+  );
+  return {
+    drugTotalMinor,
+    serviceFeeMinor,
+    totalMinor: drugTotalMinor + serviceFeeMinor,
+  };
+}
+
 // ─── step 7: upload prescription ─────────────────────────────────────────────
 async function uploadPrescription(token: string): Promise<string> {
   const res = await api("POST", "/patient/uploads/prescription", {
@@ -369,8 +392,12 @@ async function placeOrder(
   pharmacyId: string,
   inventoryId: string,
   prescriptionImageKey?: string,
-  quantity = 2,
+  quantity = TEST_ORDER_QUANTITY,
+  expectedTotalMinor?: number,
 ): Promise<string> {
+  if (expectedTotalMinor === undefined) {
+    throw new Error("expectedTotalMinor is required for patient checkout");
+  }
   const res = await api("POST", "/patient/orders", {
     token,
     body: {
@@ -378,6 +405,7 @@ async function placeOrder(
       fulfillmentType: "delivery",
       deliveryAddress: "12 Test Avenue, Freetown",
       prescriptionImageKey,
+      expectedTotalMinor,
       items: [{ inventoryId, quantity }],
     },
   });
@@ -390,6 +418,61 @@ async function placeOrder(
   }
   pass("Place order", `orderId=${body.id}`);
   return body.id;
+}
+
+async function verifyCheckoutGuards(
+  token: string,
+  pharmacyId: string,
+  inventoryId: string,
+  expectedTotalMinor: number,
+): Promise<void> {
+  const stalePrice = await api("POST", "/patient/orders", {
+    token,
+    body: {
+      pharmacyId,
+      fulfillmentType: "delivery",
+      deliveryAddress: "12 Test Avenue, Freetown",
+      expectedTotalMinor: expectedTotalMinor + 1,
+      items: [{ inventoryId, quantity: TEST_ORDER_QUANTITY }],
+    },
+  });
+  if (
+    stalePrice.status !== 409 ||
+    (stalePrice.body as { code?: string }).code !== "PRICE_CHANGED"
+  ) {
+    throw new Error(
+      `Expected stale displayed price to be rejected with PRICE_CHANGED, got ${stalePrice.status}: ${JSON.stringify(stalePrice.body)}`,
+    );
+  }
+  pass("Stale displayed price is rejected", "code=PRICE_CHANGED");
+
+  await db
+    .update(pharmaciesTable)
+    .set({ isOnline: false, updatedAt: new Date() })
+    .where(eq(pharmaciesTable.id, pharmacyId));
+  try {
+    const offline = await api("POST", "/patient/orders", {
+      token,
+      body: {
+        pharmacyId,
+        fulfillmentType: "delivery",
+        deliveryAddress: "12 Test Avenue, Freetown",
+        expectedTotalMinor,
+        items: [{ inventoryId, quantity: TEST_ORDER_QUANTITY }],
+      },
+    });
+    if (offline.status !== 409) {
+      throw new Error(
+        `Expected offline pharmacy to be rejected with 409, got ${offline.status}: ${JSON.stringify(offline.body)}`,
+      );
+    }
+    pass("Offline pharmacy is rejected");
+  } finally {
+    await db
+      .update(pharmaciesTable)
+      .set({ isOnline: true, updatedAt: new Date() })
+      .where(eq(pharmaciesTable.id, pharmacyId));
+  }
 }
 
 // ─── step 9: pay for order ────────────────────────────────────────────────────
@@ -450,6 +533,7 @@ async function verifyPaymentStockConflict(
     inventoryId,
     undefined,
     1,
+    expectedOrderTotals(TEST_PRICE_LEONES, 1).totalMinor,
   );
   await db
     .update(pharmacyInventoryTable)
@@ -474,6 +558,262 @@ async function verifyPaymentStockConflict(
     throw new Error("Stock-conflicted payment changed inventory");
   }
   pass("Stock conflict rolls payment back without deducting or marking paid");
+}
+
+async function fulfillThroughDelivery(
+  pharmacyToken: string,
+  hqToken: string,
+  patientToken: string,
+  orderId: string,
+): Promise<{ courierId: string; completedOrder: Record<string, any> }> {
+  const confirm = await api("PATCH", `/pharmacy/orders/${orderId}/status`, {
+    token: pharmacyToken,
+    body: { status: "confirmed" },
+  });
+  expect("Pharmacy confirms paid order", confirm, 200);
+  if ((confirm.body as { status?: string }).status !== "confirmed") {
+    throw new Error("Pharmacy confirmation did not return status=confirmed");
+  }
+  pass("Pharmacy confirms paid order");
+
+  const ready = await api("PATCH", `/pharmacy/orders/${orderId}/status`, {
+    token: pharmacyToken,
+    body: { status: "ready" },
+  });
+  expect("Pharmacy marks order ready", ready, 200);
+  if ((ready.body as { status?: string }).status !== "ready") {
+    throw new Error("Pharmacy ready transition did not return status=ready");
+  }
+  pass("Pharmacy marks order ready");
+
+  const courierRes = await api("POST", "/hq/couriers", {
+    token: hqToken,
+    body: {
+      name: `Test Courier ${RUN_ID}`,
+      phone: `+2328${RUN_DIGITS}`,
+      vehicleType: "motorbike",
+    },
+  });
+  const courierBody = expect("Create test courier", courierRes, 201) as {
+    id: string;
+  };
+  pass("HQ creates delivery courier", `id=${courierBody.id}`);
+
+  const assigned = await api("POST", `/hq/orders/${orderId}/assign-courier`, {
+    token: hqToken,
+    body: { courierId: courierBody.id },
+  });
+  expect("HQ assigns courier", assigned, 200);
+  if ((assigned.body as { status?: string }).status !== "assigned") {
+    throw new Error("Courier assignment did not return status=assigned");
+  }
+  pass("HQ assigns courier");
+
+  const pickedUp = await api("POST", `/pharmacy/orders/${orderId}/picked-up`, {
+    token: pharmacyToken,
+    body: {},
+  });
+  expect("Pharmacy records courier handoff", pickedUp, 200);
+  if ((pickedUp.body as { status?: string }).status !== "picked_up") {
+    throw new Error("Courier handoff did not return status=picked_up");
+  }
+  pass("Pharmacy records courier handoff");
+
+  const delivering = await api(
+    "PATCH",
+    `/hq/orders/${orderId}/courier-status`,
+    {
+      token: hqToken,
+      body: { status: "delivering" },
+    },
+  );
+  expect("HQ advances order to delivering", delivering, 200);
+  if ((delivering.body as { status?: string }).status !== "delivering") {
+    throw new Error("HQ delivery transition did not return status=delivering");
+  }
+  pass("HQ advances order to delivering");
+
+  const delivered = await api(
+    "POST",
+    `/patient/orders/${orderId}/confirm-receipt`,
+    {
+      token: patientToken,
+      body: {},
+    },
+  );
+  const completedOrder = expect(
+    "Patient confirms receipt",
+    delivered,
+    200,
+  ) as Record<string, any>;
+  if (
+    completedOrder.status !== "delivered" ||
+    completedOrder.deliveryConfirmationMethod !== "patient"
+  ) {
+    throw new Error(
+      `Expected patient-confirmed delivered order, got ${JSON.stringify({
+        status: completedOrder.status,
+        deliveryConfirmationMethod:
+          completedOrder.deliveryConfirmationMethod,
+      })}`,
+    );
+  }
+  pass("Patient confirms delivered order");
+
+  return { courierId: courierBody.id, completedOrder };
+}
+
+async function verifyFinancialReconciliation(
+  hqToken: string,
+  pharmacyId: string,
+  courierId: string,
+  completedOrder: Record<string, any>,
+  expected: ReturnType<typeof expectedOrderTotals>,
+): Promise<void> {
+  const completedAt = new Date(completedOrder.completedAt);
+  if (isNaN(completedAt.getTime())) {
+    throw new Error("Delivered order did not include a valid completedAt");
+  }
+  const periodStart = completedAt.toISOString();
+  const periodEnd = new Date(completedAt.getTime() + 1).toISOString();
+
+  const generated = await api("POST", "/hq/settlements/generate", {
+    token: hqToken,
+    body: { periodStart, periodEnd },
+  });
+  expect("Generate completed-order settlements", generated, 201);
+  pass("Generate completed-order settlements");
+
+  const reportRes = await api(
+    "GET",
+    `/hq/settlements?start=${encodeURIComponent(periodStart)}&end=${encodeURIComponent(periodEnd)}`,
+    { token: hqToken },
+  );
+  const report = expect(
+    "Read completed-order financial report",
+    reportRes,
+    200,
+  ) as {
+    pharmacy: Array<{
+      pharmacyId: string;
+      amountMinor: number;
+      orderCount: number;
+      periodStart: string;
+      periodEnd: string;
+    }>;
+    courier: Array<{
+      courierId: string;
+      amountMinor: number;
+      deliveryCount: number;
+      periodStart: string;
+      periodEnd: string;
+    }>;
+    metrics: {
+      patientPaidLeones: number;
+      medicineCommissionMinor: number;
+      commissionIncomeMinor: number;
+      owedPharmacyMinor: number;
+      owedCourierMinor: number;
+      completedOrders: number;
+      completedDeliveries: number;
+    };
+    pharmacyBreakdown: Array<{
+      pharmacyId: string;
+      orderCount: number;
+      pharmacyEarningsMinor: number;
+      medicineCommissionMinor: number;
+    }>;
+  };
+
+  const orderTotalMinor = Math.round(Number(completedOrder.totalLeones) * 100);
+  const pharmacyEarningsMinor = completedOrder.pharmacyMedicineTotalMinor;
+  const serviceFeeMinor = completedOrder.medicineCommissionMinor;
+  if (
+    orderTotalMinor !== expected.totalMinor ||
+    pharmacyEarningsMinor !== expected.drugTotalMinor ||
+    serviceFeeMinor !== expected.serviceFeeMinor ||
+    completedOrder.deliveryCommissionMinor !== 0 ||
+    orderTotalMinor !== pharmacyEarningsMinor + serviceFeeMinor
+  ) {
+    throw new Error(
+      `Order financial snapshot does not reconcile: ${JSON.stringify({
+        orderTotalMinor,
+        pharmacyEarningsMinor,
+        serviceFeeMinor,
+        deliveryCommissionMinor: completedOrder.deliveryCommissionMinor,
+        expected,
+      })}`,
+    );
+  }
+  pass(
+    "Order financial snapshot reconciles",
+    `${pharmacyEarningsMinor} + ${serviceFeeMinor} = ${orderTotalMinor} minor units`,
+  );
+
+  const metrics = report.metrics;
+  if (
+    metrics.completedOrders !== 1 ||
+    metrics.completedDeliveries !== 1 ||
+    Math.round(metrics.patientPaidLeones * 100) !== orderTotalMinor ||
+    metrics.owedPharmacyMinor !== pharmacyEarningsMinor ||
+    metrics.medicineCommissionMinor !== serviceFeeMinor ||
+    metrics.commissionIncomeMinor !== serviceFeeMinor
+  ) {
+    throw new Error(
+      `Financial report does not reconcile to the completed order: ${JSON.stringify({
+        metrics,
+        expected: {
+          orderTotalMinor,
+          pharmacyEarningsMinor,
+          serviceFeeMinor,
+        },
+      })}`,
+    );
+  }
+  pass(
+    "Patient-paid revenue, pharmacy earnings, and service-fee income reconcile",
+    `patient=${orderTotalMinor}, pharmacy=${pharmacyEarningsMinor}, fee=${serviceFeeMinor}`,
+  );
+
+  const pharmacySettlement = report.pharmacy.find(
+    (row) =>
+      row.pharmacyId === pharmacyId &&
+      row.amountMinor === pharmacyEarningsMinor &&
+      new Date(row.periodStart).toISOString() === periodStart &&
+      new Date(row.periodEnd).toISOString() === periodEnd,
+  );
+  if (!pharmacySettlement || pharmacySettlement.orderCount !== 1) {
+    throw new Error(
+      `Missing exact pharmacy settlement: ${JSON.stringify(report.pharmacy)}`,
+    );
+  }
+  const courierSettlement = report.courier.find(
+    (row) =>
+      row.courierId === courierId &&
+      new Date(row.periodStart).toISOString() === periodStart &&
+      new Date(row.periodEnd).toISOString() === periodEnd,
+  );
+  if (!courierSettlement || courierSettlement.deliveryCount !== 1) {
+    throw new Error(
+      `Missing exact courier settlement: ${JSON.stringify(report.courier)}`,
+    );
+  }
+  const breakdown = report.pharmacyBreakdown.find(
+    (row) => row.pharmacyId === pharmacyId,
+  );
+  if (
+    !breakdown ||
+    breakdown.orderCount !== 1 ||
+    breakdown.pharmacyEarningsMinor !== pharmacyEarningsMinor ||
+    breakdown.medicineCommissionMinor !== serviceFeeMinor
+  ) {
+    throw new Error(
+      `Missing exact pharmacy earnings breakdown: ${JSON.stringify(
+        report.pharmacyBreakdown,
+      )}`,
+    );
+  }
+  pass("Pharmacy and courier settlements match completed-order snapshots");
 }
 
 // ─── step 10: verify order in list ───────────────────────────────────────────
@@ -579,7 +919,21 @@ async function cleanup(
   hqToken: string,
   pharmacyId: string | null,
   hqId: string,
+  courierId: string | null = null,
 ): Promise<void> {
+  if (courierId) {
+    const res = await api("DELETE", `/hq/couriers/${courierId}`, {
+      token: hqToken,
+    });
+    if (res.status !== 200) {
+      console.warn(
+        `  ⚠️  WARN  Could not retire test courier (${res.status})`,
+      );
+    } else {
+      log("Retired test courier", courierId);
+    }
+  }
+
   // Deactivate test pharmacy
   if (pharmacyId) {
     const res = await api("PATCH", `/hq/pharmacies/${pharmacyId}`, {
@@ -705,12 +1059,33 @@ async function main() {
 
   // Place order
   let orderId: string;
+  const checkoutTotals = expectedOrderTotals(
+    searchResult.priceLeones,
+    TEST_ORDER_QUANTITY,
+  );
   try {
+    if (searchResult.priceLeones !== TEST_PRICE_LEONES) {
+      throw new Error(
+        `Expected approved listing price ${TEST_PRICE_LEONES}, got ${searchResult.priceLeones}`,
+      );
+    }
+    pass(
+      "Approved listing price and 5% service fee verified",
+      `drug=${checkoutTotals.drugTotalMinor}, fee=${checkoutTotals.serviceFeeMinor}`,
+    );
+    await verifyCheckoutGuards(
+      token,
+      searchResult.pharmacyId,
+      searchResult.inventoryId,
+      checkoutTotals.totalMinor,
+    );
     orderId = await placeOrder(
       token,
       searchResult.pharmacyId,
       searchResult.inventoryId,
       prescriptionKey,
+      TEST_ORDER_QUANTITY,
+      checkoutTotals.totalMinor,
     );
   } catch (e) {
     fail("Place order", e);
@@ -737,6 +1112,30 @@ async function main() {
     fail("Verify order in list", e);
   }
 
+  // ------ Pharmacy / HQ Delivery Flow ------
+  console.log(
+    "\n── Pharmacy / HQ Delivery Flow ────────────────────────────────",
+  );
+  let courierId: string | null = null;
+  try {
+    const delivery = await fulfillThroughDelivery(
+      pharmacyToken,
+      hqToken,
+      token,
+      orderId,
+    );
+    courierId = delivery.courierId;
+    await verifyFinancialReconciliation(
+      hqToken,
+      searchResult.pharmacyId,
+      courierId,
+      delivery.completedOrder,
+      checkoutTotals,
+    );
+  } catch (e) {
+    fail("Pharmacy / HQ delivery and financial reconciliation", e);
+  }
+
   // ------ Auth refresh ------
   console.log(
     "\n── Auth / Token Refresh ────────────────────────────────────────",
@@ -751,7 +1150,7 @@ async function main() {
   console.log(
     "\n── Cleanup ─────────────────────────────────────────────────────",
   );
-  await cleanup(hqToken, pharmacyId, hqId);
+  await cleanup(hqToken, pharmacyId, hqId, courierId);
 
   // ------ Summary ------
   const total = passed + failed;
