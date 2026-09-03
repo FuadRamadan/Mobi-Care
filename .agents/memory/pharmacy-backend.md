@@ -23,7 +23,7 @@ description: Key facts about the pharmacy API server — routes, schema, auth, k
 - `GET /api/prescription-images/:id` (verifies HMAC signed URL; returns 501 until object store is wired)
 
 ## Order status — pharmacy writes only
-Pharmacy may only transition: `paid→confirmed→packaging→ready`. Collection: `POST /:id/collected {idChecked:true}`. Delivery handoff: `POST /:id/picked-up`. Status past `picked_up` is dispatch/HQ only.
+Pharmacy may only transition: `paid→confirmed→packaging→ready`. In-person collection uses `POST /:id/collected {idChecked:true}`. After HQ assigns a courier, the pharmacy must record the delivery handoff through `POST /:id/picked-up`; only then may HQ advance it to delivering.
 
 ## Prescription reject reasons (closed enum)
 `illegible_image | expired_prescription | invalid_prescription | drug_unavailable | controlled_substance_not_authorized | patient_mismatch | quantity_exceeded`. Never accept free text.

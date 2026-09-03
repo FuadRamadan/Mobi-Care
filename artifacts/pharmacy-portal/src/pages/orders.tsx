@@ -66,7 +66,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useListOrders(undefined, {
-    query: { queryKey: getListOrdersQueryKey(), refetchInterval: 15_000 },
+    query: { queryKey: getListOrdersQueryKey(), refetchInterval: 5_000 },
   });
 
   const filteredOrders = orders?.filter(order => {
@@ -338,9 +338,9 @@ function OrderDetailsSheet({
           <section className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pharmacy Stages</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+                 <p className="text-xs text-muted-foreground mt-1">
                 {order.fulfillmentType === "delivery"
-                  ? "Collected means the assigned courier has collected the packaged order."
+                   ? "After a courier is assigned, mark the packaged order as collected so HQ can start delivery."
                   : "In-person patient handover is tracked separately from courier collection."}
               </p>
             </div>
@@ -390,7 +390,7 @@ function OrderDetailsSheet({
               )}
               {order.status === "assigned" && order.fulfillmentType === "delivery" && (
                 <Button onClick={handlePickedUp} className="w-full">
-                  Mark as Collected by Courier
+                   Mark as Collected
                 </Button>
               )}
               

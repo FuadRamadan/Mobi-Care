@@ -123,8 +123,8 @@ export function notificationForStatus(
       };
     case "picked_up":
       return {
-        title: "Order picked up 📬",
-        body: "Your order has left the pharmacy and is on its way to you.",
+        title: "Order collected by courier 📬",
+        body: "The pharmacy has handed your order to the assigned courier. HQ will mark it as delivering when the journey begins.",
         type: "order_status",
       };
     case "delivering":

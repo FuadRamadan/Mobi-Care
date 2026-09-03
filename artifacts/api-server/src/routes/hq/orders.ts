@@ -219,10 +219,10 @@ router.post("/:id/assign-courier", async (req: AuthRequest, res) => {
 });
 
 // ── PATCH /hq/orders/:id/courier-status ──────────────────────────────────────
-// HQ drives courier-side statuses through delivering. The customer confirms
-// receipt, which is the only path that moves a delivery to delivered.
+// The pharmacy must explicitly record the courier handoff as `picked_up`
+// before HQ can move the delivery into `delivering`. The customer confirms
+// receipt, which is the only intended path that moves a delivery to delivered.
 const COURIER_TRANSITIONS: Record<string, string[]> = {
-  assigned: ["delivering"],
   picked_up: ["delivering"],
 };
 
@@ -257,7 +257,10 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
     res
       .status(409)
       .json({
-        error: `Cannot transition from '${order.status}' to '${body.data.status}'`,
+        error:
+          order.status === "assigned"
+            ? "Pharmacy must mark the order as collected before HQ can mark it as delivering"
+            : `Cannot transition from '${order.status}' to '${body.data.status}'`,
       });
     return;
   }
@@ -315,45 +318,11 @@ router.patch("/:id/courier-status", async (req: AuthRequest, res) => {
   res.json((await hydrateOrders([updated!]))[0]);
 });
 
-// ── POST /hq/orders/:id/confirm-delivery — receipt fallback ──────────────────
-router.post("/:id/confirm-delivery", async (req: AuthRequest, res) => {
-  const id = req.params.id as string;
-  const now = new Date();
-  const [updated] = await db
-    .update(ordersTable)
-    .set({
-      status: "delivered",
-      completedAt: now,
-      deliveryConfirmedAt: now,
-      deliveryConfirmationMethod: "hq",
-      deliveryConfirmedByHqUserId: req.pharmacy!.sub,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(ordersTable.id, id),
-        eq(ordersTable.fulfillmentType, "delivery"),
-        eq(ordersTable.status, "delivering"),
-      ),
-    )
-    .returning();
-  if (!updated) {
-    res.status(409).json({
-      error: "Only a delivering delivery order can be confirmed by HQ",
-    });
-    return;
-  }
-  await writeAudit({
-    actorType: "hq",
-    actorId: req.pharmacy!.sub,
-    actorName: req.pharmacy!.name,
-    action: "order.delivery_confirmed_by_hq",
-    entityType: "order",
-    entityId: id,
-    details: { method: "hq", confirmedAt: now.toISOString() },
+// ── POST /hq/orders/:id/confirm-delivery — retired HQ fallback ────────────────
+router.post("/:id/confirm-delivery", async (_req: AuthRequest, res) => {
+  res.status(403).json({
+    error: "Only the patient can confirm receipt and mark a delivery as delivered",
   });
-  await checkOrderFlags(updated);
-  res.json((await hydrateOrders([updated]))[0]);
 });
 
 // ── POST /hq/orders/:id/cash-collected — COD reconciliation ─────────────────

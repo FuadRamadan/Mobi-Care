@@ -37,6 +37,7 @@ function statusStyle(status: string, colors: ReturnType<typeof import('@/hooks/u
 }
 
 function statusLabel(status: string): string {
+  if (status === 'picked_up') return 'Collected';
   return status.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
@@ -116,7 +117,7 @@ export default function OrdersScreen() {
   const queryClient = useQueryClient();
 
   const { data: orders, isFetching, isError, refetch } = usePatientListOrders({
-    query: { queryKey: getPatientListOrdersQueryKey(), refetchInterval: 15_000 },
+    query: { queryKey: getPatientListOrdersQueryKey(), refetchInterval: 5_000 },
   });
   const removeFromHistory = useRemovePatientOrderFromHistory();
   const removeOrder = (id: string) => {

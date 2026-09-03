@@ -19,7 +19,7 @@ const DELIVERY_STEPS: { key: string; label: string; hint: string }[] = [
   { key: 'packaging', label: 'Being prepared', hint: 'Your medicines are being packed' },
   { key: 'ready', label: 'Ready for dispatch', hint: 'Waiting for a rider' },
   { key: 'assigned', label: 'Rider assigned', hint: 'A courier is on the way to the pharmacy' },
-  { key: 'picked_up', label: 'Picked up', hint: 'Your order left the pharmacy' },
+  { key: 'picked_up', label: 'Collected', hint: 'The pharmacy handed your order to the assigned courier' },
   { key: 'delivering', label: 'On the way', hint: 'The rider is heading to you' },
   { key: 'delivered', label: 'Delivered', hint: 'Enjoy — get well soon!' },
 ];
@@ -42,7 +42,7 @@ export default function OrderDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: order, isLoading, error } = usePatientGetOrder(id!, {
-    query: { refetchInterval: 10_000, queryKey: getPatientGetOrderQueryKey(id!) },
+    query: { refetchInterval: 5_000, queryKey: getPatientGetOrderQueryKey(id!) },
   });
   const confirmReceipt = useConfirmPatientOrderReceipt({
     mutation: {

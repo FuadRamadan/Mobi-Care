@@ -49,7 +49,7 @@ const DELIVERY_STEPS = [
   { key: 'packaging', label: 'Being Packaged' },
   { key: 'ready', label: 'Ready for Pickup' },
   { key: 'assigned', label: 'Courier Assigned' },
-  { key: 'picked_up', label: 'Picked Up' },
+  { key: 'picked_up', label: 'Collected' },
   { key: 'delivering', label: 'Out for Delivery' },
   { key: 'delivered', label: 'Delivered' },
 ];
@@ -164,7 +164,7 @@ export default function OrderDetailScreen() {
 
   const { data: order, isLoading, isError } = usePatientGetOrder(
     id ?? '',
-    { query: { queryKey: getPatientGetOrderQueryKey(id ?? ''), refetchInterval: 10_000, enabled: !!id } }
+    { query: { queryKey: getPatientGetOrderQueryKey(id ?? ''), refetchInterval: 5_000, enabled: !!id } }
   );
   const confirmReceipt = useConfirmPatientOrderReceipt({
     mutation: {

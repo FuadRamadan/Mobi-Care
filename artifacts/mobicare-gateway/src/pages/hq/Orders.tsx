@@ -21,7 +21,7 @@ export default function HqOrders() {
     {
       query: {
         queryKey: getListHqOrdersQueryKey(params),
-        refetchInterval: 10_000,
+        refetchInterval: 5_000,
       },
     },
   );

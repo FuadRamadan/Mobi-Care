@@ -4696,7 +4696,7 @@ export const getUpdateCourierStatusUrl = (id: string,) => {
 }
 
 /**
- * @summary Mark an assigned or picked-up delivery as delivering
+ * @summary Mark a pharmacy-collected delivery as delivering
  */
 export const updateCourierStatus = async (id: string,
     courierStatusUpdate: CourierStatusUpdate, options?: Parameters<typeof customFetch>[1]): Promise<HqOrder> => {
@@ -4746,7 +4746,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateCourierStatusMutationError = ErrorType<void>
 
     /**
- * @summary Mark an assigned or picked-up delivery as delivering
+ * @summary Mark a pharmacy-collected delivery as delivering
  */
 export const useUpdateCourierStatus = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCourierStatus>>, TError,{id: string;data: BodyType<CourierStatusUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -4828,77 +4828,6 @@ export const useMarkCashCollected = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMarkCashCollectedMutationOptions(options));
-    }
-
-export const getConfirmDeliveryByHqUrl = (id: string,) => {
-
-
-
-
-  return `/api/hq/orders/${id}/confirm-delivery`
-}
-
-/**
- * @summary Confirm a delivering order was delivered as an HQ fallback
- */
-export const confirmDeliveryByHq = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<HqOrder> => {
-
-  return customFetch<HqOrder>(getConfirmDeliveryByHqUrl(id),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getConfirmDeliveryByHqMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['confirmDeliveryByHq'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmDeliveryByHq>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  confirmDeliveryByHq(id,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ConfirmDeliveryByHqMutationResult = NonNullable<Awaited<ReturnType<typeof confirmDeliveryByHq>>>
-
-    export type ConfirmDeliveryByHqMutationError = ErrorType<void>
-
-    /**
- * @summary Confirm a delivering order was delivered as an HQ fallback
- */
-export const useConfirmDeliveryByHq = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDeliveryByHq>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof confirmDeliveryByHq>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getConfirmDeliveryByHqMutationOptions(options));
     }
 
 export const getListHqPharmaciesUrl = () => {

@@ -14,7 +14,7 @@ export default function PatientOrders() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: orders, isLoading } = usePatientListOrders({
-    query: { refetchInterval: 15_000, queryKey: getPatientListOrdersQueryKey() },
+    query: { refetchInterval: 5_000, queryKey: getPatientListOrdersQueryKey() },
   });
   const removeFromHistory = useRemovePatientOrderFromHistory();
   const removeOrder = async (id: string) => {

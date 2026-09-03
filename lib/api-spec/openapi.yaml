@@ -1302,7 +1302,7 @@ paths:
     patch:
       operationId: updateCourierStatus
       tags: [hq]
-      summary: Mark an assigned or picked-up delivery as delivering
+      summary: Mark a pharmacy-collected delivery as delivering
       security:
         - BearerAuth: []
       parameters:
@@ -1348,30 +1348,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqOrder"
         "409":
-          description: Invalid state
-
-  /hq/orders/{id}/confirm-delivery:
-    post:
-      operationId: confirmDeliveryByHq
-      tags: [hq]
-      summary: Confirm a delivering order was delivered as an HQ fallback
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Delivered order
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HqOrder"
-        "409":
-          description: Order is not an eligible delivering delivery order
+          description: Invalid state; the pharmacy must mark the order as collected first
 
   /hq/pharmacies:
     get:
