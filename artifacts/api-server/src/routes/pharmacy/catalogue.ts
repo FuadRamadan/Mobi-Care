@@ -13,6 +13,15 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
 const router = safeRouter();
+const PACKAGING_UNITS = [
+  "Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube",
+  "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece",
+] as const;
+const DOSAGE_FORMS = [
+  "Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion",
+  "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder",
+  "Patch",
+] as const;
 const primaryCategorySchema = z.enum(
   DRUG_PRIMARY_CATEGORIES as [string, ...string[]],
 );
@@ -42,13 +51,13 @@ router.post("/", async (req: AuthRequest, res) => {
       name: z.string().min(2),
       genericName: z.string().min(2),
       strength: z.string().trim().min(1).max(50),
-      form: z.string().trim().min(1).max(50),
+      form: z.enum(DOSAGE_FORMS),
       suggestedCategory: primaryCategorySchema,
       suggestedSubcategory: subcategorySchema,
       description: z.string().optional(),
       // Pharmacies may NOT assign tier — HQ owns tier classification.
       // The proposal starts at tier 3 (OTC) pending HQ review.
-      unit: z.string().min(1).default("tablets"),
+      unit: z.enum(PACKAGING_UNITS).default("Tablet"),
     })
     .safeParse(req.body);
 

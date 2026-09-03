@@ -17,6 +17,38 @@ import type { AuthRequest } from "../../middlewares/auth.js";
 const router = safeRouter();
 const DISTRICTS = ["bo", "bombali", "bonthe", "falaba", "freetown", "kailahun", "kambia", "kenema", "koinadugu", "kono", "moyamba", "port loko", "karene", "pujehun", "tonkolili", "western area"];
 
+function parseCoordinate(value: string | null): number | null {
+  if (value === null) return null;
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function haversineDistanceKm(
+  patientLat: number | null,
+  patientLng: number | null,
+  pharmacyLat: number | null,
+  pharmacyLng: number | null,
+): number | null {
+  if (
+    patientLat === null ||
+    patientLng === null ||
+    pharmacyLat === null ||
+    pharmacyLng === null ||
+    Math.abs(patientLat) > 90 ||
+    Math.abs(pharmacyLat) > 90 ||
+    Math.abs(patientLng) > 180 ||
+    Math.abs(pharmacyLng) > 180
+  ) return null;
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latDelta = radians(pharmacyLat - patientLat);
+  const lngDelta = radians(pharmacyLng - patientLng);
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(radians(patientLat)) * Math.cos(radians(pharmacyLat)) *
+      Math.sin(lngDelta / 2) ** 2;
+  return Math.round(2 * 6371 * Math.asin(Math.sqrt(a)) * 10) / 10;
+}
+
 function coarseDistrict(address: string | null | undefined): string {
   const normalized = address?.toLocaleLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
   if (!normalized) return "Unknown";
@@ -121,6 +153,13 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmacyId: pharmaciesTable.id,
       pharmacyName: pharmaciesTable.name,
       pharmacyAddress: pharmaciesTable.address,
+      pharmacyPhone: pharmaciesTable.phone,
+      pharmacyLocationLat: pharmaciesTable.locationLat,
+      pharmacyLocationLng: pharmaciesTable.locationLng,
+      mobileMoneyProvider: pharmaciesTable.mobileMoneyProvider,
+      mobileMoneyNumber: pharmaciesTable.mobileMoneyNumber,
+      mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
+      isOnline: pharmaciesTable.isOnline,
       controlledSubstanceAuthorized:
         pharmaciesTable.controlledSubstanceAuthorized,
     })
@@ -133,8 +172,19 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmaciesTable,
       eq(pharmaciesTable.id, pharmacyInventoryTable.pharmacyId),
     )
-    .where(and(...filters))
-    .limit(200);
+    .where(and(...filters));
+
+  const [patient] = await db
+    .select({
+      address: patientsTable.address,
+      locationLat: patientsTable.locationLat,
+      locationLng: patientsTable.locationLng,
+    })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, req.pharmacy!.sub))
+    .limit(1);
+  const patientLat = parseCoordinate(patient?.locationLat ?? null);
+  const patientLng = parseCoordinate(patient?.locationLng ?? null);
 
   // Group offers per drug.
   const byDrug = new Map<string, any>();
@@ -171,9 +221,21 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmacyId: r.pharmacyId,
       pharmacyName: r.pharmacyName,
       pharmacyAddress: r.pharmacyAddress,
+      pharmacyPhone: r.pharmacyPhone,
+      mobileMoneyProvider: r.mobileMoneyProvider,
+      mobileMoneyNumber: r.mobileMoneyNumber,
+      mobileMoneyAccountName: r.mobileMoneyAccountName,
+      isOnline: r.isOnline,
+      distanceKm: haversineDistanceKm(
+        patientLat,
+        patientLng,
+        parseCoordinate(r.pharmacyLocationLat),
+        parseCoordinate(r.pharmacyLocationLng),
+      ),
       brand: r.brand,
       manufacturer: r.manufacturer,
       priceLeones: Number(r.priceLeones),
+      stockQuantity: r.stockQuantity,
       unitOfSale: r.unitOfSale,
       inStock: r.stockQuantity > 0,
       availableForDelivery: r.availableForDelivery && r.tier !== "1",
@@ -188,7 +250,6 @@ router.get("/", async (req: AuthRequest, res) => {
 
   // Analytics is intentionally anonymous: only the normalized search and
   // aggregate-safe result count are retained, never patient/session/IP data.
-  const [patient] = await db.select({ address: patientsTable.address }).from(patientsTable).where(eq(patientsTable.id, req.pharmacy!.sub)).limit(1);
   await db.insert(searchEventsTable).values({
     normalizedQuery: q ? q.toLocaleLowerCase() : null,
     primaryCategory: category || null,

@@ -7,11 +7,9 @@ import { useHqAuth } from '@/hq/auth';
 import { HQ_ACCESS_KEY } from '@/lib/portalToken';
 
 type Insights = {
-  minimumGroupSize: number;
-  totals: Record<string, number | null>;
+  totals: Record<string, number>;
   trends: Record<string, Array<{ period: string; count: number }>>;
   rankings: Record<string, Array<{ label: string; count?: number; revenue?: number; category?: string; area?: string }>>;
-  suppression: Record<string, string>;
 };
 const today = new Date().toISOString().slice(0, 10);
 const monthAgo = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
@@ -62,7 +60,7 @@ export default function HqInsights() {
         <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
         <Button variant="outline" onClick={() => window.print()}>Print / Save PDF</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Aggregate-only reporting. No patient identities or order-level records are displayed or exported. Groups smaller than {data?.minimumGroupSize ?? 10} are suppressed.</p>
+      <p className="text-sm text-muted-foreground">Aggregate reporting. No patient identities or order-level records are displayed or exported. Every recorded group is included.</p>
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-semibold">Current data exports</h2>
         <p className="mt-1 text-sm text-muted-foreground">Download a current, read-only CSV snapshot. Exporting never changes or removes the original records.</p>
@@ -76,19 +74,18 @@ export default function HqInsights() {
       </section>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="grid gap-4 md:grid-cols-3">
-        {Object.entries(data?.totals ?? {}).map(([key, value]) => <div key={key} className="rounded-xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</p><p className="mt-2 text-2xl font-bold">{value === null ? 'Suppressed' : value.toLocaleString()}</p>{value === null && <p className="mt-1 text-xs text-muted-foreground">Fewer than {data?.minimumGroupSize ?? 10} contributing records.</p>}</div>)}
+        {Object.entries(data?.totals ?? {}).map(([key, value]) => <div key={key} className="rounded-xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</p><p className="mt-2 text-2xl font-bold">{value.toLocaleString()}</p></div>)}
       </div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.trends ?? {}).map(([key, rows]) => <Trend key={key} title={titleize(key)} rows={rows} />)}</div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.rankings ?? {}).map(([key, rows]) => <Ranking key={key} title={titleize(key)} rows={rows} />)}</div>
-      <div className="space-y-1 text-xs text-muted-foreground">{Object.entries(data?.suppression ?? {}).map(([metric, message]) => <p key={metric}><strong>{titleize(metric)}:</strong> {message}</p>)}</div>
     </div>
   </HqLayout>;
 }
 const titleize = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 function Ranking({ title, rows }: { title: string; rows: Array<{ label: string; count?: number; revenue?: number; category?: string; area?: string }> }) {
-  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <ul className="mt-3 space-y-2 text-sm">{rows.map((row, index) => <li key={`${row.label ?? row.category}-${index}`} className="flex justify-between gap-2 border-b pb-1 last:border-0"><span>{row.label ?? `${row.category} — ${row.area}`}</span><strong>{(row.revenue ?? row.count ?? 0).toLocaleString()}</strong></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">No reportable groups in this period.</p>}</section>;
+  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-2 text-sm">{rows.map((row, index) => <li key={`${row.label ?? row.category}-${index}`} className="flex justify-between gap-2 border-b pb-1 last:border-0"><span>{row.label ?? `${row.category} — ${row.area}`}</span><strong>{(row.revenue ?? row.count ?? 0).toLocaleString()}</strong></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">No data in this period.</p>}</section>;
 }
 function Trend({ title, rows }: { title: string; rows: Array<{ period: string; count: number }> }) {
   const max = Math.max(...rows.map(row => Number(row.count)), 1);
-  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <div className="mt-4 space-y-2">{rows.map(row => <div key={row.period} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-xs"><span>{row.period}</span><div className="h-3 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${Math.max(3, Number(row.count) / max * 100)}%` }} /></div><strong className="text-right">{Number(row.count).toLocaleString()}</strong></div>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No data in this period.</p>}</section>;
+  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-2">{rows.map(row => <div key={row.period} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-xs"><span>{row.period}</span><div className="h-3 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${Math.max(3, Number(row.count) / max * 100)}%` }} /></div><strong className="text-right">{Number(row.count).toLocaleString()}</strong></div>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No data in this period.</p>}</section>;
 }

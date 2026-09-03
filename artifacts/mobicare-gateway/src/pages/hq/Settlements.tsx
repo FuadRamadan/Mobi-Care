@@ -139,8 +139,9 @@ export default function HqSettlements() {
         <div className="space-y-8">
           <section>
             <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Financial overview</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission income</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.commissionIncomeMinor / 100)}</p><p className="text-xs text-muted-foreground">Medicine {formatLeones(settlements.metrics.medicineCommissionMinor / 100)} · Delivery {formatLeones(settlements.metrics.deliveryCommissionMinor / 100)}</p></CardContent></Card>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Total patient-paid revenue</p><p className="text-xl font-semibold">{formatLeones((settlements.metrics as typeof settlements.metrics & { patientPaidLeones: number }).patientPaidLeones)}</p><p className="text-xs text-muted-foreground">Completed orders in selected period</p></CardContent></Card>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Service-fee income</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.commissionIncomeMinor / 100)}</p><p className="text-xs text-muted-foreground">5% medicine service fee {formatLeones(settlements.metrics.medicineCommissionMinor / 100)}</p></CardContent></Card>
               <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Owed pharmacies</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.owedPharmacyMinor / 100)}</p></CardContent></Card>
               <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Owed couriers</p><p className="text-xl font-semibold">{formatLeones(settlements.metrics.owedCourierMinor / 100)}</p></CardContent></Card>
               <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Completed deliveries</p><p className="text-xl font-semibold">{settlements.metrics.completedDeliveries}</p></CardContent></Card>
@@ -149,7 +150,7 @@ export default function HqSettlements() {
           <section>
             <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Pharmacy breakdown</h2>
             <div className="border rounded-xl bg-card overflow-x-auto">
-              <Table><TableHeader><TableRow><TableHead>Pharmacy</TableHead><TableHead>Orders</TableHead><TableHead>Earnings</TableHead><TableHead>Commission</TableHead></TableRow></TableHeader>
+              <Table><TableHeader><TableRow><TableHead>Pharmacy</TableHead><TableHead>Orders</TableHead><TableHead>Earnings</TableHead><TableHead>Service fee</TableHead></TableRow></TableHeader>
                 <TableBody>{settlements.pharmacyBreakdown.map((row) => <TableRow key={row.pharmacyId}><TableCell>{row.pharmacyName ?? '—'}</TableCell><TableCell>{row.orderCount}</TableCell><TableCell>{formatLeones(row.pharmacyEarningsMinor / 100)}</TableCell><TableCell>{formatLeones(row.medicineCommissionMinor / 100)}</TableCell></TableRow>)}</TableBody>
               </Table>
             </div>

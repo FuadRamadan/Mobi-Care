@@ -69,6 +69,8 @@ function profileResponse(patient: typeof patientsTable.$inferSelect) {
       : patient.age,
     nin: patient.nin,
     address: patient.address,
+    locationLat: patient.locationLat,
+    locationLng: patient.locationLng,
     email: patient.email,
     nationality: patient.nationality,
     profileImageUrl: signed
@@ -103,6 +105,8 @@ router.patch("/", async (req: AuthRequest, res) => {
       address: z.string().trim().max(300).nullable().optional(),
       email: z.string().trim().email().max(254).nullable().optional(),
       nationality: z.string().trim().max(80).nullable().optional(),
+      locationLat: z.number().min(-90).max(90).nullable().optional(),
+      locationLng: z.number().min(-180).max(180).nullable().optional(),
     })
     .strict()
     .refine((value) => Object.values(value).some((field) => field !== undefined))
@@ -124,6 +128,12 @@ router.patch("/", async (req: AuthRequest, res) => {
       ...(values.email !== undefined ? { email: values.email || null } : {}),
       ...(values.nationality !== undefined
         ? { nationality: values.nationality || null }
+        : {}),
+      ...(values.locationLat !== undefined
+        ? { locationLat: values.locationLat?.toString() ?? null }
+        : {}),
+      ...(values.locationLng !== undefined
+        ? { locationLng: values.locationLng?.toString() ?? null }
         : {}),
       updatedAt: new Date(),
     })

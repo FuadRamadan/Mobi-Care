@@ -14,6 +14,15 @@ import { writeAudit } from "../../lib/audit.js";
 import { pharmaciesTable } from "@workspace/db/schema";
 
 const router = safeRouter();
+const PACKAGING_UNITS = [
+  "Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube",
+  "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece",
+] as const;
+const DOSAGE_FORMS = [
+  "Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion",
+  "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder",
+  "Patch",
+] as const;
 
 const primaryCategorySchema = z.enum(
   DRUG_PRIMARY_CATEGORIES as [string, ...string[]],
@@ -25,8 +34,8 @@ const dateSchema = z
 
 const inventoryFields = z.object({
   strength: z.string().trim().min(1).max(50),
-  form: z.string().trim().min(1).max(50),
-  unitOfSale: z.string().trim().min(1).max(80),
+  form: z.enum(DOSAGE_FORMS),
+  unitOfSale: z.enum(PACKAGING_UNITS),
   expiryDate: dateSchema,
   brand: z.string().trim().max(100).nullable().optional(),
   manufacturer: z.string().trim().max(150).nullable().optional(),
@@ -58,8 +67,12 @@ export function catalogueAllowsValue(
 }
 
 function validateListing(
-  data: z.infer<typeof inventoryFields>,
+  data: Omit<z.infer<typeof inventoryFields>, "form" | "unitOfSale"> & {
+    form: string;
+    unitOfSale: string;
+  },
   drug: typeof drugCatalogueTable.$inferSelect,
+  allowExistingLegacyForm = false,
 ): string | null {
   if (data.expiryDate <= todayIso()) {
     return "Expired stock cannot be saved. Enter an expiry date after today.";
@@ -67,7 +80,10 @@ function validateListing(
   if (!catalogueAllowsValue(drug.commonStrengths, data.strength)) {
     return "Select a strength approved in the MobiCare catalogue.";
   }
-  if (!catalogueAllowsValue(drug.commonForms, data.form)) {
+  if (
+    !allowExistingLegacyForm &&
+    !catalogueAllowsValue(drug.commonForms, data.form)
+  ) {
     return "Select a form approved in the MobiCare catalogue.";
   }
   const primaryCategory = data.primaryCategory ?? drug.primaryCategory;
@@ -87,6 +103,31 @@ function validateListing(
     !normalizeOptional(data.otherCategoryText)
   ) {
     return "Explain the category when selecting Other.";
+  }
+  return null;
+}
+
+function validateUpdatedFixedValues(
+  data: { form?: string; unitOfSale?: string },
+  existing: typeof pharmacyInventoryTable.$inferSelect,
+): string | null {
+  // Legacy values can remain on an existing record so a pharmacy can repair
+  // other fields, but neither field can be changed to a new free-text value.
+  if (
+    data.form !== undefined &&
+    data.form !== existing.form &&
+    !DOSAGE_FORMS.includes(data.form as (typeof DOSAGE_FORMS)[number])
+  ) {
+    return "Select a dosage form from the approved list.";
+  }
+  if (
+    data.unitOfSale !== undefined &&
+    data.unitOfSale !== existing.unitOfSale &&
+    !PACKAGING_UNITS.includes(
+      data.unitOfSale as (typeof PACKAGING_UNITS)[number],
+    )
+  ) {
+    return "Select a packaging unit from the approved list.";
   }
   return null;
 }
@@ -277,6 +318,10 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   const body = inventoryFields
     .partial()
     .extend({
+      // Accept persisted legacy values only while editing; they are checked
+      // against the stored listing below and cannot be newly introduced.
+      form: z.string().trim().min(1).max(50).optional(),
+      unitOfSale: z.string().trim().min(1).max(80).optional(),
       brand: z.string().trim().max(100).nullable().optional(),
       manufacturer: z.string().trim().max(150).nullable().optional(),
       countryOfOrigin: z.string().trim().max(100).nullable().optional(),
@@ -317,6 +362,11 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     .limit(1);
   if (!existing) {
     res.status(404).json({ error: "Listing not found" });
+    return;
+  }
+  const fixedValueError = validateUpdatedFixedValues(body.data, existing.inventory);
+  if (fixedValueError) {
+    res.status(400).json({ error: fixedValueError });
     return;
   }
 
@@ -362,7 +412,11 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   };
 
   if (body.data.isActive !== false) {
-    const validationError = validateListing(merged, existing.drug);
+    const validationError = validateListing(
+      merged,
+      existing.drug,
+      body.data.form === undefined || body.data.form === existing.inventory.form,
+    );
     if (validationError) {
       res.status(400).json({ error: validationError });
       return;

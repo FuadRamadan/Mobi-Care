@@ -12,7 +12,7 @@ export type AllocatedPriceLine = PriceAllocationLine & {
 };
 
 /**
- * Allocates the order-level basis-point commission in whole minor units.
+ * Allocates the order-level basis-point service fee in whole minor units.
  * Largest fractional remainders receive the extra units; the stable key makes
  * ties deterministic. `patientLineTotalMinor` is authoritative because a
  * one-cent remainder cannot always be represented in an integer unit price.
@@ -72,4 +72,14 @@ export function allocatePatientPrices(
       ),
     };
   });
+}
+
+export function calculateServiceFeeMinor(
+  drugTotalMinor: number,
+  serviceFeeBasisPoints = 500,
+): number {
+  if (!Number.isSafeInteger(drugTotalMinor) || drugTotalMinor < 0) {
+    throw new RangeError("drugTotalMinor must be a non-negative safe integer");
+  }
+  return Math.round((drugTotalMinor * serviceFeeBasisPoints) / 10_000);
 }

@@ -29,6 +29,8 @@ export default function Checkout() {
     setQuantity,
     removeItem,
     clear,
+    drugTotalLeones,
+    serviceFeeLeones,
     totalLeones,
     prescriptionRequired,
     collectionOnly,
@@ -130,6 +132,7 @@ export default function Checkout() {
         data: {
           pharmacyId: cart!.pharmacyId,
           fulfillmentType: effectiveFulfillment,
+          expectedTotalMinor: Math.round(totalLeones * 100),
           ...(effectiveFulfillment === "delivery"
             ? { deliveryAddress: address.trim() }
             : {}),
@@ -359,8 +362,16 @@ export default function Checkout() {
               <Smartphone className="w-4 h-4 text-orange-money" /> Orange Money
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Total</span>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Drug price</span>
+            <span className="font-medium">{formatLeones(drugTotalLeones)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Service fee (5%)</span>
+            <span className="font-medium">{formatLeones(serviceFeeLeones)}</span>
+          </div>
+          <div className="flex items-center justify-between border-t pt-3">
+            <span className="font-medium">Total payable</span>
             <span
               className="font-display font-bold text-xl text-dark-green"
               data-testid="text-total"

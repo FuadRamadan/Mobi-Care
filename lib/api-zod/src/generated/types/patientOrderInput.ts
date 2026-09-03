@@ -11,6 +11,11 @@ import type { PatientOrderItemInput } from './patientOrderItemInput';
 export interface PatientOrderInput {
   pharmacyId: string;
   fulfillmentType: PatientOrderInputFulfillmentType;
+  /**
+     * Exact total shown at checkout in minor units; creation fails if live prices differ
+     * @minimum 0
+     */
+  expectedTotalMinor: number;
   deliveryAddress?: string;
   prescriptionImageKey?: string;
   items: PatientOrderItemInput[];

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   Alert,
+  Clipboard,
   FlatList,
   Platform,
   Pressable,
@@ -54,8 +55,9 @@ interface OfferRowProps {
 
 function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
   const s = makeStyles(colors, { top: 0, bottom: 0 });
-  const canDeliver = offer.availableForDelivery && offer.inStock;
-  const canCollect = offer.availableForCollection && offer.inStock;
+  const available = offer.inStock && offer.isOnline;
+  const canDeliver = offer.availableForDelivery && available;
+  const canCollect = offer.availableForCollection && available;
 
   return (
     <View style={s.offerRow}>
@@ -63,7 +65,17 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
         <Text style={s.offerPharmacy} numberOfLines={1}>
           {offer.pharmacyName}
         </Text>
+        <Text style={s.offerDetail}>{offer.pharmacyAddress || "Address unavailable"}</Text>
+        <Text style={s.offerDetail}>
+          {offer.pharmacyPhone || "Phone unavailable"} ·{" "}
+          {offer.distanceKm == null ? "Distance unavailable" : `${offer.distanceKm.toFixed(1)} km away`}
+        </Text>
         <View style={s.offerTags}>
+          <View style={[s.tag, { backgroundColor: offer.isOnline ? "#DCFCE7" : "#E5E7EB" }]}>
+            <Text style={[s.tagText, { color: offer.isOnline ? "#166534" : "#374151" }]}>
+              {offer.isOnline ? "Online" : "Offline"}
+            </Text>
+          </View>
           {canDeliver && (
             <View style={[s.tag, { backgroundColor: colors.secondary }]}>
               <Feather name="truck" size={10} color={colors.primary} />
@@ -87,14 +99,31 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
               </Text>
             </View>
           )}
+          <Text style={s.offerDetail}>{offer.stockQuantity} in stock</Text>
         </View>
+        {(offer.mobileMoneyProvider || offer.mobileMoneyNumber || offer.mobileMoneyAccountName) && (
+          <Pressable
+            disabled={!offer.mobileMoneyNumber}
+            onPress={() => {
+              if (!offer.mobileMoneyNumber) return;
+              Clipboard.setString(offer.mobileMoneyNumber);
+              Alert.alert("Copied", "Payment number copied to your clipboard.");
+            }}
+          >
+            <Text style={[s.offerDetail, offer.mobileMoneyNumber && { color: colors.primary }]}>
+              {offer.mobileMoneyProvider || "Mobile money"}
+              {offer.mobileMoneyAccountName ? ` · ${offer.mobileMoneyAccountName}` : ""}
+              {offer.mobileMoneyNumber ? ` · ${offer.mobileMoneyNumber} (tap to copy)` : ""}
+            </Text>
+          </Pressable>
+        )}
       </View>
       <View style={s.offerRight}>
         <Text style={s.offerPrice}>
           {formatLeones(offer.priceLeones)}
           <Text style={s.offerUnitOfSale}> / {offer.unitOfSale}</Text>
         </Text>
-        {offer.inStock ? (
+        {available ? (
           <TouchableOpacity
             style={s.addBtn}
             onPress={() => onAdd(offer)}
@@ -105,7 +134,7 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
           </TouchableOpacity>
         ) : (
           <View style={s.outOfStockPlaceholder}>
-            <Text style={s.outOfStockText}>Unavailable</Text>
+            <Text style={s.outOfStockText}>{offer.inStock ? "Offline" : "Unavailable"}</Text>
           </View>
         )}
       </View>
@@ -120,11 +149,9 @@ interface DrugCardProps {
 }
 
 function DrugCard({ drug, colors, onAddOffer }: DrugCardProps) {
-  const [expanded, setExpanded] = useState(false);
   const s = makeStyles(colors, { top: 0, bottom: 0 });
   const tierColors = TIER_COLORS(colors);
-  const visibleOffers = expanded ? drug.offers : drug.offers.slice(0, 2);
-  const bestOffer = drug.offers.find((o) => o.inStock);
+  const bestOffer = drug.offers.find((o) => o.inStock && o.isOnline);
 
   return (
     <View style={s.drugCard}>
@@ -184,7 +211,7 @@ function DrugCard({ drug, colors, onAddOffer }: DrugCardProps) {
 
       <View style={s.divider} />
 
-      {visibleOffers.map((offer) => (
+      {drug.offers.map((offer) => (
         <OfferRow
           key={offer.inventoryId}
           offer={offer}
@@ -194,20 +221,6 @@ function DrugCard({ drug, colors, onAddOffer }: DrugCardProps) {
         />
       ))}
 
-      {drug.offers.length > 2 && (
-        <Pressable style={s.expandBtn} onPress={() => setExpanded((v) => !v)}>
-          <Text style={s.expandText}>
-            {expanded
-              ? "Show less"
-              : `+${drug.offers.length - 2} more pharmacies`}
-          </Text>
-          <Feather
-            name={expanded ? "chevron-up" : "chevron-down"}
-            size={14}
-            color={colors.primary}
-          />
-        </Pressable>
-      )}
     </View>
   );
 }
@@ -541,6 +554,11 @@ function makeStyles(
       fontSize: 14,
       fontWeight: "600",
       color: colors.foreground,
+    },
+    offerDetail: {
+      fontSize: 11,
+      color: colors.mutedForeground,
+      lineHeight: 16,
     },
     offerTags: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
     offerRight: { alignItems: "flex-end", gap: 6 },

@@ -299,7 +299,7 @@ function OrderDetailsSheet({
                     <TableHead className="h-8 py-2 text-xs">Item</TableHead>
                     <TableHead className="h-8 py-2 text-xs text-right">Qty</TableHead>
                     <TableHead className="h-8 py-2 text-xs text-right">Base</TableHead>
-                    <TableHead className="h-8 py-2 text-xs text-right">Commission</TableHead>
+                    <TableHead className="h-8 py-2 text-xs text-right">Service fee</TableHead>
                     <TableHead className="h-8 py-2 text-xs text-right">Patient price</TableHead>
                   </TableRow>
                 </TableHeader>

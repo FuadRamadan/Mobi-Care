@@ -14,4 +14,23 @@ export interface HqPharmacyUpdate {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
+  /**
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  locationLat?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  locationLng?: number | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  isOnline?: boolean;
 }

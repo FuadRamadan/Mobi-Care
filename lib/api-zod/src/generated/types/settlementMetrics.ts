@@ -9,6 +9,8 @@
 export interface SettlementMetrics {
   rangeStart: string;
   rangeEndExclusive: string;
+  /** Total amount paid by patients for completed orders in the selected period */
+  patientPaidLeones: number;
   medicineCommissionMinor: number;
   deliveryCommissionMinor: number;
   commissionIncomeMinor: number;

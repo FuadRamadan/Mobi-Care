@@ -11,6 +11,8 @@ import { useLocation } from "wouter";
 function destinationForNotification(type: string | null | undefined) {
   if (type === "prescription_submitted") return "/prescriptions";
   if (type === "order_cancelled") return "/orders?tab=cancelled";
+  if (type === "drug_request_approved" || type === "drug_request_rejected")
+    return "/inventory";
   return "/orders";
 }
 

@@ -9,16 +9,54 @@ import {
   settlementsTable,
   prescriptionsTable,
 } from "@workspace/db/schema";
-import { eq, gt, inArray, desc, and, sql, isNull } from "drizzle-orm";
+import { eq, gt, desc, and, sql, isNull } from "drizzle-orm";
+import { z } from "zod";
 
 const router = safeRouter();
 
-// GET /hq/dashboard — aggregate counts, live order feed, completed revenue.
+const trendQuery = z.object({
+  start: z.string().date().optional(),
+  end: z.string().date().optional(),
+  pharmacyId: z.string().uuid().optional(),
+});
+
+// GET /hq/dashboard/trends — daily operational trends. Search telemetry is
+// intentionally anonymous and is therefore only available platform-wide.
+router.get("/trends", async (req, res) => {
+  const parsed = trendQuery.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "start/end must be YYYY-MM-DD and pharmacyId must be a UUID" });
+    return;
+  }
+  const end = parsed.data.end ? new Date(`${parsed.data.end}T00:00:00.000Z`) : new Date();
+  if (parsed.data.end) end.setUTCDate(end.getUTCDate() + 1);
+  const start = parsed.data.start
+    ? new Date(`${parsed.data.start}T00:00:00.000Z`)
+    : new Date(end.getTime() - 29 * 86400_000);
+  if (start >= end) {
+    res.status(400).json({ error: "start must be before end" });
+    return;
+  }
+  const pharmacyClause = parsed.data.pharmacyId
+    ? sql`AND pharmacy_id = ${parsed.data.pharmacyId}`
+    : sql``;
+  const [searches, orders, pharmacies] = await Promise.all([
+    db.execute(sql`SELECT date_trunc('day', created_at)::date::text AS date, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at < ${end} GROUP BY 1 ORDER BY 1`),
+    db.execute(sql`SELECT date_trunc('day', created_at)::date::text AS date, count(*)::int AS count FROM orders WHERE created_at >= ${start} AND created_at < ${end} ${pharmacyClause} GROUP BY 1 ORDER BY 1`),
+    db.select({ id: pharmaciesTable.id, name: pharmaciesTable.name }).from(pharmaciesTable).orderBy(pharmaciesTable.name),
+  ]);
+  res.json({
+    searches: searches.rows,
+    orders: orders.rows,
+    pharmacies,
+    searchScope: "all",
+  });
+});
+
+// GET /hq/dashboard — aggregate counts and live order feed.
 router.get("/", async (_req, res) => {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-
-  const REVENUE_STATUSES = ["delivered", "collected"] as const;
 
   const [
     [orderCounts],
@@ -27,7 +65,6 @@ router.get("/", async (_req, res) => {
     [openFlags],
     [heldDrugs],
     [pendingSettlements],
-    [revenue],
     [todayOrders],
     [pendingPrescriptions],
     [unconfirmedDeliveries],
@@ -59,12 +96,6 @@ router.get("/", async (_req, res) => {
       .from(settlementsTable)
       .where(eq(settlementsTable.status, "pending")),
     db
-      .select({
-        total: sql<number>`coalesce(sum(${ordersTable.totalLeones}), 0)::int`,
-      })
-      .from(ordersTable)
-       .where(and(inArray(ordersTable.status, [...REVENUE_STATUSES]), sql`${ordersTable.completedAt} is not null`)),
-    db
       .select({ count: sql<number>`count(*)::int` })
       .from(ordersTable)
       .where(gt(ordersTable.createdAt, startOfToday)),
@@ -88,8 +119,7 @@ router.get("/", async (_req, res) => {
       })
       .from(ordersTable)
       .leftJoin(pharmaciesTable, eq(ordersTable.pharmacyId, pharmaciesTable.id))
-      .orderBy(desc(ordersTable.createdAt))
-      .limit(12),
+      .orderBy(desc(ordersTable.createdAt)),
   ]);
 
   // Orders by status (for the command-centre widgets)
@@ -122,7 +152,6 @@ router.get("/", async (_req, res) => {
       awaitingDispatch: awaitingDispatch[0]?.count ?? 0,
       pendingPrescriptions: pendingPrescriptions?.count ?? 0,
       unconfirmedDeliveries: unconfirmedDeliveries?.count ?? 0,
-      completedRevenueLeones: revenue?.total ?? 0,
     },
     ordersByStatus: statusRows,
     recentOrders,

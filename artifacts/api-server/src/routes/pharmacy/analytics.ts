@@ -7,6 +7,8 @@ import {
   prescriptionsTable as prescriptions,
 } from "@workspace/db";
 import { eq, and, gte, sql, count, sum, inArray } from "drizzle-orm";
+import { lt } from "drizzle-orm";
+import { z } from "zod";
 
 const router = safeRouter();
 
@@ -93,11 +95,27 @@ router.get("/overview", async (req: AuthRequest, res) => {
 // GET /analytics/orders-by-day
 router.get("/orders-by-day", async (req: AuthRequest, res) => {
   const pharmacyId = req.pharmacy!.sub;
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const parsed = z.object({
+    start: z.string().date().optional(),
+    end: z.string().date().optional(),
+  }).safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "start and end must be YYYY-MM-DD" });
+    return;
+  }
+  const end = parsed.data.end ? new Date(`${parsed.data.end}T00:00:00.000Z`) : new Date();
+  if (parsed.data.end) end.setUTCDate(end.getUTCDate() + 1);
+  const start = parsed.data.start
+    ? new Date(`${parsed.data.start}T00:00:00.000Z`)
+    : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+  if (start >= end) {
+    res.status(400).json({ error: "start must be before end" });
+    return;
+  }
 
   const rows = await db
     .select({
-      date: sql<string>`date_trunc('day', ${orders.createdAt})::date::text`,
+      date: sql<string>`date_trunc('day', ${orders.completedAt})::date::text`,
       orders: count(),
       revenueLeones: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}), 0)::int`,
     })
@@ -106,11 +124,12 @@ router.get("/orders-by-day", async (req: AuthRequest, res) => {
       and(
         eq(orders.pharmacyId, pharmacyId),
         inArray(orders.status, ["delivered", "collected"]),
-        gte(orders.completedAt, since),
+            gte(orders.completedAt, start),
+            lt(orders.completedAt, end),
       ),
     )
-    .groupBy(sql`date_trunc('day', ${orders.createdAt})`)
-    .orderBy(sql`date_trunc('day', ${orders.createdAt})`);
+    .groupBy(sql`date_trunc('day', ${orders.completedAt})`)
+    .orderBy(sql`date_trunc('day', ${orders.completedAt})`);
 
   res.json(
     rows.map((r) => ({

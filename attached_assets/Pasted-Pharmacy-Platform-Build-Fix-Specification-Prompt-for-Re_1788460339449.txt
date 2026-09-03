@@ -1,0 +1,93 @@
+Pharmacy Platform — Build & Fix Specification
+Prompt for Replit Agent  |  Prepared by Martha Kabba
+
+How to use this document
+You are working on an existing pharmacy platform with three surfaces: a Patient app (search and order drugs), a Pharmacy Portal, and an HQ / Headquarters Portal. Implement every requirement below in the existing codebase.
+•	Do not rebuild or redesign anything that is not mentioned here. Keep the current stack, routing, styling and auth exactly as they are.
+•	Work through the sections in order. Section 1 is the highest priority because it is a live money bug.
+•	After each section, state which files you changed and why.
+•	If a requirement conflicts with existing logic, stop and explain the conflict instead of guessing.
+•	Write database migrations for any schema change. Never drop or overwrite existing order or payment records.
+•	Add automated tests for every calculation rule in Section 1.
+1. Fix the drug price, service fee and total calculation
+Current problem
+•	The patient sees one amount at search, a different total at checkout, and the totals reported in the Pharmacy Portal and HQ Portal do not match what the patient actually paid.
+•	This means the service fee is being applied, dropped or recalculated inconsistently across the three surfaces.
+Required behaviour
+•	Patient search results: display the actual drug price only (the pharmacy's price for the drug). No fee shown at this stage.
+•	Total amount / checkout page: display a clear breakdown, in this order:
+◦	Drug price (line item, per drug, showing quantity where applicable)
+◦	Service fee (5% of the drug price) shown directly underneath, labelled so the patient understands it
+◦	Total amount payable = drug price + service fee, shown in bold as the final line
+•	The amount charged at payment must equal that displayed total, to the cent.
+•	The Pharmacy Portal and HQ Portal must both report figures that reconcile exactly to what the patient paid.
+Worked example
+For a drug priced at 10,000.00 (use the currency already configured in the app):
+Line item	Example amount	Who it belongs to
+Drug price (pharmacy price)	10,000.00	Pharmacy
+Service fee (5% of drug price)	500.00	Platform / HQ
+Total paid by patient	10,500.00	—
+Pharmacy settlement amount	10,000.00	Pharmacy
+Platform revenue	500.00	Platform / HQ
+
+
+2. Approved drug requests must appear in both catalogues immediately
+Current problem
+When a pharmacy requests a drug that is not in the master catalogue and HQ approves it, the drug does not become usable straight away.
+Required behaviour
+•	On HQ approval, the drug is created in the master catalogue and becomes immediately visible and selectable in both the HQ catalogue and the requesting pharmacy's catalogue — no manual re-entry, no re-import, no waiting for a scheduled job.
+•	The approval action must be atomic: create the master catalogue record, link it to the requesting pharmacy, and update the request status in a single database transaction. If any step fails, roll all of it back and show a clear error.
+•	Clear or invalidate any cached catalogue list so the new drug shows on the next page load rather than after a cache expiry.
+•	Notify the requesting pharmacy in-app that the drug was approved and is now available.
+•	If HQ rejects the request, record the rejection reason and show it to the pharmacy.
+•	Prevent duplicates: before creating the record, check for an existing drug with the same name, strength and form, and warn the HQ approver rather than creating a second entry.
+Acceptance criteria
+•	Pharmacy submits a new drug request → HQ approves → pharmacy refreshes their catalogue and the drug is there, ready to price and stock.
+•	The same drug is searchable by patients once the pharmacy sets a price and stock quantity.
+•	The drug appears in the HQ master catalogue list in the same moment.
+3. Use dropdowns throughout the drug addition page
+Required behaviour
+Replace free-text inputs on the drug addition form with dropdown (select) fields wherever the value comes from a fixed list. Free typing here is what creates duplicate and inconsistent catalogue entries.
+•	Packaging / unit: Box, Bottle, Vial, Sachet, Tablet, Capsule, Strip, Tube, Ampoule, Syringe, Pack, Carton, Jar, Can, Roll, Piece.
+•	Dosage form: Tablet, Capsule, Syrup, Suspension, Injection, Infusion, Cream, Ointment, Gel, Drops, Inhaler, Suppository, Powder, Patch.
+4. Show pharmacy decision-making details in patient search results
+Required behaviour
+A patient searching for a drug needs enough information to choose a pharmacy without leaving the results page. Each result card must show:
+•	Pharmacy name
+•	Full physical address, including area / town / landmark
+•	Mobile money number used for payment, with a tap-to-copy control
+•	Mobile money provider / account name, so the patient can confirm they are paying the right entity
+•	Contact phone number for the pharmacy
+•	Drug price (per the rule in Section 1 — price only, no fee at this stage)
+•	Stock availability status and quantity available
+•	Pharmacy online or Offline
+•	Estimated distance from the patient
+5. Move total revenue into the Settlements section
+Required behaviour
+•	Remove the "Total revenue" figure from the General Dashboard.
+•	Show total revenue in the Settlements section instead, where it sits alongside payouts and reconciliation.
+•	Keep "Revenue per day" on the General Dashboard — that stays exactly where it is.
+•	Both figures must be driven by the stored order amounts from Section 1, so the dashboard and Settlements can never disagree.
+6. Show all data — remove the minimum-count suppression
+Current problem
+Records, rows or categories with a count below 10 are currently being hidden or grouped away. This makes low-volume pharmacies, drugs and days invisible, and it makes totals look wrong because the visible rows do not add up to the reported total.
+Required behaviour
+•	Remove every threshold, filter or condition that omits results because the count is small — search results, dashboards, reports, charts, exports and tables.
+•	Search the codebase for conditions such as count > 10, >= 10, HAVING COUNT(*) > 10, LIMIT-based truncation and any "Other" bucketing, and remove them.
+•	Show every record, including counts of 1.
+•	Where a list is genuinely long, use pagination or a scroll — never silent truncation.
+•	When there is genuinely no data, show an explicit empty state ("No orders in this period"), not a hidden or blank panel.
+•	Verify afterwards that the sum of displayed rows equals the reported total on every screen.
+7. Add trend charts to both dashboards
+Pharmacy Portal dashboard
+•	Line or bar chart showing number of orders per day over time.
+•	Selectable date range: last 7 days, last 30 days, last 90 days, and a custom range.
+•	Data scoped strictly to that pharmacy.
+HQ Portal dashboard
+•	Chart showing number of searches per day.
+•	Chart showing number of orders per day.
+•	Show both series on one chart with a legend, or as two charts side by side — whichever reads more clearly in the existing layout.
+•	Same date-range selector as the Pharmacy Portal.
+•	Data aggregated across all pharmacies, with an optional filter by individual pharmacy.
+•	This section must also honour Section 6 — no minimum-count filtering in the chart data.
+

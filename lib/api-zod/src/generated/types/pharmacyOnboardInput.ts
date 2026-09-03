@@ -13,4 +13,18 @@ export interface PharmacyOnboardInput {
   username: string;
   phone?: string;
   address?: string;
+  /**
+     * @minimum -90
+     * @maximum 90
+     */
+  locationLat?: number;
+  /**
+     * @minimum -180
+     * @maximum 180
+     */
+  locationLng?: number;
+  mobileMoneyProvider?: string;
+  mobileMoneyNumber?: string;
+  mobileMoneyAccountName?: string;
+  isOnline?: boolean;
 }

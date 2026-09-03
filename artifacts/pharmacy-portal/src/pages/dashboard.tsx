@@ -1,4 +1,5 @@
-import { useGetAnalyticsOverview, useGetOrdersByDay } from "@workspace/api-client-react";
+import { useGetAnalyticsOverview } from "@workspace/api-client-react";
+import { useEffect, useState } from "react";
 import { formatLeones } from "@/lib/format";
 import { format, parseISO } from "date-fns";
 import { Activity, Clock, Package, AlertTriangle, TrendingUp, ArrowRight, type LucideIcon } from "lucide-react";
@@ -7,7 +8,32 @@ import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsOverview();
-  const { data: chartData, isLoading: chartLoading } = useGetOrdersByDay();
+  const today = new Date().toISOString().slice(0, 10);
+  const [range, setRange] = useState<'7' | '30' | '90' | 'custom'>('30');
+  const [start, setStart] = useState(new Date(Date.now() - 29 * 86400_000).toISOString().slice(0, 10));
+  const [end, setEnd] = useState(today);
+  const [chartData, setChartData] = useState<Array<{ date: string; orders: number; revenueLeones: number }> | null>(null);
+  const [chartLoading, setChartLoading] = useState(true);
+  useEffect(() => {
+    const controller = new AbortController();
+    setChartLoading(true);
+    fetch(`${import.meta.env.BASE_URL}api/pharmacy/analytics/orders-by-day?start=${start}&end=${end}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('mc_access')}` },
+      signal: controller.signal,
+    })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Unable to load order trend.')))
+      .then((rows: Array<{ date: string; orders: number; revenueLeones: number }>) => setChartData(rows))
+      .catch(error => { if (error.name !== 'AbortError') setChartData([]); })
+      .finally(() => { if (!controller.signal.aborted) setChartLoading(false); });
+    return () => controller.abort();
+  }, [start, end]);
+  const selectRange = (value: '7' | '30' | '90' | 'custom') => {
+    setRange(value);
+    if (value !== 'custom') {
+      setStart(new Date(Date.now() - (Number(value) - 1) * 86400_000).toISOString().slice(0, 10));
+      setEnd(today);
+    }
+  };
 
   if (analyticsLoading || chartLoading) {
     return (
@@ -91,14 +117,21 @@ export default function Dashboard() {
       <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6 shadow-sm">
         <div className="mb-6">
           <h3 className="text-lg font-semibold">Order Volume & Revenue</h3>
-          <p className="text-sm text-muted-foreground">Last 30 days</p>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            {(['7', '30', '90'] as const).map(days => <Button key={days} size="sm" variant={range === days ? 'default' : 'outline'} onClick={() => selectRange(days)}>Last {days} days</Button>)}
+            <Button size="sm" variant={range === 'custom' ? 'default' : 'outline'} onClick={() => selectRange('custom')}>Custom</Button>
+            {range === 'custom' && <>
+              <input className="rounded border bg-background px-2 py-1 text-sm" type="date" value={start} max={end} onChange={event => setStart(event.target.value)} />
+              <input className="rounded border bg-background px-2 py-1 text-sm" type="date" value={end} min={start} max={today} onChange={event => setEnd(event.target.value)} />
+            </>}
+          </div>
         </div>
         <div className="h-[350px] w-full">
           {chartData && chartData.length > 0 ? (
             <div
               className="flex h-full min-w-[680px] items-end gap-1 overflow-x-auto border-b border-border px-2 pt-8"
               role="img"
-              aria-label="Daily order volume for the last 30 days"
+              aria-label={`Daily completed order volume from ${start} to ${end}`}
             >
               {chartData.map((day, index) => (
                 <div
@@ -124,7 +157,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              No data available for the last 30 days
+              No orders in this period
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import {
   Truck,
   Store,
   X,
+  Copy,
 } from "lucide-react";
 import {
   usePatientSearchDrugs,
@@ -29,6 +30,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+type DetailedDrugOffer = DrugOffer & {
+  pharmacyPhone?: string | null;
+  mobileMoneyProvider?: string | null;
+  mobileMoneyNumber?: string | null;
+  mobileMoneyAccountName?: string | null;
+  stockQuantity?: number;
+  isOnline?: boolean;
+  distanceKm?: number | null;
+};
 
 function useDebounced(value: string, ms = 350): string {
   const [debounced, setDebounced] = useState(value);
@@ -164,8 +176,7 @@ export default function PatientSearch() {
 function DrugCard({ drug }: { drug: DrugSearchResult }) {
   const { addItem, cart } = useCart();
   const { toast } = useToast();
-  const [expanded, setExpanded] = useState(false);
-  const offers = expanded ? drug.offers : drug.offers.slice(0, 3);
+  const offers = drug.offers as DetailedDrugOffer[];
 
   function add(offer: DrugOffer, replace = false) {
     const ok = addItem(
@@ -258,16 +269,62 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
           </p>
         )}
 
-        <div className="divide-y rounded-xl border bg-secondary/30">
+        <ScrollArea className="max-h-[32rem] rounded-xl border bg-secondary/30">
+          <div className="divide-y">
           {offers.map((offer, idx) => (
             <div
               key={offer.inventoryId}
-              className={`flex items-center gap-3 p-3 ${!offer.inStock ? "opacity-60 grayscale-[50%]" : ""}`}
+              className={`flex items-center gap-3 p-3 ${(!offer.inStock || offer.isOnline === false) ? "opacity-60 grayscale-[50%]" : ""}`}
             >
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-sm truncate">
                   {offer.pharmacyName}
                 </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {offer.pharmacyAddress || "Address unavailable"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Phone: {offer.pharmacyPhone || "Unavailable"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {offer.distanceKm == null
+                    ? "Distance unavailable"
+                    : `${offer.distanceKm.toFixed(1)} km away`}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <Badge
+                    variant="secondary"
+                    className={offer.isOnline === false ? "bg-gray-200 text-gray-700" : "bg-green-100 text-green-800"}
+                  >
+                    {offer.isOnline === false ? "Offline" : "Online"}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {offer.inStock
+                      ? `${offer.stockQuantity ?? 0} available`
+                      : "Out of stock"}
+                  </Badge>
+                </div>
+                {(offer.mobileMoneyNumber || offer.mobileMoneyProvider || offer.mobileMoneyAccountName) && (
+                  <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>
+                      {offer.mobileMoneyProvider || "Mobile money"}{offer.mobileMoneyAccountName ? ` · ${offer.mobileMoneyAccountName}` : ""}
+                      {offer.mobileMoneyNumber ? ` · ${offer.mobileMoneyNumber}` : ""}
+                    </span>
+                    {offer.mobileMoneyNumber && (
+                      <button
+                        type="button"
+                        aria-label={`Copy payment number for ${offer.pharmacyName}`}
+                        className="rounded p-0.5 hover:bg-secondary text-primary"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(offer.mobileMoneyNumber!);
+                          toast({ title: "Payment number copied" });
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                   {offer.availableForDelivery && (
                     <span className="inline-flex items-center gap-1">
@@ -284,7 +341,7 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
               <div className="text-right shrink-0">
                 <div className="font-display font-bold text-dark-green">
                   {formatLeones(offer.priceLeones)}
-                  {idx === 0 && drug.offers.length > 1 && offer.inStock && (
+                  {idx === 0 && drug.offers.length > 1 && offer.inStock && offer.isOnline !== false && (
                     <span className="ml-1.5 text-[10px] font-sans font-semibold text-primary uppercase">
                       Best
                     </span>
@@ -298,26 +355,16 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
                 size="sm"
                 className="rounded-full shrink-0 min-w-16"
                 onClick={() => add(offer)}
-                disabled={!offer.inStock}
-                variant={offer.inStock ? "default" : "secondary"}
+                disabled={!offer.inStock || offer.isOnline === false}
+                variant={offer.inStock && offer.isOnline !== false ? "default" : "secondary"}
                 data-testid={`button-add-${drug.listingKey}-${offer.pharmacyId}`}
               >
-                {offer.inStock ? "Add" : "Out of stock"}
+                {!offer.inStock ? "Out of stock" : offer.isOnline === false ? "Offline" : "Add"}
               </Button>
             </div>
           ))}
-        </div>
-
-        {drug.offers.length > 3 && (
-          <button
-            className="text-xs text-primary font-medium hover:underline"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded
-              ? "Show fewer pharmacies"
-              : `Compare all ${drug.offers.length} pharmacies`}
-          </button>
-        )}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

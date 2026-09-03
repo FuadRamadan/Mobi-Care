@@ -42,9 +42,12 @@ import type {
   ExportHqInsightsCsvParams,
   FlagReviewInput,
   GenerateSettlementsInput,
+  GetHqDashboardTrendsParams,
   GetHqInsightsParams,
+  GetOrdersByDayParams,
   HealthStatus,
   HqDashboard,
+  HqDashboardTrends,
   HqDrug,
   HqDrugInput,
   HqDrugUpdate,
@@ -3753,20 +3756,27 @@ export function useGetAnalyticsOverview<TData = Awaited<ReturnType<typeof getAna
 
 
 
-export const getGetOrdersByDayUrl = () => {
+export const getGetOrdersByDayUrl = (params?: GetOrdersByDayParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/pharmacy/analytics/orders-by-day`
+  return stringifiedParams.length > 0 ? `/api/pharmacy/analytics/orders-by-day?${stringifiedParams}` : `/api/pharmacy/analytics/orders-by-day`
 }
 
 /**
- * @summary Orders and revenue grouped by day (last 30 days)
+ * @summary Orders and revenue grouped by day for a selected range
  */
-export const getOrdersByDay = async ( options?: Parameters<typeof customFetch>[1]): Promise<DailyOrderStat[]> => {
+export const getOrdersByDay = async (params?: GetOrdersByDayParams, options?: Parameters<typeof customFetch>[1]): Promise<DailyOrderStat[]> => {
 
-  return customFetch<DailyOrderStat[]>(getGetOrdersByDayUrl(),
+  return customFetch<DailyOrderStat[]>(getGetOrdersByDayUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3779,23 +3789,23 @@ export const getOrdersByDay = async ( options?: Parameters<typeof customFetch>[1
 
 
 
-export const getGetOrdersByDayQueryKey = () => {
+export const getGetOrdersByDayQueryKey = (params?: GetOrdersByDayParams,) => {
     return [
-    `/api/pharmacy/analytics/orders-by-day`
+    `/api/pharmacy/analytics/orders-by-day`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetOrdersByDayQueryOptions = <TData = Awaited<ReturnType<typeof getOrdersByDay>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrdersByDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetOrdersByDayQueryOptions = <TData = Awaited<ReturnType<typeof getOrdersByDay>>, TError = ErrorType<unknown>>(params?: GetOrdersByDayParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrdersByDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetOrdersByDayQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetOrdersByDayQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrdersByDay>>> = ({ signal }) => getOrdersByDay({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrdersByDay>>> = ({ signal }) => getOrdersByDay(params, { signal, ...requestOptions });
 
 
 
@@ -3809,15 +3819,15 @@ export type GetOrdersByDayQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Orders and revenue grouped by day (last 30 days)
+ * @summary Orders and revenue grouped by day for a selected range
  */
 
 export function useGetOrdersByDay<TData = Awaited<ReturnType<typeof getOrdersByDay>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrdersByDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetOrdersByDayParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrdersByDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetOrdersByDayQueryOptions(options)
+  const queryOptions = getGetOrdersByDayQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3993,7 +4003,7 @@ export const getGetHqDashboardUrl = () => {
 }
 
 /**
- * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
+ * @summary HQ command centre — operational aggregates and complete live order feed
  */
 export const getHqDashboard = async ( options?: Parameters<typeof customFetch>[1]): Promise<HqDashboard> => {
 
@@ -4040,7 +4050,7 @@ export type GetHqDashboardQueryError = ErrorType<unknown>
 
 
 /**
- * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
+ * @summary HQ command centre — operational aggregates and complete live order feed
  */
 
 export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboard>>, TError = ErrorType<unknown>>(
@@ -4049,6 +4059,90 @@ export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboa
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHqDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqDashboardTrendsUrl = (params?: GetHqDashboardTrendsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/dashboard/trends?${stringifiedParams}` : `/api/hq/dashboard/trends`
+}
+
+/**
+ * @summary Daily platform searches and orders for a selected range
+ */
+export const getHqDashboardTrends = async (params?: GetHqDashboardTrendsParams, options?: Parameters<typeof customFetch>[1]): Promise<HqDashboardTrends> => {
+
+  return customFetch<HqDashboardTrends>(getGetHqDashboardTrendsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqDashboardTrendsQueryKey = (params?: GetHqDashboardTrendsParams,) => {
+    return [
+    `/api/hq/dashboard/trends`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqDashboardTrendsQueryOptions = <TData = Awaited<ReturnType<typeof getHqDashboardTrends>>, TError = ErrorType<unknown>>(params?: GetHqDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqDashboardTrendsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqDashboardTrends>>> = ({ signal }) => getHqDashboardTrends(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqDashboardTrendsQueryResult = NonNullable<Awaited<ReturnType<typeof getHqDashboardTrends>>>
+export type GetHqDashboardTrendsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Daily platform searches and orders for a selected range
+ */
+
+export function useGetHqDashboardTrends<TData = Awaited<ReturnType<typeof getHqDashboardTrends>>, TError = ErrorType<unknown>>(
+ params?: GetHqDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqDashboardTrendsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4077,7 +4171,7 @@ export const getGetHqInsightsUrl = (params?: GetHqInsightsParams,) => {
 }
 
 /**
- * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+ * @summary Permission-protected Data & Insights metrics including every record
  */
 export const getHqInsights = async (params?: GetHqInsightsParams, options?: Parameters<typeof customFetch>[1]): Promise<HqInsights> => {
 
@@ -4124,7 +4218,7 @@ export type GetHqInsightsQueryError = ErrorType<void>
 
 
 /**
- * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
+ * @summary Permission-protected Data & Insights metrics including every record
  */
 
 export function useGetHqInsights<TData = Awaited<ReturnType<typeof getHqInsights>>, TError = ErrorType<void>>(
@@ -4161,7 +4255,7 @@ export const getExportHqInsightsCsvUrl = (params?: ExportHqInsightsCsvParams,) =
 }
 
 /**
- * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+ * @summary Download complete Data & Insights CSV
  */
 export const exportHqInsightsCsv = async (params?: ExportHqInsightsCsvParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
 
@@ -4208,7 +4302,7 @@ export type ExportHqInsightsCsvQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
+ * @summary Download complete Data & Insights CSV
  */
 
 export function useExportHqInsightsCsv<TData = Awaited<ReturnType<typeof exportHqInsightsCsv>>, TError = ErrorType<unknown>>(

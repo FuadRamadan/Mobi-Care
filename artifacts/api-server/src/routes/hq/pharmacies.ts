@@ -71,6 +71,12 @@ router.post("/", async (req: AuthRequest, res) => {
         ),
       phone: z.string().min(5).optional(),
       address: z.string().optional(),
+      mobileMoneyProvider: z.string().min(1).optional(),
+      mobileMoneyNumber: z.string().min(3).optional(),
+      mobileMoneyAccountName: z.string().min(1).optional(),
+      locationLat: z.number().min(-90).max(90).optional(),
+      locationLng: z.number().min(-180).max(180).optional(),
+      isOnline: z.boolean().optional(),
     })
     .safeParse(req.body);
 
@@ -125,6 +131,12 @@ router.post("/", async (req: AuthRequest, res) => {
         username: body.data.username,
         phone: body.data.phone ?? null,
         address: body.data.address ?? null,
+        mobileMoneyProvider: body.data.mobileMoneyProvider ?? null,
+        mobileMoneyNumber: body.data.mobileMoneyNumber ?? null,
+        mobileMoneyAccountName: body.data.mobileMoneyAccountName ?? null,
+        locationLat: body.data.locationLat?.toString() ?? null,
+        locationLng: body.data.locationLng?.toString() ?? null,
+        isOnline: body.data.isOnline ?? true,
         passwordHash,
         mustChangePassword: true,
         temporaryPasswordExpiresAt,
@@ -287,6 +299,12 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       name: z.string().min(1).optional(),
       phone: z.string().min(5).nullable().optional(),
       address: z.string().nullable().optional(),
+      mobileMoneyProvider: z.string().min(1).nullable().optional(),
+      mobileMoneyNumber: z.string().min(3).nullable().optional(),
+      mobileMoneyAccountName: z.string().min(1).nullable().optional(),
+      locationLat: z.number().min(-90).max(90).nullable().optional(),
+      locationLng: z.number().min(-180).max(180).nullable().optional(),
+      isOnline: z.boolean().optional(),
     })
     .safeParse(req.body);
 
@@ -307,7 +325,18 @@ router.patch("/:id", async (req: AuthRequest, res) => {
 
   const [updated] = await db
     .update(pharmaciesTable)
-    .set({ ...body.data, updatedAt: new Date() })
+    .set({
+      ...body.data,
+      locationLat:
+        body.data.locationLat === undefined
+          ? undefined
+          : body.data.locationLat?.toString() ?? null,
+      locationLng:
+        body.data.locationLng === undefined
+          ? undefined
+          : body.data.locationLng?.toString() ?? null,
+      updatedAt: new Date(),
+    })
     .where(eq(pharmaciesTable.id, id))
     .returning();
 
