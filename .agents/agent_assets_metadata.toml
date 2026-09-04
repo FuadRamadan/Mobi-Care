@@ -70,3 +70,17 @@ mtime_ms = 1788357140937
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/c358958a-2335-4917-a467-d61564675731/68f34faa-7860-44a8-8f04-5eac01b3863e"
 storage_version_token = "1788357171449608"
 content_type = "text/html"
+
+[[outputs]]
+id = "o4ncMI6GLG1ZbxLGjxmCc"
+uri = "file://exports/MobiCare-complete-application-2026-09-04.zip"
+type = "unspecified"
+title = "MobiCare Complete Application Export"
+description = "Canonical API, gateway website, pharmacy portal, Expo mobile app, shared libraries, migrations, catalogue workbook, setup guide, and development PostgreSQL schema/data dump. Secrets and plaintext credential files are excluded."
+logical_id = "9c354684-189a-4fe4-9e49-5fd13606a17e"
+content_hash = "sha256:a2f65d11ba07a469e89db66ff912b8db1ac25f6c9a12582881f98445f1515feb"
+size = 3194274
+mtime_ms = 1788523116335
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/9c354684-189a-4fe4-9e49-5fd13606a17e/c5c872a4-3c68-451f-88a8-3df656e4e103"
+storage_version_token = "1788523130549997"
+content_type = "application/octet-stream"
