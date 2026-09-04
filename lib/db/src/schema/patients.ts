@@ -13,9 +13,6 @@ export const patientsTable = pgTable("patients", {
   dateOfBirth: date("date_of_birth", { mode: "string" }),
   nin: text("nin"),
   address: text("address"),
-  // Optional coordinates support an honest distance estimate in search results.
-  locationLat: text("location_lat"),
-  locationLng: text("location_lng"),
   email: text("email"),
   nationality: text("nationality"),
   profileImageKey: text("profile_image_key"),

@@ -92,7 +92,6 @@ router.get("/", async (req, res) => {
       .select({
         medicineCommissionMinor: sql<number>`coalesce(sum(${ordersTable.medicineCommissionMinor}), 0)::int`,
         deliveryCommissionMinor: sql<number>`coalesce(sum(${ordersTable.deliveryCommissionMinor}), 0)::int`,
-        patientPaidLeones: sql<string>`coalesce(sum(${ordersTable.totalLeones}), 0)::numeric`,
         owedPharmacyMinor: sql<number>`coalesce(sum(${ordersTable.pharmacyMedicineTotalMinor}), 0)::int`,
         owedCourierMinor: sql<number>`coalesce(sum(${ordersTable.courierPayoutMinor}) filter (where ${ordersTable.status} = 'delivered'), 0)::int`,
         completedOrders: sql<number>`count(*)::int`,
@@ -122,7 +121,6 @@ router.get("/", async (req, res) => {
       rangeEndExclusive: range.end,
       medicineCommissionMinor: metrics?.medicineCommissionMinor ?? 0,
       deliveryCommissionMinor: metrics?.deliveryCommissionMinor ?? 0,
-      patientPaidLeones: Number(metrics?.patientPaidLeones ?? 0),
       commissionIncomeMinor:
         (metrics?.medicineCommissionMinor ?? 0) +
         (metrics?.deliveryCommissionMinor ?? 0),

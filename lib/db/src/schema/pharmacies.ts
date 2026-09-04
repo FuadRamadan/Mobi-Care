@@ -17,11 +17,6 @@ export const pharmaciesTable = pgTable("pharmacies", {
   address: text("address"),
   locationLat: text("location_lat"),
   locationLng: text("location_lng"),
-  mobileMoneyProvider: text("mobile_money_provider"),
-  mobileMoneyNumber: text("mobile_money_number"),
-  mobileMoneyAccountName: text("mobile_money_account_name"),
-  // A pharmacy can be temporarily offline while its account remains active.
-  isOnline: boolean("is_online").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   // Controlled-substance authorisation issued by HQ
   controlledSubstanceAuthorized: boolean("controlled_substance_authorized")

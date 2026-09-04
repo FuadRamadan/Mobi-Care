@@ -6,7 +6,6 @@ import {
   useResetPharmacyPassword,
   getListHqPharmaciesQueryKey,
 } from '@workspace/api-client-react';
-import type { HqPharmacy } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import HqLayout from './HqLayout';
 import { EmptyState, formatDate } from './shared';
@@ -33,31 +32,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, KeyRound, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
-type PharmacyDecisionDetails = {
-  mobileMoneyProvider?: string | null;
-  mobileMoneyNumber?: string | null;
-  mobileMoneyAccountName?: string | null;
-  isOnline?: boolean;
-  locationLat?: string | null;
-  locationLng?: string | null;
-};
-
 export default function HqPharmacies() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data, isLoading } = useListHqPharmacies();
-  const pharmacies = (data ?? []) as (HqPharmacy & PharmacyDecisionDetails)[];
+  const pharmacies = data ?? [];
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListHqPharmaciesQueryKey() });
   const onError = (err: unknown) =>
     toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
 
   const [openOnboard, setOpenOnboard] = useState(false);
-  const [form, setForm] = useState({
-    name: '', username: '', phone: '', address: '',
-    mobileMoneyProvider: '', mobileMoneyNumber: '', mobileMoneyAccountName: '',
-    locationLat: '', locationLng: '',
-  });
+  const [form, setForm] = useState({ name: '', username: '', phone: '', address: '' });
   const [tempPasswordRes, setTempPasswordRes] = useState<{ tempPassword: string; temporaryPasswordExpiresAt: string } | null>(null);
 
   const [resetTargetId, setResetTargetId] = useState<string | null>(null);
@@ -99,7 +85,7 @@ export default function HqPharmacies() {
             if (!v && tempPasswordRes) return;
             if (!v) {
               setTempPasswordRes(null);
-              setForm({ name: '', username: '', phone: '', address: '', mobileMoneyProvider: '', mobileMoneyNumber: '', mobileMoneyAccountName: '', locationLat: '', locationLng: '' });
+              setForm({ name: '', username: '', phone: '', address: '' });
               setOpenOnboard(false);
             } else {
               setOpenOnboard(v);
@@ -174,12 +160,7 @@ export default function HqPharmacies() {
                       username: form.username,
                       phone: form.phone || undefined,
                       address: form.address || undefined,
-                      mobileMoneyProvider: form.mobileMoneyProvider || undefined,
-                      mobileMoneyNumber: form.mobileMoneyNumber || undefined,
-                      mobileMoneyAccountName: form.mobileMoneyAccountName || undefined,
-                      locationLat: form.locationLat ? Number(form.locationLat) : undefined,
-                      locationLng: form.locationLng ? Number(form.locationLng) : undefined,
-                    } as never,
+                    },
                   });
                 }}
               >
@@ -198,28 +179,6 @@ export default function HqPharmacies() {
                 <div className="space-y-1.5">
                   <Label>Address (optional)</Label>
                   <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Mobile money provider (optional)</Label>
-                  <Input value={form.mobileMoneyProvider} onChange={(e) => setForm({ ...form, mobileMoneyProvider: e.target.value })} placeholder="e.g. Orange Money" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Mobile money payment number (optional)</Label>
-                  <Input value={form.mobileMoneyNumber} onChange={(e) => setForm({ ...form, mobileMoneyNumber: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Mobile money account name (optional)</Label>
-                  <Input value={form.mobileMoneyAccountName} onChange={(e) => setForm({ ...form, mobileMoneyAccountName: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Latitude (optional)</Label>
-                    <Input type="number" min={-90} max={90} step="any" value={form.locationLat} onChange={(e) => setForm({ ...form, locationLat: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Longitude (optional)</Label>
-                    <Input type="number" min={-180} max={180} step="any" value={form.locationLng} onChange={(e) => setForm({ ...form, locationLng: e.target.value })} />
-                  </div>
                 </div>
                 <Button type="submit" disabled={onboard.isPending} className="w-full" data-testid="button-submit-onboard">
                   {onboard.isPending ? 'Creating…' : 'Create pharmacy account'}
@@ -270,7 +229,6 @@ export default function HqPharmacies() {
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Payment details</TableHead>
                 <TableHead>Online</TableHead>
                 <TableHead>Tier 1 authorised</TableHead>
                 <TableHead>Joined</TableHead>
@@ -286,59 +244,16 @@ export default function HqPharmacies() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{p.username}</TableCell>
                   <TableCell>{p.phone ?? '—'}</TableCell>
-                  <TableCell className="min-w-56 space-y-1.5">
-                    <Input
-                      aria-label={`Mobile money provider for ${p.name}`}
-                      defaultValue={p.mobileMoneyProvider ?? ''}
-                      placeholder="Provider"
-                      disabled={update.isPending}
-                      onBlur={(event) => update.mutate({ id: p.id, data: { mobileMoneyProvider: event.target.value || null } as never })}
-                    />
-                    <Input
-                      aria-label={`Mobile money number for ${p.name}`}
-                      defaultValue={p.mobileMoneyNumber ?? ''}
-                      placeholder="Payment number"
-                      disabled={update.isPending}
-                      onBlur={(event) => update.mutate({ id: p.id, data: { mobileMoneyNumber: event.target.value || null } as never })}
-                    />
-                    <Input
-                      aria-label={`Mobile money account name for ${p.name}`}
-                      defaultValue={p.mobileMoneyAccountName ?? ''}
-                      placeholder="Account name"
-                      disabled={update.isPending}
-                      onBlur={(event) => update.mutate({ id: p.id, data: { mobileMoneyAccountName: event.target.value || null } as never })}
-                    />
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <Input
-                        type="number"
-                        min={-90}
-                        max={90}
-                        step="any"
-                        defaultValue={p.locationLat ?? ''}
-                        placeholder="Latitude"
-                        onBlur={(event) => update.mutate({ id: p.id, data: { locationLat: event.target.value ? Number(event.target.value) : null } as never })}
-                      />
-                      <Input
-                        type="number"
-                        min={-180}
-                        max={180}
-                        step="any"
-                        defaultValue={p.locationLng ?? ''}
-                        placeholder="Longitude"
-                        onBlur={(event) => update.mutate({ id: p.id, data: { locationLng: event.target.value ? Number(event.target.value) : null } as never })}
-                      />
-                    </div>
-                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch
-                        checked={p.isOnline ?? true}
+                        checked={p.isActive}
                         disabled={update.isPending}
-                        onCheckedChange={(v) => update.mutate({ id: p.id, data: { isOnline: v } as never })}
+                        onCheckedChange={(v) => update.mutate({ id: p.id, data: { isActive: v } })}
                         data-testid={`switch-active-${p.id}`}
                       />
-                      <Badge variant="secondary" className={p.isOnline ?? true ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
-                        {p.isOnline ?? true ? 'online' : 'offline'}
+                      <Badge variant="secondary" className={p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
+                        {p.isActive ? 'online' : 'offline'}
                       </Badge>
                     </div>
                   </TableCell>

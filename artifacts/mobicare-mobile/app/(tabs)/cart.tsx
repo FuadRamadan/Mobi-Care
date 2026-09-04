@@ -40,8 +40,6 @@ export default function CartScreen() {
   const {
     cart,
     itemCount,
-    drugTotalLeones,
-    serviceFeeLeones,
     totalLeones,
     requiresPrescription,
     requiresCollection,
@@ -171,7 +169,6 @@ export default function CartScreen() {
         data: {
           pharmacyId: cart.pharmacyId!,
           fulfillmentType: activeFulfillment,
-          expectedTotalMinor: Math.round(totalLeones * 100),
           items: cart.items.map((i) => ({
             inventoryId: i.inventoryId,
             quantity: i.quantity,
@@ -455,12 +452,10 @@ export default function CartScreen() {
       <View style={s.section}>
         <Text style={s.sectionTitle}>Summary</Text>
         <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Drug price</Text>
-          <Text style={s.summaryValue}>{formatLeones(drugTotalLeones)}</Text>
-        </View>
-        <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Service fee (5%)</Text>
-          <Text style={s.summaryValue}>{formatLeones(serviceFeeLeones)}</Text>
+          <Text style={s.summaryLabel}>
+            {itemCount} item{itemCount !== 1 ? "s" : ""}
+          </Text>
+          <Text style={s.summaryValue}>{formatLeones(totalLeones)}</Text>
         </View>
         <View style={s.summaryRow}>
           <Text style={s.summaryLabel}>Payment</Text>
@@ -471,7 +466,7 @@ export default function CartScreen() {
           </View>
         </View>
         <View style={[s.summaryRow, s.summaryTotal]}>
-          <Text style={s.totalLabel}>Total payable</Text>
+          <Text style={s.totalLabel}>Total</Text>
           <Text style={s.totalValue}>{formatLeones(totalLeones)}</Text>
         </View>
       </View>

@@ -13,7 +13,6 @@ import {
   DrugPrimaryCategory,
   DrugSubcategory,
   getListInventoryQueryKey,
-  getListCatalogueQueryKey,
 } from "@workspace/api-client-react";
 import { formatLeones } from "@/lib/format";
 import {
@@ -52,15 +51,6 @@ import { differenceInDays, parseISO } from "date-fns";
 
 const selectClass =
   "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
-const PACKAGING_UNITS = [
-  "Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube",
-  "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece",
-] as const;
-const DOSAGE_FORMS = [
-  "Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion",
-  "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder",
-  "Patch",
-] as const;
 
 function TierBadge({
   tier,
@@ -111,7 +101,8 @@ function DrugDropdown({
         d.isApproved &&
         (d.name.toLowerCase().includes(search.toLowerCase()) ||
           (d.genericName ?? "").toLowerCase().includes(search.toLowerCase())),
-    );
+    )
+    .slice(0, 20);
 
   return (
     <div ref={ref} className="relative">
@@ -202,7 +193,6 @@ function RequestMissingDrugModal({
   categories: DrugCategory[];
 }) {
   const proposeMutation = useProposeDrug();
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [genericName, setGenericName] = useState("");
   const [strength, setStrength] = useState("");
@@ -243,9 +233,6 @@ function RequestMissingDrugModal({
           unit: unit || undefined,
           description: description || undefined,
         },
-      });
-      await queryClient.invalidateQueries({
-        queryKey: getListCatalogueQueryKey(),
       });
       toast.success("Drug request submitted. HQ will review it shortly.");
       onOpenChange(false);
@@ -344,34 +331,24 @@ function RequestMissingDrugModal({
               <Label>
                 Form <span className="text-destructive">*</span>
               </Label>
-              <select
+              <Input
                 value={form}
                 onChange={(e) => setForm(e.target.value)}
-                className={selectClass}
-                data-testid="select-propose-form"
-              >
-                <option value="">Select dosage form...</option>
-                {DOSAGE_FORMS.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
+                placeholder="e.g. Tablet"
+                data-testid="input-propose-form"
+              />
               {errors.form && (
                 <p className="text-xs text-destructive">{errors.form}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label>Unit</Label>
-              <select
+              <Input
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className={selectClass}
-                data-testid="select-propose-unit"
-              >
-                <option value="">Select packaging...</option>
-                {PACKAGING_UNITS.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
+                placeholder="e.g. Box"
+                data-testid="input-propose-unit"
+              />
             </div>
           </div>
 
@@ -666,6 +643,10 @@ function ListingModal({
   const commonStrengths = isEdit
     ? item!.drug.commonStrengths || []
     : selectedDrug?.commonStrengths || [];
+  const commonForms = isEdit
+    ? item!.drug.commonForms || []
+    : selectedDrug?.commonForms || [];
+
   const selectedCategoryObj = categories.find(
     (c) => c.value === primaryCategory,
   );
@@ -811,19 +792,18 @@ function ListingModal({
                 <Label>
                   Form <span className="text-destructive">*</span>
                 </Label>
-                <select
+                <Input
+                  list="forms-list"
                   value={form}
                   onChange={(e) => setForm(e.target.value)}
-                  className={selectClass}
-                  data-testid="select-form"
-                >
-                  <option value="">Select dosage form...</option>
-                  {[...DOSAGE_FORMS, ...(isEdit && form && !DOSAGE_FORMS.includes(form as any) ? [form] : [])].map((option) => (
-                    <option key={option} value={option}>
-                      {option}{!DOSAGE_FORMS.includes(option as any) ? " (legacy)" : ""}
-                    </option>
+                  placeholder="e.g. Tablet"
+                  data-testid="input-form"
+                />
+                <datalist id="forms-list">
+                  {commonForms.map((f) => (
+                    <option key={f} value={f} />
                   ))}
-                </select>
+                </datalist>
                 {errors.form && (
                   <p className="text-xs text-destructive">{errors.form}</p>
                 )}
@@ -842,19 +822,12 @@ function ListingModal({
                 <Label>
                   Unit of Sale <span className="text-destructive">*</span>
                 </Label>
-                <select
+                <Input
                   value={unitOfSale}
                   onChange={(e) => setUnitOfSale(e.target.value)}
-                  className={selectClass}
-                  data-testid="select-unit"
-                >
-                  <option value="">Select packaging...</option>
-                  {[...PACKAGING_UNITS, ...(isEdit && unitOfSale && !PACKAGING_UNITS.includes(unitOfSale as any) ? [unitOfSale] : [])].map((option) => (
-                    <option key={option} value={option}>
-                      {option}{!PACKAGING_UNITS.includes(option as any) ? " (legacy)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="e.g. Box, Pack"
+                  data-testid="input-unit"
+                />
                 {errors.unitOfSale && (
                   <p className="text-xs text-destructive">
                     {errors.unitOfSale}
@@ -1117,13 +1090,7 @@ export default function Inventory() {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   const { data: inventory, isLoading: isLoadingInventory } = useListInventory();
-  const { data: catalogue = [] } = useListCatalogue({
-    query: {
-      queryKey: getListCatalogueQueryKey(),
-      refetchInterval: 15_000,
-      refetchOnMount: "always",
-    },
-  });
+  const { data: catalogue = [] } = useListCatalogue();
   const { data: categories = [] } = useListDrugCategories();
 
   const deleteMutation = useDeleteInventoryItem();

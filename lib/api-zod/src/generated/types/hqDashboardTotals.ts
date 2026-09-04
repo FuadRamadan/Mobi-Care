@@ -19,4 +19,6 @@ export type HqDashboardTotals = {
   awaitingDispatch: number;
   pendingPrescriptions: number;
   unconfirmedDeliveries: number;
+  /** Sum of orders in delivered or collected status with a completed_at timestamp. */
+  completedRevenueLeones: number;
 };

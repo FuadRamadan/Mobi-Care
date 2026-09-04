@@ -29,16 +29,4 @@ export interface PatientProfileUpdate {
      * @nullable
      */
   nationality?: string | null;
-  /**
-     * @minimum -90
-     * @maximum 90
-     * @nullable
-     */
-  locationLat?: number | null;
-  /**
-     * @minimum -180
-     * @maximum 180
-     * @nullable
-     */
-  locationLng?: number | null;
 }

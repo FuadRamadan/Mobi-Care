@@ -36,7 +36,6 @@ import {
 import { allocatePatientPrices } from "../../lib/financialAllocation.js";
 
 const router = safeRouter();
-const SERVICE_FEE_BASIS_POINTS = 500;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -386,7 +385,6 @@ router.post("/", async (req: AuthRequest, res) => {
     .object({
       pharmacyId: z.string().uuid(),
       fulfillmentType: z.enum(["delivery", "collection"]),
-      expectedTotalMinor: z.number().int().nonnegative(),
       deliveryAddress: z.string().min(5).optional(),
       prescriptionImageKey: z.string().min(1).optional(),
       items: z
@@ -443,8 +441,8 @@ router.post("/", async (req: AuthRequest, res) => {
     .from(pharmaciesTable)
     .where(eq(pharmaciesTable.id, input.pharmacyId))
     .limit(1);
-  if (!pharmacy || !pharmacy.isActive || !pharmacy.isOnline) {
-    res.status(409).json({ error: "Pharmacy is not currently available" });
+  if (!pharmacy || !pharmacy.isActive) {
+    res.status(404).json({ error: "Pharmacy not found or inactive" });
     return;
   }
 
@@ -551,6 +549,7 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
+  const financialSettings = await getFinancialSettings();
   const allocatedPrices = allocatePatientPrices(
     input.items.map((item) => {
       const listing = byInventory.get(item.inventoryId)!;
@@ -560,7 +559,7 @@ router.post("/", async (req: AuthRequest, res) => {
         quantity: item.quantity,
       };
     }),
-    SERVICE_FEE_BASIS_POINTS,
+    financialSettings.medicineMarkupBasisPoints,
   );
   const allocatedByInventory = new Map(
     allocatedPrices.map((line) => [line.key, line]),
@@ -571,27 +570,17 @@ router.post("/", async (req: AuthRequest, res) => {
   );
   const patientMedicineTotalMinor =
     pharmacyMedicineTotalMinor + medicineCommissionMinor;
-  // The customer-facing price is deliberately only the pharmacy's drug price
-  // plus the fixed 5% MobiCare service fee. Courier pay remains a separate
-  // platform obligation and is never added as a hidden checkout charge.
-  const financialSettings = await getFinancialSettings();
-  const deliveryFeeMinor = 0;
+  const deliveryFeeMinor =
+    input.fulfillmentType === "delivery"
+      ? financialSettings.deliveryFeeMinor
+      : 0;
   const courierPayoutMinor =
     input.fulfillmentType === "delivery"
       ? financialSettings.courierPayoutMinor
       : 0;
-  const deliveryCommissionMinor = 0;
-  const totalMinor = patientMedicineTotalMinor;
+  const deliveryCommissionMinor = deliveryFeeMinor - courierPayoutMinor;
+  const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
   const total = minorToLeones(totalMinor);
-  if (input.expectedTotalMinor !== totalMinor) {
-    res.status(409).json({
-      error: "The order price changed. Review the updated total before paying.",
-      code: "PRICE_CHANGED",
-      expectedTotalMinor: input.expectedTotalMinor,
-      currentTotalMinor: totalMinor,
-    });
-    return;
-  }
 
   if (prescriptionRequired && !input.prescriptionImageKey) {
     res.status(400).json({
@@ -610,36 +599,6 @@ router.post("/", async (req: AuthRequest, res) => {
   let createdOrder: typeof ordersTable.$inferSelect;
   try {
     createdOrder = await db.transaction(async (tx) => {
-      const lockedListings = await tx
-        .select({
-          id: pharmacyInventoryTable.id,
-          priceLeones: pharmacyInventoryTable.priceLeones,
-        })
-        .from(pharmacyInventoryTable)
-        .where(
-          and(
-            eq(pharmacyInventoryTable.pharmacyId, input.pharmacyId),
-            inArray(pharmacyInventoryTable.id, inventoryIds),
-          ),
-        )
-        .for("update");
-      const lockedById = new Map(lockedListings.map((listing) => [listing.id, listing]));
-      const priceChanged =
-        lockedListings.length !== input.items.length ||
-        input.items.some((item) => {
-          const locked = lockedById.get(item.inventoryId);
-          const originallyQuoted = byInventory.get(item.inventoryId);
-          return (
-            !locked ||
-            !originallyQuoted ||
-            decimalLeonesToMinor(locked.priceLeones) !==
-              decimalLeonesToMinor(originallyQuoted.priceLeones)
-          );
-        });
-      if (priceChanged) {
-        throw Object.assign(new Error("PRICE_CHANGED"), { code: "PRICE_CHANGED" });
-      }
-
       const [order] = await tx
         .insert(ordersTable)
         .values({
@@ -652,7 +611,8 @@ router.post("/", async (req: AuthRequest, res) => {
           status: "awaiting_payment",
           paymentMethod: "orange_money",
           totalLeones: total,
-          medicineMarkupBasisPoints: SERVICE_FEE_BASIS_POINTS,
+          medicineMarkupBasisPoints:
+            financialSettings.medicineMarkupBasisPoints,
           pharmacyMedicineTotalMinor,
           medicineCommissionMinor,
           patientMedicineTotalMinor,
@@ -723,13 +683,6 @@ router.post("/", async (req: AuthRequest, res) => {
       return order!;
     });
   } catch (err: any) {
-    if (err?.code === "PRICE_CHANGED") {
-      res.status(409).json({
-        error: "The order price changed. Review the updated total before paying.",
-        code: "PRICE_CHANGED",
-      });
-      return;
-    }
     if (err?.code === "INVALID_PRESCRIPTION_KEY") {
       res.status(400).json({
         error:

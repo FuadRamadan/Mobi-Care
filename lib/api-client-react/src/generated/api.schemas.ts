@@ -247,10 +247,6 @@ export interface PatientProfile {
   /** @nullable */
   address: string | null;
   /** @nullable */
-  locationLat: string | null;
-  /** @nullable */
-  locationLng: string | null;
-  /** @nullable */
   email: string | null;
   /** @nullable */
   nationality: string | null;
@@ -282,18 +278,6 @@ export interface PatientProfileUpdate {
      * @nullable
      */
   nationality?: string | null;
-  /**
-     * @minimum -90
-     * @maximum 90
-     * @nullable
-     */
-  locationLat?: number | null;
-  /**
-     * @minimum -180
-     * @maximum 180
-     * @nullable
-     */
-  locationLng?: number | null;
 }
 
 export interface PatientProfilePhotoInput {
@@ -308,25 +292,10 @@ export interface DrugOffer {
   /** @nullable */
   pharmacyAddress?: string | null;
   /** @nullable */
-  pharmacyPhone?: string | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyAccountName?: string | null;
-  isOnline: boolean;
-  /**
-     * Haversine estimate in kilometres, or null when coordinates are unavailable
-     * @nullable
-     */
-  distanceKm?: number | null;
-  /** @nullable */
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
   priceLeones: number;
-  stockQuantity: number;
   unitOfSale: string;
   inStock: boolean;
   availableForDelivery: boolean;
@@ -441,11 +410,6 @@ export const PatientOrderInputFulfillmentType = {
 export interface PatientOrderInput {
   pharmacyId: string;
   fulfillmentType: PatientOrderInputFulfillmentType;
-  /**
-     * Exact total shown at checkout in minor units; creation fails if live prices differ
-     * @minimum 0
-     */
-  expectedTotalMinor: number;
   deliveryAddress?: string;
   prescriptionImageKey?: string;
   items: PatientOrderItemInput[];
@@ -849,11 +813,20 @@ export type HqInsightsRankingsItem = { [key: string]: unknown };
 
 export type HqInsightsRankings = {[key: string]: HqInsightsRankingsItem[]};
 
+/**
+ * Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.
+ */
+export type HqInsightsSuppression = {[key: string]: string};
+
 export interface HqInsights {
+  /** @minimum 10 */
+  minimumGroupSize: number;
   dateRange: HqInsightsDateRange;
   totals: HqInsightsTotals;
   trends: HqInsightsTrends;
   rankings: HqInsightsRankings;
+  /** Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted. */
+  suppression: HqInsightsSuppression;
 }
 
 export type HqDashboardTotals = {
@@ -869,6 +842,8 @@ export type HqDashboardTotals = {
   awaitingDispatch: number;
   pendingPrescriptions: number;
   unconfirmedDeliveries: number;
+  /** Sum of orders in delivered or collected status with a completed_at timestamp. */
+  completedRevenueLeones: number;
 };
 
 export type HqDashboardOrdersByStatusItem = {
@@ -891,30 +866,6 @@ export interface HqDashboard {
   totals: HqDashboardTotals;
   ordersByStatus: HqDashboardOrdersByStatusItem[];
   recentOrders: HqDashboardRecentOrdersItem[];
-}
-
-export type HqDashboardTrendsPharmaciesItem = {
-  id: string;
-  name: string;
-};
-
-export type HqDashboardTrendsSearchScope = typeof HqDashboardTrendsSearchScope[keyof typeof HqDashboardTrendsSearchScope];
-
-
-export const HqDashboardTrendsSearchScope = {
-  all: 'all',
-} as const;
-
-export interface HqDailyCount {
-  date: string;
-  count: number;
-}
-
-export interface HqDashboardTrends {
-  searches: HqDailyCount[];
-  orders: HqDailyCount[];
-  pharmacies: HqDashboardTrendsPharmaciesItem[];
-  searchScope: HqDashboardTrendsSearchScope;
 }
 
 export interface HqCourierSummary {
@@ -1026,14 +977,7 @@ export interface HqPharmacy {
   locationLat?: string | null;
   /** @nullable */
   locationLng?: string | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyAccountName?: string | null;
   isActive: boolean;
-  isOnline: boolean;
   controlledSubstanceAuthorized: boolean;
   mustChangePassword: boolean;
   sessionVersion: number;
@@ -1051,20 +995,6 @@ export interface PharmacyOnboardInput {
   username: string;
   phone?: string;
   address?: string;
-  /**
-     * @minimum -90
-     * @maximum 90
-     */
-  locationLat?: number;
-  /**
-     * @minimum -180
-     * @maximum 180
-     */
-  locationLng?: number;
-  mobileMoneyProvider?: string;
-  mobileMoneyNumber?: string;
-  mobileMoneyAccountName?: string;
-  isOnline?: boolean;
 }
 
 export interface PharmacyOnboardResponse {
@@ -1320,25 +1250,6 @@ export interface HqPharmacyUpdate {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
-  /**
-     * @minimum -90
-     * @maximum 90
-     * @nullable
-     */
-  locationLat?: number | null;
-  /**
-     * @minimum -180
-     * @maximum 180
-     * @nullable
-     */
-  locationLng?: number | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyAccountName?: string | null;
-  isOnline?: boolean;
 }
 
 export interface TeamMember {
@@ -1682,8 +1593,6 @@ export interface Settlement {
 export interface SettlementMetrics {
   rangeStart: string;
   rangeEndExclusive: string;
-  /** Total amount paid by patients for completed orders in the selected period */
-  patientPaidLeones: number;
   medicineCommissionMinor: number;
   deliveryCommissionMinor: number;
   commissionIncomeMinor: number;
@@ -1779,20 +1688,6 @@ export type PatientSearchDrugsParams = {
 q?: string;
 category?: DrugPrimaryCategory;
 subcategory?: DrugSubcategory;
-};
-
-export type GetOrdersByDayParams = {
-start?: string;
-end?: string;
-};
-
-export type GetHqDashboardTrendsParams = {
-start?: string;
-end?: string;
-/**
- * Filters orders only; anonymous searches remain platform-wide
- */
-pharmacyId?: string;
 };
 
 export type GetHqInsightsParams = {

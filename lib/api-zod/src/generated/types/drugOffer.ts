@@ -13,25 +13,10 @@ export interface DrugOffer {
   /** @nullable */
   pharmacyAddress?: string | null;
   /** @nullable */
-  pharmacyPhone?: string | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyAccountName?: string | null;
-  isOnline: boolean;
-  /**
-     * Haversine estimate in kilometres, or null when coordinates are unavailable
-     * @nullable
-     */
-  distanceKm?: number | null;
-  /** @nullable */
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
   priceLeones: number;
-  stockQuantity: number;
   unitOfSale: string;
   inStock: boolean;
   availableForDelivery: boolean;

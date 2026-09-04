@@ -1067,16 +1067,9 @@ paths:
     get:
       operationId: getOrdersByDay
       tags: [analytics]
-      summary: Orders and revenue grouped by day for a selected range
+      summary: Orders and revenue grouped by day (last 30 days)
       security:
         - BearerAuth: []
-      parameters:
-        - name: start
-          in: query
-          schema: { type: string, format: date }
-        - name: end
-          in: query
-          schema: { type: string, format: date }
       responses:
         "200":
           description: Daily order data
@@ -1125,7 +1118,7 @@ paths:
     get:
       operationId: getHqDashboard
       tags: [hq]
-      summary: HQ command centre — operational aggregates and complete live order feed
+      summary: HQ command centre — aggregates, live feed, and completed delivered/collected revenue
       security:
         - BearerAuth: []
       responses:
@@ -1136,37 +1129,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqDashboard"
 
-  /hq/dashboard/trends:
-    get:
-      operationId: getHqDashboardTrends
-      tags: [hq]
-      summary: Daily platform searches and orders for a selected range
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: start
-          in: query
-          schema: { type: string, format: date }
-        - name: end
-          in: query
-          schema: { type: string, format: date }
-        - name: pharmacyId
-          in: query
-          description: Filters orders only; anonymous searches remain platform-wide
-          schema: { type: string }
-      responses:
-        "200":
-          description: Daily trend rows and available pharmacy filters
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HqDashboardTrends"
-
   /hq/insights:
     get:
       operationId: getHqInsights
       tags: [hq]
-      summary: Permission-protected Data & Insights metrics including every record
+      summary: Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
       security:
         - BearerAuth: []
       parameters:
@@ -1181,7 +1148,7 @@ paths:
           schema: { type: string, enum: [day, week, month] }
       responses:
         "200":
-          description: Complete metrics for the requested period
+          description: Aggregate metrics only; small groups are suppressed
           content:
             application/json:
               schema:
@@ -1192,7 +1159,7 @@ paths:
     get:
       operationId: exportHqInsightsCsv
       tags: [hq]
-      summary: Download complete Data & Insights CSV
+      summary: Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
       security:
         - BearerAuth: []
       parameters:
@@ -1204,7 +1171,7 @@ paths:
           schema: { type: string, format: date }
       responses:
         "200":
-          description: CSV containing every metric and bucket for the requested period
+          description: CSV containing aggregate metrics only. Buckets under 10 are omitted and suppressed totals are marked SUPPRESSED.
           content:
             text/csv:
               schema: { type: string }
@@ -2513,7 +2480,7 @@ components:
 
     PatientProfile:
       type: object
-      required: [id, name, phone, dateOfBirth, age, nin, address, locationLat, locationLng, email, nationality, profileImageUrl, profileComplete]
+      required: [id, name, phone, dateOfBirth, age, nin, address, email, nationality, profileImageUrl, profileComplete]
       properties:
         id:
           type: string
@@ -2529,10 +2496,6 @@ components:
         nin:
           type: ["string", "null"]
         address:
-          type: ["string", "null"]
-        locationLat:
-          type: ["string", "null"]
-        locationLng:
           type: ["string", "null"]
         email:
           type: ["string", "null"]
@@ -2561,14 +2524,6 @@ components:
         nationality:
           type: ["string", "null"]
           maxLength: 80
-        locationLat:
-          type: ["number", "null"]
-          minimum: -90
-          maximum: 90
-        locationLng:
-          type: ["number", "null"]
-          minimum: -180
-          maximum: 180
 
     PatientProfilePhotoInput:
       type: object
@@ -2586,10 +2541,8 @@ components:
           pharmacyId,
           pharmacyName,
           priceLeones,
-          stockQuantity,
           unitOfSale,
           inStock,
-          isOnline,
           availableForDelivery,
           availableForCollection,
         ]
@@ -2602,26 +2555,11 @@ components:
           type: string
         pharmacyAddress:
           type: ["string", "null"]
-        pharmacyPhone:
-          type: ["string", "null"]
-        mobileMoneyProvider:
-          type: ["string", "null"]
-        mobileMoneyNumber:
-          type: ["string", "null"]
-        mobileMoneyAccountName:
-          type: ["string", "null"]
-        isOnline:
-          type: boolean
-        distanceKm:
-          type: ["number", "null"]
-          description: Haversine estimate in kilometres, or null when coordinates are unavailable
         brand:
           type: ["string", "null"]
         manufacturer:
           type: ["string", "null"]
         priceLeones:
-          type: number
-        stockQuantity:
           type: number
         unitOfSale:
           type: string
@@ -2700,17 +2638,13 @@ components:
 
     PatientOrderInput:
       type: object
-      required: [pharmacyId, fulfillmentType, expectedTotalMinor, items]
+      required: [pharmacyId, fulfillmentType, items]
       properties:
         pharmacyId:
           type: string
         fulfillmentType:
           type: string
           enum: [delivery, collection]
-        expectedTotalMinor:
-          type: number
-          minimum: 0
-          description: Exact total shown at checkout in minor units; creation fails if live prices differ
         deliveryAddress:
           type: string
         prescriptionImageKey:
@@ -3368,8 +3302,9 @@ components:
 
     HqInsights:
       type: object
-      required: [dateRange, totals, trends, rankings]
+      required: [minimumGroupSize, dateRange, totals, trends, rankings, suppression]
       properties:
+        minimumGroupSize: { type: number, minimum: 10 }
         dateRange:
           type: object
           additionalProperties: true
@@ -3391,6 +3326,12 @@ components:
             items:
               type: object
               additionalProperties: true
+        suppression:
+          type: object
+          additionalProperties:
+            type: string
+          description: Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.
+
     HqDashboard:
       type: object
       required: [totals, ordersByStatus, recentOrders]
@@ -3411,6 +3352,7 @@ components:
               awaitingDispatch,
               pendingPrescriptions,
               unconfirmedDeliveries,
+              completedRevenueLeones,
             ]
           properties:
             orders:
@@ -3437,6 +3379,9 @@ components:
               type: number
             unconfirmedDeliveries:
               type: number
+            completedRevenueLeones:
+              type: number
+              description: Sum of orders in delivered or collected status with a completed_at timestamp.
         ordersByStatus:
           type: array
           items:
@@ -3468,36 +3413,6 @@ components:
                 type: ["string", "null"]
               createdAt:
                 type: string
-
-    HqDashboardTrends:
-      type: object
-      required: [searches, orders, pharmacies, searchScope]
-      properties:
-        searches:
-          type: array
-          items:
-            $ref: "#/components/schemas/HqDailyCount"
-        orders:
-          type: array
-          items:
-            $ref: "#/components/schemas/HqDailyCount"
-        pharmacies:
-          type: array
-          items:
-            type: object
-            required: [id, name]
-            properties:
-              id: { type: string }
-              name: { type: string }
-        searchScope:
-          type: string
-          enum: [all]
-    HqDailyCount:
-      type: object
-      required: [date, count]
-      properties:
-        date: { type: string, format: date }
-        count: { type: number }
 
     HqCourierSummary:
       type: object
@@ -3631,7 +3546,6 @@ components:
           name,
           username,
           isActive,
-          isOnline,
           controlledSubstanceAuthorized,
           mustChangePassword,
           sessionVersion,
@@ -3654,15 +3568,7 @@ components:
           type: ["string", "null"]
         locationLng:
           type: ["string", "null"]
-        mobileMoneyProvider:
-          type: ["string", "null"]
-        mobileMoneyNumber:
-          type: ["string", "null"]
-        mobileMoneyAccountName:
-          type: ["string", "null"]
         isActive:
-          type: boolean
-        isOnline:
           type: boolean
         controlledSubstanceAuthorized:
           type: boolean
@@ -3693,22 +3599,6 @@ components:
           type: string
         address:
           type: string
-        locationLat:
-          type: number
-          minimum: -90
-          maximum: 90
-        locationLng:
-          type: number
-          minimum: -180
-          maximum: 180
-        mobileMoneyProvider:
-          type: string
-        mobileMoneyNumber:
-          type: string
-        mobileMoneyAccountName:
-          type: string
-        isOnline:
-          type: boolean
 
     PharmacyOnboardResponse:
       type: object
@@ -3973,22 +3863,6 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
-        locationLat:
-          type: ["number", "null"]
-          minimum: -90
-          maximum: 90
-        locationLng:
-          type: ["number", "null"]
-          minimum: -180
-          maximum: 180
-        mobileMoneyProvider:
-          type: ["string", "null"]
-        mobileMoneyNumber:
-          type: ["string", "null"]
-        mobileMoneyAccountName:
-          type: ["string", "null"]
-        isOnline:
-          type: boolean
 
     TeamMember:
       type: object
@@ -4390,13 +4264,10 @@ components:
     SettlementMetrics:
       type: object
       required:
-        [rangeStart, rangeEndExclusive, patientPaidLeones, medicineCommissionMinor, deliveryCommissionMinor, commissionIncomeMinor, owedPharmacyMinor, owedCourierMinor, completedOrders, completedDeliveries]
+        [rangeStart, rangeEndExclusive, medicineCommissionMinor, deliveryCommissionMinor, commissionIncomeMinor, owedPharmacyMinor, owedCourierMinor, completedOrders, completedDeliveries]
       properties:
         rangeStart: { type: string }
         rangeEndExclusive: { type: string }
-        patientPaidLeones:
-          type: number
-          description: Total amount paid by patients for completed orders in the selected period
         medicineCommissionMinor: { type: number }
         deliveryCommissionMinor: { type: number }
         commissionIncomeMinor: { type: number }

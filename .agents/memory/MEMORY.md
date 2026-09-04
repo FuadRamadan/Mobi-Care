@@ -20,5 +20,3 @@
 - [Financial snapshot integrity](financial-snapshot-integrity.md) — reconcile exact line totals, settlement uniqueness, and legacy obligations at a persisted rollout boundary.
 - [Aggregate insights privacy](aggregate-insights-privacy.md) — enforce minimum cohorts on every JSON/CSV metric and keep location telemetry coarse and identity-free.
 - [User removal and data exports](user-removal-and-data-exports.md) — delete only owned notifications; hide terminal patient orders; retire referenced drugs; gate current-record exports.
-- [Patient pricing contract](patient-pricing-contract.md) — charge drug prices plus one fixed 5% service fee; reject stale checkout totals and never add a hidden delivery charge.
-- [Release gate isolation](release-gate-isolation.md) — destructive end-to-end release checks must provision local test storage, never use deployment-provided production data.

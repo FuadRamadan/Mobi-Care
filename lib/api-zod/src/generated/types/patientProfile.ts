@@ -18,10 +18,6 @@ export interface PatientProfile {
   /** @nullable */
   address: string | null;
   /** @nullable */
-  locationLat: string | null;
-  /** @nullable */
-  locationLng: string | null;
-  /** @nullable */
   email: string | null;
   /** @nullable */
   nationality: string | null;

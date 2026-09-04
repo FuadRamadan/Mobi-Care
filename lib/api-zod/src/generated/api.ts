@@ -840,16 +840,9 @@ export const PatientSearchDrugsResponseItem = zod.object({
   "pharmacyId": zod.string(),
   "pharmacyName": zod.string(),
   "pharmacyAddress": zod.string().nullish(),
-  "pharmacyPhone": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
-  "isOnline": zod.boolean(),
-  "distanceKm": zod.number().nullish().describe('Haversine estimate in kilometres, or null when coordinates are unavailable'),
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "priceLeones": zod.number(),
-  "stockQuantity": zod.number(),
   "unitOfSale": zod.string(),
   "inStock": zod.boolean(),
   "availableForDelivery": zod.boolean(),
@@ -939,15 +932,12 @@ export const PatientListOrdersResponse = zod.array(PatientListOrdersResponseItem
 /**
  * @summary Place an order (delivery or collection)
  */
-export const patientCreateOrderBodyExpectedTotalMinorMin = 0;
-
 
 
 
 export const PatientCreateOrderBody = zod.object({
   "pharmacyId": zod.string(),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
-  "expectedTotalMinor": zod.number().min(patientCreateOrderBodyExpectedTotalMinorMin).describe('Exact total shown at checkout in minor units; creation fails if live prices differ'),
   "deliveryAddress": zod.string().optional(),
   "prescriptionImageKey": zod.string().optional(),
   "items": zod.array(zod.object({
@@ -1314,8 +1304,6 @@ export const GetPatientProfileResponse = zod.object({
   "dateOfBirth": zod.coerce.date().nullable(),
   "nin": zod.string().nullable(),
   "address": zod.string().nullable(),
-  "locationLat": zod.string().nullable(),
-  "locationLng": zod.string().nullable(),
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
@@ -1335,12 +1323,6 @@ export const updatePatientProfileBodyAddressMax = 300;
 export const updatePatientProfileBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 export const updatePatientProfileBodyNationalityMax = 80;
 
-export const updatePatientProfileBodyLocationLatMin = -90;
-export const updatePatientProfileBodyLocationLatMax = 90;
-
-export const updatePatientProfileBodyLocationLngMin = -180;
-export const updatePatientProfileBodyLocationLngMax = 180;
-
 
 
 export const UpdatePatientProfileBody = zod.object({
@@ -1348,9 +1330,7 @@ export const UpdatePatientProfileBody = zod.object({
   "nin": zod.string().max(updatePatientProfileBodyNinMax).nullish(),
   "address": zod.string().max(updatePatientProfileBodyAddressMax).nullish(),
   "email": zod.string().regex(updatePatientProfileBodyEmailRegExp).nullish(),
-  "nationality": zod.string().max(updatePatientProfileBodyNationalityMax).nullish(),
-  "locationLat": zod.number().min(updatePatientProfileBodyLocationLatMin).max(updatePatientProfileBodyLocationLatMax).nullish(),
-  "locationLng": zod.number().min(updatePatientProfileBodyLocationLngMin).max(updatePatientProfileBodyLocationLngMax).nullish()
+  "nationality": zod.string().max(updatePatientProfileBodyNationalityMax).nullish()
 })
 
 export const UpdatePatientProfileResponse = zod.object({
@@ -1361,8 +1341,6 @@ export const UpdatePatientProfileResponse = zod.object({
   "dateOfBirth": zod.coerce.date().nullable(),
   "nin": zod.string().nullable(),
   "address": zod.string().nullable(),
-  "locationLat": zod.string().nullable(),
-  "locationLng": zod.string().nullable(),
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
@@ -1385,8 +1363,6 @@ export const UpdatePatientProfilePhotoResponse = zod.object({
   "dateOfBirth": zod.coerce.date().nullable(),
   "nin": zod.string().nullable(),
   "address": zod.string().nullable(),
-  "locationLat": zod.string().nullable(),
-  "locationLng": zod.string().nullable(),
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
@@ -1533,13 +1509,8 @@ export const GetAnalyticsOverviewResponse = zod.object({
 
 
 /**
- * @summary Orders and revenue grouped by day for a selected range
+ * @summary Orders and revenue grouped by day (last 30 days)
  */
-export const GetOrdersByDayQueryParams = zod.object({
-  "start": zod.date().optional(),
-  "end": zod.date().optional()
-})
-
 export const GetOrdersByDayResponseItem = zod.object({
   "date": zod.string(),
   "orders": zod.number(),
@@ -1574,7 +1545,7 @@ export const GetTeamMemberPhotoResponse = zod.unknown()
 
 
 /**
- * @summary HQ command centre — operational aggregates and complete live order feed
+ * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
  */
 export const GetHqDashboardResponse = zod.object({
   "totals": zod.object({
@@ -1589,7 +1560,8 @@ export const GetHqDashboardResponse = zod.object({
   "pendingSettlements": zod.number(),
   "awaitingDispatch": zod.number(),
   "pendingPrescriptions": zod.number(),
-  "unconfirmedDeliveries": zod.number()
+  "unconfirmedDeliveries": zod.number(),
+  "completedRevenueLeones": zod.number().describe('Sum of orders in delivered or collected status with a completed_at timestamp.')
 }),
   "ordersByStatus": zod.array(zod.object({
   "status": zod.string(),
@@ -1608,33 +1580,7 @@ export const GetHqDashboardResponse = zod.object({
 
 
 /**
- * @summary Daily platform searches and orders for a selected range
- */
-export const GetHqDashboardTrendsQueryParams = zod.object({
-  "start": zod.date().optional(),
-  "end": zod.date().optional(),
-  "pharmacyId": zod.coerce.string().optional().describe('Filters orders only; anonymous searches remain platform-wide')
-})
-
-export const GetHqDashboardTrendsResponse = zod.object({
-  "searches": zod.array(zod.object({
-  "date": zod.coerce.date(),
-  "count": zod.number()
-})),
-  "orders": zod.array(zod.object({
-  "date": zod.coerce.date(),
-  "count": zod.number()
-})),
-  "pharmacies": zod.array(zod.object({
-  "id": zod.string(),
-  "name": zod.string()
-})),
-  "searchScope": zod.enum(['all'])
-})
-
-
-/**
- * @summary Permission-protected Data & Insights metrics including every record
+ * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
  */
 export const GetHqInsightsQueryParams = zod.object({
   "start": zod.date().optional(),
@@ -1642,16 +1588,22 @@ export const GetHqInsightsQueryParams = zod.object({
   "interval": zod.enum(['day', 'week', 'month']).optional()
 })
 
+export const getHqInsightsResponseMinimumGroupSizeMin = 10;
+
+
+
 export const GetHqInsightsResponse = zod.object({
+  "minimumGroupSize": zod.number().min(getHqInsightsResponseMinimumGroupSizeMin),
   "dateRange": zod.record(zod.string(), zod.unknown()),
   "totals": zod.record(zod.string(), zod.number().nullable()),
   "trends": zod.record(zod.string(), zod.array(zod.record(zod.string(), zod.unknown()))),
-  "rankings": zod.record(zod.string(), zod.array(zod.record(zod.string(), zod.unknown())))
+  "rankings": zod.record(zod.string(), zod.array(zod.record(zod.string(), zod.unknown()))),
+  "suppression": zod.record(zod.string(), zod.string()).describe('Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted.')
 })
 
 
 /**
- * @summary Download complete Data & Insights CSV
+ * @summary Download aggregate-only Data & Insights CSV; values with fewer than 10 contributing records are marked SUPPRESSED
  */
 export const ExportHqInsightsCsvQueryParams = zod.object({
   "start": zod.date().optional(),
@@ -2050,11 +2002,7 @@ export const ListHqPharmaciesResponseItem = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
   "isActive": zod.boolean(),
-  "isOnline": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
   "sessionVersion": zod.number(),
@@ -2072,25 +2020,13 @@ export const ListHqPharmaciesResponse = zod.array(ListHqPharmaciesResponseItem)
 
 export const onboardPharmacyBodyUsernameMin = 3;
 
-export const onboardPharmacyBodyLocationLatMin = -90;
-export const onboardPharmacyBodyLocationLatMax = 90;
-
-export const onboardPharmacyBodyLocationLngMin = -180;
-export const onboardPharmacyBodyLocationLngMax = 180;
-
 
 
 export const OnboardPharmacyBody = zod.object({
   "name": zod.string().min(1),
   "username": zod.string().min(onboardPharmacyBodyUsernameMin),
   "phone": zod.string().optional(),
-  "address": zod.string().optional(),
-  "locationLat": zod.number().min(onboardPharmacyBodyLocationLatMin).max(onboardPharmacyBodyLocationLatMax).optional(),
-  "locationLng": zod.number().min(onboardPharmacyBodyLocationLngMin).max(onboardPharmacyBodyLocationLngMax).optional(),
-  "mobileMoneyProvider": zod.string().optional(),
-  "mobileMoneyNumber": zod.string().optional(),
-  "mobileMoneyAccountName": zod.string().optional(),
-  "isOnline": zod.boolean().optional()
+  "address": zod.string().optional()
 })
 
 export const OnboardPharmacyResponse = zod.object({
@@ -2102,11 +2038,7 @@ export const OnboardPharmacyResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
   "isActive": zod.boolean(),
-  "isOnline": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
   "sessionVersion": zod.number(),
@@ -2127,26 +2059,12 @@ export const UpdateHqPharmacyParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const updateHqPharmacyBodyLocationLatMin = -90;
-export const updateHqPharmacyBodyLocationLatMax = 90;
-
-export const updateHqPharmacyBodyLocationLngMin = -180;
-export const updateHqPharmacyBodyLocationLngMax = 180;
-
-
-
 export const UpdateHqPharmacyBody = zod.object({
   "isActive": zod.boolean().optional(),
   "controlledSubstanceAuthorized": zod.boolean().optional(),
   "name": zod.string().optional(),
   "phone": zod.string().nullish(),
-  "address": zod.string().nullish(),
-  "locationLat": zod.number().min(updateHqPharmacyBodyLocationLatMin).max(updateHqPharmacyBodyLocationLatMax).nullish(),
-  "locationLng": zod.number().min(updateHqPharmacyBodyLocationLngMin).max(updateHqPharmacyBodyLocationLngMax).nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
-  "isOnline": zod.boolean().optional()
+  "address": zod.string().nullish()
 })
 
 export const UpdateHqPharmacyResponse = zod.object({
@@ -2157,11 +2075,7 @@ export const UpdateHqPharmacyResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
   "isActive": zod.boolean(),
-  "isOnline": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
   "sessionVersion": zod.number(),
@@ -2193,11 +2107,7 @@ export const ResetPharmacyPasswordResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyAccountName": zod.string().nullish(),
   "isActive": zod.boolean(),
-  "isOnline": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
   "sessionVersion": zod.number(),
@@ -3263,7 +3173,6 @@ export const ListSettlementsResponse = zod.object({
   "metrics": zod.object({
   "rangeStart": zod.string(),
   "rangeEndExclusive": zod.string(),
-  "patientPaidLeones": zod.number().describe('Total amount paid by patients for completed orders in the selected period'),
   "medicineCommissionMinor": zod.number(),
   "deliveryCommissionMinor": zod.number(),
   "commissionIncomeMinor": zod.number(),

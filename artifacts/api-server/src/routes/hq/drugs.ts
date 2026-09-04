@@ -4,28 +4,18 @@ import { db } from "@workspace/db";
 import {
   drugCatalogueTable,
   pharmacyInventoryTable,
-  notificationsTable,
   orderItemsTable,
   DRUG_PRIMARY_CATEGORIES,
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { eq, desc, count, and, ne, sql } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 
 const router = safeRouter();
 
 const TIERS = ["1", "2", "3"] as const;
-const PACKAGING_UNITS = [
-  "Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube",
-  "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece",
-] as const;
-const DOSAGE_FORMS = [
-  "Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion",
-  "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder",
-  "Patch",
-] as const;
 const primaryCategorySchema = z.enum(
   DRUG_PRIMARY_CATEGORIES as [string, ...string[]],
 );
@@ -41,10 +31,6 @@ function oneBusinessDayAfter(createdAt: Date): string {
 
 function withReviewDueAt<T extends { createdAt: Date }>(drug: T) {
   return { ...drug, reviewDueAt: oneBusinessDayAfter(drug.createdAt) };
-}
-
-function normalizeDrugValue(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
 /** Tier 1 (controlled) MUST carry a max-units-per-order cap — server-enforced. */
@@ -97,9 +83,9 @@ router.post("/", async (req: AuthRequest, res) => {
       genericName: z.string().optional(),
       description: z.string().optional(),
       tier: z.enum(TIERS),
-      unit: z.enum(PACKAGING_UNITS).default("Tablet"),
+      unit: z.string().min(1).default("tablets"),
       commonStrengths: z.array(z.string().trim().min(1).max(50)).min(1),
-      commonForms: z.array(z.enum(DOSAGE_FORMS)).min(1),
+      commonForms: z.array(z.string().trim().min(1).max(50)).min(1),
       primaryCategory: primaryCategorySchema,
       subcategory: subcategorySchema,
       maxUnitsPerOrder: z.number().min(1).nullable().optional(),
@@ -179,12 +165,12 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       name: z.string().min(1).optional(),
       genericName: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
-      unit: z.enum(PACKAGING_UNITS).optional(),
+      unit: z.string().min(1).optional(),
       commonStrengths: z
         .array(z.string().trim().min(1).max(50))
         .min(1)
         .optional(),
-      commonForms: z.array(z.enum(DOSAGE_FORMS)).min(1).optional(),
+      commonForms: z.array(z.string().trim().min(1).max(50)).min(1).optional(),
       primaryCategory: primaryCategorySchema.optional(),
       subcategory: subcategorySchema.optional(),
     })
@@ -278,123 +264,13 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     updatedAt: new Date(),
   };
 
+  const [updated] = await db
+    .update(drugCatalogueTable)
+    .set(updateValues)
+    .where(eq(drugCatalogueTable.id, id))
+    .returning();
+
   const released = requestedReviewStatus === "approved" && !existing.isApproved;
-  let updated: typeof drugCatalogueTable.$inferSelect | undefined;
-  try {
-    updated = await db.transaction(async (tx) => {
-      if (released) {
-        const strength = body.data.commonStrengths?.[0] ?? existing.commonStrengths[0];
-        const form = body.data.commonForms?.[0] ?? existing.commonForms[0];
-        if (!strength || !form) {
-          throw new Error("The requested drug must include a strength and dosage form.");
-        }
-
-        // Serialize equivalent approvals, including requests whose spelling only
-        // differs by case or whitespace, before checking for a duplicate.
-        const lockKey = `${normalizeDrugValue(body.data.name ?? existing.name)}|${normalizeDrugValue(strength)}|${normalizeDrugValue(form)}`;
-        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
-        const candidates = await tx
-          .select()
-          .from(drugCatalogueTable)
-          .where(
-            and(
-              eq(drugCatalogueTable.isApproved, true),
-              ne(drugCatalogueTable.id, id),
-            ),
-          );
-        const duplicate = candidates.find(
-          (drug) =>
-            normalizeDrugValue(drug.name) ===
-              normalizeDrugValue(body.data.name ?? existing.name) &&
-            drug.commonStrengths.some(
-              (candidate) => normalizeDrugValue(candidate) === normalizeDrugValue(strength),
-            ) &&
-            drug.commonForms.some(
-              (candidate) => normalizeDrugValue(candidate) === normalizeDrugValue(form),
-            ),
-        );
-        if (duplicate) {
-          const error = new Error(
-            `An approved catalogue drug already exists for ${duplicate.name} (${strength}, ${form}).`,
-          ) as Error & { code?: string };
-          error.code = "DUPLICATE_DRUG";
-          throw error;
-        }
-      }
-
-      const [releasedDrug] = await tx
-        .update(drugCatalogueTable)
-        .set(updateValues)
-        .where(eq(drugCatalogueTable.id, id))
-        .returning();
-      if (!releasedDrug) throw new Error("Drug approval could not be saved.");
-
-      if (released && existing.proposedByPharmacyId) {
-        const strength = releasedDrug.commonStrengths[0]!;
-        const form = releasedDrug.commonForms[0]!;
-        const [listing] = await tx
-          .insert(pharmacyInventoryTable)
-          .values({
-            pharmacyId: existing.proposedByPharmacyId,
-            drugId: releasedDrug.id,
-            strength,
-            form,
-            unitOfSale: releasedDrug.unit,
-            priceLeones: "0.00",
-            stockQuantity: 0,
-            completionStatus: "incomplete",
-            isActive: true,
-          })
-          .onConflictDoNothing()
-          .returning();
-        if (!listing) {
-          // A pre-existing listing is already the requested link; do not create
-          // a duplicate variant.
-          const [linked] = await tx
-            .select({ id: pharmacyInventoryTable.id })
-            .from(pharmacyInventoryTable)
-            .where(
-              and(
-                eq(pharmacyInventoryTable.pharmacyId, existing.proposedByPharmacyId),
-                eq(pharmacyInventoryTable.drugId, releasedDrug.id),
-                eq(pharmacyInventoryTable.strength, strength),
-                eq(pharmacyInventoryTable.form, form),
-                eq(pharmacyInventoryTable.unitOfSale, releasedDrug.unit),
-              ),
-            )
-            .limit(1);
-          if (!linked) throw new Error("Pharmacy listing could not be linked.");
-        }
-        await tx.insert(notificationsTable).values({
-          pharmacyId: existing.proposedByPharmacyId,
-          title: "Drug request approved",
-          body: `${releasedDrug.name} is now in your catalogue. Complete its price, stock, and expiry details to make it available to patients.`,
-          type: "drug_request_approved",
-          referenceId: releasedDrug.id,
-        });
-      } else if (
-        requestedReviewStatus === "rejected" &&
-        existing.reviewStatus === "pending" &&
-        existing.proposedByPharmacyId
-      ) {
-        await tx.insert(notificationsTable).values({
-          pharmacyId: existing.proposedByPharmacyId,
-          title: "Drug request rejected",
-          body: `${existing.name} was not approved. Reason: ${body.data.rejectionReason!.trim()}`,
-          type: "drug_request_rejected",
-          referenceId: existing.id,
-        });
-      }
-      return releasedDrug;
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Drug review could not be completed.";
-    res.status((error as { code?: string }).code === "DUPLICATE_DRUG" ? 409 : 500).json({
-      error: message,
-      code: (error as { code?: string }).code,
-    });
-    return;
-  }
   await writeAudit({
     actorType: "hq",
     actorId: req.pharmacy!.sub,
@@ -410,7 +286,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     details: { changes: updateValues },
   });
 
-  res.json(withReviewDueAt(updated));
+  res.json(withReviewDueAt(updated!));
 });
 
 // ── DELETE /hq/drugs/:id — remove from active catalogue safely ──────────────

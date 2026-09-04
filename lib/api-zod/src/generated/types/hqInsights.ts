@@ -7,12 +7,17 @@
  */
 import type { HqInsightsDateRange } from './hqInsightsDateRange';
 import type { HqInsightsRankings } from './hqInsightsRankings';
+import type { HqInsightsSuppression } from './hqInsightsSuppression';
 import type { HqInsightsTotals } from './hqInsightsTotals';
 import type { HqInsightsTrends } from './hqInsightsTrends';
 
 export interface HqInsights {
+  /** @minimum 10 */
+  minimumGroupSize: number;
   dateRange: HqInsightsDateRange;
   totals: HqInsightsTotals;
   trends: HqInsightsTrends;
   rankings: HqInsightsRankings;
+  /** Per-metric explanation of minimum-cohort suppression. Totals are null when their own cohort is below 10; trend and ranking buckets below 10 are omitted. */
+  suppression: HqInsightsSuppression;
 }

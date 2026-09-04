@@ -14,7 +14,6 @@ import {
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -133,23 +132,6 @@ export default function ProfileScreen() {
       { text: "Photo Library", onPress: () => void selectImage("library") },
       { text: "Cancel", style: "cancel" },
     ]);
-  };
-
-  const saveCurrentLocation = async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Location permission needed", "Allow location access to estimate distances to pharmacies.");
-      return;
-    }
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
-    updateProfile.mutate({
-      data: {
-        locationLat: position.coords.latitude,
-        locationLng: position.coords.longitude,
-      },
-    });
   };
 
   const s = makeStyles(colors);
@@ -307,18 +289,6 @@ export default function ProfileScreen() {
                 multiline
                 maxLength={300}
               />
-              <Pressable
-                style={s.retryButton}
-                onPress={() => void saveCurrentLocation()}
-                disabled={updateProfile.isPending}
-              >
-                <Feather name="map-pin" size={16} color={colors.primary} />
-                <Text style={s.retryText}>
-                  {profile.locationLat && profile.locationLng
-                    ? "Update current location"
-                    : "Use current location for distance"}
-                </Text>
-              </Pressable>
               <Text style={s.label}>Email</Text>
               <TextInput
                 style={s.input}

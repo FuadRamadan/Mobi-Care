@@ -45,8 +45,6 @@ interface CartValue {
   setQuantity: (inventoryId: string, quantity: number) => void;
   removeItem: (inventoryId: string) => void;
   clear: () => void;
-  drugTotalLeones: number;
-  serviceFeeLeones: number;
   totalLeones: number;
   itemCount: number;
   prescriptionRequired: boolean;
@@ -143,14 +141,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setCart(null), []);
 
   const items = cart?.items ?? [];
-  const drugTotalMinor = items.reduce(
-    (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
-    0,
-  );
-  const serviceFeeMinor = Math.round((drugTotalMinor * 500) / 10_000);
-  const drugTotalLeones = drugTotalMinor / 100;
-  const serviceFeeLeones = serviceFeeMinor / 100;
-  const totalLeones = (drugTotalMinor + serviceFeeMinor) / 100;
+  const totalLeones = items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   const prescriptionRequired = items.some((i) => i.prescriptionRequired);
   const collectionOnly = items.some((i) => i.collectionOnly);
@@ -163,8 +154,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setQuantity,
         removeItem,
         clear,
-        drugTotalLeones,
-        serviceFeeLeones,
         totalLeones,
         itemCount,
         prescriptionRequired,

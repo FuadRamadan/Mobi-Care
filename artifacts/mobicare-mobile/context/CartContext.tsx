@@ -28,8 +28,6 @@ const EMPTY_CART: CartState = { pharmacyId: null, pharmacyName: null, items: [] 
 interface CartContextValue {
   cart: CartState;
   itemCount: number;
-  drugTotalLeones: number;
-  serviceFeeLeones: number;
   totalLeones: number;
   requiresPrescription: boolean;
   requiresCollection: boolean;
@@ -127,21 +125,13 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
   }, [persist]);
 
   const itemCount = cart.items.reduce((s, i) => s + i.quantity, 0);
-  const drugTotalMinor = cart.items.reduce(
-    (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
-    0,
-  );
-  const serviceFeeMinor = Math.round((drugTotalMinor * 500) / 10_000);
-  const drugTotalLeones = drugTotalMinor / 100;
-  const serviceFeeLeones = serviceFeeMinor / 100;
-  const totalLeones = (drugTotalMinor + serviceFeeMinor) / 100;
+  const totalLeones = cart.items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
   const requiresPrescription = cart.items.some((i) => i.requiresPrescription);
   const requiresCollection = cart.items.some((i) => i.collectionOnly);
 
   return (
     <CartContext.Provider value={{
-      cart, itemCount, drugTotalLeones, serviceFeeLeones, totalLeones,
-      requiresPrescription, requiresCollection,
+      cart, itemCount, totalLeones, requiresPrescription, requiresCollection,
       addItem, replaceCart, removeItem, updateQty, clearCart,
     }}>
       {children}
