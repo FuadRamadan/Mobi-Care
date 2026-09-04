@@ -1,4 +1,6 @@
 import {
+  getGetAnalyticsOverviewQueryKey,
+  getGetPharmacyCommissionAnalyticsQueryKey,
   useGetAnalyticsOverview,
   useGetPharmacyCommissionAnalytics,
   exportPharmacyCommissionHistory
@@ -27,7 +29,12 @@ const formatStatus = (status: string) => {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsOverview();
+  const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsOverview({
+    query: {
+      queryKey: getGetAnalyticsOverviewQueryKey(),
+      refetchInterval: 5_000,
+    },
+  });
   const [dateRange, setDateRange] = useState("30");
   const [customStart, setCustomStart] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -41,7 +48,12 @@ export default function Dashboard() {
     return { start, end };
   }, [dateRange, customStart, customEnd]);
 
-  const { data: commissionData, isLoading: commissionLoading } = useGetPharmacyCommissionAnalytics(queryParams);
+  const { data: commissionData, isLoading: commissionLoading } = useGetPharmacyCommissionAnalytics(queryParams, {
+    query: {
+      queryKey: getGetPharmacyCommissionAnalyticsQueryKey(queryParams),
+      refetchInterval: 5_000,
+    },
+  });
 
   const chartData = commissionData?.daily || [];
   const todayStat = commissionData?.today;

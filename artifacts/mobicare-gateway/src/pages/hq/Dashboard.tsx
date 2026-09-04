@@ -47,7 +47,7 @@ export default function HqDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: d, isLoading } = useGetHqDashboard({
-    query: { queryKey: getGetHqDashboardQueryKey(), refetchInterval: 10_000 },
+    query: { queryKey: getGetHqDashboardQueryKey(), refetchInterval: 5_000 },
   });
   const t = d?.totals;
   const confirmDelivery = useConfirmDeliveryByHq({

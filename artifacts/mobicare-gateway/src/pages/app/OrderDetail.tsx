@@ -1,7 +1,8 @@
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Check, Truck, Store, Phone, FileText, PackageCheck } from 'lucide-react';
+import { ArrowLeft, Check, Truck, Store, Phone, FileText, PackageCheck, XCircle } from 'lucide-react';
 import {
   usePatientGetOrder,
+  useCancelPatientOrder,
   useConfirmPatientOrderReceipt,
   getPatientGetOrderQueryKey,
   getPatientListOrdersQueryKey,
@@ -63,6 +64,29 @@ export default function OrderDetail() {
       },
     },
   });
+  const cancelOrder = useCancelPatientOrder({
+    mutation: {
+      onSuccess: (updated) => {
+        queryClient.setQueryData(getPatientGetOrderQueryKey(id!), updated);
+        queryClient.setQueryData<PatientOrder[]>(
+          getPatientListOrdersQueryKey(),
+          (orders) => orders?.map((item) => item.id === updated.id ? updated : item),
+        );
+        toast({
+          title: 'Order cancelled',
+          description: 'The pharmacy and HQ have been notified.',
+        });
+      },
+      onError: (err) => {
+        queryClient.invalidateQueries({ queryKey: getPatientGetOrderQueryKey(id!) });
+        toast({
+          title: 'Could not cancel order',
+          description: err instanceof Error ? err.message : 'A courier may already have been assigned. Refresh and try again.',
+          variant: 'destructive',
+        });
+      },
+    },
+  });
 
   if (isLoading) return <EmptyState>Loading order…</EmptyState>;
   if (error || !order) return <EmptyState>Order not found.</EmptyState>;
@@ -77,6 +101,9 @@ export default function OrderDetail() {
   const steps = o.fulfillmentType === 'delivery' ? DELIVERY_STEPS : COLLECTION_STEPS;
   const statusIdx = STATUS_ORDER.indexOf(o.status);
   const cancelled = o.status === 'cancelled';
+  const canCancel =
+    !o.courier &&
+    ['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready'].includes(o.status);
 
   return (
     <div className="space-y-5">
@@ -134,6 +161,35 @@ export default function OrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      {canCancel && (
+        <Card className="border-destructive/30" data-testid="card-cancel-order">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex gap-3 flex-1">
+              <XCircle className="w-6 h-6 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold">No longer interested?</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can cancel this order only until a courier is assigned.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="destructive"
+              className="shrink-0"
+              disabled={cancelOrder.isPending}
+              onClick={() => {
+                if (window.confirm('Cancel this order? This action cannot be undone.')) {
+                  cancelOrder.mutate({ id: o.id });
+                }
+              }}
+              data-testid="button-cancel-order"
+            >
+              {cancelOrder.isPending ? 'Cancelling…' : 'Cancel Order'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {o.fulfillmentType === 'delivery' && o.status === 'delivering' && (
         <Card className="border-primary/40 bg-primary/5" data-testid="card-confirm-receipt">

@@ -185,10 +185,14 @@ export default function OrderDetailScreen() {
     mutation: {
       onSuccess: (updated) => {
         queryClient.setQueryData(getPatientGetOrderQueryKey(id ?? ''), updated);
-        queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() });
+        queryClient.setQueryData<PatientOrder[]>(
+          getPatientListOrdersQueryKey(),
+          (orders) => orders?.map((item) => item.id === updated.id ? updated : item),
+        );
         Alert.alert('Order cancelled', 'Your order has been cancelled.');
       },
       onError: (error) => {
+        queryClient.invalidateQueries({ queryKey: getPatientGetOrderQueryKey(id ?? '') });
         Alert.alert(
           'Could not cancel order',
           error instanceof Error ? error.message : 'Please refresh and try again.',

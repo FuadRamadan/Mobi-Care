@@ -83,7 +83,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
   const markRead = useMarkHqNotificationsRead();
   const unreadCount = unread?.unreadCount ?? 0;
   const { data: dashboard } = useGetHqDashboard({
-    query: { queryKey: getGetHqDashboardQueryKey(), enabled: !!user, refetchInterval: 30_000 },
+    query: { queryKey: getGetHqDashboardQueryKey(), enabled: !!user, refetchInterval: 5_000 },
   });
   const queueCounts = dashboard?.totals;
 
