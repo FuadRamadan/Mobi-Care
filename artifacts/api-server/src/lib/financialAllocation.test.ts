@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allocatePatientPrices } from "./financialAllocation.js";
+import {
+  allocatePatientPrices,
+  calculateOrderPricing,
+  SERVICE_FEE_BASIS_POINTS,
+} from "./financialAllocation.js";
 
 test("allocates basis-point remainders deterministically and exactly", () => {
   const lines = [
@@ -25,27 +29,20 @@ test("allocates basis-point remainders deterministically and exactly", () => {
 });
 
 test("five percent charge reconciles exactly to patient total", () => {
-  const allocation = allocatePatientPrices(
-    [
-      { key: "ten-thousand", baseUnitPriceMinor: 1_000_000, quantity: 1 },
-      { key: "small", baseUnitPriceMinor: 101, quantity: 3 },
-    ],
-    500,
-  );
-  const drugAmountMinor = allocation.reduce(
-    (total, line) => total + line.baseLineTotalMinor,
-    0,
-  );
-  const serviceFeeMinor = allocation.reduce(
-    (total, line) => total + line.medicineCommissionMinor,
-    0,
-  );
-  const patientTotalMinor = allocation.reduce(
-    (total, line) => total + line.patientLineTotalMinor,
-    0,
-  );
+  const pricing = calculateOrderPricing(1_000_000);
+  assert.equal(SERVICE_FEE_BASIS_POINTS, 500);
+  assert.deepEqual(pricing, {
+    drugSubtotalMinor: 1_000_000,
+    serviceFeeMinor: 50_000,
+    totalPaidMinor: 1_050_000,
+  });
+});
 
-  assert.equal(allocation[0]?.medicineCommissionMinor, 50_000);
-  assert.equal(serviceFeeMinor, Math.round((drugAmountMinor * 5) / 100));
-  assert.equal(patientTotalMinor, drugAmountMinor + serviceFeeMinor);
+test("rounds the order-level service fee once in integer minor units", () => {
+  assert.deepEqual(calculateOrderPricing(303), {
+    drugSubtotalMinor: 303,
+    serviceFeeMinor: 15,
+    totalPaidMinor: 318,
+  });
+  assert.throws(() => calculateOrderPricing(1.5));
 });

@@ -149,9 +149,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setCart(null), []);
 
   const items = cart?.items ?? [];
-  const subtotalLeones = items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
-  const serviceFeeLeones = Math.round(subtotalLeones * 5) / 100;
-  const totalLeones = subtotalLeones + serviceFeeLeones;
+  const subtotalMinor = items.reduce(
+    (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
+    0,
+  );
+  const serviceFeeMinor = Math.round((subtotalMinor * 5) / 100);
+  const subtotalLeones = subtotalMinor / 100;
+  const serviceFeeLeones = serviceFeeMinor / 100;
+  const totalLeones = (subtotalMinor + serviceFeeMinor) / 100;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   const prescriptionRequired = items.some((i) => i.prescriptionRequired);
   const collectionOnly = items.some((i) => i.collectionOnly);

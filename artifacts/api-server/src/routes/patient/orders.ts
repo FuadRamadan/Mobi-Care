@@ -30,10 +30,12 @@ import {
 } from "../../lib/patientNotifications.js";
 import {
   decimalLeonesToMinor,
-  getFinancialSettings,
   minorToLeones,
 } from "../../lib/financialSettings.js";
-import { allocatePatientPrices } from "../../lib/financialAllocation.js";
+import {
+  calculateOrderPricing,
+  SERVICE_FEE_BASIS_POINTS,
+} from "../../lib/financialAllocation.js";
 
 const router = safeRouter();
 
@@ -552,37 +554,16 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
-  const financialSettings = await getFinancialSettings();
-  const allocatedPrices = allocatePatientPrices(
-    input.items.map((item) => {
-      const listing = byInventory.get(item.inventoryId)!;
-      return {
-        key: item.inventoryId,
-        baseUnitPriceMinor: decimalLeonesToMinor(listing.priceLeones),
-        quantity: item.quantity,
-      };
-    }),
-    financialSettings.medicineMarkupBasisPoints,
-  );
-  const allocatedByInventory = new Map(
-    allocatedPrices.map((line) => [line.key, line]),
-  );
-  const medicineCommissionMinor = allocatedPrices.reduce(
-    (total, line) => total + line.medicineCommissionMinor,
-    0,
-  );
-  const patientMedicineTotalMinor =
-    pharmacyMedicineTotalMinor + medicineCommissionMinor;
-  const deliveryFeeMinor =
-    input.fulfillmentType === "delivery"
-      ? financialSettings.deliveryFeeMinor
-      : 0;
-  const courierPayoutMinor =
-    input.fulfillmentType === "delivery"
-      ? financialSettings.courierPayoutMinor
-      : 0;
-  const deliveryCommissionMinor = deliveryFeeMinor - courierPayoutMinor;
-  const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
+  const {
+    serviceFeeMinor: medicineCommissionMinor,
+    totalPaidMinor: patientMedicineTotalMinor,
+  } = calculateOrderPricing(pharmacyMedicineTotalMinor);
+  // Delivery is not added to the patient charge. The displayed and recorded
+  // total is always pharmacy drug subtotal + the fixed 5% MobiCare service fee.
+  const deliveryFeeMinor = 0;
+  const courierPayoutMinor = 0;
+  const deliveryCommissionMinor = 0;
+  const totalMinor = patientMedicineTotalMinor;
   const total = minorToLeones(totalMinor);
 
   if (prescriptionRequired && !input.prescriptionImageKey) {
@@ -614,8 +595,7 @@ router.post("/", async (req: AuthRequest, res) => {
           status: "awaiting_payment",
           paymentMethod: "orange_money",
           totalLeones: total,
-          medicineMarkupBasisPoints:
-            financialSettings.medicineMarkupBasisPoints,
+          medicineMarkupBasisPoints: SERVICE_FEE_BASIS_POINTS,
           pharmacyMedicineTotalMinor,
           medicineCommissionMinor,
           patientMedicineTotalMinor,
@@ -666,17 +646,18 @@ router.post("/", async (req: AuthRequest, res) => {
       await tx.insert(orderItemsTable).values(
         input.items.map((item) => {
           const l = byInventory.get(item.inventoryId)!;
-          const allocated = allocatedByInventory.get(item.inventoryId)!;
+          const baseUnitPriceMinor = decimalLeonesToMinor(l.priceLeones);
+          const baseLineTotalMinor = baseUnitPriceMinor * item.quantity;
           return {
             orderId: order!.id,
             inventoryId: item.inventoryId,
             drugId: l.drugId,
             drugName: l.drugName,
             quantity: item.quantity,
-            unitPriceLeones: minorToLeones(allocated.patientUnitPriceMinor),
-            baseUnitPriceMinor: allocated.baseUnitPriceMinor,
-            patientUnitPriceMinor: allocated.patientUnitPriceMinor,
-            patientLineTotalMinor: allocated.patientLineTotalMinor,
+            unitPriceLeones: minorToLeones(baseUnitPriceMinor),
+            baseUnitPriceMinor,
+            patientUnitPriceMinor: baseUnitPriceMinor,
+            patientLineTotalMinor: baseLineTotalMinor,
             prescriptionId:
               l.tier === "1" || l.tier === "2" ? prescriptionId : null,
           };

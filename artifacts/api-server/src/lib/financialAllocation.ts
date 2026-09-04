@@ -11,6 +11,22 @@ export type AllocatedPriceLine = PriceAllocationLine & {
   patientUnitPriceMinor: number;
 };
 
+export const SERVICE_FEE_BASIS_POINTS = 500;
+
+export function calculateOrderPricing(drugSubtotalMinor: number) {
+  if (!Number.isSafeInteger(drugSubtotalMinor) || drugSubtotalMinor < 0) {
+    throw new Error("drugSubtotalMinor must be a non-negative safe integer");
+  }
+  const serviceFeeMinor = Math.round(
+    (drugSubtotalMinor * SERVICE_FEE_BASIS_POINTS) / 10_000,
+  );
+  return {
+    drugSubtotalMinor,
+    serviceFeeMinor,
+    totalPaidMinor: drugSubtotalMinor + serviceFeeMinor,
+  };
+}
+
 /**
  * Allocates the order-level basis-point commission in whole minor units.
  * Largest fractional remainders receive the extra units; the stable key makes

@@ -134,9 +134,14 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
   }, [persist]);
 
   const itemCount = cart.items.reduce((s, i) => s + i.quantity, 0);
-  const totalLeones = cart.items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
-  const serviceFeeLeones = Math.round(totalLeones * 5) / 100;
-  const amountPayableLeones = totalLeones + serviceFeeLeones;
+  const subtotalMinor = cart.items.reduce(
+    (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
+    0,
+  );
+  const serviceFeeMinor = Math.round((subtotalMinor * 5) / 100);
+  const totalLeones = subtotalMinor / 100;
+  const serviceFeeLeones = serviceFeeMinor / 100;
+  const amountPayableLeones = (subtotalMinor + serviceFeeMinor) / 100;
   const requiresPrescription = cart.items.some((i) => i.requiresPrescription);
   const requiresCollection = cart.items.some((i) => i.collectionOnly);
 
