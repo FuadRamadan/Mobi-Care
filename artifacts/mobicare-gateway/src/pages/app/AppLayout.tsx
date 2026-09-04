@@ -1,9 +1,10 @@
 import { type ReactNode } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { Search, ShoppingBag, ClipboardList, LogOut, Bell } from 'lucide-react';
+import { Search, ShoppingBag, ClipboardList, LogOut, Bell, User } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
 import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
+import { ProfileCompletionDialog } from './ProfileCompletionDialog';
 
 /**
  * Patient app shell — mobile-first (PWA style): sticky top bar + bottom nav.
@@ -30,10 +31,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: '/app/checkout', label: 'Cart', icon: ShoppingBag, badge: itemCount, testId: 'nav-cart' },
     { href: '/app/orders', label: 'Orders', icon: ClipboardList, testId: 'nav-orders' },
     { href: '/app/notifications', label: 'Alerts', icon: Bell, badge: unreadCount, testId: 'nav-notifications' },
+    { href: '/app/profile', label: 'Profile', icon: User, testId: 'nav-profile' },
   ];
 
   return (
     <div className="min-h-screen bg-secondary/40 flex flex-col">
+      <ProfileCompletionDialog />
       <header className="sticky top-0 z-20 bg-dark-green text-white shadow-md">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 h-14">
           <Link
@@ -81,7 +84,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6 pb-24">{children}</main>
 
       <nav className="fixed bottom-0 inset-x-0 z-20 bg-card border-t">
-        <div className="max-w-3xl mx-auto grid grid-cols-4">
+        <div className="max-w-3xl mx-auto grid grid-cols-5">
           {tabs.map((t) => {
             const active = location === t.href || location.startsWith(t.href + '/');
             return (

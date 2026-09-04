@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: result.user.name,
       phone: result.user.phone ?? null,
       role: result.user.role,
-      profileCompletionPending: false,
+      profileCompletionPending: true,
     });
     syncPushToken();
   }, [applyTokens, syncPushToken]);

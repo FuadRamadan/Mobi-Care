@@ -23,6 +23,7 @@ export interface PatientUser {
 
 interface PatientAuthValue {
   user: PatientUser | null;
+  profileCompletionPending: boolean;
   login: (phone: string, password: string) => Promise<void>;
   register: (
     name: string,
@@ -30,6 +31,8 @@ interface PatientAuthValue {
     password: string,
     dateOfBirth: string,
   ) => Promise<void>;
+  updateUserName: (name: string) => void;
+  dismissProfileCompletion: () => void;
   logout: () => void;
 }
 
@@ -46,9 +49,23 @@ function readStoredUser(): PatientUser | null {
 
 export function PatientAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PatientUser | null>(readStoredUser);
+  const [profileCompletionPending, setProfileCompletionPending] = useState(false);
   const queryClient = useQueryClient();
   const loginMutation = useLogin();
   const registerMutation = useRegisterPatient();
+
+  const dismissProfileCompletion = useCallback(() => {
+    setProfileCompletionPending(false);
+  }, []);
+
+  const updateUserName = useCallback((name: string) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, name };
+      localStorage.setItem(USER_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const storeSession = useCallback(
     (accessToken: string, refreshToken: string, u: { id: string; name: string; phone?: string | null }) => {
@@ -58,6 +75,7 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
       const ptUser: PatientUser = { id: u.id, name: u.name, phone: u.phone ?? '' };
       localStorage.setItem(USER_KEY, JSON.stringify(ptUser));
       setUser(ptUser);
+      setProfileCompletionPending(true);
     },
     [queryClient],
   );
@@ -142,7 +160,15 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
   }, [user, logout]);
 
   return (
-    <PatientAuthContext.Provider value={{ user, login, register, logout }}>
+    <PatientAuthContext.Provider value={{
+      user,
+      login,
+      register,
+      updateUserName,
+      logout,
+      profileCompletionPending,
+      dismissProfileCompletion,
+    }}>
       {children}
     </PatientAuthContext.Provider>
   );

@@ -19,6 +19,7 @@ const Patient = lazy(() => import('@/pages/Patient'));
 const Pharmacy = lazy(() => import('@/pages/Pharmacy'));
 const PatientLogin = lazy(() => import('@/pages/app/Login'));
 const AppLayout = lazy(() => import('@/pages/app/AppLayout'));
+const PatientProfile = lazy(() => import('@/pages/app/Profile'));
 const PatientSearch = lazy(() => import('@/pages/app/Search'));
 const Checkout = lazy(() => import('@/pages/app/Checkout'));
 const PatientOrders = lazy(() => import('@/pages/app/Orders'));
@@ -95,6 +96,9 @@ function Router() {
             <Route path="/hq/insights" component={HqInsights} />
             {/* Patient app — same site, own shell (Layout renders bare for /app*) */}
             <Route path="/app" component={PatientLogin} />
+            <Route path="/app/profile">
+              <AppLayout><PatientProfile /></AppLayout>
+            </Route>
             <Route path="/app/search">
               <AppLayout><PatientSearch /></AppLayout>
             </Route>
