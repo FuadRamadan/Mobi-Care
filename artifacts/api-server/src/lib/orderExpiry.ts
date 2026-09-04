@@ -48,10 +48,19 @@ export async function expireStaleOrders(): Promise<number> {
 }
 
 /** Periodic safety net so unpaid checkouts expire even with no traffic. */
+let sweepTimer: NodeJS.Timeout | undefined;
+
 export function startOrderExpirySweep(): void {
-  setInterval(() => {
+  if (sweepTimer) return;
+  sweepTimer = setInterval(() => {
     expireStaleOrders().catch((err) =>
       logger.error({ err }, "Order expiry sweep failed"),
     );
   }, 60_000).unref();
+}
+
+export function stopOrderExpirySweep(): void {
+  if (!sweepTimer) return;
+  clearInterval(sweepTimer);
+  sweepTimer = undefined;
 }

@@ -1,8 +1,8 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { startOrderExpirySweep } from "./lib/orderExpiry";
-import { startCommissionSettlementSweep } from "./lib/commissionSettlements";
-import { db } from "@workspace/db";
+import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
+import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
+import { db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 /**
@@ -195,15 +195,33 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 
-assertSchemaUpToDate().then(() => {
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-
+async function start(): Promise<void> {
+  await assertSchemaUpToDate();
+  const server = app.listen(port, "0.0.0.0", () => {
     logger.info({ port }, "Server listening");
     startOrderExpirySweep();
     startCommissionSettlementSweep();
   });
+
+  const shutdown = async (signal: string) => {
+    logger.info({ signal }, "Graceful shutdown started");
+    stopOrderExpirySweep();
+    stopCommissionSettlementSweep();
+    server.close(async (error) => {
+      if (error) logger.error({ err: error }, "HTTP server close failed");
+      await pool.end().catch((err) =>
+        logger.error({ err }, "Database pool close failed"),
+      );
+      process.exit(error ? 1 : 0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  process.once("SIGINT", () => void shutdown("SIGINT"));
+}
+
+start().catch((err) => {
+  logger.fatal({ err }, "API startup failed");
+  process.exit(1);
 });

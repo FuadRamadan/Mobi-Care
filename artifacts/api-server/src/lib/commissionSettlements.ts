@@ -109,7 +109,10 @@ function previousBusinessDate(): string {
 }
 
 /** Closes yesterday shortly after midnight and retries safely each hour. */
+let settlementSweepTimer: NodeJS.Timeout | undefined;
+
 export function startCommissionSettlementSweep(): void {
+  if (settlementSweepTimer) return;
   const run = async () => {
     try {
       const settlementDate = previousBusinessDate();
@@ -120,5 +123,12 @@ export function startCommissionSettlementSweep(): void {
     }
   };
   void run();
-  setInterval(() => void run(), 60 * 60 * 1000).unref();
+  settlementSweepTimer = setInterval(() => void run(), 60 * 60 * 1000);
+  settlementSweepTimer.unref();
+}
+
+export function stopCommissionSettlementSweep(): void {
+  if (!settlementSweepTimer) return;
+  clearInterval(settlementSweepTimer);
+  settlementSweepTimer = undefined;
 }

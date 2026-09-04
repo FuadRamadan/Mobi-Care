@@ -1,0 +1,141 @@
+Prepare the **entire MobiCare application for production hosting on GoDaddy**.
+
+The backend must use **Node.js/Express**.
+
+### Production & Hosting Preparation
+
+1. **Backend**
+
+* Ensure the backend is fully production-ready using Node.js and Express.
+* Create/verify a proper production start command such as `npm start`.
+* Ensure the application listens on the hosting provider's `PORT` environment variable.
+* Remove any Replit-only hosting assumptions.
+* Ensure all API routes work correctly in production.
+* Configure production CORS to allow the deployed frontend domain.
+* Add proper error handling and graceful server startup.
+* Do not expose sensitive errors, credentials, or secrets to users.
+
+2. **Environment Variables / Secrets**
+   Prepare a complete `.env.example` file containing every environment variable required by the application, but **NEVER place real secret values in the file or source code**.
+
+Include placeholders for all required values, such as:
+
+* `NODE_ENV`
+* `PORT`
+* `DATABASE_URL`
+* `JWT_SECRET` or the application's authentication secret
+* Frontend URL / `CLIENT_URL`
+* Email service/API credentials
+* Cloudinary credentials if used
+* Any other API keys, authentication secrets, database credentials, or third-party service credentials currently required by the application.
+
+Review the entire codebase and make sure there are **no hardcoded API keys, passwords, database credentials, tokens, or secrets**.
+
+3. **Database**
+
+* Ensure the Node.js backend connects to the production PostgreSQL database through `DATABASE_URL`.
+* Do not depend on Replit's local database for production.
+* Verify database migrations/schema setup is production-ready.
+* Ensure database connection errors are handled properly.
+* Make sure existing application data structures and functionality are preserved.
+
+4. **Frontend**
+
+* Make the frontend production-ready.
+* Replace any development/Replit API URLs with an environment-based API URL.
+* Create the appropriate frontend environment variable, such as `VITE_API_URL`, if the frontend uses Vite.
+* Ensure the frontend communicates correctly with the Node.js backend after deployment.
+* Do not hardcode localhost URLs.
+
+5. **Authentication & Security**
+
+* Ensure authentication works in production.
+* Secure cookies/session configuration where applicable.
+* Configure HTTPS-aware settings for production.
+* Validate all important user inputs.
+* Keep patient, pharmacy, HQ, courier, order, and other application data protected.
+* Do not expose environment variables to the frontend unless they are intentionally public variables such as a Vite `VITE_*` variable.
+
+6. **File/Image Uploads**
+
+* Ensure patient profile pictures and other uploaded files use the configured production storage service, such as Cloudinary, rather than temporary local/Replit storage.
+* Verify uploaded images remain available after logout, restart, or redeployment.
+
+7. **Production Scripts**
+   Review and correct `package.json` so the project has appropriate commands, including:
+
+* development
+* build
+* start
+* database migration/initialization if required
+
+The production command must start the Node.js backend correctly.
+
+8. **GoDaddy Compatibility**
+   Prepare the project so it can be deployed on a GoDaddy hosting environment that supports Node.js.
+
+Clearly separate:
+
+* Frontend
+* Node.js/Express backend
+* PostgreSQL database
+* External services/storage
+
+Do not assume that GoDaddy will provide the PostgreSQL database or third-party services unless already configured.
+
+9. **Replit Independence**
+   The application was developed in Replit, but production hosting should not depend on Replit.
+
+Remove or replace any Replit-specific configuration that is unnecessary for production.
+
+10. **Deployment Documentation**
+    Create a `DEPLOYMENT.md` file explaining exactly how to deploy the application to GoDaddy, including:
+
+* Required GoDaddy hosting type
+* Node.js version
+* Build command
+* Start command
+* Environment variables/secrets to create
+* Database configuration
+* Frontend configuration
+* Backend configuration
+* Domain configuration
+* CORS configuration
+* SSL/HTTPS considerations
+* How to verify the deployment
+* Common deployment errors and how to troubleshoot them
+
+11. **Final Production Audit**
+    Before finishing:
+
+* Check for broken imports.
+* Check for missing environment variables.
+* Check for localhost URLs.
+* Check for hardcoded secrets.
+* Check frontend-to-backend API connections.
+* Check database connections.
+* Check authentication.
+* Check file uploads.
+* Check production build.
+* Check Node.js server startup.
+* Fix any deployment-related errors you find.
+
+### IMPORTANT
+
+Do **not** redesign the application.
+
+Do **not** remove existing features.
+
+Do **not** change the existing UI unnecessarily.
+
+Preserve all current MobiCare functionality, including the Patient App, Pharmacy Dashboard, HQ Dashboard, orders, courier workflow, notifications, catalogue, profiles, authentication, and real-time updates.
+
+Only make the changes required to make the application **secure, production-ready, and deployable on GoDaddy with a Node.js/Express backend**.
+
+At the end, provide:
+
+1. A list of files changed/created.
+2. The complete list of environment variables required, without revealing secret values.
+3. The exact production build command.
+4. The exact production start command.
+5. Any remaining GoDaddy configuration that must be completed manually.

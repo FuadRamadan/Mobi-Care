@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useHqAuth } from '@/hq/auth';
 import { HQ_ACCESS_KEY } from '@/lib/portalToken';
+import { apiUrl } from '@/lib/apiUrl';
 
 type Insights = {
   minimumGroupSize: number;
@@ -25,7 +26,7 @@ export default function HqInsights() {
   const [error, setError] = useState('');
   const load = async () => {
     setError('');
-    const response = await fetch(`${import.meta.env.BASE_URL}api/hq/insights?start=${start}&end=${end}&interval=${interval}`, { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
+    const response = await fetch(apiUrl(`/api/hq/insights?start=${start}&end=${end}&interval=${interval}`), { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
     if (!response.ok) { setError('Unable to load aggregate insights.'); return; }
     setData(await response.json() as Insights);
   };
@@ -33,7 +34,7 @@ export default function HqInsights() {
   if (!user) return <Redirect to="/hq" />;
   if (!user.canViewDataInsights) return <Redirect to="/hq/dashboard" />;
   const exportCsv = async () => {
-    const response = await fetch(`${import.meta.env.BASE_URL}api/hq/insights/export.csv?start=${start}&end=${end}&interval=${interval}`, { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
+    const response = await fetch(apiUrl(`/api/hq/insights/export.csv?start=${start}&end=${end}&interval=${interval}`), { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
     if (!response.ok) { setError('Unable to export aggregate insights.'); return; }
     const href = URL.createObjectURL(await response.blob());
     const link = document.createElement('a'); link.href = href; link.download = 'mobicare-data-insights.csv'; link.click();
@@ -41,7 +42,7 @@ export default function HqInsights() {
   };
   const exportCurrentData = async (resource: 'orders' | 'patients' | 'notifications' | 'catalogue' | 'inventory') => {
     setError('');
-    const response = await fetch(`${import.meta.env.BASE_URL}api/hq/exports/${resource}.csv`, { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
+    const response = await fetch(apiUrl(`/api/hq/exports/${resource}.csv`), { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
     if (!response.ok) { setError(`Unable to export current ${resource} data.`); return; }
     const href = URL.createObjectURL(await response.blob());
     const link = document.createElement('a'); link.href = href; link.download = `mobicare-${resource}.csv`; link.click();

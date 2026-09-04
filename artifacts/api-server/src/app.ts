@@ -5,6 +5,14 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+const configuredOrigins = process.env.ALLOWED_ORIGINS
+  ?.split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+if (process.env.NODE_ENV === "production" && !configuredOrigins?.length) {
+  throw new Error("ALLOWED_ORIGINS is required in production");
+}
 
 app.use(
   pinoHttp({
@@ -27,9 +35,7 @@ app.use(
 );
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-      : true, // allow all origins in development; set ALLOWED_ORIGINS in production
+    origin: configuredOrigins?.length ? configuredOrigins : true,
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -41,6 +47,10 @@ app.use(
 app.use("/api/patient/uploads", express.json({ limit: "8mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
 
 app.use("/api", router);
 

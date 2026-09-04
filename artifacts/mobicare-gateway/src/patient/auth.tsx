@@ -14,6 +14,7 @@ import {
   PT_USER_KEY as USER_KEY,
   tokenSecondsLeft,
 } from '@/lib/portalToken';
+import { apiUrl } from '@/lib/apiUrl';
 
 export interface PatientUser {
   id: string;
@@ -136,7 +137,7 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = localStorage.getItem(REFRESH_KEY);
       if (!refreshToken) return logout();
       try {
-        const res = await fetch(`${import.meta.env.BASE_URL}api/auth/refresh`, {
+        const res = await fetch(apiUrl('/api/auth/refresh'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken }),
