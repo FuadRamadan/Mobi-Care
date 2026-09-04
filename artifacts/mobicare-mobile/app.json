@@ -44,7 +44,8 @@
           "photosPermission": "MobiCare needs access to your photos to upload prescription images.",
           "cameraPermission": "MobiCare needs your camera to capture prescription photos."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -32,6 +32,7 @@ const HqDispatch = lazy(() => import('@/pages/hq/Dispatch'));
 const HqPharmacies = lazy(() => import('@/pages/hq/Pharmacies'));
 const HqCatalogue = lazy(() => import('@/pages/hq/Catalogue'));
 const HqCouriers = lazy(() => import('@/pages/hq/Couriers'));
+const HqAdvertisements = lazy(() => import('@/pages/hq/Advertisements'));
 const HqFlags = lazy(() => import('@/pages/hq/Flags'));
 const HqSettlements = lazy(() => import('@/pages/hq/Settlements'));
 const HqAudit = lazy(() => import('@/pages/hq/Audit'));
@@ -87,6 +88,7 @@ function Router() {
             <Route path="/hq/pharmacies" component={HqPharmacies} />
             <Route path="/hq/catalogue" component={HqCatalogue} />
             <Route path="/hq/couriers" component={HqCouriers} />
+            <Route path="/hq/advertisements" component={HqAdvertisements} />
             <Route path="/hq/flags" component={HqFlags} />
             <Route path="/hq/settlements" component={HqSettlements} />
             <Route path="/hq/audit" component={HqAudit} />

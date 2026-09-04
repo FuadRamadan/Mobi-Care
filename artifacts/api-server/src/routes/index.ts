@@ -9,6 +9,7 @@ import prescriptionImagesRouter from "./prescriptionImages.js";
 import patientProfileImagesRouter from "./patientProfileImages.js";
 import teamRouter from "./team.js";
 import courierPhotosRouter from "./courierPhotos.js";
+import advertisementsRouter from "./advertisements.js";
 import { pharmacy } from "../middlewares/auth.js";
 
 const router = safeRouter();
@@ -27,5 +28,6 @@ router.use("/prescription-images", prescriptionImagesRouter);
 router.use("/patient-profile-images", patientProfileImagesRouter);
 router.use("/team", teamRouter);
 router.use("/couriers", courierPhotosRouter);
+router.use("/advertisements", advertisementsRouter);
 
 export default router;

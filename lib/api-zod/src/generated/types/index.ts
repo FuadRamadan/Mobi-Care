@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.2.0
  */
 
+export * from './advertisementCreate';
+export * from './advertisementUpdate';
+export * from './advertisementUploadRequest';
+export * from './advertisementUploadRequestContentType';
+export * from './advertisementUploadResponse';
 export * from './analyticsOverview';
 export * from './analyticsOverviewOrdersByStatus';
 export * from './assignCourierInput';
@@ -55,6 +60,7 @@ export * from './getHqInsightsInterval';
 export * from './getHqInsightsParams';
 export * from './getPharmacyCommissionAnalyticsParams';
 export * from './healthStatus';
+export * from './hqAdvertisement';
 export * from './hqCourierSummary';
 export * from './hqDashboard';
 export * from './hqDashboardOrdersByStatusItem';
@@ -164,6 +170,9 @@ export * from './prescriptionStatus';
 export * from './prescriptionUploadInput';
 export * from './prescriptionUploadResponse';
 export * from './presignedUpload';
+export * from './publicAdvertisement';
+export * from './publicAdvertisementContentType';
+export * from './publicAdvertisementMediaKind';
 export * from './pushTokenInput';
 export * from './refreshInput';
 export * from './removalResult';

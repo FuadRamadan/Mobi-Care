@@ -22,3 +22,4 @@
 - [User removal and data exports](user-removal-and-data-exports.md) — delete only owned notifications; hide terminal patient orders; retire referenced drugs; gate current-record exports.
 - [Stale workflow bundles](stale-workflow-bundles.md) — after merged schema changes, rebuild the canonical API before treating old-column errors as a live database mismatch.
 - [Patient profile completion](patient-profile-completion.md) — required profile data is server-derived; “Not Now” suppresses prompting only for the current login.
+- [Patient advertisements](patient-advertisements.md) — HQ-curated image/MP4 promotions use scheduled public visibility, revocable media URLs, and native/web carousels.

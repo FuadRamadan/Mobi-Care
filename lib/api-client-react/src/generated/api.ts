@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdvertisementCreate,
+  AdvertisementUpdate,
+  AdvertisementUploadRequest,
+  AdvertisementUploadResponse,
   AnalyticsOverview,
   AssignCourierInput,
   AuditEntry,
@@ -50,6 +54,7 @@ import type {
   GetHqInsightsParams,
   GetPharmacyCommissionAnalyticsParams,
   HealthStatus,
+  HqAdvertisement,
   HqDashboard,
   HqDashboardTrends,
   HqDrug,
@@ -107,6 +112,7 @@ import type {
   PrescriptionUploadInput,
   PrescriptionUploadResponse,
   PresignedUpload,
+  PublicAdvertisement,
   PushTokenInput,
   RefreshInput,
   RemovalResult,
@@ -4158,6 +4164,160 @@ export function useGetTeamMemberPhoto<TData = Awaited<ReturnType<typeof getTeamM
 
 
 
+export const getListAdvertisementsUrl = () => {
+
+
+
+
+  return `/api/advertisements`
+}
+
+/**
+ * @summary Currently active patient advertisements in display order
+ */
+export const listAdvertisements = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublicAdvertisement[]> => {
+
+  return customFetch<PublicAdvertisement[]>(getListAdvertisementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdvertisementsQueryKey = () => {
+    return [
+    `/api/advertisements`
+    ] as const;
+    }
+
+
+export const getListAdvertisementsQueryOptions = <TData = Awaited<ReturnType<typeof listAdvertisements>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdvertisements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdvertisementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdvertisements>>> = ({ signal }) => listAdvertisements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdvertisements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdvertisementsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdvertisements>>>
+export type ListAdvertisementsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Currently active patient advertisements in display order
+ */
+
+export function useListAdvertisements<TData = Awaited<ReturnType<typeof listAdvertisements>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdvertisements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdvertisementsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdvertisementMediaUrl = (id: string,) => {
+
+
+
+
+  return `/api/advertisements/${id}/media`
+}
+
+/**
+ * @summary Stream media belonging to an existing advertisement
+ */
+export const getAdvertisementMedia = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getGetAdvertisementMediaUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdvertisementMediaQueryKey = (id: string,) => {
+    return [
+    `/api/advertisements/${id}/media`
+    ] as const;
+    }
+
+
+export const getGetAdvertisementMediaQueryOptions = <TData = Awaited<ReturnType<typeof getAdvertisementMedia>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdvertisementMediaQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdvertisementMedia>>> = ({ signal }) => getAdvertisementMedia(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementMedia>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdvertisementMediaQueryResult = NonNullable<Awaited<ReturnType<typeof getAdvertisementMedia>>>
+export type GetAdvertisementMediaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Stream media belonging to an existing advertisement
+ */
+
+export function useGetAdvertisementMedia<TData = Awaited<ReturnType<typeof getAdvertisementMedia>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdvertisementMediaQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetHqDashboardUrl = () => {
 
 
@@ -6355,6 +6515,368 @@ export function useGetSavedApiRequestHistory<TData = Awaited<ReturnType<typeof g
 
 
 
+
+export const getListHqAdvertisementsUrl = () => {
+
+
+
+
+  return `/api/hq/advertisements`
+}
+
+/**
+ * @summary List all patient advertisements, including inactive and scheduled entries
+ */
+export const listHqAdvertisements = async ( options?: Parameters<typeof customFetch>[1]): Promise<HqAdvertisement[]> => {
+
+  return customFetch<HqAdvertisement[]>(getListHqAdvertisementsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHqAdvertisementsQueryKey = () => {
+    return [
+    `/api/hq/advertisements`
+    ] as const;
+    }
+
+
+export const getListHqAdvertisementsQueryOptions = <TData = Awaited<ReturnType<typeof listHqAdvertisements>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqAdvertisements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHqAdvertisementsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHqAdvertisements>>> = ({ signal }) => listHqAdvertisements({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHqAdvertisements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHqAdvertisementsQueryResult = NonNullable<Awaited<ReturnType<typeof listHqAdvertisements>>>
+export type ListHqAdvertisementsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all patient advertisements, including inactive and scheduled entries
+ */
+
+export function useListHqAdvertisements<TData = Awaited<ReturnType<typeof listHqAdvertisements>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqAdvertisements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHqAdvertisementsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateHqAdvertisementUrl = () => {
+
+
+
+
+  return `/api/hq/advertisements`
+}
+
+/**
+ * @summary Create an advertisement from a completed claimed upload
+ */
+export const createHqAdvertisement = async (advertisementCreate: AdvertisementCreate, options?: Parameters<typeof customFetch>[1]): Promise<HqAdvertisement> => {
+
+  return customFetch<HqAdvertisement>(getCreateHqAdvertisementUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(advertisementCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateHqAdvertisementMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHqAdvertisement>>, TError,{data: BodyType<AdvertisementCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createHqAdvertisement>>, TError,{data: BodyType<AdvertisementCreate>}, TContext> => {
+
+const mutationKey = ['createHqAdvertisement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createHqAdvertisement>>, {data: BodyType<AdvertisementCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createHqAdvertisement(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateHqAdvertisementMutationResult = NonNullable<Awaited<ReturnType<typeof createHqAdvertisement>>>
+    export type CreateHqAdvertisementMutationBody = BodyType<AdvertisementCreate>
+    export type CreateHqAdvertisementMutationError = ErrorType<void>
+
+    /**
+ * @summary Create an advertisement from a completed claimed upload
+ */
+export const useCreateHqAdvertisement = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHqAdvertisement>>, TError,{data: BodyType<AdvertisementCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createHqAdvertisement>>,
+        TError,
+        {data: BodyType<AdvertisementCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateHqAdvertisementMutationOptions(options));
+    }
+
+export const getRequestHqAdvertisementUploadUrl = () => {
+
+
+
+
+  return `/api/hq/advertisements/upload`
+}
+
+/**
+ * @summary Request a short-lived direct upload URL for advertisement media
+ */
+export const requestHqAdvertisementUpload = async (advertisementUploadRequest: AdvertisementUploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<AdvertisementUploadResponse> => {
+
+  return customFetch<AdvertisementUploadResponse>(getRequestHqAdvertisementUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(advertisementUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestHqAdvertisementUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestHqAdvertisementUpload>>, TError,{data: BodyType<AdvertisementUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestHqAdvertisementUpload>>, TError,{data: BodyType<AdvertisementUploadRequest>}, TContext> => {
+
+const mutationKey = ['requestHqAdvertisementUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestHqAdvertisementUpload>>, {data: BodyType<AdvertisementUploadRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestHqAdvertisementUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestHqAdvertisementUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestHqAdvertisementUpload>>>
+    export type RequestHqAdvertisementUploadMutationBody = BodyType<AdvertisementUploadRequest>
+    export type RequestHqAdvertisementUploadMutationError = ErrorType<void>
+
+    /**
+ * @summary Request a short-lived direct upload URL for advertisement media
+ */
+export const useRequestHqAdvertisementUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestHqAdvertisementUpload>>, TError,{data: BodyType<AdvertisementUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestHqAdvertisementUpload>>,
+        TError,
+        {data: BodyType<AdvertisementUploadRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestHqAdvertisementUploadMutationOptions(options));
+    }
+
+export const getUpdateHqAdvertisementUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/advertisements/${id}`
+}
+
+/**
+ * @summary Update advertisement metadata, status, display order, or schedule
+ */
+export const updateHqAdvertisement = async (id: string,
+    advertisementUpdate: AdvertisementUpdate, options?: Parameters<typeof customFetch>[1]): Promise<HqAdvertisement> => {
+
+  return customFetch<HqAdvertisement>(getUpdateHqAdvertisementUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(advertisementUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateHqAdvertisementMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHqAdvertisement>>, TError,{id: string;data: BodyType<AdvertisementUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateHqAdvertisement>>, TError,{id: string;data: BodyType<AdvertisementUpdate>}, TContext> => {
+
+const mutationKey = ['updateHqAdvertisement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateHqAdvertisement>>, {id: string;data: BodyType<AdvertisementUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateHqAdvertisement(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateHqAdvertisementMutationResult = NonNullable<Awaited<ReturnType<typeof updateHqAdvertisement>>>
+    export type UpdateHqAdvertisementMutationBody = BodyType<AdvertisementUpdate>
+    export type UpdateHqAdvertisementMutationError = ErrorType<void>
+
+    /**
+ * @summary Update advertisement metadata, status, display order, or schedule
+ */
+export const useUpdateHqAdvertisement = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHqAdvertisement>>, TError,{id: string;data: BodyType<AdvertisementUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateHqAdvertisement>>,
+        TError,
+        {id: string;data: BodyType<AdvertisementUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateHqAdvertisementMutationOptions(options));
+    }
+
+export const getDeleteHqAdvertisementUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/advertisements/${id}`
+}
+
+/**
+ * @summary Delete an advertisement and best-effort remove its media object
+ */
+export const deleteHqAdvertisement = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getDeleteHqAdvertisementUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteHqAdvertisementMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisement>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisement>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteHqAdvertisement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteHqAdvertisement>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteHqAdvertisement(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteHqAdvertisementMutationResult = NonNullable<Awaited<ReturnType<typeof deleteHqAdvertisement>>>
+
+    export type DeleteHqAdvertisementMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an advertisement and best-effort remove its media object
+ */
+export const useDeleteHqAdvertisement = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisement>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteHqAdvertisement>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteHqAdvertisementMutationOptions(options));
+    }
 
 export const getListHqTeamMembersUrl = () => {
 

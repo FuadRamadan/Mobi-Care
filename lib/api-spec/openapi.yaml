@@ -1168,6 +1168,37 @@ paths:
         "404":
           description: Team member or photo not found
 
+  /advertisements:
+    get:
+      operationId: listAdvertisements
+      tags: [advertisements]
+      summary: Currently active patient advertisements in display order
+      responses:
+        "200":
+          description: Displayable advertisements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicAdvertisement"
+
+  /advertisements/{id}/media:
+    get:
+      operationId: getAdvertisementMedia
+      tags: [advertisements]
+      summary: Stream media belonging to an existing advertisement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Advertisement image or video bytes
+        "404":
+          description: Advertisement or media not found
+
   # ── HQ ────────────────────────────────────────────────────────────────────
   /hq/dashboard:
     get:
@@ -1711,6 +1742,99 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SavedApiRequestHistory"
+
+  /hq/advertisements:
+    get:
+      operationId: listHqAdvertisements
+      tags: [advertisements]
+      summary: List all patient advertisements, including inactive and scheduled entries
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Advertisements in display order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HqAdvertisement"
+    post:
+      operationId: createHqAdvertisement
+      tags: [advertisements]
+      summary: Create an advertisement from a completed claimed upload
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdvertisementCreate" }
+      responses:
+        "201":
+          description: Created advertisement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HqAdvertisement" }
+        "400": { description: Invalid or unclaimed upload }
+
+  /hq/advertisements/upload:
+    post:
+      operationId: requestHqAdvertisementUpload
+      tags: [advertisements]
+      summary: Request a short-lived direct upload URL for advertisement media
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdvertisementUploadRequest" }
+      responses:
+        "200":
+          description: Signed upload target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdvertisementUploadResponse" }
+        "400": { description: Unsupported media metadata }
+
+  /hq/advertisements/{id}:
+    patch:
+      operationId: updateHqAdvertisement
+      tags: [advertisements]
+      summary: Update advertisement metadata, status, display order, or schedule
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdvertisementUpdate" }
+      responses:
+        "200":
+          description: Updated advertisement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HqAdvertisement" }
+        "404": { description: Advertisement not found }
+    delete:
+      operationId: deleteHqAdvertisement
+      tags: [advertisements]
+      summary: Delete an advertisement and best-effort remove its media object
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Advertisement deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "404": { description: Advertisement not found }
 
   /hq/team:
     get:
@@ -4027,6 +4151,74 @@ components:
           type: ["number", "null"]
           minimum: -180
           maximum: 180
+
+    PublicAdvertisement:
+      type: object
+      required: [id, title, alt, caption, mediaKind, contentType, fileSize, linkUrl, sortOrder, startsAt, endsAt, createdAt, mediaUrl]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        alt: { type: [string, "null"] }
+        caption: { type: [string, "null"] }
+        mediaKind: { type: string, enum: [image, video] }
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4] }
+        fileSize: { type: number }
+        linkUrl: { type: [string, "null"] }
+        sortOrder: { type: number }
+        startsAt: { type: [string, "null"], format: date-time }
+        endsAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        mediaUrl: { type: string }
+
+    HqAdvertisement:
+      allOf:
+        - $ref: "#/components/schemas/PublicAdvertisement"
+        - type: object
+          required: [isActive, createdByHqStaffId, updatedAt]
+          properties:
+            isActive: { type: boolean }
+            createdByHqStaffId: { type: string }
+            updatedAt: { type: string, format: date-time }
+
+    AdvertisementUploadRequest:
+      type: object
+      required: [contentType, fileSize]
+      properties:
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4] }
+        fileSize: { type: number, minimum: 1 }
+
+    AdvertisementUploadResponse:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
+
+    AdvertisementCreate:
+      type: object
+      required: [title, objectPath]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        alt: { type: [string, "null"], maxLength: 500 }
+        caption: { type: [string, "null"], maxLength: 500 }
+        objectPath: { type: string, pattern: "^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp|mp4)$" }
+        linkUrl: { type: [string, "null"], pattern: "^https?://" }
+        isActive: { type: boolean }
+        sortOrder: { type: number, minimum: 0 }
+        startsAt: { type: [string, "null"], format: date-time }
+        endsAt: { type: [string, "null"], format: date-time }
+
+    AdvertisementUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        alt: { type: [string, "null"], maxLength: 500 }
+        caption: { type: [string, "null"], maxLength: 500 }
+        linkUrl: { type: [string, "null"], pattern: "^https?://" }
+        isActive: { type: boolean }
+        sortOrder: { type: number, minimum: 0 }
+        startsAt: { type: [string, "null"], format: date-time }
+        endsAt: { type: [string, "null"], format: date-time }
 
     TeamMember:
       type: object

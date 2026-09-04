@@ -1605,6 +1605,37 @@ export const GetTeamMemberPhotoResponse = zod.unknown()
 
 
 /**
+ * @summary Currently active patient advertisements in display order
+ */
+export const ListAdvertisementsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+})
+export const ListAdvertisementsResponse = zod.array(ListAdvertisementsResponseItem)
+
+
+/**
+ * @summary Stream media belonging to an existing advertisement
+ */
+export const GetAdvertisementMediaParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdvertisementMediaResponse = zod.unknown()
+
+
+/**
  * @summary HQ command centre — aggregates, live feed, and completed delivered/collected revenue
  */
 export const GetHqDashboardResponse = zod.object({
@@ -2805,6 +2836,158 @@ export const GetSavedApiRequestHistoryResponseItem = zod.object({
   "createdAt": zod.coerce.date().optional()
 })
 export const GetSavedApiRequestHistoryResponse = zod.array(GetSavedApiRequestHistoryResponseItem)
+
+
+/**
+ * @summary List all patient advertisements, including inactive and scheduled entries
+ */
+export const ListHqAdvertisementsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+}).and(zod.object({
+  "isActive": zod.boolean(),
+  "createdByHqStaffId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+export const ListHqAdvertisementsResponse = zod.array(ListHqAdvertisementsResponseItem)
+
+
+/**
+ * @summary Create an advertisement from a completed claimed upload
+ */
+export const createHqAdvertisementBodyTitleMax = 200;
+
+export const createHqAdvertisementBodyAltMax = 500;
+
+export const createHqAdvertisementBodyCaptionMax = 500;
+
+export const createHqAdvertisementBodyObjectPathRegExp = new RegExp('^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp|mp4)$');
+export const createHqAdvertisementBodyLinkUrlRegExp = new RegExp('^https?:/');
+export const createHqAdvertisementBodySortOrderMin = 0;
+
+
+
+export const CreateHqAdvertisementBody = zod.object({
+  "title": zod.string().min(1).max(createHqAdvertisementBodyTitleMax),
+  "alt": zod.string().max(createHqAdvertisementBodyAltMax).nullish(),
+  "caption": zod.string().max(createHqAdvertisementBodyCaptionMax).nullish(),
+  "objectPath": zod.string().regex(createHqAdvertisementBodyObjectPathRegExp),
+  "linkUrl": zod.string().regex(createHqAdvertisementBodyLinkUrlRegExp).nullish(),
+  "isActive": zod.boolean().optional(),
+  "sortOrder": zod.number().min(createHqAdvertisementBodySortOrderMin).optional(),
+  "startsAt": zod.coerce.date().nullish(),
+  "endsAt": zod.coerce.date().nullish()
+})
+
+export const CreateHqAdvertisementResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+}).and(zod.object({
+  "isActive": zod.boolean(),
+  "createdByHqStaffId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Request a short-lived direct upload URL for advertisement media
+ */
+
+
+
+export const RequestHqAdvertisementUploadBody = zod.object({
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number().min(1)
+})
+
+export const RequestHqAdvertisementUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Update advertisement metadata, status, display order, or schedule
+ */
+export const UpdateHqAdvertisementParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateHqAdvertisementBodyTitleMax = 200;
+
+export const updateHqAdvertisementBodyAltMax = 500;
+
+export const updateHqAdvertisementBodyCaptionMax = 500;
+
+export const updateHqAdvertisementBodyLinkUrlRegExp = new RegExp('^https?:/');
+export const updateHqAdvertisementBodySortOrderMin = 0;
+
+
+
+export const UpdateHqAdvertisementBody = zod.object({
+  "title": zod.string().min(1).max(updateHqAdvertisementBodyTitleMax).optional(),
+  "alt": zod.string().max(updateHqAdvertisementBodyAltMax).nullish(),
+  "caption": zod.string().max(updateHqAdvertisementBodyCaptionMax).nullish(),
+  "linkUrl": zod.string().regex(updateHqAdvertisementBodyLinkUrlRegExp).nullish(),
+  "isActive": zod.boolean().optional(),
+  "sortOrder": zod.number().min(updateHqAdvertisementBodySortOrderMin).optional(),
+  "startsAt": zod.coerce.date().nullish(),
+  "endsAt": zod.coerce.date().nullish()
+})
+
+export const UpdateHqAdvertisementResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+}).and(zod.object({
+  "isActive": zod.boolean(),
+  "createdByHqStaffId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Delete an advertisement and best-effort remove its media object
+ */
+export const DeleteHqAdvertisementParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteHqAdvertisementResponse = zod.object({
+  "message": zod.string()
+})
 
 
 /**

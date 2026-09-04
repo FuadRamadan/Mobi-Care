@@ -19,6 +19,7 @@ import teamRouter from "./team.js";
 import apiConnectionsRouter from "./apiConnections.js";
 import insightsRouter from "./insights.js";
 import exportsRouter from "./exports.js";
+import advertisementsRouter from "./advertisements.js";
 
 const router = safeRouter();
 
@@ -41,6 +42,7 @@ router.use("/audit", auditRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/password-policy", passwordPolicyRouter);
 router.use("/team", teamRouter);
+router.use("/advertisements", advertisementsRouter);
 router.use(
   "/api-connections",
   requireManageIntegrations,

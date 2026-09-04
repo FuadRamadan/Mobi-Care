@@ -29,6 +29,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
 import { MobiCareHeader } from "@/components/MobiCareHeader";
+import { AdCarousel } from "@/components/AdCarousel";
 
 const TIER_LABELS: Record<string, string> = {
   "1": "Rx Only",
@@ -533,32 +534,7 @@ export default function SearchScreen() {
         </ScrollView>
       </View>
 
-      {isError && (
-        <View style={s.center}>
-          <Feather name="alert-circle" size={40} color={colors.destructive} />
-          <Text style={s.centerText}>
-            Search failed. Check your connection.
-          </Text>
-        </View>
-      )}
 
-      {showPrompt && !isError && (
-        <View style={s.center}>
-          <MaterialCommunityIcons name="pill" size={56} color={colors.border} />
-          <Text style={s.centerTitle}>Find Medicines</Text>
-          <Text style={s.centerText}>
-            Search by name, generic name, or browse categories above.
-          </Text>
-        </View>
-      )}
-
-      {showEmpty && (
-        <View style={s.center}>
-          <Feather name="search" size={40} color={colors.border} />
-          <Text style={s.centerTitle}>No results</Text>
-          <Text style={s.centerText}>No medicines found.</Text>
-        </View>
-      )}
 
       <FlatList
         data={drugs ?? []}
@@ -566,12 +542,42 @@ export default function SearchScreen() {
         renderItem={({ item }) => (
           <DrugCard drug={item} colors={colors} onAddOffer={handleAddOffer} />
         )}
+        ListEmptyComponent={() => (
+          <View style={{ flex: 1 }}>
+            {isError && (
+              <View style={s.center}>
+                <Feather name="alert-circle" size={40} color={colors.destructive} />
+                <Text style={s.centerText}>
+                  Search failed. Check your connection.
+                </Text>
+              </View>
+            )}
+
+            {showPrompt && !isError && (
+              <View style={s.center}>
+                <MaterialCommunityIcons name="pill" size={56} color={colors.border} />
+                <Text style={s.centerTitle}>Find Medicines</Text>
+                <Text style={s.centerText}>
+                  Search by name, generic name, or browse categories above.
+                </Text>
+              </View>
+            )}
+
+            {showEmpty && (
+              <View style={s.center}>
+                <Feather name="search" size={40} color={colors.border} />
+                <Text style={s.centerTitle}>No results</Text>
+                <Text style={s.centerText}>No medicines found.</Text>
+              </View>
+            )}
+          </View>
+        )}
+        ListFooterComponent={<AdCarousel />}
         contentContainerStyle={[
           s.list,
           isWeb ? { paddingBottom: insets.bottom + 34 } : {},
         ]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!!(drugs && drugs.length > 0)}
       />
     </View>
   );
@@ -619,7 +625,7 @@ function makeStyles(
     categoryChipTextActive: {
       color: "#FFFFFF",
     },
-    list: { paddingHorizontal: 16, paddingBottom: 120, gap: 12 },
+    list: { paddingHorizontal: 16, paddingBottom: 120, gap: 12, flexGrow: 1 },
     drugCard: {
       backgroundColor: colors.card,
       borderRadius: colors.radius + 4,

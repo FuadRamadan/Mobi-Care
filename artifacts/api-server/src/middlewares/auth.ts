@@ -33,7 +33,6 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   }
 
   // For pharmacy tokens, validate sessionVersion against the live row.
-  // HQ tokens do not use sessionVersion — skip the DB check.
   if (payload.role === "pharmacy") {
     try {
       const [[row], policy] = await Promise.all([
@@ -95,6 +94,23 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
       res.status(500).json({ error: "Authentication check failed" });
     }
     return;
+  }
+
+  if (payload.role === "hq") {
+    try {
+      const [row] = await db
+        .select({ isActive: hqStaffTable.isActive })
+        .from(hqStaffTable)
+        .where(eq(hqStaffTable.id, payload.sub))
+        .limit(1);
+      if (!row || !row.isActive) {
+        res.status(401).json({ error: "Account inactive or not found" });
+        return;
+      }
+    } catch {
+      res.status(500).json({ error: "Authentication check failed" });
+      return;
+    }
   }
 
   if (payload.role === "patient") {

@@ -29,6 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
+import { PromotionsCarousel } from "./PromotionsCarousel";
 
 function useDebounced(value: string, ms = 350): string {
   const [debounced, setDebounced] = useState(value);
@@ -172,6 +173,8 @@ export default function PatientSearch() {
           <DrugCard key={drug.listingKey} drug={drug} />
         ))}
       </div>
+
+      <PromotionsCarousel />
     </div>
   );
 }

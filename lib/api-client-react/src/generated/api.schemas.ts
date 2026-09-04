@@ -1305,6 +1305,134 @@ export interface HqPharmacyUpdate {
   longitude?: number | null;
 }
 
+export type PublicAdvertisementMediaKind = typeof PublicAdvertisementMediaKind[keyof typeof PublicAdvertisementMediaKind];
+
+
+export const PublicAdvertisementMediaKind = {
+  image: 'image',
+  video: 'video',
+} as const;
+
+export type PublicAdvertisementContentType = typeof PublicAdvertisementContentType[keyof typeof PublicAdvertisementContentType];
+
+
+export const PublicAdvertisementContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'video/mp4': 'video/mp4',
+} as const;
+
+export interface PublicAdvertisement {
+  id: string;
+  title: string;
+  /** @nullable */
+  alt: string | null;
+  /** @nullable */
+  caption: string | null;
+  mediaKind: PublicAdvertisementMediaKind;
+  contentType: PublicAdvertisementContentType;
+  fileSize: number;
+  /** @nullable */
+  linkUrl: string | null;
+  sortOrder: number;
+  /** @nullable */
+  startsAt: string | null;
+  /** @nullable */
+  endsAt: string | null;
+  createdAt: string;
+  mediaUrl: string;
+}
+
+export type HqAdvertisement = PublicAdvertisement & {
+  isActive: boolean;
+  createdByHqStaffId: string;
+  updatedAt: string;
+};
+
+export type AdvertisementUploadRequestContentType = typeof AdvertisementUploadRequestContentType[keyof typeof AdvertisementUploadRequestContentType];
+
+
+export const AdvertisementUploadRequestContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'video/mp4': 'video/mp4',
+} as const;
+
+export interface AdvertisementUploadRequest {
+  contentType: AdvertisementUploadRequestContentType;
+  /** @minimum 1 */
+  fileSize: number;
+}
+
+export interface AdvertisementUploadResponse {
+  uploadUrl: string;
+  objectPath: string;
+}
+
+export interface AdvertisementCreate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  alt?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  caption?: string | null;
+  /** @pattern ^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|mp4)$ */
+  objectPath: string;
+  /**
+     * @nullable
+     * @pattern ^https?://
+     */
+  linkUrl?: string | null;
+  isActive?: boolean;
+  /** @minimum 0 */
+  sortOrder?: number;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+}
+
+export interface AdvertisementUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  alt?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  caption?: string | null;
+  /**
+     * @nullable
+     * @pattern ^https?://
+     */
+  linkUrl?: string | null;
+  isActive?: boolean;
+  /** @minimum 0 */
+  sortOrder?: number;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+}
+
 export interface TeamMember {
   id: string;
   slug?: string;
