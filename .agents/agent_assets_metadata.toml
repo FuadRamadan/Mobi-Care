@@ -84,3 +84,17 @@ mtime_ms = 1788523116335
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/9c354684-189a-4fe4-9e49-5fd13606a17e/c5c872a4-3c68-451f-88a8-3df656e4e103"
 storage_version_token = "1788523130549997"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "U59662YELjbBVt9tilxMA"
+uri = "file://exports/MobiCare-GoDaddy-NodeJS-deploy.zip"
+type = "unspecified"
+title = "MobiCare GoDaddy Node.js Deployment"
+description = "GoDaddy-compatible single-app ZIP with root package.json, production start command, bundled API, MobiCare gateway, and pharmacy portal. Validated locally against the API health endpoint and both web roots."
+logical_id = "8e75b00b-718b-4639-b238-699b369d6780"
+content_hash = "sha256:a835df73a7d107cffc0dc66fa4591fa757b6b1a7daf32d3c74e4817dec0c3432"
+size = 3259809
+mtime_ms = 1788523792517
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:171f0ddc-fd13-4075-9c0e-8408438b341e/8e75b00b-718b-4639-b238-699b369d6780/2502a4ae-abfa-4bf6-9dc3-044e625ce92b"
+storage_version_token = "1788523812929634"
+content_type = "application/octet-stream"
