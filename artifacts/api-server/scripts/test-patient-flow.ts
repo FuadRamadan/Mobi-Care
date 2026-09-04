@@ -12,15 +12,16 @@
  *   - Never uses fixed/default credentials that could persist in a shared DB.
  *
  * Usage:
- *   # API server must be running (pnpm --filter @workspace/api-server run dev)
- *   pnpm --filter @workspace/api-server run test-patient-flow
+ *   pnpm --filter @workspace/api-server run release-check
  *
  * Optional env overrides:
  *   TEST_API_BASE_URL   default: http://localhost:$PORT (or :4000)
  *
  * Safety:
- *   This flow is test-only. It accepts localhost and Replit development
- *   targets, but refuses production mode and production hostnames.
+ *   This flow is only launched by the release-check wrapper, which provisions
+ *   a disposable PostgreSQL database and destroys it after the run. Direct
+ *   execution is refused so test records cannot enter the shared development
+ *   database.
  */
 
 import bcrypt from "bcryptjs";
@@ -45,9 +46,12 @@ const BASE_URL =
 
 function assertSafeTestEnvironment(): void {
   const nodeEnvironment = process.env["NODE_ENV"];
-  if (nodeEnvironment !== "development" && nodeEnvironment !== "test") {
+  if (
+    nodeEnvironment !== "test" ||
+    process.env["MEDICINE_ORDER_FLOW_ISOLATED"] !== "true"
+  ) {
     throw new Error(
-      `Refusing to run patient order flow with NODE_ENV=${nodeEnvironment ?? "unset"}; use NODE_ENV=development or NODE_ENV=test.`,
+      "Refusing to run patient order flow outside the isolated release-check database.",
     );
   }
 

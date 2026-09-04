@@ -160,6 +160,7 @@ async function main() {
   const testEnvironment = {
     ...process.env,
     CI: "true",
+    MEDICINE_ORDER_FLOW_ISOLATED: "true",
     DATABASE_URL: databaseUrl,
     NODE_ENV: "test",
     SMS_TRANSPORT: "test",
