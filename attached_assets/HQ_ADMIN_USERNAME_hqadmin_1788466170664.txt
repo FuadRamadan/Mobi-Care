@@ -1,3 +1,0 @@
-HQ_ADMIN_USERNAME: hqadmin
-HQ_ADMIN_PASSWORD: Mobicare@123
-HQ_ADMIN_NAME: MobiCare Admin
