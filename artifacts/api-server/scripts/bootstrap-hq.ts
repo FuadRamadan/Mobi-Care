@@ -5,7 +5,8 @@
  *   HQ_ADMIN_USERNAME=admin HQ_ADMIN_PASSWORD='...' HQ_ADMIN_NAME='Ops Lead' \
  *     pnpm --filter @workspace/api-server exec tsx scripts/bootstrap-hq.ts
  *
- * Idempotent: if the username already exists, it exits without changes.
+ * Idempotent: creates the configured admin when missing, or securely
+ * synchronizes and reactivates the existing configured account.
  */
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
@@ -13,9 +14,9 @@ import { hqStaffTable, auditLogTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
 async function main() {
-  const username = process.env.HQ_ADMIN_USERNAME;
+  const username = process.env.HQ_ADMIN_USERNAME?.trim();
   const password = process.env.HQ_ADMIN_PASSWORD;
-  const name = process.env.HQ_ADMIN_NAME ?? "HQ Administrator";
+  const name = process.env.HQ_ADMIN_NAME?.trim() || "HQ Administrator";
 
   if (!username || !password) {
     console.error("HQ_ADMIN_USERNAME and HQ_ADMIN_PASSWORD env vars are required");
@@ -32,15 +33,49 @@ async function main() {
     .where(eq(hqStaffTable.username, username))
     .limit(1);
 
+  const passwordHash = await bcrypt.hash(password, 12);
   if (existing) {
-    console.log(`HQ account '${username}' already exists — nothing to do.`);
+    await db
+      .update(hqStaffTable)
+      .set({
+        name,
+        passwordHash,
+        isActive: true,
+        canManageIntegrations: true,
+        canManageSettlements: true,
+        canViewDataInsights: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(hqStaffTable.id, existing.id));
+
+    await db.insert(auditLogTable).values({
+      actorType: "system",
+      actorName: "bootstrap-hq script",
+      action: "hq_staff.bootstrap_sync",
+      entityType: "hq_staff",
+      entityId: existing.id,
+      details: {
+        reactivated: true,
+        passwordResetFromSecret: true,
+        permissionsSynchronized: true,
+      },
+    });
+
+    console.log("Configured HQ administrator synchronized and activated.");
     process.exit(0);
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
   const [created] = await db
     .insert(hqStaffTable)
-    .values({ username, name, passwordHash, canManageIntegrations: true })
+    .values({
+      username,
+      name,
+      passwordHash,
+      isActive: true,
+      canManageIntegrations: true,
+      canManageSettlements: true,
+      canViewDataInsights: true,
+    })
     .returning({ id: hqStaffTable.id });
 
   await db.insert(auditLogTable).values({
@@ -52,7 +87,7 @@ async function main() {
     details: { username, name },
   });
 
-  console.log(`Created HQ account '${username}' (${created!.id}).`);
+  console.log("Configured HQ administrator created and activated.");
   process.exit(0);
 }
 
