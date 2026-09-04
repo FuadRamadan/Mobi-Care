@@ -135,7 +135,7 @@ function MediaContent({
     <img
       src={ad.mediaUrl}
       alt={ad.alt || ad.title}
-      className="w-full h-full object-cover"
+      className="w-full h-full object-contain bg-white"
     />
   );
 }

@@ -70,7 +70,8 @@ function AdItem({ item, isActive }: { item: PublicAdvertisement, isActive: boole
         <Image 
           source={{ uri: `https://${process.env.EXPO_PUBLIC_DOMAIN}${item.mediaUrl}` }}
           style={StyleSheet.absoluteFillObject}
-          contentFit="cover"
+          contentFit="contain"
+          contentPosition="center"
           accessibilityLabel={item.alt || undefined}
         />
       )}
