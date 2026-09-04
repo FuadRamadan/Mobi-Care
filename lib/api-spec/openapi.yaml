@@ -547,6 +547,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/ImageUrlResponse"
 
+  /pharmacy/analytics/commission:
+    get:
+      operationId: getPharmacyCommissionAnalytics
+      tags: [analytics]
+      summary: Pharmacy-scoped live and daily commission history
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Today, outstanding balance, and zero-filled daily commission rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyCommissionAnalytics"
+
+  /pharmacy/analytics/commission.csv:
+    get:
+      operationId: exportPharmacyCommissionHistory
+      tags: [analytics]
+      summary: Download the authenticated pharmacy's commission history as CSV
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Commission history CSV
+          content:
+            text/csv:
+              schema: { type: string }
+
   # ── Patient experience ─────────────────────────────────────────────────────
   /auth/register:
     post:
@@ -592,6 +635,18 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/DrugSubcategory"
+        - name: pharmacyId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: patientLatitude
+          in: query
+          required: false
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: patientLongitude
+          in: query
+          required: false
+          schema: { type: number, minimum: -180, maximum: 180 }
       responses:
         "200":
           description: Drugs with per-pharmacy price offers
@@ -1129,6 +1184,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqDashboard"
 
+  /hq/dashboard/trends:
+    get:
+      operationId: getHqDashboardTrends
+      tags: [hq]
+      summary: Zero-filled daily searches, completed orders, and platform commission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: pharmacyId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Daily trends including zero-value dates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqDashboardTrends"
+
   /hq/insights:
     get:
       operationId: getHqInsights
@@ -1146,6 +1228,9 @@ paths:
         - name: interval
           in: query
           schema: { type: string, enum: [day, week, month] }
+        - name: pharmacyId
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: Aggregate metrics only; small groups are suppressed
@@ -2050,7 +2135,7 @@ paths:
     get:
       operationId: listSettlements
       tags: [hq]
-      summary: Pharmacy and courier settlements
+      summary: Daily pharmacy commission settlements
       security:
         - BearerAuth: []
       parameters:
@@ -2064,6 +2149,12 @@ paths:
           schema:
             type: string
           description: Inclusive ISO date, or an exclusive ISO date-time
+        - name: pharmacyId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [unpaid, partially_paid, paid] }
       responses:
         "200":
           description: Settlements
@@ -2076,7 +2167,7 @@ paths:
     post:
       operationId: generateSettlements
       tags: [hq]
-      summary: Generate pending settlements for a period
+      summary: Idempotently generate daily commission settlements in the business timezone
       security:
         - BearerAuth: []
       requestBody:
@@ -2093,11 +2184,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
-  /hq/settlements/{id}/mark-paid:
+  /hq/settlements/{id}/payments:
     post:
-      operationId: markSettlementPaid
+      operationId: recordCommissionSettlementPayment
       tags: [hq]
-      summary: Mark a settlement as paid
+      summary: Record an append-only commission payment against a daily settlement
       security:
         - BearerAuth: []
       parameters:
@@ -2111,16 +2202,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MarkPaidInput"
+              $ref: "#/components/schemas/CommissionSettlementPaymentInput"
       responses:
-        "200":
-          description: Paid settlement
+        "201":
+          description: Updated commission settlement
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Settlement"
+                $ref: "#/components/schemas/CommissionSettlement"
         "409":
-          description: Already paid
+          description: Payment exceeds balance
+
+  /hq/settlements/{id}/history:
+    get:
+      operationId: getCommissionSettlementHistory
+      tags: [hq]
+      summary: Append-only payment and adjustment history for a settlement
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Settlement history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommissionSettlementHistory"
 
   /hq/audit:
     get:
@@ -2543,6 +2654,7 @@ components:
           priceLeones,
           unitOfSale,
           inStock,
+          stockQuantity,
           availableForDelivery,
           availableForCollection,
         ]
@@ -2555,6 +2667,18 @@ components:
           type: string
         pharmacyAddress:
           type: ["string", "null"]
+        pharmacyPhone:
+          type: ["string", "null"]
+        mobileMoneyNumber:
+          type: ["string", "null"]
+        mobileMoneyProvider:
+          type: ["string", "null"]
+        mobileMoneyAccountName:
+          type: ["string", "null"]
+        online:
+          type: boolean
+        estimatedDistanceKm:
+          type: ["number", "null"]
         brand:
           type: ["string", "null"]
         manufacturer:
@@ -2565,6 +2689,8 @@ components:
           type: string
         inStock:
           type: boolean
+        stockQuantity:
+          type: number
         availableForDelivery:
           type: boolean
         availableForCollection:
@@ -3568,6 +3694,16 @@ components:
           type: ["string", "null"]
         locationLng:
           type: ["string", "null"]
+        mobileMoneyNumber:
+          type: ["string", "null"]
+        mobileMoneyProvider:
+          type: ["string", "null"]
+        mobileMoneyAccountName:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
         isActive:
           type: boolean
         controlledSubstanceAuthorized:
@@ -3599,6 +3735,20 @@ components:
           type: string
         address:
           type: string
+        mobileMoneyNumber:
+          type: string
+        mobileMoneyProvider:
+          type: string
+        mobileMoneyAccountName:
+          type: string
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
 
     PharmacyOnboardResponse:
       type: object
@@ -3863,6 +4013,20 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        mobileMoneyNumber:
+          type: ["string", "null"]
+        mobileMoneyProvider:
+          type: ["string", "null"]
+        mobileMoneyAccountName:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: ["number", "null"]
+          minimum: -180
+          maximum: 180
 
     TeamMember:
       type: object
@@ -4205,6 +4369,90 @@ components:
         note:
           type: string
           minLength: 1
+
+    HqDashboardTrends:
+      type: object
+      required: [start, end, pharmacyId, days]
+      properties:
+        start: { type: string, format: date }
+        end: { type: string, format: date }
+        pharmacyId: { type: ["string", "null"] }
+        days:
+          type: array
+          items:
+            type: object
+            required: [date, searches, orders, commissionMinor]
+            properties:
+              date: { type: string, format: date }
+              searches: { type: number }
+              orders: { type: number }
+              commissionMinor: { type: number }
+
+    PharmacyCommissionDaily:
+      type: object
+      required: [settlementDate, businessTimezone, ordersCount, grossCollectedMinor, drugAmountTotalMinor, commissionDueMinor, amountPaidMinor, balanceMinor, status]
+      properties:
+        settlementDate: { type: string, format: date }
+        businessTimezone: { type: string }
+        ordersCount: { type: number }
+        grossCollectedMinor: { type: number }
+        drugAmountTotalMinor: { type: number }
+        commissionDueMinor: { type: number }
+        amountPaidMinor: { type: number }
+        balanceMinor: { type: number }
+        status: { type: string, enum: [unpaid, partially_paid, paid] }
+
+    PharmacyCommissionAnalytics:
+      type: object
+      required: [today, outstandingCommissionMinor, daily]
+      properties:
+        today:
+          type: object
+          required: [ordersCount, grossCollectedMinor, drugAmountTotalMinor, commissionDueMinor, pharmacyEarningsMinor]
+          properties:
+            ordersCount: { type: number }
+            grossCollectedMinor: { type: number }
+            drugAmountTotalMinor: { type: number }
+            commissionDueMinor: { type: number }
+            pharmacyEarningsMinor: { type: number }
+        outstandingCommissionMinor: { type: number }
+        daily:
+          type: array
+          items: { $ref: "#/components/schemas/PharmacyCommissionDaily" }
+
+    CommissionSettlement:
+      type: object
+      required: [id, pharmacyId, settlementDate, businessTimezone, ordersCount, grossCollectedMinor, drugAmountTotalMinor, commissionDueMinor, amountPaidMinor, balanceMinor, status]
+      properties:
+        id: { type: string }
+        pharmacyId: { type: string }
+        pharmacyName: { type: ["string", "null"] }
+        settlementDate: { type: string, format: date }
+        businessTimezone: { type: string }
+        ordersCount: { type: number }
+        grossCollectedMinor: { type: number }
+        drugAmountTotalMinor: { type: number }
+        commissionDueMinor: { type: number }
+        amountPaidMinor: { type: number }
+        balanceMinor: { type: number }
+        status: { type: string, enum: [unpaid, partially_paid, paid] }
+        paidAt: { type: ["string", "null"], format: date-time }
+        paymentReference: { type: ["string", "null"] }
+
+    CommissionSettlementPaymentInput:
+      type: object
+      required: [amountMinor, paymentReference]
+      properties:
+        amountMinor: { type: number, minimum: 1 }
+        paidAt: { type: string, format: date-time }
+        paymentReference: { type: string, minLength: 1 }
+
+    CommissionSettlementHistory:
+      type: object
+      required: [payments, adjustments]
+      properties:
+        payments: { type: array, items: { type: object, additionalProperties: true } }
+        adjustments: { type: array, items: { type: object, additionalProperties: true } }
 
     Settlement:
       type: object

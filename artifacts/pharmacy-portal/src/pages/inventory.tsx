@@ -13,6 +13,7 @@ import {
   DrugPrimaryCategory,
   DrugSubcategory,
   getListInventoryQueryKey,
+  getListCatalogueQueryKey,
 } from "@workspace/api-client-react";
 import { formatLeones } from "@/lib/format";
 import {
@@ -51,6 +52,9 @@ import { differenceInDays, parseISO } from "date-fns";
 
 const selectClass =
   "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
+const PACKAGING_UNITS = ["Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube", "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece"];
+const DOSAGE_FORMS = ["Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion", "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder", "Patch"];
 
 function TierBadge({
   tier,
@@ -101,8 +105,11 @@ function DrugDropdown({
         d.isApproved &&
         (d.name.toLowerCase().includes(search.toLowerCase()) ||
           (d.genericName ?? "").toLowerCase().includes(search.toLowerCase())),
-    )
-    .slice(0, 20);
+    );
+
+  const displayLimit = 50;
+  const isTruncated = filtered.length > displayLimit;
+  const displayed = filtered.slice(0, displayLimit);
 
   return (
     <div ref={ref} className="relative">
@@ -141,40 +148,49 @@ function DrugDropdown({
               <p className="text-sm text-muted-foreground text-center py-4">
                 Loading catalogue…
               </p>
-            ) : filtered.length === 0 ? (
+            ) : displayed.length === 0 ? (
               <div className="py-6 px-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   No matches found.
                 </p>
               </div>
             ) : (
-              filtered.map((drug) => (
-                <button
-                  key={drug.id}
-                  type="button"
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 flex items-center justify-between border-b last:border-0"
-                  onClick={() => {
-                    onChange(drug);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  data-testid={`option-drug-${drug.id}`}
-                >
-                  <div>
-                    <div className="font-medium text-foreground">
-                      {drug.name}
-                    </div>
-                    {drug.genericName && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {drug.genericName}
+              <>
+                {displayed.map((drug) => (
+                  <button
+                    key={drug.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 flex items-center justify-between border-b last:border-0"
+                    onClick={() => {
+                      onChange(drug);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    data-testid={`option-drug-${drug.id}`}
+                  >
+                    <div>
+                      <div className="font-medium text-foreground">
+                        {drug.name}
                       </div>
-                    )}
+                      {drug.genericName && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {drug.genericName}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0 text-muted-foreground border">
+                      T{drug.tier}
+                    </span>
+                  </button>
+                ))}
+                {isTruncated && (
+                  <div className="py-3 px-4 text-center border-t bg-muted/5">
+                    <p className="text-xs text-muted-foreground">
+                      Showing first {displayLimit} results. Please type to refine your search.
+                    </p>
                   </div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0 text-muted-foreground border">
-                    T{drug.tier}
-                  </span>
-                </button>
-              ))
+                )}
+              </>
             )}
           </div>
         </div>
@@ -193,6 +209,7 @@ function RequestMissingDrugModal({
   categories: DrugCategory[];
 }) {
   const proposeMutation = useProposeDrug();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [genericName, setGenericName] = useState("");
   const [strength, setStrength] = useState("");
@@ -234,6 +251,7 @@ function RequestMissingDrugModal({
           description: description || undefined,
         },
       });
+      queryClient.invalidateQueries({ queryKey: getListCatalogueQueryKey() });
       toast.success("Drug request submitted. HQ will review it shortly.");
       onOpenChange(false);
       setName("");
@@ -331,24 +349,30 @@ function RequestMissingDrugModal({
               <Label>
                 Form <span className="text-destructive">*</span>
               </Label>
-              <Input
+              <select
                 value={form}
                 onChange={(e) => setForm(e.target.value)}
-                placeholder="e.g. Tablet"
-                data-testid="input-propose-form"
-              />
+                className={selectClass}
+                data-testid="select-propose-form"
+              >
+                <option value="">Select form...</option>
+                {DOSAGE_FORMS.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
               {errors.form && (
                 <p className="text-xs text-destructive">{errors.form}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label>Unit</Label>
-              <Input
+              <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                placeholder="e.g. Box"
-                data-testid="input-propose-unit"
-              />
+                className={selectClass}
+                data-testid="select-propose-unit"
+              >
+                <option value="">Select unit...</option>
+                {PACKAGING_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
           </div>
 
@@ -792,18 +816,20 @@ function ListingModal({
                 <Label>
                   Form <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  list="forms-list"
+                <select
                   value={form}
                   onChange={(e) => setForm(e.target.value)}
-                  placeholder="e.g. Tablet"
-                  data-testid="input-form"
-                />
-                <datalist id="forms-list">
-                  {commonForms.map((f) => (
-                    <option key={f} value={f} />
+                  className={selectClass}
+                  data-testid="select-form"
+                >
+                  <option value="">Select form...</option>
+                  {DOSAGE_FORMS.map((f) => (
+                    <option key={f} value={f}>{f}</option>
                   ))}
-                </datalist>
+                  {form && !DOSAGE_FORMS.includes(form) && (
+                    <option value={form}>{form} (Legacy)</option>
+                  )}
+                </select>
                 {errors.form && (
                   <p className="text-xs text-destructive">{errors.form}</p>
                 )}
@@ -822,12 +848,20 @@ function ListingModal({
                 <Label>
                   Unit of Sale <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <select
                   value={unitOfSale}
                   onChange={(e) => setUnitOfSale(e.target.value)}
-                  placeholder="e.g. Box, Pack"
-                  data-testid="input-unit"
-                />
+                  className={selectClass}
+                  data-testid="select-unit"
+                >
+                  <option value="">Select unit...</option>
+                  {PACKAGING_UNITS.map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                  {unitOfSale && !PACKAGING_UNITS.includes(unitOfSale) && (
+                    <option value={unitOfSale}>{unitOfSale} (Legacy)</option>
+                  )}
+                </select>
                 {errors.unitOfSale && (
                   <p className="text-xs text-destructive">
                     {errors.unitOfSale}
@@ -1096,6 +1130,8 @@ export default function Inventory() {
   const deleteMutation = useDeleteInventoryItem();
   const queryClient = useQueryClient();
 
+  const myRequests = catalogue.filter((d) => d.reviewStatus === "pending" || d.reviewStatus === "rejected");
+
   const filteredInventory = (inventory ?? []).filter((item) => {
     const q = search.toLowerCase();
     return (
@@ -1185,6 +1221,34 @@ export default function Inventory() {
           data-testid="input-search-inventory"
         />
       </div>
+
+      {/* My Drug Requests */}
+      {myRequests.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">My Drug Requests</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {myRequests.map((req) => (
+              <div key={req.id} className="p-4 border rounded-xl bg-card shadow-sm space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-foreground">{req.name}</p>
+                    {req.genericName && <p className="text-sm text-muted-foreground">{req.genericName}</p>}
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${req.reviewStatus === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                    {req.reviewStatus === 'pending' ? 'Pending Review' : 'Rejected'}
+                  </span>
+                </div>
+                {req.reviewStatus === 'rejected' && req.rejectionReason && (
+                  <div className="p-2 bg-red-50 text-red-800 rounded-md text-sm border border-red-100">
+                    <p className="font-medium">Reason:</p>
+                    <p>{req.rejectionReason}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Low-stock banner */}
       {!isLoadingInventory && lowStockCount > 0 && (

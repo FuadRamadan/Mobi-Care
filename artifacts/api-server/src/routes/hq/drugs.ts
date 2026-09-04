@@ -9,9 +9,10 @@ import {
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { and, eq, desc, count, ne, sql } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { createPharmacyNotification } from "../../lib/pharmacyNotifications.js";
 
 const router = safeRouter();
 
@@ -264,11 +265,61 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     updatedAt: new Date(),
   };
 
-  const [updated] = await db
-    .update(drugCatalogueTable)
-    .set(updateValues)
-    .where(eq(drugCatalogueTable.id, id))
-    .returning();
+  let updated: typeof drugCatalogueTable.$inferSelect | undefined;
+  try {
+    updated = await db.transaction(async (tx) => {
+      // A proposal is a held catalogue request. Releasing it and making its
+      // requesting pharmacy able to price/stock it happen in one transaction.
+      if (requestedReviewStatus === "approved" && !existing.isApproved) {
+        const [duplicate] = await tx
+          .select({ id: drugCatalogueTable.id })
+          .from(drugCatalogueTable)
+          .where(
+            and(
+              ne(drugCatalogueTable.id, id),
+              eq(drugCatalogueTable.isApproved, true),
+              sql`lower(${drugCatalogueTable.name}) = lower(${body.data.name ?? existing.name})`,
+              sql`${body.data.commonStrengths?.[0] ?? existing.commonStrengths[0]} = any(${drugCatalogueTable.commonStrengths})`,
+              sql`${body.data.commonForms?.[0] ?? existing.commonForms[0]} = any(${drugCatalogueTable.commonForms})`,
+            ),
+          )
+          .limit(1);
+        if (duplicate) throw Object.assign(new Error("DUPLICATE_DRUG"), { code: "DUPLICATE_DRUG", duplicateId: duplicate.id });
+      }
+      const [releasedDrug] = await tx
+        .update(drugCatalogueTable)
+        .set(updateValues)
+        .where(and(eq(drugCatalogueTable.id, id), eq(drugCatalogueTable.reviewStatus, existing.reviewStatus)))
+        .returning();
+      if (!releasedDrug) throw Object.assign(new Error("REQUEST_CHANGED"), { code: "REQUEST_CHANGED" });
+      if (requestedReviewStatus === "approved" && !existing.isApproved && existing.proposedByPharmacyId) {
+        await tx.insert(pharmacyInventoryTable).values({
+          pharmacyId: existing.proposedByPharmacyId,
+          drugId: releasedDrug.id,
+          strength: body.data.commonStrengths?.[0] ?? existing.commonStrengths[0] ?? null,
+          form: body.data.commonForms?.[0] ?? existing.commonForms[0] ?? null,
+          unitOfSale: releasedDrug.unit,
+          primaryCategory: resultingPrimaryCategory,
+          subcategory: resultingSubcategory,
+          priceLeones: "0.00",
+          stockQuantity: 0,
+          completionStatus: "incomplete",
+          isActive: true,
+        }).onConflictDoNothing();
+      }
+      return releasedDrug;
+    });
+  } catch (error: any) {
+    if (error?.code === "DUPLICATE_DRUG") {
+      res.status(409).json({ error: "An approved drug with the same name, strength, and form already exists", duplicateDrugId: error.duplicateId });
+      return;
+    }
+    if (error?.code === "REQUEST_CHANGED") {
+      res.status(409).json({ error: "Drug request changed while it was being reviewed" });
+      return;
+    }
+    throw error;
+  }
 
   const released = requestedReviewStatus === "approved" && !existing.isApproved;
   await writeAudit({
@@ -285,6 +336,17 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     entityId: id,
     details: { changes: updateValues },
   });
+  if (requestedReviewStatus && existing.proposedByPharmacyId) {
+    void createPharmacyNotification({
+      pharmacyId: existing.proposedByPharmacyId,
+      title: requestedReviewStatus === "approved" ? "Drug request approved" : "Drug request rejected",
+      body: requestedReviewStatus === "approved"
+        ? `${updated!.name} is now available in your catalogue. Add a price and stock to make it searchable by patients.`
+        : `Your request for ${updated!.name} was rejected: ${body.data.rejectionReason}`,
+      type: "drug_request_review",
+      referenceId: updated!.id,
+    });
+  }
 
   res.json(withReviewDueAt(updated!));
 });

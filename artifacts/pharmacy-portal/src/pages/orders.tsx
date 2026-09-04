@@ -56,11 +56,13 @@ function statusConfigFor(order: Order) {
 }
 
 export default function Orders() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(location.split("?")[1]);
+  const dateFilter = searchParams.get("date");
+  const tabParam = searchParams.get("tab");
+
   const [activeTab, setActiveTab] = useState(() =>
-    new URLSearchParams(location.split("?")[1]).get("tab") === "cancelled"
-      ? "cancelled"
-      : "active"
+    tabParam === "cancelled" ? "cancelled" : (dateFilter ? "completed" : "active")
   );
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -73,6 +75,10 @@ export default function Orders() {
     // Search filter
     if (search && !order.id.toLowerCase().includes(search.toLowerCase()) && 
         !order.patientName.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    // Date filter (from dashboard drill-down)
+    if (dateFilter && !order.createdAt.startsWith(dateFilter) && !order.completedAt?.startsWith(dateFilter)) {
       return false;
     }
     // Tab filter
@@ -106,16 +112,29 @@ export default function Orders() {
             <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search ID or patient..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
+        <div className="flex w-full sm:w-auto items-center gap-2">
+          {dateFilter && (
+            <Button variant="outline" size="sm" onClick={() => setLocation("/orders")} className="h-10">
+              Clear Date Filter
+            </Button>
+          )}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search ID or patient..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
       </div>
+
+      {dateFilter && (
+        <div className="bg-primary/10 text-primary px-4 py-2 rounded-md font-medium text-sm">
+          Showing completed orders for {dateFilter}
+        </div>
+      )}
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
         <div className="overflow-auto flex-1">

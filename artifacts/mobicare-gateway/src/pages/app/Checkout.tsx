@@ -29,6 +29,8 @@ export default function Checkout() {
     setQuantity,
     removeItem,
     clear,
+    subtotalLeones,
+    serviceFeeLeones,
     totalLeones,
     prescriptionRequired,
     collectionOnly,
@@ -359,8 +361,20 @@ export default function Checkout() {
               <Smartphone className="w-4 h-4 text-orange-money" /> Orange Money
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Total</span>
+          <div className="space-y-1.5 pt-2 border-t">
+            {cart.items.map((item) => (
+              <div key={item.inventoryId} className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{item.quantity} × {item.drugName}</span>
+                <span>{formatLeones(item.priceLeones * item.quantity)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Service fee (5%)</span>
+              <span>{formatLeones(serviceFeeLeones)}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t">
+            <span className="font-medium">Total payable</span>
             <span
               className="font-display font-bold text-xl text-dark-green"
               data-testid="text-total"
@@ -368,15 +382,31 @@ export default function Checkout() {
               {formatLeones(totalLeones)}
             </span>
           </div>
+          <div className="pt-2">
+            <p className="text-sm font-medium mb-1">Pay directly to the pharmacy</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Please use mobile money to pay <strong>{formatLeones(totalLeones)}</strong> to the pharmacy. Your order will be confirmed once payment is received.
+            </p>
+            {cart.mobileMoneyNumber && (
+              <div className="bg-secondary/30 p-2 rounded-lg border text-sm">
+                <div className="font-medium">{cart.mobileMoneyNumber}</div>
+                {(cart.mobileMoneyProvider || cart.mobileMoneyAccountName) && (
+                  <div className="text-muted-foreground text-xs mt-0.5">
+                    {cart.mobileMoneyProvider} {cart.mobileMoneyProvider && cart.mobileMoneyAccountName ? '·' : ''} {cart.mobileMoneyAccountName}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <Button
-            className="w-full rounded-full h-12 text-base"
+            className="w-full rounded-full h-12 text-base mt-2"
             onClick={placeOrder}
             disabled={busy || deliveryBlocked || collectionBlocked}
             data-testid="button-place-order"
           >
             {busy
               ? "Placing order…"
-              : `Pay ${formatLeones(totalLeones)} & place order`}
+              : `Place order`}
           </Button>
           <p className="text-[11px] text-muted-foreground text-center">
             Mobile-money payment is recorded with your order — you'll confirm on

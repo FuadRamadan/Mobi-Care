@@ -41,6 +41,8 @@ export default function CartScreen() {
     cart,
     itemCount,
     totalLeones,
+    serviceFeeLeones,
+    amountPayableLeones,
     requiresPrescription,
     requiresCollection,
     updateQty,
@@ -180,7 +182,7 @@ export default function CartScreen() {
         },
       });
 
-      await payOrder.mutateAsync({ id: order.id });
+      const paidOrder = await payOrder.mutateAsync({ id: order.id });
 
       clearCart();
       setPrescriptionUri(null);
@@ -194,7 +196,7 @@ export default function CartScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         "Order Placed!",
-        "Your payment has been recorded. Track your order in the Orders tab.",
+        `Your direct payment of ${formatLeones(paidOrder.totalLeones)} to ${cart.pharmacyName} has been recorded. Track your order in the Orders tab.`,
         [
           {
             text: "View Orders",
@@ -453,22 +455,48 @@ export default function CartScreen() {
         <Text style={s.sectionTitle}>Summary</Text>
         <View style={s.summaryRow}>
           <Text style={s.summaryLabel}>
-            {itemCount} item{itemCount !== 1 ? "s" : ""}
+            Drug price · {itemCount} item{itemCount !== 1 ? "s" : ""}
           </Text>
           <Text style={s.summaryValue}>{formatLeones(totalLeones)}</Text>
         </View>
         <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Payment</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={[s.omBadge]}>
-              <Text style={s.omText}>Orange Money</Text>
-            </View>
-          </View>
+          <Text style={s.summaryLabel}>Service fee (5%)</Text>
+          <Text style={s.summaryValue}>{formatLeones(serviceFeeLeones)}</Text>
         </View>
         <View style={[s.summaryRow, s.summaryTotal]}>
-          <Text style={s.totalLabel}>Total</Text>
-          <Text style={s.totalValue}>{formatLeones(totalLeones)}</Text>
+          <Text style={s.totalLabel}>Total amount payable</Text>
+          <Text style={s.totalValue}>{formatLeones(amountPayableLeones)}</Text>
         </View>
+      </View>
+
+      {/* Direct pharmacy payment */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Pay the pharmacy directly</Text>
+        {cart.pharmacyPayment?.number ? (
+          <>
+            <Text style={s.paymentInstructions}>
+              Send {formatLeones(amountPayableLeones)} directly to {cart.pharmacyName}.
+            </Text>
+            <View style={s.paymentDetailRow}>
+              <Text style={s.paymentDetailLabel}>Mobile money</Text>
+              <Text style={s.paymentDetailValue}>{cart.pharmacyPayment.number}</Text>
+            </View>
+            {(cart.pharmacyPayment.provider || cart.pharmacyPayment.accountName) ? (
+              <View style={s.paymentDetailRow}>
+                <Text style={s.paymentDetailLabel}>Account</Text>
+                <Text style={s.paymentDetailValue}>
+                  {[cart.pharmacyPayment.provider, cart.pharmacyPayment.accountName]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Text>
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <Text style={s.paymentInstructions}>
+            Direct-payment details are unavailable for this saved cart. Please return to search and add the medicine again.
+          </Text>
+        )}
       </View>
 
       {/* Pay button */}
@@ -476,12 +504,12 @@ export default function CartScreen() {
         style={[s.payBtn, isSubmitting && s.payBtnDisabled]}
         testID="pay-button"
         onPress={handleCheckout}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !cart.pharmacyPayment?.number}
         activeOpacity={0.85}
       >
         <Ionicons name="phone-portrait-outline" size={20} color="#FFF" />
         <Text style={s.payBtnText}>
-          {isSubmitting ? "Processing…" : `Pay ${formatLeones(totalLeones)}`}
+          {isSubmitting ? "Processing…" : `Record payment of ${formatLeones(amountPayableLeones)}`}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -681,13 +709,18 @@ function makeStyles(
     },
     totalLabel: { fontSize: 16, fontWeight: "700", color: colors.foreground },
     totalValue: { fontSize: 18, fontWeight: "800", color: colors.darkGreen },
-    omBadge: {
-      backgroundColor: "#FF6600",
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
+    paymentInstructions: { fontSize: 13, color: colors.mutedForeground, lineHeight: 19, marginBottom: 10 },
+    paymentDetailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 12,
+      paddingVertical: 7,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
-    omText: { color: "#FFF", fontSize: 11, fontWeight: "700" },
+    paymentDetailLabel: { fontSize: 13, color: colors.mutedForeground },
+    paymentDetailValue: { flex: 1, textAlign: "right", fontSize: 13, fontWeight: "700", color: colors.foreground },
     payBtn: {
       flexDirection: "row",
       alignItems: "center",

@@ -43,7 +43,7 @@ export default function HqPharmacies() {
     toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
 
   const [openOnboard, setOpenOnboard] = useState(false);
-  const [form, setForm] = useState({ name: '', username: '', phone: '', address: '' });
+  const [form, setForm] = useState({ name: '', username: '', phone: '', address: '', mobileMoneyNumber: '', mobileMoneyProvider: '', mobileMoneyAccountName: '', locationLat: '', locationLng: '' });
   const [tempPasswordRes, setTempPasswordRes] = useState<{ tempPassword: string; temporaryPasswordExpiresAt: string } | null>(null);
 
   const [resetTargetId, setResetTargetId] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export default function HqPharmacies() {
             if (!v && tempPasswordRes) return;
             if (!v) {
               setTempPasswordRes(null);
-              setForm({ name: '', username: '', phone: '', address: '' });
+              setForm({ name: '', username: '', phone: '', address: '', mobileMoneyNumber: '', mobileMoneyProvider: '', mobileMoneyAccountName: '', locationLat: '', locationLng: '' });
               setOpenOnboard(false);
             } else {
               setOpenOnboard(v);
@@ -160,6 +160,11 @@ export default function HqPharmacies() {
                       username: form.username,
                       phone: form.phone || undefined,
                       address: form.address || undefined,
+                      mobileMoneyNumber: form.mobileMoneyNumber || undefined,
+                      mobileMoneyProvider: form.mobileMoneyProvider || undefined,
+                      mobileMoneyAccountName: form.mobileMoneyAccountName || undefined,
+                      latitude: form.locationLat ? Number(form.locationLat) : undefined,
+                      longitude: form.locationLng ? Number(form.locationLng) : undefined,
                     },
                   });
                 }}

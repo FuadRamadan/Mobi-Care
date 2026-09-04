@@ -12,4 +12,15 @@ export type PatientSearchDrugsParams = {
 q?: string;
 category?: DrugPrimaryCategory;
 subcategory?: DrugSubcategory;
+pharmacyId?: string;
+/**
+ * @minimum -90
+ * @maximum 90
+ */
+patientLatitude?: number;
+/**
+ * @minimum -180
+ * @maximum 180
+ */
+patientLongitude?: number;
 };

@@ -7,6 +7,8 @@ import {
   useListDrugCategories,
   getListHqDrugsQueryKey,
   type HqDrug,
+  type DrugPrimaryCategory,
+  type DrugSubcategory,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import HqLayout from "./HqLayout";
@@ -31,6 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -122,8 +127,10 @@ export default function HqCatalogue() {
   const { data: categories = [] } = useListDrugCategories();
   const drugs = data ?? [];
 
-  const refresh = () =>
+  const refresh = () => {
     queryClient.invalidateQueries({ queryKey: getListHqDrugsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ["/api/pharmacy/catalogue"] });
+  };
   const onError = (err: unknown) =>
     toast({
       title: "Action failed",
@@ -221,8 +228,8 @@ export default function HqCatalogue() {
       tier: form.tier as "1" | "2" | "3",
       unit: form.unit || undefined,
       maxUnitsPerOrder: form.maxUnits ? Number(form.maxUnits) : null,
-      primaryCategory: form.primaryCategory as any,
-      subcategory: form.subcategory as any,
+      primaryCategory: form.primaryCategory as DrugPrimaryCategory,
+      subcategory: form.subcategory as DrugSubcategory,
       commonStrengths: form.commonStrengths
         .split(",")
         .map((s) => s.trim())
@@ -236,7 +243,7 @@ export default function HqCatalogue() {
     if (isNew) {
       create.mutate({ data: payload }, { onSuccess: () => setOpen(false) });
     } else {
-      const updateData: any = {
+      const updateData: Parameters<typeof update.mutate>[0]["data"] = {
         ...payload,
         genericName: payload.genericName ?? null,
       };
@@ -359,6 +366,59 @@ export default function HqCatalogue() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
+                  <Label>Packaging / Unit</Label>
+                  <Select
+                    value={form.unit}
+                    onValueChange={(v) => setForm({ ...form, unit: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Box","Bottle","Vial","Sachet","Tablet","Capsule","Strip","Tube","Ampoule","Syringe","Pack","Carton","Jar","Can","Roll","Piece"].map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Dosage Forms</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal">
+                        {form.commonForms ? <span className="truncate">{form.commonForms}</span> : <span className="text-muted-foreground">Select forms...</span>}
+                        <ChevronDown className="w-4 h-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0">
+                      <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                        {["Tablet","Capsule","Syrup","Suspension","Injection","Infusion","Cream","Ointment","Gel","Drops","Inhaler","Suppository","Powder","Patch"].map(f => {
+                          const current = form.commonForms.split(',').map(s => s.trim()).filter(Boolean);
+                          const isChecked = current.includes(f);
+                          return (
+                            <div key={f} className="flex items-center space-x-2 p-1 hover:bg-muted rounded">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setForm({ ...form, commonForms: [...current, f].join(', ') });
+                                  } else {
+                                    setForm({ ...form, commonForms: current.filter(x => x !== f).join(', ') });
+                                  }
+                                }}
+                              />
+                              <Label className="flex-1 cursor-pointer font-normal">{f}</Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <Label>Common Strengths (comma separated)</Label>
                   <Input
                     value={form.commonStrengths}
@@ -366,16 +426,6 @@ export default function HqCatalogue() {
                       setForm({ ...form, commonStrengths: e.target.value })
                     }
                     placeholder="e.g. 500mg, 1g"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Common Forms (comma separated)</Label>
-                  <Input
-                    value={form.commonForms}
-                    onChange={(e) =>
-                      setForm({ ...form, commonForms: e.target.value })
-                    }
-                    placeholder="e.g. Tablet, Syrup"
                   />
                 </div>
               </div>

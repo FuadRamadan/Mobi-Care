@@ -1,0 +1,191 @@
+Pharmacy Platform — Build & Fix Specification
+Prompt for Replit Agent  |  Prepared by Martha Kabba
+
+How to use this document
+You are working on an existing pharmacy platform with three surfaces: a Patient app (search and order drugs), a Pharmacy Portal, and an HQ / Headquarters Portal. Implement every requirement below in the existing codebase.
+•	Do not rebuild or redesign anything that is not mentioned here. Keep the current stack, routing, styling and auth exactly as they are.
+•	Work through the sections in order. Section 1 is the highest priority because it is a live money bug.
+•	After each section, state which files you changed and why.
+•	If a requirement conflicts with existing logic, stop and explain the conflict instead of guessing.
+•	Write database migrations for any schema change. Never drop or overwrite existing order or payment records.
+•	Add automated tests for every calculation rule in Section 1.
+1. Fix the drug price, service fee and total calculation
+Current problem
+•	The patient sees one amount at search, a different total at checkout, and the totals reported in the Pharmacy Portal and HQ Portal do not match what the patient actually paid.
+•	This means the service fee is being applied, dropped or recalculated inconsistently across the three surfaces.
+Required behaviour
+•	Patient search results: display the actual drug price only (the pharmacy's price for the drug). No fee shown at this stage.
+•	Total amount / checkout page: display a clear breakdown, in this order:
+◦	Drug price (line item, per drug, showing quantity where applicable)
+◦	Service fee (5% of the drug price) shown directly underneath, labelled so the patient understands it
+◦	Total amount payable = drug price + service fee, shown in bold as the final line
+•	The amount charged at payment must equal that displayed total, to the cent.
+•	The Pharmacy Portal and HQ Portal must both report figures that reconcile exactly to what the patient paid.
+Worked example
+For a drug priced at 10,000.00 (use the currency already configured in the app):
+Line item	Example amount	Who it belongs to
+Drug price (pharmacy price)	10,000.00	Pharmacy
+Service fee (5% of drug price)	500.00	Platform / HQ
+Total paid by patient	10,500.00	—
+Pharmacy settlement amount	10,000.00	Pharmacy
+Platform revenue	500.00	Platform / HQ
+
+
+2. Approved drug requests must appear in both catalogues immediately
+Current problem
+When a pharmacy requests a drug that is not in the master catalogue and HQ approves it, the drug does not become usable straight away.
+Required behaviour
+•	On HQ approval, the drug is created in the master catalogue and becomes immediately visible and selectable in both the HQ catalogue and the requesting pharmacy's catalogue — no manual re-entry, no re-import, no waiting for a scheduled job.
+•	The approval action must be atomic: create the master catalogue record, link it to the requesting pharmacy, and update the request status in a single database transaction. If any step fails, roll all of it back and show a clear error.
+•	Clear or invalidate any cached catalogue list so the new drug shows on the next page load rather than after a cache expiry.
+•	Notify the requesting pharmacy in-app that the drug was approved and is now available.
+•	If HQ rejects the request, record the rejection reason and show it to the pharmacy.
+•	Prevent duplicates: before creating the record, check for an existing drug with the same name, strength and form, and warn the HQ approver rather than creating a second entry.
+Acceptance criteria
+•	Pharmacy submits a new drug request → HQ approves → pharmacy refreshes their catalogue and the drug is there, ready to price and stock.
+•	The same drug is searchable by patients once the pharmacy sets a price and stock quantity.
+•	The drug appears in the HQ master catalogue list in the same moment.
+3. Use dropdowns throughout the drug addition page
+Required behaviour
+Replace free-text inputs on the drug addition form with dropdown (select) fields wherever the value comes from a fixed list. Free typing here is what creates duplicate and inconsistent catalogue entries.
+•	Packaging / unit: Box, Bottle, Vial, Sachet, Tablet, Capsule, Strip, Tube, Ampoule, Syringe, Pack, Carton, Jar, Can, Roll, Piece.
+•	Dosage form: Tablet, Capsule, Syrup, Suspension, Injection, Infusion, Cream, Ointment, Gel, Drops, Inhaler, Suppository, Powder, Patch.
+4. Show pharmacy decision-making details in patient search results
+Required behaviour
+A patient searching for a drug needs enough information to choose a pharmacy without leaving the results page. Each result card must show:
+•	Pharmacy name
+•	Full physical address, including area / town / landmark
+•	Mobile money number used for payment, with a tap-to-copy control
+•	Mobile money provider / account name, so the patient can confirm they are paying the right entity
+•	Contact phone number for the pharmacy
+•	Drug price (per the rule in Section 1 — price only, no fee at this stage)
+•	Stock availability status and quantity available
+•	Pharmacy online or Offline
+•	Estimated distance from the patient
+5. Move total revenue into the Settlements section
+Required behaviour
+•	Remove the "Total revenue" figure from the General Dashboard.
+•	Show total revenue in the Settlements section instead, where it sits alongside payouts and reconciliation.
+•	Keep "Revenue per day" on the General Dashboard — that stays exactly where it is.
+•	Both figures must be driven by the stored order amounts from Section 1, so the dashboard and Settlements can never disagree.
+6. Show all data — remove the minimum-count suppression
+Current problem
+Records, rows or categories with a count below 10 are currently being hidden or grouped away. This makes low-volume pharmacies, drugs and days invisible, and it makes totals look wrong because the visible rows do not add up to the reported total.
+Required behaviour
+•	Remove every threshold, filter or condition that omits results because the count is small — search results, dashboards, reports, charts, exports and tables.
+•	Search the codebase for conditions such as count > 10, >= 10, HAVING COUNT(*) > 10, LIMIT-based truncation and any "Other" bucketing, and remove them.
+•	Show every record, including counts of 1.
+•	Where a list is genuinely long, use pagination or a scroll — never silent truncation.
+•	When there is genuinely no data, show an explicit empty state ("No orders in this period"), not a hidden or blank panel.
+•	Verify afterwards that the sum of displayed rows equals the reported total on every screen.
+7. Add trend charts to both dashboards
+Pharmacy Portal dashboard
+•	Line or bar chart showing number of orders per day over time.
+•	Selectable date range: last 7 days, last 30 days, last 90 days, and a custom range.
+•	Data scoped strictly to that pharmacy.
+HQ Portal dashboard
+•	Chart showing number of searches per day.
+•	Chart showing number of orders per day.
+•	Show both series on one chart with a legend, or as two charts side by side — whichever reads more clearly in the existing layout.
+•	Same date-range selector as the Pharmacy Portal.
+•	Data aggregated across all pharmacies, with an optional filter by individual pharmacy.
+•	This section must also honour Section 6 — no minimum-count filtering in the chart data.
+
+
+
+
+
+
+
+
+Pharmacy Platform — Commission & Settlements
+Prompt for Replit Agent — Part 2  |  Prepared by Martha Kabba
+
+How to use this document
+This is Part 2 of the pharmacy platform specification. It builds on the pricing and service fee work in Part 1 and must be implemented after it, because every figure here is derived from the stored order amounts introduced there.
+•	Implement only what is described here. Do not redesign anything else.
+•	Read Section 1 first — it corrects a money-flow assumption made in Part 1. Getting this wrong will produce double-counted revenue.
+•	State which files you changed after each section.
+•	Write migrations for schema changes and add automated tests for every commission calculation.
+1. Correction to Part 1 — the direction the money flows
+Important: Part 1 assumed MobiCare collects from the patient and pays the pharmacy out. That is wrong. The patient pays the pharmacy directly using the pharmacy’s own mobile money number, and the pharmacy then owes MobiCare the 5% service fee as commission. Implement the model described below and remove any payout-to-pharmacy logic built from Part 1.
+Correct money flow
+Step	What happens	Effect on the ledger
+1	Patient pays the pharmacy directly (mobile money) — drug price + 5% service fee	Pharmacy holds the full amount
+2	Order is recorded with its stored amount breakdown	Commission due to MobiCare accrues
+3	At end of day, the day is closed and a settlement record is created per pharmacy	Pharmacy owes MobiCare that day’s commission
+4	Pharmacy pays MobiCare; HQ records the payment against that settlement	Balance falls to zero, status becomes Paid
+
+What this changes in the data model
+•	Keep the stored order fields from Part 1: drug_amount, service_fee_rate, service_fee_amount, total_amount.
+•	Rename or replace pharmacy_payout with commission_due_to_platform, which equals service_fee_amount.
+•	MobiCare revenue = commission collected. It is NOT the total amount patients paid. Make sure no dashboard treats gross patient spend as MobiCare revenue.
+Why this matters: if the platform never touches the drug money, counting the full patient payment as MobiCare revenue overstates the business by roughly twenty times. The only money MobiCare earns is the 5%.
+2. Pharmacy dashboard — commission per day
+Required behaviour
+A pharmacy must be able to open their dashboard and see, without calculating anything themselves, how much they owe MobiCare.
+•	Add a prominent card showing "Commission owed to MobiCare today", updating live as orders come in.
+•	Show alongside it, for the same day: number of orders, gross collected from patients, and the pharmacy’s own earnings (gross minus commission).
+•	Add a table or chart of commission per day for the selected date range, one row or bar per day.
+•	Show the outstanding balance across all unpaid days, so a pharmacy that has fallen behind can see the full amount owed, not just today’s.
+•	Each day’s row must show its status: Unpaid, Partially paid, or Paid.
+•	Let the pharmacy click a day and see the individual orders that make up that commission figure — no unexplained totals.
+•	Allow export of the commission history to CSV or PDF for the pharmacy’s own records.
+•	Scope all figures strictly to the logged-in pharmacy. A pharmacy must never see another pharmacy’s numbers.
+3. Settlements section — daily record per pharmacy
+Required behaviour
+•	Create a daily settlement record for every pharmacy that had at least one completed order that day.
+•	HQ must be able to see, for any date, a list of every pharmacy and what each owes for that day.
+•	Support filtering by date range, by pharmacy, and by status (Unpaid / Partially paid / Paid).
+•	Allow HQ to record a payment against a settlement, capturing the amount, date and payment reference.
+•	Never delete or overwrite a settlement record. Corrections are made by adjustment entries so the history stays auditable.
+Settlement record fields
+Field	Meaning
+settlement_date	The business day being settled
+pharmacy_id	The pharmacy that owes the commission
+orders_count	Number of completed orders that day
+gross_collected	Total paid by patients that day (drug amount + service fee)
+drug_amount_total	The pharmacy’s own earnings, excluding commission
+commission_due	Amount the pharmacy owes MobiCare for that day
+amount_paid	How much of the commission has been received
+balance	commission_due minus amount_paid
+status	Unpaid / Partially paid / Paid
+paid_at, payment_reference	When it was settled and the transaction reference
+
+How settlements are generated
+•	Run a scheduled job shortly after the close of each business day to create that day’s settlement records.
+•	The job must be idempotent — running it twice for the same day must not create duplicate records or double the amount owed.
+•	Define the business day explicitly in the application timezone, midnight to midnight, and store the timezone used. Do not rely on the server’s local time.
+•	Include only completed and paid orders. Cancelled, failed and refunded orders must not generate commission.
+•	If an order is refunded after its day has been settled, create a negative adjustment against the next open settlement rather than editing the closed one.
+•	Also expose a live "today so far" figure on the pharmacy dashboard, calculated on the fly before the day closes.
+4. Aggregate commission for MobiCare
+Required behaviour
+•	In the HQ Settlements section, show total commission across all pharmacies for the selected date range.
+•	Break that total into: commission collected, commission outstanding, and total commission earned (collected plus outstanding).
+•	Show an all-time aggregate commission figure as well as the range figure.
+•	Show a ranked list of pharmacies by commission owed, so HQ can see who to chase first.
+•	Show a ranked list of pharmacies by commission generated, so HQ can see the top-performing partners.
+Reconciliation rule: for any given day, the sum of commission_due across all pharmacies must equal MobiCare’s total commission for that day, which must equal the sum of service_fee_amount across all completed orders that day. Add an automated test asserting this.
+5. HQ dashboard — total commission per day
+Required behaviour
+•	Add a card showing total commission earned today across all pharmacies.
+•	Add a chart showing total commission per day over the selected date range.
+•	Use the same date-range selector as the other HQ charts (7 / 30 / 90 days and custom).
+•	Include days with zero commission in the series so the trend does not skip dates.
+•	Allow an optional filter by individual pharmacy.
+•	Drive this from the same stored order amounts as the Settlements section, so the dashboard and Settlements can never disagree.
+6. Remove Pending Settlements, add search metrics
+Required behaviour
+•	Remove the "Pending settlements" card from the dashboard.
+•	In its place, show total number of searches for the selected date range.
+•	Directly underneath it, show number of searches per day.
+•	Keep the same card sizing and layout so the dashboard grid does not break.
+Keep the underlying data: remove the dashboard card only. Unpaid and partially paid settlements must remain fully visible and filterable inside the Settlements section — that is now the single place HQ tracks who owes what. Do not delete the pending-settlement logic, queries or records from the system.
+Defining a search
+•	A search counts as one drug search submitted by a patient — one submission, one count.
+•	Do not count page loads, filter changes, sort changes or pagination as new searches.
+•	Store searches in a searches table with a timestamp, the search term, and the patient or session identifier, so the metric can be recalculated later.
+•	Apply the no-suppression rule from Part 1 — show every day including days with very low or zero search counts.
+•	
+

@@ -9,6 +9,12 @@ Treat the exact patient line total as authoritative when basis-point rounding ca
 
 **How to apply:** Persist and expose exact line totals; derive displayed line commission from exact patient line total minus base line total. Keep settlement generation protected by database uniqueness, not application checks alone.
 
+Patients pay each pharmacy directly for the pharmacy drug amount plus a fixed 5% service fee. The pharmacy holds the gross payment and owes that service fee to MobiCare; platform revenue is commission only, never gross patient spend.
+
+**Why:** Treating gross patient payments as MobiCare revenue or modeling pharmacy payouts reverses the real money flow and materially overstates platform income.
+
+**How to apply:** Snapshot base drug amount, service-fee rate/amount, and patient total on every order. Generate one idempotent daily commission settlement per pharmacy/business day and record payments or corrections append-only.
+
 Preserve pre-snapshot financial obligations using an immutable rollout provenance marker captured when snapshots are introduced.
 
 **Why:** Configurable values such as a 0% markup can legitimately occur after rollout and cannot safely distinguish historical rows from current snapshots.

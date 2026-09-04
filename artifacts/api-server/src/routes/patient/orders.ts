@@ -57,6 +57,9 @@ async function hydratePatientOrders(
       name: pharmaciesTable.name,
       address: pharmaciesTable.address,
       phone: pharmaciesTable.phone,
+       mobileMoneyNumber: pharmaciesTable.mobileMoneyNumber,
+       mobileMoneyProvider: pharmaciesTable.mobileMoneyProvider,
+       mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
     })
     .from(pharmaciesTable)
     .where(inArray(pharmaciesTable.id, pharmacyIds));

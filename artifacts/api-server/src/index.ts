@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startOrderExpirySweep } from "./lib/orderExpiry";
+import { startCommissionSettlementSweep } from "./lib/commissionSettlements";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -155,6 +156,13 @@ async function assertSchemaUpToDate(): Promise<void> {
         ) AS exists
       `,
     },
+    {
+      label: "daily commission settlement ledger",
+      query: sql`
+        SELECT to_regclass(current_schema() || '.commission_settlements')
+          IS NOT NULL AS exists
+      `,
+    },
   ];
 
   const missing: string[] = [];
@@ -196,5 +204,6 @@ assertSchemaUpToDate().then(() => {
 
     logger.info({ port }, "Server listening");
     startOrderExpirySweep();
+    startCommissionSettlementSweep();
   });
 });

@@ -62,7 +62,7 @@ export default function HqInsights() {
         <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
         <Button variant="outline" onClick={() => window.print()}>Print / Save PDF</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Aggregate-only reporting. No patient identities or order-level records are displayed or exported. Groups smaller than {data?.minimumGroupSize ?? 10} are suppressed.</p>
+      <p className="text-sm text-muted-foreground">Aggregate-only reporting. No patient identities or order-level records are displayed or exported.</p>
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-semibold">Current data exports</h2>
         <p className="mt-1 text-sm text-muted-foreground">Download a current, read-only CSV snapshot. Exporting never changes or removes the original records.</p>
@@ -76,11 +76,10 @@ export default function HqInsights() {
       </section>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="grid gap-4 md:grid-cols-3">
-        {Object.entries(data?.totals ?? {}).map(([key, value]) => <div key={key} className="rounded-xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</p><p className="mt-2 text-2xl font-bold">{value === null ? 'Suppressed' : value.toLocaleString()}</p>{value === null && <p className="mt-1 text-xs text-muted-foreground">Fewer than {data?.minimumGroupSize ?? 10} contributing records.</p>}</div>)}
+        {Object.entries(data?.totals ?? {}).map(([key, value]) => <div key={key} className="rounded-xl border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</p><p className="mt-2 text-2xl font-bold">{value === null ? '0' : value.toLocaleString()}</p></div>)}
       </div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.trends ?? {}).map(([key, rows]) => <Trend key={key} title={titleize(key)} rows={rows} />)}</div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.rankings ?? {}).map(([key, rows]) => <Ranking key={key} title={titleize(key)} rows={rows} />)}</div>
-      <div className="space-y-1 text-xs text-muted-foreground">{Object.entries(data?.suppression ?? {}).map(([metric, message]) => <p key={metric}><strong>{titleize(metric)}:</strong> {message}</p>)}</div>
     </div>
   </HqLayout>;
 }

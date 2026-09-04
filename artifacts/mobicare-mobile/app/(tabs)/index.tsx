@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -13,11 +13,14 @@ import {
 } from "react-native";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   DrugOffer,
   DrugSearchResult,
+  PatientSearchDrugsParams,
   getPatientSearchDrugsQueryKey,
   usePatientSearchDrugs,
   useListPatientDrugCategories,
@@ -25,7 +28,6 @@ import {
 } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
-import { useDebounce } from "@/hooks/useDebounce";
 import { MobiCareHeader } from "@/components/MobiCareHeader";
 
 const TIER_LABELS: Record<string, string> = {
@@ -56,6 +58,15 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
   const s = makeStyles(colors, { top: 0, bottom: 0 });
   const canDeliver = offer.availableForDelivery && offer.inStock;
   const canCollect = offer.availableForCollection && offer.inStock;
+  const stockLabel = offer.inStock
+    ? `In stock · ${offer.stockQuantity} available`
+    : `Out of stock · ${offer.stockQuantity} available`;
+  const copyPaymentNumber = async () => {
+    if (!offer.mobileMoneyNumber) return;
+    await Clipboard.setStringAsync(offer.mobileMoneyNumber);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Copied", "Mobile money number copied to your clipboard.");
+  };
 
   return (
     <View style={s.offerRow}>
@@ -63,6 +74,33 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
         <Text style={s.offerPharmacy} numberOfLines={1}>
           {offer.pharmacyName}
         </Text>
+        {offer.pharmacyAddress ? (
+          <View style={s.offerDetailRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={s.offerDetailText}>{offer.pharmacyAddress}</Text>
+          </View>
+        ) : null}
+        {offer.pharmacyPhone ? (
+          <View style={s.offerDetailRow}>
+            <Feather name="phone" size={12} color={colors.mutedForeground} />
+            <Text style={s.offerDetailText}>{offer.pharmacyPhone}</Text>
+          </View>
+        ) : null}
+        {offer.mobileMoneyNumber ? (
+          <Pressable
+            style={s.paymentRow}
+            onPress={copyPaymentNumber}
+            testID={`copy-payment-${offer.inventoryId}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Copy ${offer.pharmacyName} mobile money number`}
+          >
+            <Feather name="copy" size={12} color={colors.primary} />
+            <Text style={s.paymentText}>
+              {offer.mobileMoneyProvider ?? "Mobile Money"}: {offer.mobileMoneyNumber}
+              {offer.mobileMoneyAccountName ? ` · ${offer.mobileMoneyAccountName}` : ""}
+            </Text>
+          </Pressable>
+        ) : null}
         <View style={s.offerTags}>
           {canDeliver && (
             <View style={[s.tag, { backgroundColor: colors.secondary }]}>
@@ -80,13 +118,62 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
               </Text>
             </View>
           )}
-          {!offer.inStock && (
-            <View style={[s.tag, { backgroundColor: "#FEE2E2" }]}>
-              <Text style={[s.tagText, { color: colors.destructive }]}>
-                Out of stock
-              </Text>
-            </View>
-          )}
+          <View
+            style={[
+              s.tag,
+              { backgroundColor: offer.inStock ? colors.secondary : "#FEE2E2" },
+            ]}
+          >
+            <Text
+              style={[
+                s.tagText,
+                { color: offer.inStock ? colors.primary : colors.destructive },
+              ]}
+            >
+              {stockLabel}
+            </Text>
+          </View>
+          <View
+            style={[
+              s.tag,
+              { backgroundColor: offer.online ? colors.secondary : colors.muted },
+            ]}
+          >
+            <View
+              style={[
+                s.statusDot,
+                {
+                  backgroundColor: offer.online
+                    ? colors.primary
+                    : colors.mutedForeground,
+                },
+              ]}
+            />
+            <Text
+              style={[
+                s.tagText,
+                {
+                  color: offer.online
+                    ? colors.primary
+                    : colors.mutedForeground,
+                },
+              ]}
+            >
+              {offer.online ? "Online" : "Offline"}
+            </Text>
+          </View>
+          <View style={[s.tag, { backgroundColor: colors.muted }]}>
+            <Feather
+              name="navigation"
+              size={10}
+              color={colors.mutedForeground}
+            />
+            <Text style={[s.tagText, { color: colors.mutedForeground }]}>
+              {offer.estimatedDistanceKm != null
+                ? `${offer.estimatedDistanceKm.toFixed(1)} km away`
+                : "Distance unavailable"}
+            </Text>
+          </View>
         </View>
       </View>
       <View style={s.offerRight}>
@@ -217,31 +304,79 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { addItem, replaceCart, cart } = useCart();
   const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<
+    PatientSearchDrugsParams["category"] | null
+  >(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<
+    PatientSearchDrugsParams["subcategory"] | null
+  >(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const debouncedQuery = useDebounce(query, 350);
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
+  const [coordinates, setCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const locationRequested = useRef(false);
+  const [locationPermission, requestLocationPermission] =
+    Location.useForegroundPermissions();
   const isWeb = Platform.OS === "web";
 
   const { data: categoriesData } = useListPatientDrugCategories({
     query: { queryKey: getListPatientDrugCategoriesQueryKey() },
   });
 
-  const searchParams = {
-    ...(debouncedQuery.trim().length >= 2 ? { q: debouncedQuery } : {}),
+  const requestSearchLocation = useCallback(async () => {
+    let granted = locationPermission?.granted ?? false;
+    if (!granted && !locationRequested.current) {
+      locationRequested.current = true;
+      const response = await requestLocationPermission();
+      granted = response.granted;
+    }
+    if (!granted) return;
+
+    try {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setCoordinates({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+    } catch {
+      // Search remains available without location; offers show distance unavailable.
+    }
+  }, [locationPermission?.granted, requestLocationPermission]);
+
+  const submitSearch = useCallback(async () => {
+    await requestSearchLocation();
+    setSubmittedQuery(query);
+    setHasSubmittedSearch(true);
+  }, [query, requestSearchLocation]);
+
+  const searchParams: PatientSearchDrugsParams = {
+    ...(submittedQuery.trim().length >= 2 ? { q: submittedQuery } : {}),
     ...(selectedCategory ? { category: selectedCategory } : {}),
     ...(selectedSubcategory ? { subcategory: selectedSubcategory } : {}),
+    ...(coordinates
+      ? {
+          patientLatitude: coordinates.latitude,
+          patientLongitude: coordinates.longitude,
+        }
+      : {}),
   };
 
-  const hasSearch = Object.keys(searchParams).length > 0;
+  const hasSearch =
+    hasSubmittedSearch &&
+    !!(searchParams.q || searchParams.category || searchParams.subcategory);
 
   const {
     data: drugs,
     isFetching,
     isError,
-  } = usePatientSearchDrugs(searchParams as any, {
+  } = usePatientSearchDrugs(searchParams, {
     query: {
-      queryKey: getPatientSearchDrugsQueryKey(searchParams as any),
+      queryKey: getPatientSearchDrugsQueryKey(searchParams),
       enabled: hasSearch,
     },
   });
@@ -257,7 +392,12 @@ export default function SearchScreen() {
         requiresPrescription: drug.prescriptionRequired,
         collectionOnly: drug.collectionOnly,
       };
-      const ok = addItem(offer.pharmacyId, offer.pharmacyName, item);
+      const payment = {
+        number: offer.mobileMoneyNumber,
+        provider: offer.mobileMoneyProvider,
+        accountName: offer.mobileMoneyAccountName,
+      };
+      const ok = addItem(offer.pharmacyId, offer.pharmacyName, payment, item);
       if (ok) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         Alert.alert(
@@ -278,7 +418,7 @@ export default function SearchScreen() {
               text: "Replace",
               style: "destructive",
               onPress: () => {
-                replaceCart(offer.pharmacyId, offer.pharmacyName, item);
+                replaceCart(offer.pharmacyId, offer.pharmacyName, payment, item);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               },
             },
@@ -314,6 +454,7 @@ export default function SearchScreen() {
           autoCorrect={false}
           clearButtonMode="while-editing"
           returnKeyType="search"
+          onSubmitEditing={() => void submitSearch()}
           testID="search-input"
         />
         {query.length > 0 && Platform.OS !== "ios" && (
@@ -332,7 +473,11 @@ export default function SearchScreen() {
         >
           <TouchableOpacity
             style={[s.categoryChip, !selectedCategory && s.categoryChipActive]}
-            onPress={() => { setSelectedCategory(null); setSelectedSubcategory(null); }}
+            onPress={() => {
+              setSelectedCategory(null);
+              setSelectedSubcategory(null);
+              void submitSearch();
+            }}
             activeOpacity={0.7}
             testID="category-all"
           >
@@ -357,6 +502,7 @@ export default function SearchScreen() {
                 onPress={() => {
                   setSelectedCategory(isActive ? null : cat.group);
                   setSelectedSubcategory(isActive ? null : cat.value);
+                  void submitSearch();
                 }}
                 activeOpacity={0.7}
                 testID={`category-${cat.value}`}
@@ -543,6 +689,11 @@ function makeStyles(
       color: colors.foreground,
     },
     offerTags: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+    offerDetailRow: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
+    offerDetailText: { flex: 1, fontSize: 11, color: colors.mutedForeground, lineHeight: 16 },
+    paymentRow: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 2 },
+    paymentText: { flex: 1, fontSize: 11, color: colors.primary, fontWeight: "600", lineHeight: 16 },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
     offerRight: { alignItems: "flex-end", gap: 6 },
     offerPrice: { fontSize: 15, fontWeight: "700", color: colors.darkGreen },
     offerUnitOfSale: {

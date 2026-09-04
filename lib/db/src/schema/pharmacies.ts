@@ -15,6 +15,13 @@ export const pharmaciesTable = pgTable("pharmacies", {
   username: text("username").notNull().unique(),
   phone: text("phone").unique(),
   address: text("address"),
+  mobileMoneyNumber: text("mobile_money_number"),
+  mobileMoneyProvider: text("mobile_money_provider"),
+  mobileMoneyAccountName: text("mobile_money_account_name"),
+  // New explicit coordinate fields. Legacy locationLat/locationLng remain for
+  // historical compatibility and are never overwritten by this migration.
+  latitude: text("latitude"),
+  longitude: text("longitude"),
   locationLat: text("location_lat"),
   locationLng: text("location_lng"),
   isActive: boolean("is_active").notNull().default(true),

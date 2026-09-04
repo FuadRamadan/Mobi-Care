@@ -26,6 +26,9 @@ import type {
   AuthResponse,
   ChangePasswordInput,
   CollectedConfirmation,
+  CommissionSettlement,
+  CommissionSettlementHistory,
+  CommissionSettlementPaymentInput,
   Courier,
   CourierInput,
   CourierPhotoAttach,
@@ -40,11 +43,15 @@ import type {
   DrugRemovalResult,
   DrugSearchResult,
   ExportHqInsightsCsvParams,
+  ExportPharmacyCommissionHistoryParams,
   FlagReviewInput,
   GenerateSettlementsInput,
+  GetHqDashboardTrendsParams,
   GetHqInsightsParams,
+  GetPharmacyCommissionAnalyticsParams,
   HealthStatus,
   HqDashboard,
+  HqDashboardTrends,
   HqDrug,
   HqDrugInput,
   HqDrugUpdate,
@@ -67,7 +74,6 @@ import type {
   ListPrescriptionsParams,
   ListSettlementsParams,
   LoginInput,
-  MarkPaidInput,
   MarkReadInput,
   MessageResponse,
   Notification,
@@ -91,6 +97,7 @@ import type {
   PatientProfileUpdate,
   PatientRegisterInput,
   PatientSearchDrugsParams,
+  PharmacyCommissionAnalytics,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
   PharmacyResetPasswordResponse,
@@ -107,7 +114,6 @@ import type {
   SavedApiRequest,
   SavedApiRequestHistory,
   SavedApiRequestInput,
-  Settlement,
   SettlementsResponse,
   TeamMember,
   TeamMemberUpdate,
@@ -1839,6 +1845,174 @@ export const useGetPrescriptionImageUrl = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getGetPrescriptionImageUrlMutationOptions(options));
     }
+
+export const getGetPharmacyCommissionAnalyticsUrl = (params?: GetPharmacyCommissionAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/pharmacy/analytics/commission?${stringifiedParams}` : `/api/pharmacy/analytics/commission`
+}
+
+/**
+ * @summary Pharmacy-scoped live and daily commission history
+ */
+export const getPharmacyCommissionAnalytics = async (params?: GetPharmacyCommissionAnalyticsParams, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyCommissionAnalytics> => {
+
+  return customFetch<PharmacyCommissionAnalytics>(getGetPharmacyCommissionAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPharmacyCommissionAnalyticsQueryKey = (params?: GetPharmacyCommissionAnalyticsParams,) => {
+    return [
+    `/api/pharmacy/analytics/commission`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPharmacyCommissionAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>, TError = ErrorType<unknown>>(params?: GetPharmacyCommissionAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPharmacyCommissionAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>> = ({ signal }) => getPharmacyCommissionAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPharmacyCommissionAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>>
+export type GetPharmacyCommissionAnalyticsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Pharmacy-scoped live and daily commission history
+ */
+
+export function useGetPharmacyCommissionAnalytics<TData = Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>, TError = ErrorType<unknown>>(
+ params?: GetPharmacyCommissionAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyCommissionAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPharmacyCommissionAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportPharmacyCommissionHistoryUrl = (params?: ExportPharmacyCommissionHistoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/pharmacy/analytics/commission.csv?${stringifiedParams}` : `/api/pharmacy/analytics/commission.csv`
+}
+
+/**
+ * @summary Download the authenticated pharmacy's commission history as CSV
+ */
+export const exportPharmacyCommissionHistory = async (params?: ExportPharmacyCommissionHistoryParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportPharmacyCommissionHistoryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportPharmacyCommissionHistoryQueryKey = (params?: ExportPharmacyCommissionHistoryParams,) => {
+    return [
+    `/api/pharmacy/analytics/commission.csv`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportPharmacyCommissionHistoryQueryOptions = <TData = Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>, TError = ErrorType<unknown>>(params?: ExportPharmacyCommissionHistoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportPharmacyCommissionHistoryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>> = ({ signal }) => exportPharmacyCommissionHistory(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportPharmacyCommissionHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>>
+export type ExportPharmacyCommissionHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Download the authenticated pharmacy's commission history as CSV
+ */
+
+export function useExportPharmacyCommissionHistory<TData = Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>, TError = ErrorType<unknown>>(
+ params?: ExportPharmacyCommissionHistoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyCommissionHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportPharmacyCommissionHistoryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRegisterPatientUrl = () => {
 
@@ -4049,6 +4223,90 @@ export function useGetHqDashboard<TData = Awaited<ReturnType<typeof getHqDashboa
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetHqDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqDashboardTrendsUrl = (params: GetHqDashboardTrendsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/dashboard/trends?${stringifiedParams}` : `/api/hq/dashboard/trends`
+}
+
+/**
+ * @summary Zero-filled daily searches, completed orders, and platform commission
+ */
+export const getHqDashboardTrends = async (params: GetHqDashboardTrendsParams, options?: Parameters<typeof customFetch>[1]): Promise<HqDashboardTrends> => {
+
+  return customFetch<HqDashboardTrends>(getGetHqDashboardTrendsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqDashboardTrendsQueryKey = (params?: GetHqDashboardTrendsParams,) => {
+    return [
+    `/api/hq/dashboard/trends`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqDashboardTrendsQueryOptions = <TData = Awaited<ReturnType<typeof getHqDashboardTrends>>, TError = ErrorType<unknown>>(params: GetHqDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqDashboardTrendsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqDashboardTrends>>> = ({ signal }) => getHqDashboardTrends(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqDashboardTrendsQueryResult = NonNullable<Awaited<ReturnType<typeof getHqDashboardTrends>>>
+export type GetHqDashboardTrendsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Zero-filled daily searches, completed orders, and platform commission
+ */
+
+export function useGetHqDashboardTrends<TData = Awaited<ReturnType<typeof getHqDashboardTrends>>, TError = ErrorType<unknown>>(
+ params: GetHqDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqDashboardTrendsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -7444,7 +7702,7 @@ export const getListSettlementsUrl = (params?: ListSettlementsParams,) => {
 }
 
 /**
- * @summary Pharmacy and courier settlements
+ * @summary Daily pharmacy commission settlements
  */
 export const listSettlements = async (params?: ListSettlementsParams, options?: Parameters<typeof customFetch>[1]): Promise<SettlementsResponse> => {
 
@@ -7491,7 +7749,7 @@ export type ListSettlementsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Pharmacy and courier settlements
+ * @summary Daily pharmacy commission settlements
  */
 
 export function useListSettlements<TData = Awaited<ReturnType<typeof listSettlements>>, TError = ErrorType<unknown>>(
@@ -7521,7 +7779,7 @@ export const getGenerateSettlementsUrl = () => {
 }
 
 /**
- * @summary Generate pending settlements for a period
+ * @summary Idempotently generate daily commission settlements in the business timezone
  */
 export const generateSettlements = async (generateSettlementsInput: GenerateSettlementsInput, options?: Parameters<typeof customFetch>[1]): Promise<MessageResponse> => {
 
@@ -7570,7 +7828,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type GenerateSettlementsMutationError = ErrorType<unknown>
 
     /**
- * @summary Generate pending settlements for a period
+ * @summary Idempotently generate daily commission settlements in the business timezone
  */
 export const useGenerateSettlements = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateSettlements>>, TError,{data: BodyType<GenerateSettlementsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -7583,26 +7841,26 @@ export const useGenerateSettlements = <TError = ErrorType<unknown>,
       return useMutation(getGenerateSettlementsMutationOptions(options));
     }
 
-export const getMarkSettlementPaidUrl = (id: string,) => {
+export const getRecordCommissionSettlementPaymentUrl = (id: string,) => {
 
 
 
 
-  return `/api/hq/settlements/${id}/mark-paid`
+  return `/api/hq/settlements/${id}/payments`
 }
 
 /**
- * @summary Mark a settlement as paid
+ * @summary Record an append-only commission payment against a daily settlement
  */
-export const markSettlementPaid = async (id: string,
-    markPaidInput: MarkPaidInput, options?: Parameters<typeof customFetch>[1]): Promise<Settlement> => {
+export const recordCommissionSettlementPayment = async (id: string,
+    commissionSettlementPaymentInput: CommissionSettlementPaymentInput, options?: Parameters<typeof customFetch>[1]): Promise<CommissionSettlement> => {
 
-  return customFetch<Settlement>(getMarkSettlementPaidUrl(id),
+  return customFetch<CommissionSettlement>(getRecordCommissionSettlementPaymentUrl(id),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(markPaidInput)
+    body: JSON.stringify(commissionSettlementPaymentInput)
   }
 );}
 
@@ -7610,11 +7868,11 @@ export const markSettlementPaid = async (id: string,
 
 
 
-export const getMarkSettlementPaidMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSettlementPaid>>, TError,{id: string;data: BodyType<MarkPaidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof markSettlementPaid>>, TError,{id: string;data: BodyType<MarkPaidInput>}, TContext> => {
+export const getRecordCommissionSettlementPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordCommissionSettlementPayment>>, TError,{id: string;data: BodyType<CommissionSettlementPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordCommissionSettlementPayment>>, TError,{id: string;data: BodyType<CommissionSettlementPaymentInput>}, TContext> => {
 
-const mutationKey = ['markSettlementPaid'];
+const mutationKey = ['recordCommissionSettlementPayment'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -7624,10 +7882,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markSettlementPaid>>, {id: string;data: BodyType<MarkPaidInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordCommissionSettlementPayment>>, {id: string;data: BodyType<CommissionSettlementPaymentInput>}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  markSettlementPaid(id,data,requestOptions)
+          return  recordCommissionSettlementPayment(id,data,requestOptions)
         }
 
 
@@ -7637,23 +7895,100 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type MarkSettlementPaidMutationResult = NonNullable<Awaited<ReturnType<typeof markSettlementPaid>>>
-    export type MarkSettlementPaidMutationBody = BodyType<MarkPaidInput>
-    export type MarkSettlementPaidMutationError = ErrorType<void>
+    export type RecordCommissionSettlementPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordCommissionSettlementPayment>>>
+    export type RecordCommissionSettlementPaymentMutationBody = BodyType<CommissionSettlementPaymentInput>
+    export type RecordCommissionSettlementPaymentMutationError = ErrorType<void>
 
     /**
- * @summary Mark a settlement as paid
+ * @summary Record an append-only commission payment against a daily settlement
  */
-export const useMarkSettlementPaid = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSettlementPaid>>, TError,{id: string;data: BodyType<MarkPaidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useRecordCommissionSettlementPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordCommissionSettlementPayment>>, TError,{id: string;data: BodyType<CommissionSettlementPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof markSettlementPaid>>,
+        Awaited<ReturnType<typeof recordCommissionSettlementPayment>>,
         TError,
-        {id: string;data: BodyType<MarkPaidInput>},
+        {id: string;data: BodyType<CommissionSettlementPaymentInput>},
         TContext
       > => {
-      return useMutation(getMarkSettlementPaidMutationOptions(options));
+      return useMutation(getRecordCommissionSettlementPaymentMutationOptions(options));
     }
+
+export const getGetCommissionSettlementHistoryUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/settlements/${id}/history`
+}
+
+/**
+ * @summary Append-only payment and adjustment history for a settlement
+ */
+export const getCommissionSettlementHistory = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<CommissionSettlementHistory> => {
+
+  return customFetch<CommissionSettlementHistory>(getGetCommissionSettlementHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommissionSettlementHistoryQueryKey = (id: string,) => {
+    return [
+    `/api/hq/settlements/${id}/history`
+    ] as const;
+    }
+
+
+export const getGetCommissionSettlementHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getCommissionSettlementHistory>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommissionSettlementHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommissionSettlementHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommissionSettlementHistory>>> = ({ signal }) => getCommissionSettlementHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommissionSettlementHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommissionSettlementHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getCommissionSettlementHistory>>>
+export type GetCommissionSettlementHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Append-only payment and adjustment history for a settlement
+ */
+
+export function useGetCommissionSettlementHistory<TData = Awaited<ReturnType<typeof getCommissionSettlementHistory>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommissionSettlementHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommissionSettlementHistoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListAuditLogUrl = (params?: ListAuditLogParams,) => {
   const normalizedParams = new URLSearchParams();

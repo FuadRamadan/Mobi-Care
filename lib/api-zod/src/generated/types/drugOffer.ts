@@ -13,12 +13,24 @@ export interface DrugOffer {
   /** @nullable */
   pharmacyAddress?: string | null;
   /** @nullable */
+  pharmacyPhone?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  online?: boolean;
+  /** @nullable */
+  estimatedDistanceKm?: number | null;
+  /** @nullable */
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
   priceLeones: number;
   unitOfSale: string;
   inStock: boolean;
+  stockQuantity: number;
   availableForDelivery: boolean;
   availableForCollection: boolean;
 }

@@ -292,12 +292,24 @@ export interface DrugOffer {
   /** @nullable */
   pharmacyAddress?: string | null;
   /** @nullable */
+  pharmacyPhone?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  online?: boolean;
+  /** @nullable */
+  estimatedDistanceKm?: number | null;
+  /** @nullable */
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
   priceLeones: number;
   unitOfSale: string;
   inStock: boolean;
+  stockQuantity: number;
   availableForDelivery: boolean;
   availableForCollection: boolean;
 }
@@ -977,6 +989,16 @@ export interface HqPharmacy {
   locationLat?: string | null;
   /** @nullable */
   locationLng?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
   isActive: boolean;
   controlledSubstanceAuthorized: boolean;
   mustChangePassword: boolean;
@@ -995,6 +1017,19 @@ export interface PharmacyOnboardInput {
   username: string;
   phone?: string;
   address?: string;
+  mobileMoneyNumber?: string;
+  mobileMoneyProvider?: string;
+  mobileMoneyAccountName?: string;
+  /**
+     * @minimum -90
+     * @maximum 90
+     */
+  latitude?: number;
+  /**
+     * @minimum -180
+     * @maximum 180
+     */
+  longitude?: number;
 }
 
 export interface PharmacyOnboardResponse {
@@ -1250,6 +1285,24 @@ export interface HqPharmacyUpdate {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  /**
+     * @minimum -90
+     * @maximum 90
+     * @nullable
+     */
+  latitude?: number | null;
+  /**
+     * @minimum -180
+     * @maximum 180
+     * @nullable
+     */
+  longitude?: number | null;
 }
 
 export interface TeamMember {
@@ -1556,6 +1609,102 @@ export interface FlagReviewInput {
   note: string;
 }
 
+export type HqDashboardTrendsDaysItem = {
+  date: string;
+  searches: number;
+  orders: number;
+  commissionMinor: number;
+};
+
+export interface HqDashboardTrends {
+  start: string;
+  end: string;
+  /** @nullable */
+  pharmacyId: string | null;
+  days: HqDashboardTrendsDaysItem[];
+}
+
+export type PharmacyCommissionDailyStatus = typeof PharmacyCommissionDailyStatus[keyof typeof PharmacyCommissionDailyStatus];
+
+
+export const PharmacyCommissionDailyStatus = {
+  unpaid: 'unpaid',
+  partially_paid: 'partially_paid',
+  paid: 'paid',
+} as const;
+
+export interface PharmacyCommissionDaily {
+  settlementDate: string;
+  businessTimezone: string;
+  ordersCount: number;
+  grossCollectedMinor: number;
+  drugAmountTotalMinor: number;
+  commissionDueMinor: number;
+  amountPaidMinor: number;
+  balanceMinor: number;
+  status: PharmacyCommissionDailyStatus;
+}
+
+export type PharmacyCommissionAnalyticsToday = {
+  ordersCount: number;
+  grossCollectedMinor: number;
+  drugAmountTotalMinor: number;
+  commissionDueMinor: number;
+  pharmacyEarningsMinor: number;
+};
+
+export interface PharmacyCommissionAnalytics {
+  today: PharmacyCommissionAnalyticsToday;
+  outstandingCommissionMinor: number;
+  daily: PharmacyCommissionDaily[];
+}
+
+export type CommissionSettlementStatus = typeof CommissionSettlementStatus[keyof typeof CommissionSettlementStatus];
+
+
+export const CommissionSettlementStatus = {
+  unpaid: 'unpaid',
+  partially_paid: 'partially_paid',
+  paid: 'paid',
+} as const;
+
+export interface CommissionSettlement {
+  id: string;
+  pharmacyId: string;
+  /** @nullable */
+  pharmacyName?: string | null;
+  settlementDate: string;
+  businessTimezone: string;
+  ordersCount: number;
+  grossCollectedMinor: number;
+  drugAmountTotalMinor: number;
+  commissionDueMinor: number;
+  amountPaidMinor: number;
+  balanceMinor: number;
+  status: CommissionSettlementStatus;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  paymentReference?: string | null;
+}
+
+export interface CommissionSettlementPaymentInput {
+  /** @minimum 1 */
+  amountMinor: number;
+  paidAt?: string;
+  /** @minLength 1 */
+  paymentReference: string;
+}
+
+export type CommissionSettlementHistoryPaymentsItem = { [key: string]: unknown };
+
+export type CommissionSettlementHistoryAdjustmentsItem = { [key: string]: unknown };
+
+export interface CommissionSettlementHistory {
+  payments: CommissionSettlementHistoryPaymentsItem[];
+  adjustments: CommissionSettlementHistoryAdjustmentsItem[];
+}
+
 export type SettlementStatus = typeof SettlementStatus[keyof typeof SettlementStatus];
 
 
@@ -1684,16 +1833,44 @@ export type ListPrescriptionsParams = {
 status?: string;
 };
 
+export type GetPharmacyCommissionAnalyticsParams = {
+start?: string;
+end?: string;
+};
+
+export type ExportPharmacyCommissionHistoryParams = {
+start?: string;
+end?: string;
+};
+
 export type PatientSearchDrugsParams = {
 q?: string;
 category?: DrugPrimaryCategory;
 subcategory?: DrugSubcategory;
+pharmacyId?: string;
+/**
+ * @minimum -90
+ * @maximum 90
+ */
+patientLatitude?: number;
+/**
+ * @minimum -180
+ * @maximum 180
+ */
+patientLongitude?: number;
+};
+
+export type GetHqDashboardTrendsParams = {
+start: string;
+end: string;
+pharmacyId?: string;
 };
 
 export type GetHqInsightsParams = {
 start?: string;
 end?: string;
 interval?: GetHqInsightsInterval;
+pharmacyId?: string;
 };
 
 export type GetHqInsightsInterval = typeof GetHqInsightsInterval[keyof typeof GetHqInsightsInterval];
@@ -1747,7 +1924,18 @@ start?: string;
  * Inclusive ISO date, or an exclusive ISO date-time
  */
 end?: string;
+pharmacyId?: string;
+status?: ListSettlementsStatus;
 };
+
+export type ListSettlementsStatus = typeof ListSettlementsStatus[keyof typeof ListSettlementsStatus];
+
+
+export const ListSettlementsStatus = {
+  unpaid: 'unpaid',
+  partially_paid: 'partially_paid',
+  paid: 'paid',
+} as const;
 
 export type ListAuditLogParams = {
 entityType?: string;

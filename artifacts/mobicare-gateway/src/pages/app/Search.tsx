@@ -48,15 +48,30 @@ export default function PatientSearch() {
 
   const { data: categories } = useListPatientDrugCategories();
 
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => setLocation(null),
+        { timeout: 5000, maximumAge: 300000 }
+      );
+    }
+  }, []);
+
+  const params = {
+    q: q.trim() || undefined,
+    category: category || undefined,
+    ...(location ? { lat: location.lat, lng: location.lng } : {})
+  };
+
   const { data: results, isFetching } = usePatientSearchDrugs(
-    { q: q.trim() || undefined, category: category || undefined },
+    params,
     {
       query: {
         enabled,
-        queryKey: getPatientSearchDrugsQueryKey({
-          q: q.trim() || undefined,
-          category: category || undefined,
-        }),
+        queryKey: getPatientSearchDrugsQueryKey(params),
       },
     },
   );
@@ -173,6 +188,9 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
         id: offer.pharmacyId,
         name: offer.pharmacyName,
         address: offer.pharmacyAddress ?? null,
+        mobileMoneyNumber: offer.mobileMoneyNumber,
+        mobileMoneyProvider: offer.mobileMoneyProvider,
+        mobileMoneyAccountName: offer.mobileMoneyAccountName,
       },
       {
         inventoryId: offer.inventoryId,
@@ -262,48 +280,102 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
           {offers.map((offer, idx) => (
             <div
               key={offer.inventoryId}
-              className={`flex items-center gap-3 p-3 ${!offer.inStock ? "opacity-60 grayscale-[50%]" : ""}`}
+              className={`flex flex-col gap-3 p-3 ${!offer.inStock ? "opacity-60 grayscale-[50%]" : ""}`}
             >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-sm truncate">
-                  {offer.pharmacyName}
-                </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                  {offer.availableForDelivery && (
-                    <span className="inline-flex items-center gap-1">
-                      <Truck className="w-3 h-3" /> Delivery
-                    </span>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm flex items-center gap-2">
+                    {offer.pharmacyName}
+                    <span className={`w-2 h-2 rounded-full ${offer.online ? 'bg-green-500' : 'bg-gray-300'}`} title={offer.online ? 'Online' : 'Offline'} />
+                  </div>
+                  {offer.pharmacyAddress && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {offer.pharmacyAddress}
+                    </div>
                   )}
-                  {offer.availableForCollection && (
-                    <span className="inline-flex items-center gap-1">
-                      <Store className="w-3 h-3" /> Collection
+                  {offer.estimatedDistanceKm != null && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {offer.estimatedDistanceKm.toFixed(1)} km away
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                    {offer.availableForDelivery && (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <Truck className="w-3 h-3" /> Delivery
+                      </span>
+                    )}
+                    {offer.availableForCollection && (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <Store className="w-3 h-3" /> Collection
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center gap-1 ${offer.inStock ? 'text-green-600' : 'text-red-600'}`}>
+                      {offer.inStock ? `${offer.stockQuantity} in stock` : 'Out of stock'}
                     </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="font-display font-bold text-dark-green">
+                    {formatLeones(offer.priceLeones)}
+                    {idx === 0 && drug.offers.length > 1 && offer.inStock && (
+                      <span className="ml-1.5 text-[10px] font-sans font-semibold text-primary uppercase">
+                        Best
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    per {offer.unitOfSale}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-full mt-2 w-full"
+                    onClick={() => add(offer)}
+                    disabled={!offer.inStock}
+                    variant={offer.inStock ? "default" : "secondary"}
+                    data-testid={`button-add-${drug.listingKey}-${offer.pharmacyId}`}
+                  >
+                    {offer.inStock ? "Add to cart" : "Out of stock"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs bg-background/50 rounded-lg p-2 border border-border/50">
+                <div>
+                  <span className="text-muted-foreground block mb-0.5">Contact</span>
+                  {offer.pharmacyPhone ? (
+                    <a href={`tel:${offer.pharmacyPhone}`} className="font-medium text-primary hover:underline">{offer.pharmacyPhone}</a>
+                  ) : (
+                    <span className="text-muted-foreground italic">Not provided</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-0.5">Mobile Money</span>
+                  {offer.mobileMoneyNumber ? (
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">{offer.mobileMoneyNumber}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(offer.mobileMoneyNumber!);
+                            toast({ title: 'Number copied' });
+                          }}
+                          className="text-primary hover:underline text-[10px]"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      {(offer.mobileMoneyProvider || offer.mobileMoneyAccountName) && (
+                        <div className="text-muted-foreground mt-0.5">
+                          {offer.mobileMoneyProvider} {offer.mobileMoneyProvider && offer.mobileMoneyAccountName ? '·' : ''} {offer.mobileMoneyAccountName}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground italic">Not provided</span>
                   )}
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <div className="font-display font-bold text-dark-green">
-                  {formatLeones(offer.priceLeones)}
-                  {idx === 0 && drug.offers.length > 1 && offer.inStock && (
-                    <span className="ml-1.5 text-[10px] font-sans font-semibold text-primary uppercase">
-                      Best
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
-                  per {offer.unitOfSale}
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="rounded-full shrink-0 min-w-16"
-                onClick={() => add(offer)}
-                disabled={!offer.inStock}
-                variant={offer.inStock ? "default" : "secondary"}
-                data-testid={`button-add-${drug.listingKey}-${offer.pharmacyId}`}
-              >
-                {offer.inStock ? "Add" : "Out of stock"}
-              </Button>
             </div>
           ))}
         </div>

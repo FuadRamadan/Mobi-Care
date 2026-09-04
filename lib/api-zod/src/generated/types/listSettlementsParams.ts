@@ -5,6 +5,7 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { ListSettlementsStatus } from './listSettlementsStatus';
 
 export type ListSettlementsParams = {
 /**
@@ -15,4 +16,6 @@ start?: string;
  * Inclusive ISO date, or an exclusive ISO date-time
  */
 end?: string;
+pharmacyId?: string;
+status?: ListSettlementsStatus;
 };

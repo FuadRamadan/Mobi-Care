@@ -5,8 +5,10 @@ import {
   ordersTable as orders,
   pharmacyInventoryTable as pharmacyInventory,
   prescriptionsTable as prescriptions,
+  commissionSettlementsTable,
 } from "@workspace/db";
-import { eq, and, gte, sql, count, sum, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, sql, count, inArray } from "drizzle-orm";
+import { BUSINESS_TIMEZONE, businessDateNow } from "../../lib/commissionSettlements.js";
 
 const router = safeRouter();
 
@@ -119,6 +121,53 @@ router.get("/orders-by-day", async (req: AuthRequest, res) => {
       revenueLeones: Number(r.revenueLeones ?? 0) / 100,
     })),
   );
+});
+
+// Commission is the platform's fixed 5% service fee; gross remains money
+// collected directly by the pharmacy and is never reported as platform revenue.
+router.get("/commission", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const start = typeof req.query.start === "string" ? req.query.start : businessDateNow();
+  const end = typeof req.query.end === "string" ? req.query.end : start;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) {
+    res.status(400).json({ error: "start and end must be YYYY-MM-DD with start before end" });
+    return;
+  }
+  const [today, [outstanding], rows] = await Promise.all([
+    db.select({
+      ordersCount: sql<number>`count(*)::int`,
+      grossCollectedMinor: sql<number>`coalesce(sum(${orders.patientMedicineTotalMinor} + ${orders.deliveryFeeMinor}),0)::int`,
+      drugAmountTotalMinor: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}),0)::int`,
+      commissionDueMinor: sql<number>`coalesce(sum(${orders.medicineCommissionMinor}),0)::int`,
+    }).from(orders).where(and(eq(orders.pharmacyId, pharmacyId), inArray(orders.status, ["delivered", "collected"]), sql`to_char(${orders.completedAt} AT TIME ZONE ${BUSINESS_TIMEZONE}, 'YYYY-MM-DD') = ${businessDateNow()}`)),
+    db.select({ amount: sql<number>`coalesce(sum(${commissionSettlementsTable.balanceMinor}),0)::int` }).from(commissionSettlementsTable).where(and(eq(commissionSettlementsTable.pharmacyId, pharmacyId), inArray(commissionSettlementsTable.status, ["unpaid", "partially_paid"]))),
+    db.select().from(commissionSettlementsTable).where(and(eq(commissionSettlementsTable.pharmacyId, pharmacyId), gte(commissionSettlementsTable.settlementDate, start), lte(commissionSettlementsTable.settlementDate, end))).orderBy(commissionSettlementsTable.settlementDate),
+  ]);
+  const byDate = new Map(rows.map((row) => [row.settlementDate, row]));
+  const daily = [];
+  for (let day = new Date(`${start}T00:00:00.000Z`); day <= new Date(`${end}T00:00:00.000Z`); day.setUTCDate(day.getUTCDate() + 1)) {
+    const date = day.toISOString().slice(0, 10);
+    const row = byDate.get(date);
+    daily.push(row ?? { settlementDate: date, businessTimezone: BUSINESS_TIMEZONE, ordersCount: 0, grossCollectedMinor: 0, drugAmountTotalMinor: 0, commissionDueMinor: 0, amountPaidMinor: 0, balanceMinor: 0, status: "paid" });
+  }
+  res.json({ today: { ...(today[0] ?? { ordersCount: 0, grossCollectedMinor: 0, drugAmountTotalMinor: 0, commissionDueMinor: 0 }), pharmacyEarningsMinor: (today[0]?.drugAmountTotalMinor ?? 0) }, outstandingCommissionMinor: outstanding?.amount ?? 0, daily });
+});
+
+router.get("/commission.csv", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const rows = await db.select({
+    settlementDate: commissionSettlementsTable.settlementDate,
+    ordersCount: commissionSettlementsTable.ordersCount,
+    grossCollectedMinor: commissionSettlementsTable.grossCollectedMinor,
+    drugAmountTotalMinor: commissionSettlementsTable.drugAmountTotalMinor,
+    commissionDueMinor: commissionSettlementsTable.commissionDueMinor,
+    amountPaidMinor: commissionSettlementsTable.amountPaidMinor,
+    balanceMinor: commissionSettlementsTable.balanceMinor,
+    status: commissionSettlementsTable.status,
+  }).from(commissionSettlementsTable).where(eq(commissionSettlementsTable.pharmacyId, pharmacyId)).orderBy(commissionSettlementsTable.settlementDate);
+  const headings = "settlement_date,orders_count,gross_collected_minor,drug_amount_total_minor,commission_due_minor,amount_paid_minor,balance_minor,status";
+  const csv = [headings, ...rows.map((row) => [row.settlementDate, row.ordersCount, row.grossCollectedMinor, row.drugAmountTotalMinor, row.commissionDueMinor, row.amountPaidMinor, row.balanceMinor, row.status].join(","))].join("\r\n");
+  res.type("text/csv").attachment("mobicare-commission-history.csv").send(`${csv}\r\n`);
 });
 
 export default router;

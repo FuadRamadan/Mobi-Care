@@ -759,6 +759,48 @@ export const GetPrescriptionImageUrlResponse = zod.object({
 
 
 /**
+ * @summary Pharmacy-scoped live and daily commission history
+ */
+export const GetPharmacyCommissionAnalyticsQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional()
+})
+
+export const GetPharmacyCommissionAnalyticsResponse = zod.object({
+  "today": zod.object({
+  "ordersCount": zod.number(),
+  "grossCollectedMinor": zod.number(),
+  "drugAmountTotalMinor": zod.number(),
+  "commissionDueMinor": zod.number(),
+  "pharmacyEarningsMinor": zod.number()
+}),
+  "outstandingCommissionMinor": zod.number(),
+  "daily": zod.array(zod.object({
+  "settlementDate": zod.coerce.date(),
+  "businessTimezone": zod.string(),
+  "ordersCount": zod.number(),
+  "grossCollectedMinor": zod.number(),
+  "drugAmountTotalMinor": zod.number(),
+  "commissionDueMinor": zod.number(),
+  "amountPaidMinor": zod.number(),
+  "balanceMinor": zod.number(),
+  "status": zod.enum(['unpaid', 'partially_paid', 'paid'])
+}))
+})
+
+
+/**
+ * @summary Download the authenticated pharmacy's commission history as CSV
+ */
+export const ExportPharmacyCommissionHistoryQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional()
+})
+
+export const ExportPharmacyCommissionHistoryResponse = zod.unknown()
+
+
+/**
  * @summary Register a patient account (self-service)
  */
 export const registerPatientBodyNameMin = 2;
@@ -813,10 +855,21 @@ export const RegisterPatientResponse = zod.object({
 /**
  * @summary Search medicines across all pharmacies with price comparison
  */
+export const patientSearchDrugsQueryPatientLatitudeMin = -90;
+export const patientSearchDrugsQueryPatientLatitudeMax = 90;
+
+export const patientSearchDrugsQueryPatientLongitudeMin = -180;
+export const patientSearchDrugsQueryPatientLongitudeMax = 180;
+
+
+
 export const PatientSearchDrugsQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
   "category": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
-  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional()
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional(),
+  "pharmacyId": zod.coerce.string().optional(),
+  "patientLatitude": zod.coerce.number().min(patientSearchDrugsQueryPatientLatitudeMin).max(patientSearchDrugsQueryPatientLatitudeMax).optional(),
+  "patientLongitude": zod.coerce.number().min(patientSearchDrugsQueryPatientLongitudeMin).max(patientSearchDrugsQueryPatientLongitudeMax).optional()
 })
 
 export const PatientSearchDrugsResponseItem = zod.object({
@@ -840,11 +893,18 @@ export const PatientSearchDrugsResponseItem = zod.object({
   "pharmacyId": zod.string(),
   "pharmacyName": zod.string(),
   "pharmacyAddress": zod.string().nullish(),
+  "pharmacyPhone": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "online": zod.boolean().optional(),
+  "estimatedDistanceKm": zod.number().nullish(),
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "priceLeones": zod.number(),
   "unitOfSale": zod.string(),
   "inStock": zod.boolean(),
+  "stockQuantity": zod.number(),
   "availableForDelivery": zod.boolean(),
   "availableForCollection": zod.boolean()
 }))
@@ -1580,12 +1640,35 @@ export const GetHqDashboardResponse = zod.object({
 
 
 /**
+ * @summary Zero-filled daily searches, completed orders, and platform commission
+ */
+export const GetHqDashboardTrendsQueryParams = zod.object({
+  "start": zod.date(),
+  "end": zod.date(),
+  "pharmacyId": zod.coerce.string().optional()
+})
+
+export const GetHqDashboardTrendsResponse = zod.object({
+  "start": zod.coerce.date(),
+  "end": zod.coerce.date(),
+  "pharmacyId": zod.string().nullable(),
+  "days": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "searches": zod.number(),
+  "orders": zod.number(),
+  "commissionMinor": zod.number()
+}))
+})
+
+
+/**
  * @summary Permission-protected aggregate-only Data & Insights metrics, with all cohorts and buckets under 10 suppressed
  */
 export const GetHqInsightsQueryParams = zod.object({
   "start": zod.date().optional(),
   "end": zod.date().optional(),
-  "interval": zod.enum(['day', 'week', 'month']).optional()
+  "interval": zod.enum(['day', 'week', 'month']).optional(),
+  "pharmacyId": zod.coerce.string().optional()
 })
 
 export const getHqInsightsResponseMinimumGroupSizeMin = 10;
@@ -2002,6 +2085,11 @@ export const ListHqPharmaciesResponseItem = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
@@ -2020,13 +2108,24 @@ export const ListHqPharmaciesResponse = zod.array(ListHqPharmaciesResponseItem)
 
 export const onboardPharmacyBodyUsernameMin = 3;
 
+export const onboardPharmacyBodyLatitudeMin = -90;
+export const onboardPharmacyBodyLatitudeMax = 90;
+
+export const onboardPharmacyBodyLongitudeMin = -180;
+export const onboardPharmacyBodyLongitudeMax = 180;
+
 
 
 export const OnboardPharmacyBody = zod.object({
   "name": zod.string().min(1),
   "username": zod.string().min(onboardPharmacyBodyUsernameMin),
   "phone": zod.string().optional(),
-  "address": zod.string().optional()
+  "address": zod.string().optional(),
+  "mobileMoneyNumber": zod.string().optional(),
+  "mobileMoneyProvider": zod.string().optional(),
+  "mobileMoneyAccountName": zod.string().optional(),
+  "latitude": zod.number().min(onboardPharmacyBodyLatitudeMin).max(onboardPharmacyBodyLatitudeMax).optional(),
+  "longitude": zod.number().min(onboardPharmacyBodyLongitudeMin).max(onboardPharmacyBodyLongitudeMax).optional()
 })
 
 export const OnboardPharmacyResponse = zod.object({
@@ -2038,6 +2137,11 @@ export const OnboardPharmacyResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
@@ -2059,12 +2163,25 @@ export const UpdateHqPharmacyParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const updateHqPharmacyBodyLatitudeMin = -90;
+export const updateHqPharmacyBodyLatitudeMax = 90;
+
+export const updateHqPharmacyBodyLongitudeMin = -180;
+export const updateHqPharmacyBodyLongitudeMax = 180;
+
+
+
 export const UpdateHqPharmacyBody = zod.object({
   "isActive": zod.boolean().optional(),
   "controlledSubstanceAuthorized": zod.boolean().optional(),
   "name": zod.string().optional(),
   "phone": zod.string().nullish(),
-  "address": zod.string().nullish()
+  "address": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "latitude": zod.number().min(updateHqPharmacyBodyLatitudeMin).max(updateHqPharmacyBodyLatitudeMax).nullish(),
+  "longitude": zod.number().min(updateHqPharmacyBodyLongitudeMin).max(updateHqPharmacyBodyLongitudeMax).nullish()
 })
 
 export const UpdateHqPharmacyResponse = zod.object({
@@ -2075,6 +2192,11 @@ export const UpdateHqPharmacyResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
@@ -2107,6 +2229,11 @@ export const ResetPharmacyPasswordResponse = zod.object({
   "address": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish(),
+  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyAccountName": zod.string().nullish(),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
   "controlledSubstanceAuthorized": zod.boolean(),
   "mustChangePassword": zod.boolean(),
@@ -3128,11 +3255,13 @@ export const ReviewFlagResponse = zod.object({
 
 
 /**
- * @summary Pharmacy and courier settlements
+ * @summary Daily pharmacy commission settlements
  */
 export const ListSettlementsQueryParams = zod.object({
   "start": zod.coerce.string().optional().describe('Inclusive ISO date or date-time for financial metrics'),
-  "end": zod.coerce.string().optional().describe('Inclusive ISO date, or an exclusive ISO date-time')
+  "end": zod.coerce.string().optional().describe('Inclusive ISO date, or an exclusive ISO date-time'),
+  "pharmacyId": zod.coerce.string().optional(),
+  "status": zod.enum(['unpaid', 'partially_paid', 'paid']).optional()
 })
 
 export const ListSettlementsResponse = zod.object({
@@ -3192,7 +3321,7 @@ export const ListSettlementsResponse = zod.object({
 
 
 /**
- * @summary Generate pending settlements for a period
+ * @summary Idempotently generate daily commission settlements in the business timezone
  */
 export const GenerateSettlementsBody = zod.object({
   "periodStart": zod.string().describe('ISO date-time (inclusive)'),
@@ -3205,33 +3334,50 @@ export const GenerateSettlementsResponse = zod.object({
 
 
 /**
- * @summary Mark a settlement as paid
+ * @summary Record an append-only commission payment against a daily settlement
  */
-export const MarkSettlementPaidParams = zod.object({
+export const RecordCommissionSettlementPaymentParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const MarkSettlementPaidBody = zod.object({
-  "kind": zod.enum(['pharmacy', 'courier']),
-  "reference": zod.string().optional()
+
+
+
+
+export const RecordCommissionSettlementPaymentBody = zod.object({
+  "amountMinor": zod.number().min(1),
+  "paidAt": zod.coerce.date().optional(),
+  "paymentReference": zod.string().min(1)
 })
 
-export const MarkSettlementPaidResponse = zod.object({
+export const RecordCommissionSettlementPaymentResponse = zod.object({
   "id": zod.string(),
-  "pharmacyId": zod.string().nullish(),
+  "pharmacyId": zod.string(),
   "pharmacyName": zod.string().nullish(),
-  "courierId": zod.string().nullish(),
-  "courierName": zod.string().nullish(),
-  "amountLeones": zod.number(),
-  "amountMinor": zod.number().optional(),
-  "periodStart": zod.string(),
-  "periodEnd": zod.string(),
-  "orderCount": zod.number().nullish(),
-  "deliveryCount": zod.number().nullish(),
-  "status": zod.enum(['pending', 'paid']),
-  "paidAt": zod.string().nullish(),
-  "reference": zod.string().nullish(),
-  "createdAt": zod.string()
+  "settlementDate": zod.coerce.date(),
+  "businessTimezone": zod.string(),
+  "ordersCount": zod.number(),
+  "grossCollectedMinor": zod.number(),
+  "drugAmountTotalMinor": zod.number(),
+  "commissionDueMinor": zod.number(),
+  "amountPaidMinor": zod.number(),
+  "balanceMinor": zod.number(),
+  "status": zod.enum(['unpaid', 'partially_paid', 'paid']),
+  "paidAt": zod.coerce.date().nullish(),
+  "paymentReference": zod.string().nullish()
+})
+
+
+/**
+ * @summary Append-only payment and adjustment history for a settlement
+ */
+export const GetCommissionSettlementHistoryParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetCommissionSettlementHistoryResponse = zod.object({
+  "payments": zod.array(zod.record(zod.string(), zod.unknown())),
+  "adjustments": zod.array(zod.record(zod.string(), zod.unknown()))
 })
 
 

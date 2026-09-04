@@ -6,11 +6,14 @@ import { sql } from "drizzle-orm";
 import type { AuthRequest } from "../../middlewares/auth.js";
 
 const router = safeRouter();
-const MINIMUM_GROUP_SIZE = 10;
+// Reporting deliberately has no minimum cohort threshold. Small partners and
+// one-off searches are business data, not values to suppress.
+const MINIMUM_GROUP_SIZE = 0;
 const completedStatuses = ["delivered", "collected"];
-const SUPPRESSED = `Suppressed: fewer than ${MINIMUM_GROUP_SIZE} contributing records.`;
+const SUPPRESSED = "Reported without minimum-count suppression.";
 
 const querySchema = z.object({
+  pharmacyId: z.string().uuid().optional(),
   start: z.string().date().optional(),
   end: z.string().date().optional(),
   interval: z.enum(["day", "week", "month"]).default("day"),
@@ -34,8 +37,8 @@ async function logAccess(actorId: string, actorName: string, action: string, det
   await writeAudit({ actorType: "hq", actorId, actorName, action, entityType: "data_insights", details });
 }
 
-function periodQuery(table: "search_events" | "orders" | "pharmacies" | "patients", bucket: string, start: Date, end: Date, activeOnly = false) {
-  const createdRange = table === "pharmacies" ? sql`created_at >= ${start} AND created_at <= ${end}` : sql`created_at >= ${start} AND created_at <= ${end}`;
+function periodQuery(table: "search_events" | "orders" | "pharmacies" | "patients", bucket: string, start: Date, end: Date, activeOnly = false, pharmacyId?: string) {
+  const createdRange = table === "pharmacies" ? sql`created_at >= ${start} AND created_at <= ${end}` : sql`created_at >= ${start} AND created_at <= ${end}${pharmacyId ? (table === "search_events" ? sql`` : sql` AND pharmacy_id = ${pharmacyId}`) : sql``}`;
   const count = activeOnly ? sql`count(*) FILTER (WHERE is_active)` : sql`count(*)`;
   return sql`SELECT date_trunc(${bucket}, created_at)::date::text AS period, ${count}::int AS count
     FROM ${sql.raw(table)} WHERE ${createdRange} GROUP BY 1 HAVING ${count} >= ${MINIMUM_GROUP_SIZE} ORDER BY 1`;
@@ -47,22 +50,23 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
   const parsed = querySchema.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: "start/end must be YYYY-MM-DD and interval must be day, week, or month" }); return; }
   const { start, end } = getRange(parsed.data);
+  const pharmacyId = parsed.data.pharmacyId;
   const bucket = parsed.data.interval;
   const values = sql.join(completedStatuses.map(status => sql`${status}`), sql`, `);
   const [searchResult, orderResult, prescriptionResult, searchTrend, orderTrend, pharmacyTrend, patientTrend, topDrugs, topCategories, pharmacyRevenue, categoryRevenue, demand, lowFulfillment, areas, categoryAreas] = await Promise.all([
     db.execute(sql`SELECT count(*)::int AS searches, count(DISTINCT normalized_query) FILTER (WHERE normalized_query IS NOT NULL)::int AS unique_drugs,
       count(*) FILTER (WHERE result_count = 0)::int AS zero_result_searches FROM search_events WHERE created_at >= ${start} AND created_at <= ${end}`),
     db.execute(sql`SELECT
-      (SELECT count(*) FROM orders WHERE created_at >= ${start} AND created_at <= ${end})::int AS order_volume,
-      (SELECT count(*) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS completed_orders,
-      (SELECT coalesce(sum(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::float AS total_revenue,
-      (SELECT coalesce(sum(medicine_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS medicine_markup_minor,
-      (SELECT coalesce(sum(delivery_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS delivery_commission_minor,
-      (SELECT coalesce(avg(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::float AS average_order_value`),
+      (SELECT count(*) FROM orders WHERE created_at >= ${start} AND created_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::int AS order_volume,
+      (SELECT count(*) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::int AS completed_orders,
+      (SELECT coalesce(sum(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::float AS total_revenue,
+      (SELECT coalesce(sum(medicine_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::int AS medicine_markup_minor,
+      (SELECT coalesce(sum(delivery_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::int AS delivery_commission_minor,
+      (SELECT coalesce(avg(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``})::float AS average_order_value`),
     db.execute(sql`SELECT count(*) FILTER (WHERE status = 'approved')::int AS approved, count(*) FILTER (WHERE status = 'rejected')::int AS rejected,
       count(*) FILTER (WHERE status IN ('approved', 'rejected'))::int AS reviewed FROM prescriptions WHERE created_at >= ${start} AND created_at <= ${end}`),
     db.execute(periodQuery("search_events", bucket, start, end)),
-    db.execute(periodQuery("orders", bucket, start, end)),
+    db.execute(periodQuery("orders", bucket, start, end, false, pharmacyId)),
     db.execute(periodQuery("pharmacies", bucket, start, end, true)),
     db.execute(periodQuery("patients", bucket, start, end)),
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC LIMIT 10`),
@@ -123,18 +127,19 @@ router.get("/export.csv", async (req: AuthRequest, res): Promise<void> => {
   const parsed = querySchema.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: "Invalid date range" }); return; }
   const { start, end } = getRange(parsed.data);
+  const pharmacyId = parsed.data.pharmacyId;
   const bucket = parsed.data.interval;
   const values = sql.join(completedStatuses.map(status => sql`${status}`), sql`, `);
   const [searchResult, orderResult, prescriptionResult, searchesByPeriod, ordersByPeriod, pharmaciesByPeriod, patientsByPeriod, drugs, categories, pharmacyRevenue, categoryRevenue, demand, areas, categoryAreas, lowFulfillment] = await Promise.all([
     db.execute(sql`SELECT count(*)::int AS searches, count(DISTINCT normalized_query) FILTER (WHERE normalized_query IS NOT NULL)::int AS unique_drugs, count(*) FILTER (WHERE result_count = 0)::int AS zero_result_searches FROM search_events WHERE created_at >= ${start} AND created_at <= ${end}`),
     db.execute(sql`SELECT (SELECT count(*) FROM orders WHERE created_at >= ${start} AND created_at <= ${end})::int AS order_volume, (SELECT count(*) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS completed_orders, (SELECT coalesce(sum(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::float AS total_revenue, (SELECT coalesce(sum(medicine_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS medicine_markup_minor, (SELECT coalesce(sum(delivery_commission_minor), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::int AS delivery_commission_minor, (SELECT coalesce(avg(total_leones), 0) FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end})::float AS average_order_value`),
     db.execute(sql`SELECT count(*) FILTER (WHERE status = 'approved')::int AS approved, count(*) FILTER (WHERE status = 'rejected')::int AS rejected, count(*) FILTER (WHERE status IN ('approved', 'rejected'))::int AS reviewed FROM prescriptions WHERE created_at >= ${start} AND created_at <= ${end}`),
-    db.execute(periodQuery("search_events", bucket, start, end)), db.execute(periodQuery("orders", bucket, start, end)), db.execute(periodQuery("pharmacies", bucket, start, end, true)), db.execute(periodQuery("patients", bucket, start, end)),
+    db.execute(periodQuery("search_events", bucket, start, end)), db.execute(periodQuery("orders", bucket, start, end, false, pharmacyId)), db.execute(periodQuery("pharmacies", bucket, start, end, true)), db.execute(periodQuery("patients", bucket, start, end)),
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC LIMIT 10`),
     db.execute(sql`SELECT primary_category AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
-    db.execute(sql`SELECT p.name AS label, sum(o.total_leones)::float AS value FROM orders o JOIN pharmacies p ON p.id=o.pharmacy_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end} GROUP BY p.id,p.name HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
-    db.execute(sql`SELECT i.primary_category AS label, sum(o.total_leones)::float AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
-    db.execute(sql`SELECT i.primary_category AS label, count(DISTINCT o.id)::int AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.created_at >= ${start} AND o.created_at <= ${end} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
+    db.execute(sql`SELECT p.name AS label, sum(o.total_leones)::float AS value FROM orders o JOIN pharmacies p ON p.id=o.pharmacy_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY p.id,p.name HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
+    db.execute(sql`SELECT i.primary_category AS label, sum(o.total_leones)::float AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
+    db.execute(sql`SELECT i.primary_category AS label, count(DISTINCT o.id)::int AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.created_at >= ${start} AND o.created_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT area_district AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT primary_category || ' — ' || area_district AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY primary_category,area_district HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL AND result_count=0 GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),

@@ -33,6 +33,12 @@
       "expo-font",
       "expo-web-browser",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MobiCare uses your location to estimate pharmacy distances."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "MobiCare needs access to your photos to upload prescription images.",

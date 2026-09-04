@@ -11,4 +11,5 @@ export type GetHqInsightsParams = {
 start?: Date;
 end?: Date;
 interval?: GetHqInsightsInterval;
+pharmacyId?: string;
 };

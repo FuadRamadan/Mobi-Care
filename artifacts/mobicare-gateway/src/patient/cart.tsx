@@ -31,6 +31,9 @@ export interface CartState {
   pharmacyId: string;
   pharmacyName: string;
   pharmacyAddress: string | null;
+  mobileMoneyNumber?: string | null;
+  mobileMoneyProvider?: string | null;
+  mobileMoneyAccountName?: string | null;
   items: CartItem[];
 }
 
@@ -38,13 +41,15 @@ interface CartValue {
   cart: CartState | null;
   /** Add (or bump) an item. Returns false when the cart belongs to another pharmacy. */
   addItem: (
-    pharmacy: { id: string; name: string; address: string | null },
+    pharmacy: { id: string; name: string; address: string | null; mobileMoneyNumber?: string | null; mobileMoneyProvider?: string | null; mobileMoneyAccountName?: string | null },
     item: Omit<CartItem, "quantity">,
     opts?: { replacePharmacy?: boolean },
   ) => boolean;
   setQuantity: (inventoryId: string, quantity: number) => void;
   removeItem: (inventoryId: string) => void;
   clear: () => void;
+  subtotalLeones: number;
+  serviceFeeLeones: number;
   totalLeones: number;
   itemCount: number;
   prescriptionRequired: boolean;
@@ -90,6 +95,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
               pharmacyId: pharmacy.id,
               pharmacyName: pharmacy.name,
               pharmacyAddress: pharmacy.address,
+              mobileMoneyNumber: pharmacy.mobileMoneyNumber,
+              mobileMoneyProvider: pharmacy.mobileMoneyProvider,
+              mobileMoneyAccountName: pharmacy.mobileMoneyAccountName,
               items: [],
             };
       const existing = base.items.find(
@@ -141,7 +149,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setCart(null), []);
 
   const items = cart?.items ?? [];
-  const totalLeones = items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
+  const subtotalLeones = items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
+  const serviceFeeLeones = Math.round(subtotalLeones * 5) / 100;
+  const totalLeones = subtotalLeones + serviceFeeLeones;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   const prescriptionRequired = items.some((i) => i.prescriptionRequired);
   const collectionOnly = items.some((i) => i.collectionOnly);
@@ -154,6 +164,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setQuantity,
         removeItem,
         clear,
+        subtotalLeones,
+        serviceFeeLeones,
         totalLeones,
         itemCount,
         prescriptionRequired,

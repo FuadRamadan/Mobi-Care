@@ -18,6 +18,16 @@ export interface HqPharmacy {
   locationLat?: string | null;
   /** @nullable */
   locationLng?: string | null;
+  /** @nullable */
+  mobileMoneyNumber?: string | null;
+  /** @nullable */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
   isActive: boolean;
   controlledSubstanceAuthorized: boolean;
   mustChangePassword: boolean;

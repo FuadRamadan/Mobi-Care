@@ -37,8 +37,9 @@ export async function getFinancialSettings() {
   const deliveryFeeMinor = values.get(KEYS[1])!;
   const courierPayoutMinor = values.get(KEYS[2])!;
   if (
-    medicineMarkupBasisPoints < 0 ||
-    medicineMarkupBasisPoints > 10_000 ||
+    // Patient service commission is a contractual fixed 5%; checkout must
+    // never silently drift when an administrator changes a generic markup.
+    medicineMarkupBasisPoints !== 500 ||
     deliveryFeeMinor < 0 ||
     courierPayoutMinor < 0 ||
     courierPayoutMinor > deliveryFeeMinor

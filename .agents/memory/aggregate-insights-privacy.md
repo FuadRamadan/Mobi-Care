@@ -1,10 +1,10 @@
 ---
-name: Aggregate insights privacy
-description: Privacy boundary for HQ Data & Insights metrics, exports, and search telemetry.
+name: Aggregate insights visibility and privacy
+description: Rules for complete HQ metrics while keeping search telemetry access controlled and purpose-limited.
 ---
 
-Every potentially identifying aggregate must meet the minimum cohort threshold independently, including global totals, time buckets, named organizations, areas, categories, rates, and exports.
+Do not suppress low-volume HQ metrics: totals, time buckets, pharmacies, areas, categories, tables, charts, and exports must include counts of one and zero-filled days where applicable.
 
-**Why:** Protecting only rankings still lets narrow date ranges reveal a single patient, pharmacy, search, or order through totals and trend buckets.
+**Why:** MobiCare explicitly requires complete operational reconciliation; hidden low-count rows make displayed detail disagree with reported totals.
 
-**How to apply:** Enforce suppression server-side for JSON and CSV, return null or omit under-threshold values, and keep UI explanations aligned with actual suppression. Store only recognized coarse districts for search telemetry, never patient IDs, sessions, IPs, or exact addresses. Protect access with a distinct live permission and audit every view/export.
+**How to apply:** Return every authorized row without “Other” bucketing or count thresholds, paginate genuinely long lists, and render explicit empty states. Keep search telemetry purpose-limited, protect HQ access with live permissions, and audit views/exports.

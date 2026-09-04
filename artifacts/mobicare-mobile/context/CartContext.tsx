@@ -17,9 +17,16 @@ export interface CartItem {
   collectionOnly: boolean;
 }
 
+export interface PharmacyPaymentDetails {
+  number?: string | null;
+  provider?: string | null;
+  accountName?: string | null;
+}
+
 interface CartState {
   pharmacyId: string | null;
   pharmacyName: string | null;
+  pharmacyPayment?: PharmacyPaymentDetails;
   items: CartItem[];
 }
 
@@ -31,9 +38,11 @@ interface CartContextValue {
   totalLeones: number;
   requiresPrescription: boolean;
   requiresCollection: boolean;
+  serviceFeeLeones: number;
+  amountPayableLeones: number;
   /** Returns false if adding would mix pharmacies; caller should prompt user */
-  addItem: (pharmacyId: string, pharmacyName: string, item: Omit<CartItem, 'quantity'>) => boolean;
-  replaceCart: (pharmacyId: string, pharmacyName: string, item: Omit<CartItem, 'quantity'>) => void;
+  addItem: (pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => boolean;
+  replaceCart: (pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => void;
   removeItem: (inventoryId: string) => void;
   updateQty: (inventoryId: string, delta: number) => void;
   clearCart: () => void;
@@ -66,7 +75,7 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
     AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
   }, []);
 
-  const addItem = useCallback((pharmacyId: string, pharmacyName: string, item: Omit<CartItem, 'quantity'>): boolean => {
+  const addItem = useCallback((pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>): boolean => {
     let result = true;
     setCart((prev) => {
       if (prev.pharmacyId && prev.pharmacyId !== pharmacyId) {
@@ -84,15 +93,15 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
       } else {
         items = [...prev.items, { ...item, quantity: 1 }];
       }
-      const next = { pharmacyId, pharmacyName, items };
+      const next = { pharmacyId, pharmacyName, pharmacyPayment: payment, items };
       AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
       return next;
     });
     return result;
   }, []);
 
-  const replaceCart = useCallback((pharmacyId: string, pharmacyName: string, item: Omit<CartItem, 'quantity'>) => {
-    const next: CartState = { pharmacyId, pharmacyName, items: [{ ...item, quantity: 1 }] };
+  const replaceCart = useCallback((pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => {
+    const next: CartState = { pharmacyId, pharmacyName, pharmacyPayment: payment, items: [{ ...item, quantity: 1 }] };
     persist(next);
   }, [persist]);
 
@@ -126,12 +135,14 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
 
   const itemCount = cart.items.reduce((s, i) => s + i.quantity, 0);
   const totalLeones = cart.items.reduce((s, i) => s + i.priceLeones * i.quantity, 0);
+  const serviceFeeLeones = Math.round(totalLeones * 5) / 100;
+  const amountPayableLeones = totalLeones + serviceFeeLeones;
   const requiresPrescription = cart.items.some((i) => i.requiresPrescription);
   const requiresCollection = cart.items.some((i) => i.collectionOnly);
 
   return (
     <CartContext.Provider value={{
-      cart, itemCount, totalLeones, requiresPrescription, requiresCollection,
+      cart, itemCount, totalLeones, serviceFeeLeones, amountPayableLeones, requiresPrescription, requiresCollection,
       addItem, replaceCart, removeItem, updateQty, clearCart,
     }}>
       {children}

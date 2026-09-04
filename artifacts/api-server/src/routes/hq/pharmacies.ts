@@ -14,10 +14,15 @@ import {
 } from "../../lib/passwordPolicy.js";
 
 const router = safeRouter();
+const coordinateSchema = z.number().finite();
 
 function publicPharmacy(p: typeof pharmaciesTable.$inferSelect) {
   const { passwordHash: _ph, ...rest } = p;
-  return rest;
+  return {
+    ...rest,
+    latitude: p.latitude == null ? null : Number(p.latitude),
+    longitude: p.longitude == null ? null : Number(p.longitude),
+  };
 }
 
 export function pharmacyUniqueConstraint(error: unknown): string | null {
@@ -71,6 +76,11 @@ router.post("/", async (req: AuthRequest, res) => {
         ),
       phone: z.string().min(5).optional(),
       address: z.string().optional(),
+      mobileMoneyNumber: z.string().trim().min(3).optional(),
+      mobileMoneyProvider: z.string().trim().min(2).optional(),
+      mobileMoneyAccountName: z.string().trim().min(2).optional(),
+      latitude: coordinateSchema.min(-90).max(90).optional(),
+      longitude: coordinateSchema.min(-180).max(180).optional(),
     })
     .safeParse(req.body);
 
@@ -125,6 +135,13 @@ router.post("/", async (req: AuthRequest, res) => {
         username: body.data.username,
         phone: body.data.phone ?? null,
         address: body.data.address ?? null,
+        mobileMoneyNumber: body.data.mobileMoneyNumber ?? null,
+        mobileMoneyProvider: body.data.mobileMoneyProvider ?? null,
+        mobileMoneyAccountName: body.data.mobileMoneyAccountName ?? null,
+        latitude:
+          body.data.latitude === undefined ? null : String(body.data.latitude),
+        longitude:
+          body.data.longitude === undefined ? null : String(body.data.longitude),
         passwordHash,
         mustChangePassword: true,
         temporaryPasswordExpiresAt,
@@ -287,6 +304,11 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       name: z.string().min(1).optional(),
       phone: z.string().min(5).nullable().optional(),
       address: z.string().nullable().optional(),
+      mobileMoneyNumber: z.string().trim().min(3).nullable().optional(),
+      mobileMoneyProvider: z.string().trim().min(2).nullable().optional(),
+      mobileMoneyAccountName: z.string().trim().min(2).nullable().optional(),
+      latitude: coordinateSchema.min(-90).max(90).nullable().optional(),
+      longitude: coordinateSchema.min(-180).max(180).nullable().optional(),
     })
     .safeParse(req.body);
 
@@ -305,9 +327,25 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     return;
   }
 
+  const updateValues = {
+    ...body.data,
+    latitude:
+      body.data.latitude === undefined
+        ? undefined
+        : body.data.latitude === null
+          ? null
+          : String(body.data.latitude),
+    longitude:
+      body.data.longitude === undefined
+        ? undefined
+        : body.data.longitude === null
+          ? null
+          : String(body.data.longitude),
+    updatedAt: new Date(),
+  };
   const [updated] = await db
     .update(pharmaciesTable)
-    .set({ ...body.data, updatedAt: new Date() })
+    .set(updateValues)
     .where(eq(pharmaciesTable.id, id))
     .returning();
 

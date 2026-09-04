@@ -13,15 +13,34 @@ import {
 } from "@workspace/db/schema";
 import { and, eq, gt, ilike, or, type SQL } from "drizzle-orm";
 import type { AuthRequest } from "../../middlewares/auth.js";
+import {
+  haversineDistanceKm,
+  isLatitude,
+  isLongitude,
+} from "../../lib/geo.js";
 
 const router = safeRouter();
-const DISTRICTS = ["bo", "bombali", "bonthe", "falaba", "freetown", "kailahun", "kambia", "kenema", "koinadugu", "kono", "moyamba", "port loko", "karene", "pujehun", "tonkolili", "western area"];
+const DISTRICTS = [
+  "bo", "bombali", "bonthe", "falaba", "freetown", "kailahun", "kambia",
+  "kenema", "koinadugu", "kono", "moyamba", "port loko", "karene",
+  "pujehun", "tonkolili", "western area",
+];
 
 function coarseDistrict(address: string | null | undefined): string {
-  const normalized = address?.toLocaleLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  const normalized = address
+    ?.toLocaleLowerCase()
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!normalized) return "Unknown";
   const district = DISTRICTS.find((item) => normalized.includes(item));
   return district ? district.replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Unknown";
+}
+
+function queryCoordinate(value: unknown): number | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
 router.get("/categories", (_req, res) => {
@@ -41,6 +60,10 @@ router.get("/", async (req: AuthRequest, res) => {
     typeof req.query.category === "string" ? req.query.category : "";
   const subcategory =
     typeof req.query.subcategory === "string" ? req.query.subcategory : "";
+  const pharmacyId =
+    typeof req.query.pharmacyId === "string" ? req.query.pharmacyId : "";
+  const patientLatitude = queryCoordinate(req.query.lat);
+  const patientLongitude = queryCoordinate(req.query.lng);
   if (q.length > 0 && q.length < 2) {
     res
       .status(400)
@@ -67,6 +90,27 @@ router.get("/", async (req: AuthRequest, res) => {
     res
       .status(400)
       .json({ error: "The subcategory does not belong to that category" });
+    return;
+  }
+  if (
+    (patientLatitude === null) !== (patientLongitude === null) ||
+    (patientLatitude !== null &&
+      patientLongitude !== null &&
+      (!isLatitude(patientLatitude) || !isLongitude(patientLongitude)))
+  ) {
+    res.status(400).json({
+      error:
+        "lat and lng must be supplied together and be valid coordinates",
+    });
+    return;
+  }
+  if (
+    pharmacyId &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      pharmacyId,
+    )
+  ) {
+    res.status(400).json({ error: "Invalid pharmacyId" });
     return;
   }
 
@@ -96,6 +140,7 @@ router.get("/", async (req: AuthRequest, res) => {
   if (subcategory) {
     filters.push(eq(pharmacyInventoryTable.subcategory, subcategory as never));
   }
+  if (pharmacyId) filters.push(eq(pharmaciesTable.id, pharmacyId));
 
   const rows = await db
     .select({
@@ -121,6 +166,13 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmacyId: pharmaciesTable.id,
       pharmacyName: pharmaciesTable.name,
       pharmacyAddress: pharmaciesTable.address,
+      pharmacyPhone: pharmaciesTable.phone,
+      mobileMoneyNumber: pharmaciesTable.mobileMoneyNumber,
+      mobileMoneyProvider: pharmaciesTable.mobileMoneyProvider,
+      mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
+      pharmacyLatitude: pharmaciesTable.latitude,
+      pharmacyLongitude: pharmaciesTable.longitude,
+      pharmacyOnline: pharmaciesTable.isActive,
       controlledSubstanceAuthorized:
         pharmaciesTable.controlledSubstanceAuthorized,
     })
@@ -133,8 +185,7 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmaciesTable,
       eq(pharmaciesTable.id, pharmacyInventoryTable.pharmacyId),
     )
-    .where(and(...filters))
-    .limit(200);
+    .where(and(...filters));
 
   // Group offers per drug.
   const byDrug = new Map<string, any>();
@@ -171,11 +222,31 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmacyId: r.pharmacyId,
       pharmacyName: r.pharmacyName,
       pharmacyAddress: r.pharmacyAddress,
+      pharmacyPhone: r.pharmacyPhone,
+      mobileMoneyNumber: r.mobileMoneyNumber,
+      mobileMoneyProvider: r.mobileMoneyProvider,
+      mobileMoneyAccountName: r.mobileMoneyAccountName,
+      online: r.pharmacyOnline,
+      estimatedDistanceKm:
+        patientLatitude !== null &&
+        patientLongitude !== null &&
+        r.pharmacyLatitude !== null &&
+        r.pharmacyLongitude !== null &&
+        isLatitude(Number(r.pharmacyLatitude)) &&
+        isLongitude(Number(r.pharmacyLongitude))
+          ? haversineDistanceKm(
+              patientLatitude,
+              patientLongitude,
+              Number(r.pharmacyLatitude),
+              Number(r.pharmacyLongitude),
+            )
+          : null,
       brand: r.brand,
       manufacturer: r.manufacturer,
       priceLeones: Number(r.priceLeones),
       unitOfSale: r.unitOfSale,
       inStock: r.stockQuantity > 0,
+      stockQuantity: r.stockQuantity,
       availableForDelivery: r.availableForDelivery && r.tier !== "1",
       availableForCollection: r.availableForCollection,
     });
@@ -186,16 +257,26 @@ router.get("/", async (req: AuthRequest, res) => {
     offers: d.offers.sort((a: any, b: any) => a.priceLeones - b.priceLeones),
   }));
 
-  // Analytics is intentionally anonymous: only the normalized search and
-  // aggregate-safe result count are retained, never patient/session/IP data.
-  const [patient] = await db.select({ address: patientsTable.address }).from(patientsTable).where(eq(patientsTable.id, req.pharmacy!.sub)).limit(1);
-  await db.insert(searchEventsTable).values({
-    normalizedQuery: q ? q.toLocaleLowerCase() : null,
-    primaryCategory: category || null,
-    subcategory: subcategory || null,
-    areaDistrict: coarseDistrict(patient?.address),
-    resultCount: results.length,
-  });
+  // This handler is called only for a submitted search; filters and pagination
+  // use the returned result set client-side and do not write additional events.
+  const [patient] = await db
+    .select({ address: patientsTable.address })
+    .from(patientsTable)
+    .where(eq(patientsTable.id, req.pharmacy!.sub))
+    .limit(1);
+  // Category/subcategory-only requests are filter changes, not a drug-search
+  // submission. This prevents page/filter activity from inflating search KPIs.
+  if (q) {
+    await db.insert(searchEventsTable).values({
+      normalizedQuery: q.toLocaleLowerCase(),
+      patientId: req.pharmacy!.sub,
+      pharmacyId: pharmacyId || null,
+      primaryCategory: category || null,
+      subcategory: subcategory || null,
+      areaDistrict: coarseDistrict(patient?.address),
+      resultCount: results.length,
+    });
+  }
   res.json(results);
 });
 
