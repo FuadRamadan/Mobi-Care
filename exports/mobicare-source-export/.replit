@@ -22,7 +22,9 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "110b6aba21215c75cd892337efeea213c95900743f3cb79c0e27017408603a99874cf71d8d118175943514c7d388f110947a366cf3e23e6f71f458bf41076e9b"
+# JWT_SECRET was removed: it had been committed here and must be treated
+# as public. Secrets belong in the host's secret manager.
+# See deploy/godaddy/SECRETS.md.
 
 [nix]
 channel = "stable-25_05"

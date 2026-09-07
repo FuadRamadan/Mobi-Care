@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { assertSecretsAreSafe } from "./lib/secrets";
 import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
 import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
 import { db, pool } from "@workspace/db";
@@ -196,6 +197,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 
 async function start(): Promise<void> {
+  assertSecretsAreSafe();
   await assertSchemaUpToDate();
   const server = app.listen(port, "0.0.0.0", () => {
     logger.info({ port }, "Server listening");

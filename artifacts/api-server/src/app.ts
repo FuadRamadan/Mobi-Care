@@ -3,8 +3,20 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import {
+  AUTH_RATE_LIMITED_PATHS,
+  authRateLimit,
+  configureTrustProxy,
+  globalRateLimit,
+  securityHeaders,
+} from "./lib/security";
 
 const app: Express = express();
+
+// Must precede the rate limiters: they key on req.ip, which is only the real
+// client address once Express knows how many proxies sit in front.
+configureTrustProxy(app);
+
 const configuredOrigins = process.env.ALLOWED_ORIGINS
   ?.split(",")
   .map((origin) => origin.trim().replace(/\/$/, ""))
@@ -14,6 +26,7 @@ if (process.env.NODE_ENV === "production" && !configuredOrigins?.length) {
   throw new Error("ALLOWED_ORIGINS is required in production");
 }
 
+app.use(securityHeaders());
 app.use(
   pinoHttp({
     logger,
@@ -51,6 +64,11 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api", globalRateLimit());
+for (const path of AUTH_RATE_LIMITED_PATHS) {
+  app.use(`/api${path}`, authRateLimit());
+}
 
 app.use("/api", router);
 
