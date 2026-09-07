@@ -92,6 +92,10 @@ This replaces `artifacts/api-server/src/lib/objectStorage.ts`, which currently
 talks to a Replit credential sidecar on `127.0.0.1:1106` that does not exist off
 Replit. Confirmed unreachable: every image operation fails until this is done.
 
+**An S3-backed replacement is now built and tested** — see
+[OBJECT-STORAGE.md](OBJECT-STORAGE.md) for what it covers, how to configure it,
+and how to migrate the existing objects.
+
 ## Recommended shape
 
 ```
@@ -209,7 +213,8 @@ Against PostgreSQL 16, with the application itself:
 
 Not addressed here, in rough priority order:
 
-1. Object storage adapter and file migration — blocks all image handling
+1. ~~Object storage adapter~~ — built and tested; see OBJECT-STORAGE.md.
+   Still needs a real bucket and the object migration run.
 2. `JWT_SECRET` committed in `.replit` — rotate it; treat the current one as
    compromised
 3. Payment: `POST /patient/orders/:id/pay` marks an order paid on the patient's
