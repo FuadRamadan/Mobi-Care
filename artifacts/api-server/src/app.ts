@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { mountStaticSites } from "./lib/staticSites";
 import {
   AUTH_RATE_LIMITED_PATHS,
   authRateLimit,
@@ -71,6 +72,17 @@ for (const path of AUTH_RATE_LIMITED_PATHS) {
 }
 
 app.use("/api", router);
+
+// Anything under /api that no route handled is a JSON 404. Without this it
+// falls through to the root site below, whose SPA fallback would answer an
+// unknown API path with 200 and an HTML page.
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// After the API, so /api always wins over the root site's SPA fallback.
+// No-op unless SERVE_STATIC_DIR is set.
+export const mountedStaticSites: string[] = mountStaticSites(app);
 
 const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   req.log?.error({ err: error }, "Unhandled API error");

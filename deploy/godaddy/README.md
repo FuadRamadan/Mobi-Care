@@ -3,6 +3,11 @@
 Findings on what the purchased plan can and cannot run, the resulting
 architecture decision, and the database runbook.
 
+Companion documents: [DEPLOY.md](DEPLOY.md) for the deployment runbook,
+[OBJECT-STORAGE.md](OBJECT-STORAGE.md) for media, [SECRETS.md](SECRETS.md) for
+the secret that must be rotated, and [wss-probe/](wss-probe/) for the
+connectivity test that gates all of it.
+
 **Sourcing note.** GoDaddy's own pages could not be fetched directly from the
 environment where this was researched, so the platform facts below come from
 GoDaddy documentation and announcements read through search. Treat the two
@@ -116,9 +121,9 @@ value — provided the ⚠️ items check out.
 ### Confirm before building
 
 1. Does the Node app allow an outbound **WSS connection on 443** to a Neon
-   endpoint? This is the assumption everything else rests on. Test it with a
-   throwaway app that opens a connection and runs `SELECT 1` before any porting
-   work starts.
+   endpoint? This is the assumption everything else rests on.
+   **[`wss-probe/`](wss-probe/) is built for exactly this** — deploy it, read
+   its verdict, and do not proceed on anything but GO.
 2. Confirm the plan's Node.js Hosting is enabled on your account and check the
    app's memory and storage limits against a 3 MB API bundle.
 
@@ -220,9 +225,8 @@ Not addressed here, in rough priority order:
 3. Payment: `POST /patient/orders/:id/pay` marks an order paid on the patient's
    own request, with no Orange Money verification
 4. No rate limiting on authentication endpoints, and no `helmet`
-5. `DEPLOYMENT.md` still describes VPS + subdomain hosting and a migration path
-   that does not work on an empty database; it needs rewriting once the ⚠️ items
-   are settled
+5. Payment is unverified, and this deployment goes out with that gap accepted —
+   see the "What is not finished" section of [DEPLOY.md](DEPLOY.md)
 
 ## Sources
 

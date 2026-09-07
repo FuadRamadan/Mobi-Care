@@ -1,0 +1,19 @@
+{
+  "name": "mobicare-connectivity-probe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Throwaway probe: can this host reach PostgreSQL over WebSocket on 443?",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "check": "node index.js --once"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0",
+    "ws": "8.21.3"
+  }
+}

@@ -1,3 +1,11 @@
+> **Superseded.** This document was written expecting shared PHP hosting with no
+> Node support, and describes a VPS, three subdomains, and a database migration
+> path that applies zero migrations to an empty database. GoDaddy Web Hosting
+> now includes a persistent Node 22 process, which changes the picture.
+>
+> Use **[deploy/godaddy/DEPLOY.md](deploy/godaddy/DEPLOY.md)** instead. This file
+> is kept for the background it records.
+
 # MobiCare production deployment on GoDaddy
 
 ## Hosting topology
