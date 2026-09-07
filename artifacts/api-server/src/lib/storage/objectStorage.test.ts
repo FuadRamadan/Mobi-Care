@@ -234,15 +234,15 @@ async function service() {
 }
 
 test("uploads and downloads an object, signature accepted", async () => {
-  const { objectStorageClient } = await import("./objectStorage.js");
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file("private/uploads/photo.jpg")
-    .save(Buffer.from("image-bytes"), { contentType: "image/jpeg" });
+  const storage = await service();
+  await storage.uploadObjectEntity(
+    "uploads/photo.jpg",
+    Buffer.from("image-bytes"),
+    "image/jpeg",
+  );
 
   assert.deepEqual(rejected, [], "no request should fail signature verification");
 
-  const storage = await service();
   const file = await storage.getObjectEntityFile("/objects/uploads/photo.jpg");
   assert.equal(file.key, "private/uploads/photo.jpg");
 
@@ -253,11 +253,7 @@ test("uploads and downloads an object, signature accepted", async () => {
 
 test("private objects are not cacheable by shared caches", async () => {
   const storage = await service();
-  const { objectStorageClient } = await import("./objectStorage.js");
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file("private/uploads/rx.jpg")
-    .save(Buffer.from("prescription"), { contentType: "image/jpeg" });
+  await storage.uploadObjectEntity("uploads/rx.jpg", Buffer.from("prescription"), "image/jpeg");
 
   // No policy at all — must not be treated as public.
   let file = await storage.getObjectEntityFile("/objects/uploads/rx.jpg");
@@ -286,11 +282,7 @@ test("private objects are not cacheable by shared caches", async () => {
 
 test("ACL round-trips through object metadata and gates access", async () => {
   const storage = await service();
-  const { objectStorageClient } = await import("./objectStorage.js");
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file("private/uploads/rx.jpg")
-    .save(Buffer.from("prescription"), { contentType: "image/jpeg" });
+  await storage.uploadObjectEntity("uploads/rx.jpg", Buffer.from("prescription"), "image/jpeg");
 
   await storage.trySetObjectEntityAclPolicy("/objects/uploads/rx.jpg", {
     owner: "patient-1",
@@ -318,11 +310,7 @@ test("ACL round-trips through object metadata and gates access", async () => {
 
 test("an object with no policy is readable by nobody", async () => {
   const storage = await service();
-  const { objectStorageClient } = await import("./objectStorage.js");
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file("private/uploads/orphan.jpg")
-    .save(Buffer.from("x"), { contentType: "image/jpeg" });
+  await storage.uploadObjectEntity("uploads/orphan.jpg", Buffer.from("x"), "image/jpeg");
 
   const file = await storage.getObjectEntityFile("/objects/uploads/orphan.jpg");
   assert.equal(await storage.canAccessObjectEntity({ userId: "anyone", objectFile: file }), false);
@@ -432,11 +420,8 @@ test("public objects are found across configured prefixes", async () => {
 
 test("deleting an object entity removes it", async () => {
   const storage = await service();
-  const { objectStorageClient, ObjectNotFoundError } = await import("./objectStorage.js");
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file("private/uploads/gone.jpg")
-    .save(Buffer.from("x"), { contentType: "image/jpeg" });
+  const { ObjectNotFoundError } = await import("./objectStorage.js");
+  await storage.uploadObjectEntity("uploads/gone.jpg", Buffer.from("x"), "image/jpeg");
 
   await storage.deleteObjectEntity("/objects/uploads/gone.jpg");
   await assert.rejects(
@@ -447,13 +432,9 @@ test("deleting an object entity removes it", async () => {
 
 test("keys with spaces and unicode survive signing and round-trip", async () => {
   const storage = await service();
-  const { objectStorageClient } = await import("./objectStorage.js");
-  const key = "private/uploads/Dr Koroma’s scan (1).jpg";
+  const entityPath = "uploads/Dr Koroma’s scan (1).jpg";
 
-  await objectStorageClient
-    .bucket(BUCKET)
-    .file(key)
-    .save(Buffer.from("scan"), { contentType: "image/jpeg" });
+  await storage.uploadObjectEntity(entityPath, Buffer.from("scan"), "image/jpeg");
 
   assert.deepEqual(rejected, [], "encoded keys must still verify");
 

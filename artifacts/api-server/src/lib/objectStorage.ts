@@ -160,6 +160,33 @@ export class ObjectStorageService {
     };
   }
 
+  /**
+   * Write a buffer to the private area, server-side, and return the
+   * "/objects/<entity>" path the application stores.
+   *
+   * Mirrors the method on the S3 adapter so route code does not need to know
+   * how object keys are laid out or which provider is behind them.
+   */
+  async uploadObjectEntity(
+    entityPath: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<string> {
+    const cleanedPath = entityPath.replace(/^\/+/, '');
+    if (!cleanedPath || cleanedPath.includes('..')) {
+      throw new Error('Invalid object entity path');
+    }
+
+    const fullPath = `${this.getPrivateObjectDir().replace(/\/$/, '')}/${cleanedPath}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    await objectStorageClient
+      .bucket(bucketName)
+      .file(objectName)
+      .save(body, { contentType, resumable: false });
+
+    return `/objects/${cleanedPath}`;
+  }
+
   async getObjectEntityFile(objectPath: string): Promise<File> {
     if (!objectPath.startsWith('/objects/')) {
       throw new ObjectNotFoundError();
@@ -296,4 +323,15 @@ async function signObjectURL({
 
   const json = await response.json() as { signed_url: string };
   return json.signed_url;
+}
+
+/**
+ * Whether object storage is configured.
+ *
+ * Routes use this to choose between durable storage and the local-disk
+ * development fallback. The S3 adapter exports the same predicate against its
+ * own configuration, so the choice reads identically under either.
+ */
+export function isObjectStorageConfigured(): boolean {
+  return Boolean(process.env.PRIVATE_OBJECT_DIR);
 }

@@ -38,6 +38,12 @@ host's outbound port restriction is not a problem for this piece.
 | `scripts/migrate-object-storage.ts` | Copies existing objects across, verified |
 | `deploy/godaddy/switch-object-storage.sh` | Switches imports either way |
 
+Both adapters expose `uploadObjectEntity()` and `isObjectStorageConfigured()`.
+`routes/patient/uploads.ts` and `routes/patient/profile.ts` previously computed
+object keys themselves by parsing `PRIVATE_OBJECT_DIR`, which tied route code to
+one provider's key layout. They now call the service, so they work under either
+adapter with no provider-specific configuration of their own.
+
 **No new dependencies.** Signing is implemented against `node:crypto` and
 `fetch`. This keeps `package.json` untouched, avoids adding an SDK to a
 workspace that pins versions deliberately, and keeps all traffic on plain HTTPS.
@@ -70,21 +76,20 @@ Endpoints by provider:
 The bucket must **not** be public. Objects are served through the API, which
 enforces the ACL on each read.
 
-### One compatibility variable
+`PRIVATE_OBJECT_DIR` is **not** needed once the S3 adapter is selected. It
+remains the Replit adapter's own configuration, so it still matters if you
+revert.
 
-`routes/patient/uploads.ts` and `routes/patient/profile.ts` compute their own
-object keys from `PRIVATE_OBJECT_DIR` rather than going through the service.
-Those files are unchanged, so keep that variable set and consistent with the
-prefix:
+### Two scripts that stay on the old provider
 
-```bash
-PRIVATE_OBJECT_DIR=/<anything>/<S3_PRIVATE_PREFIX>    # e.g. /mobicare-media/private
-```
+`scripts/migrate-object-storage.ts` reads through the Replit client by design —
+it is the source side of the copy.
 
-The first segment is ignored by the new adapter (the bucket comes from
-`S3_BUCKET`); the rest must match `S3_PRIVATE_PREFIX` so prescription uploads
-land where the read path looks for them. Without it those two routes fall back
-to local disk, which does not survive a restart.
+`scripts/seed-team-photos.ts` is a one-off seeder that also uses the Replit
+client and `PRIVATE_OBJECT_DIR`. It is not rewritten and will not work after the
+move. It does not need to: team photos already in storage come across with
+everything else in the object migration. If team photos ever need re-seeding on
+the new provider, that script needs porting first.
 
 ## Switching over
 
@@ -169,7 +174,7 @@ Not verified, and needing a real provider before launch:
 
 1. Create the bucket, private, with credentials scoped to it alone
 2. Add a CORS rule for `PUT` from the gateway and portal origins
-3. Set the variables above, including `PRIVATE_OBJECT_DIR`
+3. Set the S3 variables above (`PRIVATE_OBJECT_DIR` is not needed)
 4. Run the migration with `--dry-run`, then for real
 5. Run the switch script, then typecheck, test and build
 6. Exercise every media path: prescription upload and read, patient profile

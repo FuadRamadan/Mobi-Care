@@ -7,10 +7,14 @@ import { db, patientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { mintProfileImageToken } from "../../lib/signedUrl.js";
-import { objectStorageClient } from "../../lib/objectStorage.js";
+import {
+  isObjectStorageConfigured,
+  ObjectStorageService,
+} from "../../lib/objectStorage.js";
 import { calculatePatientAge } from "../../lib/patientAge.js";
 
 const router = safeRouter();
+const objectStorage = new ObjectStorageService();
 const PROFILE_UPLOAD_DIR = path.resolve(process.cwd(), "uploads/profiles");
 const DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -20,13 +24,6 @@ const MIME_TYPES: Record<string, string> = {
   jpeg: "image/jpeg",
   webp: "image/webp",
 };
-
-function parsePrivateObjectDir(): { bucketName: string; dirPrefix: string } {
-  const dir = process.env.PRIVATE_OBJECT_DIR ?? "";
-  if (!dir) throw new Error("PRIVATE_OBJECT_DIR not set");
-  const parts = dir.replace(/^\//, "").split("/");
-  return { bucketName: parts[0]!, dirPrefix: parts.slice(1).join("/") };
-}
 
 async function storeProfileImage(image: string): Promise<string> {
   const match = DATA_URL_RE.exec(image);
@@ -38,16 +35,13 @@ async function storeProfileImage(image: string): Promise<string> {
   }
   const filename = `${crypto.randomUUID()}.${ext}`;
 
-  if (process.env.PRIVATE_OBJECT_DIR) {
-    const { bucketName, dirPrefix } = parsePrivateObjectDir();
-    const objectName = dirPrefix
-      ? `${dirPrefix}/profile-uploads/${filename}`
-      : `profile-uploads/${filename}`;
-    await objectStorageClient
-      .bucket(bucketName)
-      .file(objectName)
-      .save(buf, { contentType: MIME_TYPES[ext], resumable: false });
-    return `cloud:/objects/profile-uploads/${filename}`;
+  if (isObjectStorageConfigured()) {
+    const objectPath = await objectStorage.uploadObjectEntity(
+      `profile-uploads/${filename}`,
+      buf,
+      MIME_TYPES[ext]!,
+    );
+    return `cloud:${objectPath}`;
   }
 
   await fs.mkdir(PROFILE_UPLOAD_DIR, { recursive: true });

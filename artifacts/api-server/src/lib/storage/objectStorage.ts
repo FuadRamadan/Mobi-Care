@@ -26,9 +26,9 @@ import {
   getObject,
   getS3Config,
   headObject,
+  isStorageConfigured,
   presignPut,
   putObject,
-  type ObjectMetadata,
 } from "./s3Client.js";
 import {
   canAccessObject,
@@ -264,6 +264,30 @@ export class ObjectStorageService {
     });
   }
 
+  /**
+   * Write a buffer to the private area, server-side, and return the
+   * "/objects/<entity>" path the application stores.
+   *
+   * Exists so route code never has to know how keys are laid out or which
+   * provider is behind them. The Replit adapter offers the same method, so
+   * routes work unchanged under either.
+   */
+  async uploadObjectEntity(
+    entityPath: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<string> {
+    const cleanedPath = entityPath.replace(/^\/+/, "");
+    if (!cleanedPath || cleanedPath.includes("..")) {
+      throw new Error("Invalid object entity path");
+    }
+
+    await putObject(`${this.getPrivateObjectDir()}/${cleanedPath}`, body, {
+      contentType,
+    });
+    return `/objects/${cleanedPath}`;
+  }
+
   /** Delete an object by its "/objects/<entity>" path. */
   async deleteObjectEntity(objectPath: string): Promise<void> {
     const file = await this.getObjectEntityFile(objectPath);
@@ -272,46 +296,12 @@ export class ObjectStorageService {
 }
 
 /**
- * Server-side upload shim.
+ * Whether object storage is configured.
  *
- * routes/patient/uploads.ts reaches past the service to the raw provider client
- * to save a buffer directly. This keeps that call site working unchanged by
- * offering the same bucket(...).file(...).save(...) shape, so prescription
- * uploads need no rewrite to move providers.
+ * Routes use this to choose between durable storage and the local-disk
+ * development fallback. The Replit adapter exports the same predicate against
+ * its own configuration, so the choice reads identically under either.
  */
-export const objectStorageClient = {
-  bucket(bucketName: string) {
-    return {
-      file(objectName: string) {
-        return {
-          name: objectName,
-          bucket: bucketName,
-          async save(
-            body: Buffer,
-            options: {
-              contentType?: string;
-              metadata?: ObjectMetadata;
-              /**
-               * Accepted for call-site compatibility and ignored: resumable
-               * uploads were a Google client concern. Objects here are written
-               * in a single request, which suits the few-MB images involved.
-               */
-              resumable?: boolean;
-            } = {},
-          ): Promise<void> {
-            await putObject(objectName, body, {
-              ...(options.contentType ? { contentType: options.contentType } : {}),
-              ...(options.metadata ? { metadata: options.metadata } : {}),
-            });
-          },
-          async exists(): Promise<[boolean]> {
-            return [(await headObject(objectName)) !== null];
-          },
-          async delete(): Promise<void> {
-            await deleteObject(objectName);
-          },
-        };
-      },
-    };
-  },
-};
+export function isObjectStorageConfigured(): boolean {
+  return isStorageConfigured();
+}

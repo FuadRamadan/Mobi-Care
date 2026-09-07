@@ -5,9 +5,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { db, prescriptionUploadsTable } from "@workspace/db";
 import { AuthRequest } from "../../middlewares/auth.js";
-import { objectStorageClient } from "../../lib/objectStorage.js";
+import {
+  isObjectStorageConfigured,
+  ObjectStorageService,
+} from "../../lib/objectStorage.js";
 
 const router = safeRouter();
+const objectStorage = new ObjectStorageService();
 
 // Local dev storage for prescription images (fallback when object storage is
 // not configured). The imageKey prefix "local:" vs "cloud:" makes the storage
@@ -25,40 +29,21 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 /**
- * Parse PRIVATE_OBJECT_DIR (e.g. "/bucket-id/private") into
- * { bucketName, dirPrefix } suitable for direct GCS uploads.
- */
-function parsePrivateObjectDir(): { bucketName: string; dirPrefix: string } {
-  const dir = process.env.PRIVATE_OBJECT_DIR ?? "";
-  if (!dir) throw new Error("PRIVATE_OBJECT_DIR not set");
-  const parts = dir.replace(/^\//, "").split("/");
-  const bucketName = parts[0]!;
-  const dirPrefix = parts.slice(1).join("/");
-  return { bucketName, dirPrefix };
-}
-
-/**
- * Upload a buffer directly to GCS (server-side) and return an imageKey of the
- * form "cloud:/objects/uploads/<uuid>.<ext>".
+ * Upload a buffer to durable object storage and return an imageKey of the form
+ * "cloud:/objects/uploads/<uuid>.<ext>".
  */
 async function uploadToCloud(
   buf: Buffer,
   ext: string,
   uuid: string,
 ): Promise<string> {
-  const filename = `${uuid}.${ext}`;
-  const { bucketName, dirPrefix } = parsePrivateObjectDir();
-  const objectName = dirPrefix
-    ? `${dirPrefix}/uploads/${filename}`
-    : `uploads/${filename}`;
-  const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-
-  const bucket = objectStorageClient.bucket(bucketName);
-  const file = bucket.file(objectName);
-  await file.save(buf, { contentType, resumable: false });
-
+  const objectPath = await objectStorage.uploadObjectEntity(
+    `uploads/${uuid}.${ext}`,
+    buf,
+    MIME_TYPES[ext] ?? "application/octet-stream",
+  );
   // imageKey mirrors the /objects/ path the serving route understands
-  return `cloud:/objects/uploads/${filename}`;
+  return `cloud:${objectPath}`;
 }
 
 /**
@@ -66,8 +51,9 @@ async function uploadToCloud(
  * → { imageKey }
  *
  * The returned key is opaque to the client and later attached to an order.
- * Cloud storage (Replit App Storage) is used when PRIVATE_OBJECT_DIR is set;
- * otherwise falls back to local disk (useful for local dev without the env var).
+ * Durable object storage is used when it is configured; otherwise this falls
+ * back to local disk, which is useful in development but does not survive a
+ * restart.
  */
 router.post("/prescription", async (req: AuthRequest, res) => {
   const body = z.object({ image: z.string().min(1) }).safeParse(req.body);
@@ -94,7 +80,7 @@ router.post("/prescription", async (req: AuthRequest, res) => {
   const uuid = crypto.randomUUID();
   let imageKey: string;
 
-  if (process.env.PRIVATE_OBJECT_DIR) {
+  if (isObjectStorageConfigured()) {
     // Cloud path — durable across restarts
     imageKey = await uploadToCloud(buf, ext, uuid);
   } else {
