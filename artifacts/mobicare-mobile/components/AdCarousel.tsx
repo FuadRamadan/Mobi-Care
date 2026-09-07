@@ -32,7 +32,6 @@ function AdVideoItem({ item, isActive }: { item: PublicAdvertisement, isActive: 
   }, [isActive, player]);
 
   return (
-    // @ts-expect-error React 19 JSX types mismatch
     <VideoView player={player} style={StyleSheet.absoluteFillObject} contentFit="cover" nativeControls={false} />
   );
 }
@@ -66,7 +65,6 @@ function AdItem({ item, isActive }: { item: PublicAdvertisement, isActive: boole
       {isVideo ? (
         <AdVideoItem item={item} isActive={isActive} />
       ) : (
-        // @ts-expect-error React 19 JSX types mismatch
         <Image 
           source={{ uri: `https://${process.env.EXPO_PUBLIC_DOMAIN}${item.mediaUrl}` }}
           style={StyleSheet.absoluteFillObject}

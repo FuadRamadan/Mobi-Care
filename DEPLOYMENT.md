@@ -139,7 +139,13 @@ Expected response:
 ## Verification checklist
 
 1. `pnpm run typecheck`
-2. `pnpm --filter @workspace/api-server run test`
+2. `DATABASE_URL=<staging-url> pnpm --filter @workspace/api-server run test`
+
+   Five of these tests exercise real database behaviour and connect on import,
+   so `DATABASE_URL` must point at a reachable database whose schema is current.
+   Without it those tests fail with `DATABASE_URL must be set`. Never point this
+   at production — the suite writes data.
+
 3. `pnpm run build:production`
 4. `pnpm run migrate` against staging
 5. Start with the production command and confirm `/api/health`

@@ -35,9 +35,16 @@ function getJwtExp(token: string): number | null {
     if (parts.length !== 3) return null;
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    // Hermes and web both provide atob. Buffer stays as a fallback for any
+    // runtime that does not, reached through globalThis so this React Native
+    // app does not take on Node's global type surface.
+    const nodeBuffer = (globalThis as {
+      Buffer?: { from(data: string, encoding: string): { toString(encoding: string): string } };
+    }).Buffer;
     const decoded = typeof atob !== 'undefined'
       ? atob(padded)
-      : Buffer.from(padded, 'base64').toString('binary');
+      : nodeBuffer?.from(padded, 'base64').toString('binary');
+    if (decoded === undefined) return null;
     const payload = JSON.parse(decoded);
     return typeof payload.exp === 'number' ? payload.exp : null;
   } catch {
