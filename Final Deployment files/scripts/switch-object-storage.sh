@@ -2,8 +2,8 @@
 # Point the API at the S3 storage adapter instead of the Replit one, or put it
 # back.
 #
-#   bash deploy/godaddy/switch-object-storage.sh           # switch to S3
-#   bash deploy/godaddy/switch-object-storage.sh --revert   # back to Replit
+#   bash "Final Deployment files/scripts/switch-object-storage.sh"           # switch to S3
+#   bash "Final Deployment files/scripts/switch-object-storage.sh" --revert   # back to Replit
 #
 # Only import paths change; no logic is touched. Both directions are exact
 # inverses, and `git checkout -- artifacts/api-server/src` undoes either.

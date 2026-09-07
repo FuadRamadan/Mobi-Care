@@ -211,7 +211,7 @@ fi
 # that does not exist here, so photos would fail.
 if grep -rq 'from "\.\./lib/objectStorage\.js"' artifacts/api-server/src/routes; then
   echo "==> Selecting the S3 storage adapter"
-  bash deploy/godaddy/switch-object-storage.sh >/dev/null
+  bash "$REPO/Final Deployment files/scripts/switch-object-storage.sh" >/dev/null
 fi
 
 if $build; then

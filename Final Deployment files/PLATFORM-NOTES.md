@@ -1,11 +1,17 @@
-# MobiCare on GoDaddy Web Hosting Deluxe
+# GoDaddy platform notes — background
+
+Why the deployment is shaped the way it is. Not a step: read it when you want
+the reasoning, or when something in the runbooks needs justifying. The order of
+work is in [README.md](README.md).
+
+## MobiCare on GoDaddy Web Hosting Deluxe
 
 Findings on what the purchased plan can and cannot run, the resulting
 architecture decision, and the database runbook.
 
-Companion documents: [DEPLOY.md](DEPLOY.md) for the deployment runbook,
-[OBJECT-STORAGE.md](OBJECT-STORAGE.md) for media, [SECRETS.md](SECRETS.md) for
-the secret that must be rotated, and [wss-probe/](wss-probe/) for the
+Companion documents: [5-BUILD-AND-DEPLOY.md](5-BUILD-AND-DEPLOY.md) for the deployment runbook,
+[3-OBJECT-STORAGE.md](3-OBJECT-STORAGE.md) for media, [4-SECRETS.md](4-SECRETS.md) for
+the secret that must be rotated, and [1-connectivity-probe/](1-connectivity-probe/) for the
 connectivity test that gates all of it.
 
 **Sourcing note.** GoDaddy's own pages could not be fetched directly from the
@@ -51,7 +57,7 @@ PostgreSQL features with no MySQL equivalent:
   startup schema check
 - `jsonb` columns, and `gen_random_uuid()` defaults
 
-Porting means rewriting the Drizzle schema, all 21 migrations, the startup
+Porting means rewriting the Drizzle schema, all 24 migrations, the startup
 check, and re-deriving the money-handling guarantees — the settlement and
 allocation logic that decides what pharmacies get paid. That is the highest-risk
 code in the system, and it currently has passing tests that would all need to be
@@ -76,7 +82,7 @@ For `lib/db/src/index.ts` that is a one-line import change:
 +import { Pool } from "@neondatabase/serverless";
 ```
 
-Everything else — the schema, all 21 migrations, the baseline below, the
+Everything else — the schema, all 24 migrations, the baseline below, the
 financial logic, the tests — is unchanged, because it stays PostgreSQL.
 
 **Not yet implemented, deliberately.** Database connection code that has never
@@ -98,7 +104,7 @@ talks to a Replit credential sidecar on `127.0.0.1:1106` that does not exist off
 Replit. Confirmed unreachable: every image operation fails until this is done.
 
 **An S3-backed replacement is now built and tested** — see
-[OBJECT-STORAGE.md](OBJECT-STORAGE.md) for what it covers, how to configure it,
+[3-OBJECT-STORAGE.md](3-OBJECT-STORAGE.md) for what it covers, how to configure it,
 and how to migrate the existing objects.
 
 ## Recommended shape
@@ -122,7 +128,7 @@ value — provided the ⚠️ items check out.
 
 1. Does the Node app allow an outbound **WSS connection on 443** to a Neon
    endpoint? This is the assumption everything else rests on.
-   **[`wss-probe/`](wss-probe/) is built for exactly this** — deploy it, read
+   **[`1-connectivity-probe/`](1-connectivity-probe/) is built for exactly this** — deploy it, read
    its verdict, and do not proceed on anything but GO.
 2. Confirm the plan's Node.js Hosting is enabled on your account and check the
    app's memory and storage limits against a 3 MB API bundle.
@@ -130,103 +136,28 @@ value — provided the ⚠️ items check out.
 If (1) fails, the realistic options narrow to a GoDaddy VPS or another host for
 the API. Ask GoDaddy support directly — the restriction may be liftable.
 
-## Database runbook
+## Database
 
 The API refuses to start against a database whose schema is behind, so this must
-be right before anything else works.
+be right before anything else works. The commands, the reason a baseline exists,
+and what to do when the runner refuses are all in
+[2-DATABASE.md](2-DATABASE.md).
 
-### Why a baseline exists
+## What is still open
 
-`lib/db/migrations/` starts at `0001`, which issues `ALTER TABLE` against tables
-no migration creates — they were created by `drizzle-kit push` on the old host.
-Running the documented `pnpm run migrate` against an empty database applies
-**zero** migrations and fails immediately:
+Kept current; the detail is in [KNOWN-GAPS.md](KNOWN-GAPS.md).
 
-```
-error: relation "drug_catalogue" does not exist
-```
+1. **The database driver** still connects on 5432, which this platform blocks.
+   The change is ten lines and is written out in [0-BLOCKERS.md](0-BLOCKERS.md).
+   It waits on the connectivity probe.
+2. **Payment is unverified** — an order can be marked paid with no Orange Money
+   confirmation. This deployment goes out with that gap accepted.
+3. Browser CORS on presigned uploads, and the object migration, are unverified
+   until a real bucket exists.
 
-`lib/db/baseline/0000_baseline.sql` closes that gap. It is generated from the
-Drizzle model plus every migration applied in order, then verified to reproduce
-that exact schema on its own. It carries the seed rows too — the financial
-configuration in `platform_settings` and the reconciliation markers in
-`financial_migration_state`, without which a new database starts financially
-misconfigured.
-
-### Commands
-
-New, empty database:
-
-```bash
-DATABASE_URL=<url> node lib/db/scripts/migrate-tracked.mjs --init
-```
-
-Existing database already carrying the full schema (the one moving across from
-the old host) — run once, before any ordinary run. Records history, executes
-nothing, changes no data:
-
-```bash
-DATABASE_URL=<url> node lib/db/scripts/migrate-tracked.mjs --adopt
-```
-
-Every release after that:
-
-```bash
-DATABASE_URL=<url> node lib/db/scripts/migrate-tracked.mjs
-```
-
-After adding a migration, regenerate the baseline so a fresh install keeps
-matching a migrated one. This creates and drops two scratch databases, so point
-it at a development server, never one holding real data:
-
-```bash
-DATABASE_ADMIN_URL=postgresql://user@host:5432/postgres \
-  bash lib/db/scripts/generate-baseline.sh
-```
-
-### What the tracked runner changes
-
-The original `lib/db/scripts/migrate.mjs` keeps no record of what it has run, so
-it re-executes all 21 migrations on every invocation. That happens to work
-because the migrations are individually re-runnable — verified by running them
-twice — but it re-runs data migrations and rewrites two tables through an enum
-drop-and-recreate every time, which gets slow and lock-heavy as tables grow.
-
-`migrate-tracked.mjs` records each file in a `schema_migrations` table with a
-checksum, so each runs exactly once, refuses to proceed if a migration's content
-changed after it was applied, and wraps each file in its own transaction.
-
-**The original runner is untouched and still works.** Nothing depends on the new
-one until you choose to use it.
-
-### Verified
-
-Against PostgreSQL 16, with the application itself:
-
-- baseline reproduces the migrated schema exactly — dumps compared, no diff
-- `--init` on an empty database, then the API starts and its startup schema
-  check passes
-- full API test suite green against a baselined database (31/31)
-- seed rows present and correct
-- re-running is a no-op
-- `--init` refuses a database that already has tables, directing you to `--adopt`
-- `--adopt` on a simulated existing database records history without executing
-- a later migration applies correctly on top of a baselined database
-- editing an applied migration is detected and blocks the run
-
-## Still open
-
-Not addressed here, in rough priority order:
-
-1. ~~Object storage adapter~~ — built and tested; see OBJECT-STORAGE.md.
-   Still needs a real bucket and the object migration run.
-2. `JWT_SECRET` committed in `.replit` — rotate it; treat the current one as
-   compromised
-3. Payment: `POST /patient/orders/:id/pay` marks an order paid on the patient's
-   own request, with no Orange Money verification
-4. No rate limiting on authentication endpoints, and no `helmet`
-5. Payment is unverified, and this deployment goes out with that gap accepted —
-   see the "What is not finished" section of [DEPLOY.md](DEPLOY.md)
+Done since this document was first written: the S3 object storage adapter, the
+`JWT_SECRET` rotation and startup secret checks, rate limiting and security
+headers, single-origin static hosting, and the tracked migration runner.
 
 ## Sources
 

@@ -23,7 +23,7 @@ timeoutMs = 20000
 
 [userenv.shared]
 # Secrets belong in the host's secret manager, never in this file.
-# See deploy/godaddy/SECRETS.md.
+# See "Final Deployment files/4-SECRETS.md".
 
 [nix]
 channel = "stable-25_05"

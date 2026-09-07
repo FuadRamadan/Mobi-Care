@@ -8,7 +8,7 @@
  *
  * Works with any S3-compatible provider (AWS S3, Cloudflare R2, Backblaze B2,
  * MinIO). Configuration comes from the environment; see the deployment notes
- * in deploy/godaddy/README.md.
+ * in "Final Deployment files/PLATFORM-NOTES.md".
  */
 
 import { createHash } from "node:crypto";

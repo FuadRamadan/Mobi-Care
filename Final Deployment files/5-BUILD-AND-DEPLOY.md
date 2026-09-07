@@ -1,11 +1,14 @@
-# Deploying MobiCare to GoDaddy
+# Deploying MobiCare to GoDaddy — step 5
+
+Part of the deployment handover; the order of work is in
+[README.md](README.md).
 
 Supersedes the root `DEPLOYMENT.md`, which was written expecting shared PHP
 hosting and a VPS, and describes a database migration path that does not work on
 an empty database.
 
-Read `README.md` first for what the plan rests on, and run the connectivity
-probe in `wss-probe/` before anything else here.
+Read `PLATFORM-NOTES.md` first for what the plan rests on, and run the connectivity
+probe in `1-connectivity-probe/` before anything else here.
 
 ## The shape of it
 
@@ -35,7 +38,7 @@ order fails loudly rather than half-working.
 
 ### 1. Confirm the platform can reach PostgreSQL
 
-Deploy `wss-probe/` and read its verdict. See `wss-probe/README.md`. Do not
+Deploy `1-connectivity-probe/` and read its verdict. See `1-connectivity-probe/README.md`. Do not
 continue on an INCOMPLETE or NO-GO result.
 
 ### 2. Database
@@ -53,7 +56,7 @@ DATABASE_URL='postgresql://...' node lib/db/scripts/migrate-tracked.mjs --adopt
 ```
 
 Do **not** use `pnpm run migrate`: it cannot build an empty database, applying
-zero migrations and failing on the first file. See `README.md` for why.
+zero migrations and failing on the first file. See `PLATFORM-NOTES.md` for why.
 
 Every release after that is the same command with no option, which applies only
 what is pending:
@@ -91,20 +94,20 @@ S3_BUCKET=... S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... \
 ```
 
 Add a CORS rule on the bucket allowing `PUT` from `https://mobicare.sl`, or HQ
-media uploads will fail in the browser. Full detail in `OBJECT-STORAGE.md`.
+media uploads will fail in the browser. Full detail in `3-OBJECT-STORAGE.md`.
 
 ### 4. Build the release
 
 ```bash
-bash deploy/godaddy/switch-object-storage.sh          # required
-DATABASE_URL='<staging-url>' bash deploy/godaddy/package-release.sh
+bash "Final Deployment files/scripts/switch-object-storage.sh"          # required
+DATABASE_URL='<staging-url>' bash "Final Deployment files/scripts/package-release.sh"
 ```
 
 The switch is required and the packaging script refuses to run without it: the
 Replit adapter authenticates through a sidecar that does not exist off Replit,
 so packaging it would produce a build whose every image operation fails.
 
-Output is `deploy/godaddy/build/mobicare-release.zip`, about 3 MB — well under
+Output is `"Final Deployment files/build/mobicare-release.zip"`, about 3 MB — well under
 the platform's 100 MB upload limit. `DATABASE_URL` is optional but runs the full
 test suite as part of the build; point it at staging, never production.
 
@@ -133,7 +136,7 @@ S3_SECRET_ACCESS_KEY=...               # secret
 build-time only, and setting them at runtime does nothing.
 
 **`JWT_SECRET` must be a new value.** The old one was committed to the
-repository and the API refuses to start with it. See `SECRETS.md`.
+repository and the API refuses to start with it. See `4-SECRETS.md`.
 
 **`TRUST_PROXY_HOPS` is load-bearing.** It decides what the rate limiter treats
 as the client address. Wrong in one direction, one attacker locks out every
@@ -239,14 +242,14 @@ application. Two things do not roll back with it:
 To move the code back to the Replit storage adapter:
 
 ```bash
-bash deploy/godaddy/switch-object-storage.sh --revert
+bash "Final Deployment files/scripts/switch-object-storage.sh" --revert
 ```
 
 ## Common failures
 
 - **Exits at startup, "Refusing to start with unsafe secrets"** — `JWT_SECRET`
   or `SESSION_SECRET` is missing, too short, shared, or is the retired value.
-  The message names the problem. See `SECRETS.md`.
+  The message names the problem. See `4-SECRETS.md`.
 - **Exits at startup, "Database schema is out of date"** — step 2 was not run
   against this database, or it points somewhere unexpected.
 - **Exits at startup, "ALLOWED_ORIGINS is required in production"** — set it,

@@ -78,7 +78,7 @@ API's signed-URL route as a valid PNG.
   asks for a code.
 - **Payment is not real.** Marking an order paid does not contact Orange Money —
   the order simply moves to `paid`. This is the known gap recorded in
-  `deploy/godaddy/DEPLOY.md`.
+  `Final Deployment files/`.
 - **Searching needs a term.** `q=para` finds Paracetamol; an empty search
   returns nothing rather than the whole catalogue.
 - **Pharmacies cannot self-register.** That is by design: HQ issues credentials.

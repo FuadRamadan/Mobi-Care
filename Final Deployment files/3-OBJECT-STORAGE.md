@@ -1,4 +1,7 @@
-# Object storage migration
+# Object storage migration — step 3
+
+Part of the deployment handover; the order of work is in
+[README.md](README.md).
 
 Replacing Replit App Storage with S3-compatible storage. This is what blocks
 every image feature off the old host: prescriptions, patient profile photos,
@@ -36,7 +39,7 @@ host's outbound port restriction is not a problem for this piece.
 | `src/lib/storage/objectAcl.ts` | Same ACL rules, stored as S3 metadata |
 | `src/lib/storage/objectStorage.ts` | Drop-in `ObjectStorageService` |
 | `scripts/migrate-object-storage.ts` | Copies existing objects across, verified |
-| `deploy/godaddy/switch-object-storage.sh` | Switches imports either way |
+| `"Final Deployment files/scripts/switch-object-storage.sh"` | Switches imports either way |
 
 Both adapters expose `uploadObjectEntity()` and `isObjectStorageConfigured()`.
 `routes/patient/uploads.ts` and `routes/patient/profile.ts` previously computed
@@ -94,8 +97,8 @@ the new provider, that script needs porting first.
 ## Switching over
 
 ```bash
-bash deploy/godaddy/switch-object-storage.sh            # to S3
-bash deploy/godaddy/switch-object-storage.sh --revert   # back to Replit
+bash "Final Deployment files/scripts/switch-object-storage.sh"            # to S3
+bash "Final Deployment files/scripts/switch-object-storage.sh" --revert   # back to Replit
 ```
 
 It rewrites import paths in 11 files and nothing else. Both directions were run

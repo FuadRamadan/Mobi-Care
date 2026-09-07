@@ -1,9 +1,9 @@
 #!/bin/bash
 # Build MobiCare and assemble a single zip for GoDaddy Node.js Hosting.
 #
-#   bash deploy/godaddy/package-release.sh
+#   bash "Final Deployment files/scripts/package-release.sh"
 #
-# Produces deploy/godaddy/build/mobicare-release.zip containing the bundled API
+# Produces "Final Deployment files/build/mobicare-release.zip" containing the bundled API
 # and both built frontends, ready to upload. node_modules is excluded — the
 # platform installs from package.json, and the API bundle needs no dependencies
 # at all, so that install is a no-op.
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUT="$REPO/deploy/godaddy/build"
+OUT="$REPO/Final Deployment files/build"
 STAGE="$OUT/release"
 ZIP="$OUT/mobicare-release.zip"
 
@@ -40,7 +40,7 @@ cd "$REPO"
 # whose every image operation fails.
 if grep -rq 'from "\.\./lib/objectStorage\.js"' artifacts/api-server/src/routes; then
   echo "ERROR: the routes still import the Replit storage adapter." >&2
-  echo "       Run: bash deploy/godaddy/switch-object-storage.sh" >&2
+  echo "       Run: bash 'Final Deployment files/scripts/switch-object-storage.sh'" >&2
   exit 1
 fi
 
@@ -120,7 +120,7 @@ Required environment variables:
 PORT is supplied by the platform.
 
 The database schema must be current before this starts; the API checks on
-startup and exits if it is behind. See deploy/godaddy/DEPLOY.md.
+startup and exits if it is behind. See Final Deployment files/5-BUILD-AND-DEPLOY.md.
 TXT
 
 echo "==> Zipping"
@@ -145,4 +145,4 @@ echo "      dist/                 bundled API (no dependencies to install)"
 echo "      public/gateway/       public site, patient app, HQ dashboard"
 echo "      public/pharmacy-portal/  pharmacy portal"
 echo
-echo "    Next: deploy/godaddy/DEPLOY.md"
+echo "    Next: Final Deployment files/5-BUILD-AND-DEPLOY.md"

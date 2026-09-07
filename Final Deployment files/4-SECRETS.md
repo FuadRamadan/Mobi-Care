@@ -1,4 +1,7 @@
-# Secrets, and the one that must be rotated
+# Secrets, and the one that must be rotated — step 4
+
+Part of the deployment handover; the order of work is in
+[README.md](README.md).
 
 ## What happened
 

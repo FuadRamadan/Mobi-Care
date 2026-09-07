@@ -1,4 +1,7 @@
-# Connectivity probe
+# Connectivity probe — step 1
+
+The first thing to do, before any other deployment work. Start from
+[../README.md](../README.md) if you have not.
 
 A throwaway app that answers the question the whole hosting plan rests on:
 **can GoDaddy Node.js Hosting reach PostgreSQL over a WebSocket on port 443?**
@@ -49,8 +52,8 @@ creates. Verified across repeated runs: no objects left behind.
    installs dependencies from `package.json`:
 
    ```bash
-   cd deploy/godaddy/wss-probe
-   zip -r ../wss-probe.zip . -x 'node_modules/*'
+   cd "Final Deployment files/1-connectivity-probe"
+   zip -r ../connectivity-probe.zip . -x 'node_modules/*'
    ```
 
 2. Create a Node.js app in your GoDaddy hosting dashboard and upload the zip.
