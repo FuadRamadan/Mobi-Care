@@ -106,6 +106,9 @@ import type {
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
   PharmacyResetPasswordResponse,
+  PilotResetPreview,
+  PilotResetRequest,
+  PilotResetResult,
   Prescription,
   PrescriptionApproval,
   PrescriptionRejection,
@@ -4646,6 +4649,156 @@ export function useExportHqInsightsCsv<TData = Awaited<ReturnType<typeof exportH
 
 
 
+
+export const getPreviewHqPilotResetUrl = () => {
+
+
+
+
+  return `/api/hq/insights/reset`
+}
+
+/**
+ * Read-only. Returns the confirmation phrase, per-table counts, and the list of data the reset preserves, so the confirmation dialog can show real numbers rather than a generic warning. Requires both the Data & Insights and settlement-management permissions.
+ * @summary Row counts a pilot-data reset would remove, plus what it keeps
+ */
+export const previewHqPilotReset = async ( options?: Parameters<typeof customFetch>[1]): Promise<PilotResetPreview> => {
+
+  return customFetch<PilotResetPreview>(getPreviewHqPilotResetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPreviewHqPilotResetQueryKey = () => {
+    return [
+    `/api/hq/insights/reset`
+    ] as const;
+    }
+
+
+export const getPreviewHqPilotResetQueryOptions = <TData = Awaited<ReturnType<typeof previewHqPilotReset>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewHqPilotReset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPreviewHqPilotResetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof previewHqPilotReset>>> = ({ signal }) => previewHqPilotReset({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof previewHqPilotReset>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PreviewHqPilotResetQueryResult = NonNullable<Awaited<ReturnType<typeof previewHqPilotReset>>>
+export type PreviewHqPilotResetQueryError = ErrorType<void>
+
+
+/**
+ * @summary Row counts a pilot-data reset would remove, plus what it keeps
+ */
+
+export function usePreviewHqPilotReset<TData = Awaited<ReturnType<typeof previewHqPilotReset>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewHqPilotReset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPreviewHqPilotResetQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getResetHqPilotDataUrl = () => {
+
+
+
+
+  return `/api/hq/insights/reset`
+}
+
+/**
+ * Irreversible, and applied as a single transaction. Pharmacies, patients, HQ staff, the drug catalogue, inventory and the append-only audit log are never touched; the reset writes its own entry to that audit log. The request body must repeat the confirmation phrase exactly.
+ * @summary Permanently clear the searches, orders, prescriptions and commission ledger collected during the pilot
+ */
+export const resetHqPilotData = async (pilotResetRequest: PilotResetRequest, options?: Parameters<typeof customFetch>[1]): Promise<PilotResetResult> => {
+
+  return customFetch<PilotResetResult>(getResetHqPilotDataUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pilotResetRequest)
+  }
+);}
+
+
+
+
+
+export const getResetHqPilotDataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetHqPilotData>>, TError,{data: BodyType<PilotResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetHqPilotData>>, TError,{data: BodyType<PilotResetRequest>}, TContext> => {
+
+const mutationKey = ['resetHqPilotData'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetHqPilotData>>, {data: BodyType<PilotResetRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  resetHqPilotData(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetHqPilotDataMutationResult = NonNullable<Awaited<ReturnType<typeof resetHqPilotData>>>
+    export type ResetHqPilotDataMutationBody = BodyType<PilotResetRequest>
+    export type ResetHqPilotDataMutationError = ErrorType<void>
+
+    /**
+ * @summary Permanently clear the searches, orders, prescriptions and commission ledger collected during the pilot
+ */
+export const useResetHqPilotData = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetHqPilotData>>, TError,{data: BodyType<PilotResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetHqPilotData>>,
+        TError,
+        {data: BodyType<PilotResetRequest>},
+        TContext
+      > => {
+      return useMutation(getResetHqPilotDataMutationOptions(options));
+    }
 
 export const getListHqNotificationsUrl = () => {
 

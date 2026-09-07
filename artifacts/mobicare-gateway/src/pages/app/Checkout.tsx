@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
+import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 
 export default function Checkout() {
   const {
@@ -387,16 +388,13 @@ export default function Checkout() {
             <p className="text-xs text-muted-foreground mb-2">
               Please use mobile money to pay <strong>{formatLeones(totalLeones)}</strong> to the pharmacy. Your order will be confirmed once payment is received.
             </p>
-            {cart.mobileMoneyNumber && (
-              <div className="bg-secondary/30 p-2 rounded-lg border text-sm">
-                <div className="font-medium">{cart.mobileMoneyNumber}</div>
-                {(cart.mobileMoneyProvider || cart.mobileMoneyAccountName) && (
-                  <div className="text-muted-foreground text-xs mt-0.5">
-                    {cart.mobileMoneyProvider} {cart.mobileMoneyProvider && cart.mobileMoneyAccountName ? '·' : ''} {cart.mobileMoneyAccountName}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="bg-secondary/30 p-2 rounded-lg border text-sm">
+              <MobileMoneyLines
+                lines={cart.mobileMoneyLines}
+                accountName={cart.mobileMoneyAccountName}
+                emptyText="This pharmacy has not published a mobile money number. Call them on the number in your order to arrange payment."
+              />
+            </div>
           </div>
           <Button
             className="w-full rounded-full h-12 text-base mt-2"

@@ -14,22 +14,18 @@ import {
   type DrugSearchResult,
   type DrugOffer,
   type DrugPrimaryCategory,
+  type DrugSubcategory,
 } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
 import { PromotionsCarousel } from "./PromotionsCarousel";
+import { categoryEmoji, categoryLabel } from "@/patient/categories";
+import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 
 function useDebounced(value: string, ms = 350): string {
   const [debounced, setDebounced] = useState(value);
@@ -43,6 +39,7 @@ function useDebounced(value: string, ms = 350): string {
 export default function PatientSearch() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<DrugPrimaryCategory | "">("");
+  const [subcategory, setSubcategory] = useState<DrugSubcategory | "">("");
 
   const q = useDebounced(query);
   const enabled = q.trim().length >= 2 || category !== "";
@@ -64,7 +61,12 @@ export default function PatientSearch() {
   const params = {
     q: q.trim() || undefined,
     category: category || undefined,
-    ...(location ? { lat: location.lat, lng: location.lng } : {})
+    subcategory: subcategory || undefined,
+    // The names the API documents. The route also still accepts lat/lng, which
+    // is what this app used to send.
+    ...(location
+      ? { patientLatitude: location.lat, patientLongitude: location.lng }
+      : {})
   };
 
   const { data: results, isFetching } = usePatientSearchDrugs(
@@ -77,8 +79,18 @@ export default function PatientSearch() {
     },
   );
 
-  // Keep this compact on first view; the selector exposes every appendix group.
-  const popularCats = categories?.slice(0, 8) || [];
+  const activeCategory = categories?.find((group) => group.value === category);
+
+  /**
+   * Tapping the selected category clears it, so there is always a way back to
+   * everything without hunting for a separate control. Changing category drops
+   * the subcategory, which would otherwise be a filter from the previous one —
+   * the server rejects a mismatched pair, so this is correctness, not tidiness.
+   */
+  function chooseCategory(value: DrugPrimaryCategory) {
+    setSubcategory("");
+    setCategory((current) => (current === value ? "" : value));
+  }
 
   return (
     <div className="space-y-5">
@@ -111,55 +123,97 @@ export default function PatientSearch() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={category === "" ? "default" : "secondary"}
-            className="cursor-pointer hover:bg-primary/80 transition-colors"
-            onClick={() => setCategory("")}
-          >
-            All
-          </Badge>
-          {popularCats.map((cat) => (
-            <Badge
-              key={cat.value}
-              variant={category === cat.value ? "default" : "secondary"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
-              onClick={() => setCategory(cat.value)}
-            >
-              {cat.label}
-            </Badge>
-          ))}
-          {categories && categories.flatMap((group) => group.subcategories).length > popularCats.length && (
-            <Select
-              value={category || "all"}
-              onValueChange={(value) =>
-                setCategory(
-                  value === "all" ? "" : (value.split(":")[0] as DrugPrimaryCategory),
-                )
-              }
-            >
-              <SelectTrigger className="w-auto h-6 text-xs rounded-full border-dashed bg-secondary/50 px-3 shrink-0">
-                <SelectValue placeholder="More categories..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.flatMap((group) =>
-                  group.subcategories.map((subcategory) => (
-                    <SelectItem key={`${group.value}:${subcategory.value}`} value={`${group.value}:${subcategory.value}`}>
-                      {group.label} · {subcategory.label}
-                    </SelectItem>
-                  )),
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {categories && categories.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <p className="text-sm font-medium">Browse by category</p>
+              {category !== "" && (
+                <button
+                  type="button"
+                  onClick={() => { setCategory(""); setSubcategory(""); }}
+                  className="text-xs text-primary hover:underline underline-offset-2"
+                  data-testid="button-clear-category"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Three across on a phone keeps the whole range on one screen
+                without scrolling, which is the point of browsing rather than
+                searching, while leaving each label room to wrap. */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {categories.map((cat) => {
+                const selected = category === cat.value;
+                return (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => chooseCategory(cat.value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:bg-secondary/40"
+                    }`}
+                    data-testid={`tile-category-${cat.value}`}
+                  >
+                    {/* Decorative: the label below is the accessible name, so a
+                        screen reader says "Pain & fever", not "face with
+                        head-bandage, Pain & fever". */}
+                    <span className="text-2xl leading-none" aria-hidden="true">
+                      {categoryEmoji(cat.value)}
+                    </span>
+                    <span
+                      className={`text-[11px] leading-tight ${
+                        selected ? "font-semibold text-primary" : "text-foreground"
+                      }`}
+                    >
+                      {categoryLabel(cat.value, cat.label)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Subcategories appear only once a category is chosen: the full
+                taxonomy is over forty entries, which is a list to get lost in
+                rather than one to browse. */}
+            {activeCategory && activeCategory.subcategories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant={subcategory === "" ? "default" : "secondary"}
+                  className="cursor-pointer transition-colors"
+                  onClick={() => setSubcategory("")}
+                >
+                  All {categoryLabel(activeCategory.value, activeCategory.label).toLowerCase()}
+                </Badge>
+                {activeCategory.subcategories.map((sub) => (
+                  <Badge
+                    key={sub.value}
+                    variant={subcategory === sub.value ? "default" : "secondary"}
+                    className="cursor-pointer transition-colors"
+                    onClick={() =>
+                      setSubcategory((current) =>
+                        current === sub.value ? "" : sub.value,
+                      )
+                    }
+                    data-testid={`chip-subcategory-${sub.value}`}
+                  >
+                    {sub.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {!enabled && (
-        <EmptyState>
-          Type at least 2 letters or select a category to search.
-        </EmptyState>
+      {/* Only once someone has started typing. On arrival the category grid is
+          already the invitation, and a box below it saying "select a category"
+          just repeats what is on screen. */}
+      {!enabled && query.length > 0 && (
+        <EmptyState>Keep typing — searches start at two letters.</EmptyState>
       )}
       {enabled && isFetching && !results && <EmptyState>Searching…</EmptyState>}
       {enabled && results && results.length === 0 && (
@@ -191,8 +245,7 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
         id: offer.pharmacyId,
         name: offer.pharmacyName,
         address: offer.pharmacyAddress ?? null,
-        mobileMoneyNumber: offer.mobileMoneyNumber,
-        mobileMoneyProvider: offer.mobileMoneyProvider,
+        mobileMoneyLines: offer.mobileMoneyLines ?? [],
         mobileMoneyAccountName: offer.mobileMoneyAccountName,
       },
       {
@@ -354,29 +407,10 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
                 </div>
                 <div>
                   <span className="text-muted-foreground block mb-0.5">Mobile Money</span>
-                  {offer.mobileMoneyNumber ? (
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{offer.mobileMoneyNumber}</span>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(offer.mobileMoneyNumber!);
-                            toast({ title: 'Number copied' });
-                          }}
-                          className="text-primary hover:underline text-[10px]"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      {(offer.mobileMoneyProvider || offer.mobileMoneyAccountName) && (
-                        <div className="text-muted-foreground mt-0.5">
-                          {offer.mobileMoneyProvider} {offer.mobileMoneyProvider && offer.mobileMoneyAccountName ? '·' : ''} {offer.mobileMoneyAccountName}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground italic">Not provided</span>
-                  )}
+                  <MobileMoneyLines
+                    lines={offer.mobileMoneyLines}
+                    accountName={offer.mobileMoneyAccountName}
+                  />
                 </div>
               </div>
             </div>

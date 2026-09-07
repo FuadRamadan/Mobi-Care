@@ -1310,23 +1310,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [confirmationPhrase, totalRows, steps, preserved]
-                properties:
-                  confirmationPhrase: { type: string }
-                  totalRows: { type: integer }
-                  steps:
-                    type: array
-                    items:
-                      type: object
-                      required: [table, label, rows]
-                      properties:
-                        table: { type: string }
-                        label: { type: string }
-                        rows: { type: integer }
-                  preserved:
-                    type: array
-                    items: { type: string }
+                $ref: "#/components/schemas/PilotResetPreview"
         "403": { description: Data & Insights and settlement permissions required }
     post:
       operationId: resetHqPilotData
@@ -1344,35 +1328,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [confirm]
-              properties:
-                confirm:
-                  type: string
-                  description: Must equal the confirmationPhrase returned by GET.
+              $ref: "#/components/schemas/PilotResetRequest"
       responses:
         "200":
           description: Rows removed, by table
           content:
             application/json:
               schema:
-                type: object
-                required: [deleted, totalRows, images, preserved]
-                properties:
-                  deleted:
-                    type: object
-                    additionalProperties: { type: integer }
-                  totalRows: { type: integer }
-                  images:
-                    type: object
-                    description: Prescription image files tidied from storage after the transaction committed.
-                    required: [found, deleted]
-                    properties:
-                      found: { type: integer }
-                      deleted: { type: integer }
-                  preserved:
-                    type: array
-                    items: { type: string }
+                $ref: "#/components/schemas/PilotResetResult"
         "400": { description: Missing or incorrect confirmation phrase; nothing was removed }
         "403": { description: Data & Insights and settlement permissions required }
 
@@ -2877,10 +2840,19 @@ components:
           type: ["string", "null"]
         pharmacyPhone:
           type: ["string", "null"]
+        mobileMoneyLines:
+          type: array
+          description: Empty when the pharmacy has published no way to be paid.
+          items:
+            $ref: "#/components/schemas/MobileMoneyLine"
         mobileMoneyNumber:
           type: ["string", "null"]
+          deprecated: true
+          description: First entry of mobileMoneyLines. Kept for older clients.
         mobileMoneyProvider:
           type: ["string", "null"]
+          deprecated: true
+          description: First entry of mobileMoneyLines. Kept for older clients.
         mobileMoneyAccountName:
           type: ["string", "null"]
         online:
@@ -2988,6 +2960,67 @@ components:
           items:
             $ref: "#/components/schemas/PatientOrderItemInput"
 
+    PilotResetPreview:
+      type: object
+      required: [confirmationPhrase, totalRows, steps, preserved]
+      properties:
+        confirmationPhrase:
+          type: string
+        totalRows:
+          type: number
+        steps:
+          type: array
+          items:
+            type: object
+            required: [table, label, rows]
+            properties:
+              table: { type: string }
+              label: { type: string }
+              rows: { type: number }
+        preserved:
+          type: array
+          items: { type: string }
+
+    PilotResetRequest:
+      type: object
+      required: [confirm]
+      properties:
+        confirm:
+          type: string
+          description: Must equal the confirmationPhrase returned by GET.
+
+    PilotResetResult:
+      type: object
+      required: [deleted, totalRows, images, preserved]
+      properties:
+        deleted:
+          type: object
+          additionalProperties: { type: number }
+        totalRows:
+          type: number
+        images:
+          type: object
+          description: Prescription image files tidied from storage after the transaction committed.
+          required: [found, deleted]
+          properties:
+            found: { type: number }
+            deleted: { type: number }
+        preserved:
+          type: array
+          items: { type: string }
+
+    MobileMoneyLine:
+      type: object
+      description: >
+        One mobile money account a pharmacy accepts payment on. The provider is
+        display-ready ("Orange Money", "AfriMoney"), never a raw enum value.
+      required: [provider, number]
+      properties:
+        provider:
+          type: string
+        number:
+          type: string
+
     OrderPharmacyInfo:
       type: object
       required: [id, name]
@@ -2999,6 +3032,23 @@ components:
         address:
           type: ["string", "null"]
         phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        mobileMoneyLines:
+          type: array
+          description: Empty when the pharmacy has published no way to be paid.
+          items:
+            $ref: "#/components/schemas/MobileMoneyLine"
+        mobileMoneyNumber:
+          type: ["string", "null"]
+          deprecated: true
+          description: First entry of mobileMoneyLines. Kept for older clients.
+        mobileMoneyProvider:
+          type: ["string", "null"]
+          deprecated: true
+          description: First entry of mobileMoneyLines. Kept for older clients.
+        mobileMoneyAccountName:
           type: ["string", "null"]
 
     OrderCourierInfo:
@@ -3898,16 +3948,26 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        email:
+          type: ["string", "null"]
         locationLat:
           type: ["string", "null"]
         locationLng:
           type: ["string", "null"]
-        mobileMoneyNumber:
+        orangeMoneyNumber:
           type: ["string", "null"]
-        mobileMoneyProvider:
+        afriMoneyNumber:
           type: ["string", "null"]
         mobileMoneyAccountName:
           type: ["string", "null"]
+        mobileMoneyNumber:
+          type: ["string", "null"]
+          deprecated: true
+          description: Superseded by orangeMoneyNumber / afriMoneyNumber.
+        mobileMoneyProvider:
+          type: ["string", "null"]
+          deprecated: true
+          description: Superseded by orangeMoneyNumber / afriMoneyNumber.
         latitude:
           type: ["number", "null"]
         longitude:
@@ -3941,12 +4001,18 @@ components:
           minLength: 3
         phone:
           type: string
+        email:
+          type: string
         address:
           type: string
-        mobileMoneyNumber:
+        orangeMoneyNumber:
           type: string
-        mobileMoneyProvider:
+          minLength: 6
+          maxLength: 32
+        afriMoneyNumber:
           type: string
+          minLength: 6
+          maxLength: 32
         mobileMoneyAccountName:
           type: string
         latitude:
@@ -4219,12 +4285,18 @@ components:
           type: string
         phone:
           type: ["string", "null"]
+        email:
+          type: ["string", "null"]
         address:
           type: ["string", "null"]
-        mobileMoneyNumber:
+        orangeMoneyNumber:
           type: ["string", "null"]
-        mobileMoneyProvider:
+          minLength: 6
+          maxLength: 32
+        afriMoneyNumber:
           type: ["string", "null"]
+          minLength: 6
+          maxLength: 32
         mobileMoneyAccountName:
           type: ["string", "null"]
         latitude:

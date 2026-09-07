@@ -13,11 +13,21 @@ export interface HqPharmacyUpdate {
   /** @nullable */
   phone?: string | null;
   /** @nullable */
+  email?: string | null;
+  /** @nullable */
   address?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     * @nullable
+     */
+  orangeMoneyNumber?: string | null;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     * @nullable
+     */
+  afriMoneyNumber?: string | null;
   /** @nullable */
   mobileMoneyAccountName?: string | null;
   /**

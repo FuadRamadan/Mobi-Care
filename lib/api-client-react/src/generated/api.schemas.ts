@@ -285,6 +285,14 @@ export interface PatientProfilePhotoInput {
   image: string;
 }
 
+/**
+ * One mobile money account a pharmacy accepts payment on. The provider is display-ready ("Orange Money", "AfriMoney"), never a raw enum value.
+ */
+export interface MobileMoneyLine {
+  provider: string;
+  number: string;
+}
+
 export interface DrugOffer {
   inventoryId: string;
   pharmacyId: string;
@@ -293,9 +301,19 @@ export interface DrugOffer {
   pharmacyAddress?: string | null;
   /** @nullable */
   pharmacyPhone?: string | null;
-  /** @nullable */
+  /** Empty when the pharmacy has published no way to be paid. */
+  mobileMoneyLines?: MobileMoneyLine[];
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
   mobileMoneyNumber?: string | null;
-  /** @nullable */
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
   mobileMoneyProvider?: string | null;
   /** @nullable */
   mobileMoneyAccountName?: string | null;
@@ -427,6 +445,42 @@ export interface PatientOrderInput {
   items: PatientOrderItemInput[];
 }
 
+export type PilotResetPreviewStepsItem = {
+  table: string;
+  label: string;
+  rows: number;
+};
+
+export interface PilotResetPreview {
+  confirmationPhrase: string;
+  totalRows: number;
+  steps: PilotResetPreviewStepsItem[];
+  preserved: string[];
+}
+
+export interface PilotResetRequest {
+  /** Must equal the confirmationPhrase returned by GET. */
+  confirm: string;
+}
+
+export type PilotResetResultDeleted = {[key: string]: number};
+
+/**
+ * Prescription image files tidied from storage after the transaction committed.
+ */
+export type PilotResetResultImages = {
+  found: number;
+  deleted: number;
+};
+
+export interface PilotResetResult {
+  deleted: PilotResetResultDeleted;
+  totalRows: number;
+  /** Prescription image files tidied from storage after the transaction committed. */
+  images: PilotResetResultImages;
+  preserved: string[];
+}
+
 export interface OrderPharmacyInfo {
   id: string;
   name: string;
@@ -434,6 +488,24 @@ export interface OrderPharmacyInfo {
   address?: string | null;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** Empty when the pharmacy has published no way to be paid. */
+  mobileMoneyLines?: MobileMoneyLine[];
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyNumber?: string | null;
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
 }
 
 export interface OrderCourierInfo {
@@ -986,15 +1058,29 @@ export interface HqPharmacy {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  email?: string | null;
+  /** @nullable */
   locationLat?: string | null;
   /** @nullable */
   locationLng?: string | null;
   /** @nullable */
-  mobileMoneyNumber?: string | null;
+  orangeMoneyNumber?: string | null;
   /** @nullable */
-  mobileMoneyProvider?: string | null;
+  afriMoneyNumber?: string | null;
   /** @nullable */
   mobileMoneyAccountName?: string | null;
+  /**
+     * Superseded by orangeMoneyNumber / afriMoneyNumber.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyNumber?: string | null;
+  /**
+     * Superseded by orangeMoneyNumber / afriMoneyNumber.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyProvider?: string | null;
   /** @nullable */
   latitude?: number | null;
   /** @nullable */
@@ -1016,9 +1102,18 @@ export interface PharmacyOnboardInput {
   /** @minLength 3 */
   username: string;
   phone?: string;
+  email?: string;
   address?: string;
-  mobileMoneyNumber?: string;
-  mobileMoneyProvider?: string;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     */
+  orangeMoneyNumber?: string;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     */
+  afriMoneyNumber?: string;
   mobileMoneyAccountName?: string;
   /**
      * @minimum -90
@@ -1284,11 +1379,21 @@ export interface HqPharmacyUpdate {
   /** @nullable */
   phone?: string | null;
   /** @nullable */
+  email?: string | null;
+  /** @nullable */
   address?: string | null;
-  /** @nullable */
-  mobileMoneyNumber?: string | null;
-  /** @nullable */
-  mobileMoneyProvider?: string | null;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     * @nullable
+     */
+  orangeMoneyNumber?: string | null;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     * @nullable
+     */
+  afriMoneyNumber?: string | null;
   /** @nullable */
   mobileMoneyAccountName?: string | null;
   /**

@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import type { MobileMoneyLine } from "@workspace/api-client-react";
 
 const CART_KEY = "mc_pt_cart";
 
@@ -31,8 +32,7 @@ export interface CartState {
   pharmacyId: string;
   pharmacyName: string;
   pharmacyAddress: string | null;
-  mobileMoneyNumber?: string | null;
-  mobileMoneyProvider?: string | null;
+  mobileMoneyLines?: MobileMoneyLine[];
   mobileMoneyAccountName?: string | null;
   items: CartItem[];
 }
@@ -41,7 +41,7 @@ interface CartValue {
   cart: CartState | null;
   /** Add (or bump) an item. Returns false when the cart belongs to another pharmacy. */
   addItem: (
-    pharmacy: { id: string; name: string; address: string | null; mobileMoneyNumber?: string | null; mobileMoneyProvider?: string | null; mobileMoneyAccountName?: string | null },
+    pharmacy: { id: string; name: string; address: string | null; mobileMoneyLines?: MobileMoneyLine[]; mobileMoneyAccountName?: string | null },
     item: Omit<CartItem, "quantity">,
     opts?: { replacePharmacy?: boolean },
   ) => boolean;
@@ -95,8 +95,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               pharmacyId: pharmacy.id,
               pharmacyName: pharmacy.name,
               pharmacyAddress: pharmacy.address,
-              mobileMoneyNumber: pharmacy.mobileMoneyNumber,
-              mobileMoneyProvider: pharmacy.mobileMoneyProvider,
+              mobileMoneyLines: pharmacy.mobileMoneyLines,
               mobileMoneyAccountName: pharmacy.mobileMoneyAccountName,
               items: [],
             };

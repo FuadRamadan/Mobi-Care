@@ -15,15 +15,29 @@ export interface HqPharmacy {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  email?: string | null;
+  /** @nullable */
   locationLat?: string | null;
   /** @nullable */
   locationLng?: string | null;
   /** @nullable */
-  mobileMoneyNumber?: string | null;
+  orangeMoneyNumber?: string | null;
   /** @nullable */
-  mobileMoneyProvider?: string | null;
+  afriMoneyNumber?: string | null;
   /** @nullable */
   mobileMoneyAccountName?: string | null;
+  /**
+     * Superseded by orangeMoneyNumber / afriMoneyNumber.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyNumber?: string | null;
+  /**
+     * Superseded by orangeMoneyNumber / afriMoneyNumber.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyProvider?: string | null;
   /** @nullable */
   latitude?: number | null;
   /** @nullable */

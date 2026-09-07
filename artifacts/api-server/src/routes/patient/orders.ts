@@ -1,4 +1,5 @@
 import { safeRouter } from "../../lib/safeRouter.js";
+import { mobileMoneyLines } from "../../lib/mobileMoney.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import {
@@ -59,6 +60,8 @@ async function hydratePatientOrders(
       name: pharmaciesTable.name,
       address: pharmaciesTable.address,
       phone: pharmaciesTable.phone,
+       orangeMoneyNumber: pharmaciesTable.orangeMoneyNumber,
+       afriMoneyNumber: pharmaciesTable.afriMoneyNumber,
        mobileMoneyNumber: pharmaciesTable.mobileMoneyNumber,
        mobileMoneyProvider: pharmaciesTable.mobileMoneyProvider,
        mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
@@ -104,7 +107,18 @@ async function hydratePatientOrders(
         ...item,
         unitPriceLeones: Number(item.unitPriceLeones),
       })),
-    pharmacy: pharmacies.find((p) => p.id === o.pharmacyId) ?? null,
+    pharmacy: (() => {
+      const pharmacy = pharmacies.find((p) => p.id === o.pharmacyId);
+      if (!pharmacy) return null;
+      const paymentLines = mobileMoneyLines(pharmacy);
+      return {
+        ...pharmacy,
+        mobileMoneyLines: paymentLines,
+        // Kept for clients that predate the two-line split (the Expo app).
+        mobileMoneyNumber: paymentLines[0]?.number ?? null,
+        mobileMoneyProvider: paymentLines[0]?.provider ?? null,
+      };
+    })(),
     courier: o.courierId
       ? (() => {
           const courier = couriers.find((c) => c.id === o.courierId);

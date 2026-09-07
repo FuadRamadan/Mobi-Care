@@ -5,6 +5,7 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { MobileMoneyLine } from './mobileMoneyLine';
 
 export interface OrderPharmacyInfo {
   id: string;
@@ -13,4 +14,22 @@ export interface OrderPharmacyInfo {
   address?: string | null;
   /** @nullable */
   phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** Empty when the pharmacy has published no way to be paid. */
+  mobileMoneyLines?: MobileMoneyLine[];
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyNumber?: string | null;
+  /**
+     * First entry of mobileMoneyLines. Kept for older clients.
+     * @deprecated
+     * @nullable
+     */
+  mobileMoneyProvider?: string | null;
+  /** @nullable */
+  mobileMoneyAccountName?: string | null;
 }

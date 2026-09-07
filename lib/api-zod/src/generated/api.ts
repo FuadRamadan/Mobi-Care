@@ -894,8 +894,12 @@ export const PatientSearchDrugsResponseItem = zod.object({
   "pharmacyName": zod.string(),
   "pharmacyAddress": zod.string().nullish(),
   "pharmacyPhone": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
   "mobileMoneyAccountName": zod.string().nullish(),
   "online": zod.boolean().optional(),
   "estimatedDistanceKm": zod.number().nullish(),
@@ -972,7 +976,15 @@ export const PatientListOrdersResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1049,7 +1061,15 @@ export const PatientCreateOrderResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1115,7 +1135,15 @@ export const PatientGetOrderResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1193,7 +1221,15 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1259,7 +1295,15 @@ export const CancelPatientOrderResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1325,7 +1369,15 @@ export const PatientPayOrderResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "address": zod.string().nullish(),
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
+  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
+  "mobileMoneyAccountName": zod.string().nullish()
 }),zod.null()]).optional(),
   "courier": zod.union([zod.object({
   "id": zod.string(),
@@ -1728,6 +1780,41 @@ export const ExportHqInsightsCsvResponse = zod.unknown()
 
 
 /**
+ * Read-only. Returns the confirmation phrase, per-table counts, and the list of data the reset preserves, so the confirmation dialog can show real numbers rather than a generic warning. Requires both the Data & Insights and settlement-management permissions.
+ * @summary Row counts a pilot-data reset would remove, plus what it keeps
+ */
+export const PreviewHqPilotResetResponse = zod.object({
+  "confirmationPhrase": zod.string(),
+  "totalRows": zod.number(),
+  "steps": zod.array(zod.object({
+  "table": zod.string(),
+  "label": zod.string(),
+  "rows": zod.number()
+})),
+  "preserved": zod.array(zod.string())
+})
+
+
+/**
+ * Irreversible, and applied as a single transaction. Pharmacies, patients, HQ staff, the drug catalogue, inventory and the append-only audit log are never touched; the reset writes its own entry to that audit log. The request body must repeat the confirmation phrase exactly.
+ * @summary Permanently clear the searches, orders, prescriptions and commission ledger collected during the pilot
+ */
+export const ResetHqPilotDataBody = zod.object({
+  "confirm": zod.string().describe('Must equal the confirmationPhrase returned by GET.')
+})
+
+export const ResetHqPilotDataResponse = zod.object({
+  "deleted": zod.record(zod.string(), zod.number()),
+  "totalRows": zod.number(),
+  "images": zod.object({
+  "found": zod.number(),
+  "deleted": zod.number()
+}).describe('Prescription image files tidied from storage after the transaction committed.'),
+  "preserved": zod.array(zod.string())
+})
+
+
+/**
  * @summary List notifications for the authenticated HQ staff member
  */
 export const ListHqNotificationsResponseItem = zod.object({
@@ -2114,11 +2201,14 @@ export const ListHqPharmaciesResponseItem = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
+  "email": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "orangeMoneyNumber": zod.string().nullish(),
+  "afriMoneyNumber": zod.string().nullish(),
   "mobileMoneyAccountName": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
@@ -2139,6 +2229,12 @@ export const ListHqPharmaciesResponse = zod.array(ListHqPharmaciesResponseItem)
 
 export const onboardPharmacyBodyUsernameMin = 3;
 
+export const onboardPharmacyBodyOrangeMoneyNumberMin = 6;
+export const onboardPharmacyBodyOrangeMoneyNumberMax = 32;
+
+export const onboardPharmacyBodyAfriMoneyNumberMin = 6;
+export const onboardPharmacyBodyAfriMoneyNumberMax = 32;
+
 export const onboardPharmacyBodyLatitudeMin = -90;
 export const onboardPharmacyBodyLatitudeMax = 90;
 
@@ -2151,9 +2247,10 @@ export const OnboardPharmacyBody = zod.object({
   "name": zod.string().min(1),
   "username": zod.string().min(onboardPharmacyBodyUsernameMin),
   "phone": zod.string().optional(),
+  "email": zod.string().optional(),
   "address": zod.string().optional(),
-  "mobileMoneyNumber": zod.string().optional(),
-  "mobileMoneyProvider": zod.string().optional(),
+  "orangeMoneyNumber": zod.string().min(onboardPharmacyBodyOrangeMoneyNumberMin).max(onboardPharmacyBodyOrangeMoneyNumberMax).optional(),
+  "afriMoneyNumber": zod.string().min(onboardPharmacyBodyAfriMoneyNumberMin).max(onboardPharmacyBodyAfriMoneyNumberMax).optional(),
   "mobileMoneyAccountName": zod.string().optional(),
   "latitude": zod.number().min(onboardPharmacyBodyLatitudeMin).max(onboardPharmacyBodyLatitudeMax).optional(),
   "longitude": zod.number().min(onboardPharmacyBodyLongitudeMin).max(onboardPharmacyBodyLongitudeMax).optional()
@@ -2166,11 +2263,14 @@ export const OnboardPharmacyResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
+  "email": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "orangeMoneyNumber": zod.string().nullish(),
+  "afriMoneyNumber": zod.string().nullish(),
   "mobileMoneyAccountName": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
@@ -2194,6 +2294,12 @@ export const UpdateHqPharmacyParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const updateHqPharmacyBodyOrangeMoneyNumberMin = 6;
+export const updateHqPharmacyBodyOrangeMoneyNumberMax = 32;
+
+export const updateHqPharmacyBodyAfriMoneyNumberMin = 6;
+export const updateHqPharmacyBodyAfriMoneyNumberMax = 32;
+
 export const updateHqPharmacyBodyLatitudeMin = -90;
 export const updateHqPharmacyBodyLatitudeMax = 90;
 
@@ -2207,9 +2313,10 @@ export const UpdateHqPharmacyBody = zod.object({
   "controlledSubstanceAuthorized": zod.boolean().optional(),
   "name": zod.string().optional(),
   "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "orangeMoneyNumber": zod.string().min(updateHqPharmacyBodyOrangeMoneyNumberMin).max(updateHqPharmacyBodyOrangeMoneyNumberMax).nullish(),
+  "afriMoneyNumber": zod.string().min(updateHqPharmacyBodyAfriMoneyNumberMin).max(updateHqPharmacyBodyAfriMoneyNumberMax).nullish(),
   "mobileMoneyAccountName": zod.string().nullish(),
   "latitude": zod.number().min(updateHqPharmacyBodyLatitudeMin).max(updateHqPharmacyBodyLatitudeMax).nullish(),
   "longitude": zod.number().min(updateHqPharmacyBodyLongitudeMin).max(updateHqPharmacyBodyLongitudeMax).nullish()
@@ -2221,11 +2328,14 @@ export const UpdateHqPharmacyResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
+  "email": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "orangeMoneyNumber": zod.string().nullish(),
+  "afriMoneyNumber": zod.string().nullish(),
   "mobileMoneyAccountName": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),
@@ -2258,11 +2368,14 @@ export const ResetPharmacyPasswordResponse = zod.object({
   "username": zod.string(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
+  "email": zod.string().nullish(),
   "locationLat": zod.string().nullish(),
   "locationLng": zod.string().nullish(),
-  "mobileMoneyNumber": zod.string().nullish(),
-  "mobileMoneyProvider": zod.string().nullish(),
+  "orangeMoneyNumber": zod.string().nullish(),
+  "afriMoneyNumber": zod.string().nullish(),
   "mobileMoneyAccountName": zod.string().nullish(),
+  "mobileMoneyNumber": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
+  "mobileMoneyProvider": zod.string().nullish().describe('Superseded by orangeMoneyNumber \/ afriMoneyNumber.'),
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "isActive": zod.boolean(),

@@ -188,8 +188,11 @@ async function main(): Promise<void> {
           // Seeded ready to use: no forced password change on first login.
           mustChangePassword: false,
           controlledSubstanceAuthorized: true,
-          mobileMoneyProvider: "orange_money",
-          mobileMoneyNumber: "+23276111222",
+          email: "hello@citypharmacy.sl",
+          // Both lines, so checkout and the search results show the two-wallet
+          // case rather than only the simple one.
+          orangeMoneyNumber: "+23276111222",
+          afriMoneyNumber: "+23288444555",
           mobileMoneyAccountName: "City Pharmacy Lumley",
           locationLat: "8.4550",
           locationLng: "-13.2760",

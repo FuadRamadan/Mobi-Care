@@ -12,9 +12,18 @@ export interface PharmacyOnboardInput {
   /** @minLength 3 */
   username: string;
   phone?: string;
+  email?: string;
   address?: string;
-  mobileMoneyNumber?: string;
-  mobileMoneyProvider?: string;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     */
+  orangeMoneyNumber?: string;
+  /**
+     * @minLength 6
+     * @maxLength 32
+     */
+  afriMoneyNumber?: string;
   mobileMoneyAccountName?: string;
   /**
      * @minimum -90

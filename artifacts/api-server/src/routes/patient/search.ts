@@ -1,4 +1,5 @@
 import { safeRouter } from "../../lib/safeRouter.js";
+import { mobileMoneyLines } from "../../lib/mobileMoney.js";
 import { db } from "@workspace/db";
 import {
   drugCatalogueTable,
@@ -62,8 +63,16 @@ router.get("/", async (req: AuthRequest, res) => {
     typeof req.query.subcategory === "string" ? req.query.subcategory : "";
   const pharmacyId =
     typeof req.query.pharmacyId === "string" ? req.query.pharmacyId : "";
-  const patientLatitude = queryCoordinate(req.query.lat);
-  const patientLongitude = queryCoordinate(req.query.lng);
+  // patientLatitude/patientLongitude are the documented names; lat/lng were
+  // what this route actually read, so the two clients disagreed and the Expo
+  // app's coordinates were silently ignored, leaving its results unsorted by
+  // distance. Both are accepted so neither client breaks.
+  const patientLatitude = queryCoordinate(
+    req.query.patientLatitude ?? req.query.lat,
+  );
+  const patientLongitude = queryCoordinate(
+    req.query.patientLongitude ?? req.query.lng,
+  );
   if (q.length > 0 && q.length < 2) {
     res
       .status(400)
@@ -167,6 +176,8 @@ router.get("/", async (req: AuthRequest, res) => {
       pharmacyName: pharmaciesTable.name,
       pharmacyAddress: pharmaciesTable.address,
       pharmacyPhone: pharmaciesTable.phone,
+      orangeMoneyNumber: pharmaciesTable.orangeMoneyNumber,
+      afriMoneyNumber: pharmaciesTable.afriMoneyNumber,
       mobileMoneyNumber: pharmaciesTable.mobileMoneyNumber,
       mobileMoneyProvider: pharmaciesTable.mobileMoneyProvider,
       mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
@@ -217,14 +228,18 @@ router.get("/", async (req: AuthRequest, res) => {
       };
       byDrug.set(listingKey, entry);
     }
+    const paymentLines = mobileMoneyLines(r);
     entry.offers.push({
       inventoryId: r.inventoryId,
       pharmacyId: r.pharmacyId,
       pharmacyName: r.pharmacyName,
       pharmacyAddress: r.pharmacyAddress,
       pharmacyPhone: r.pharmacyPhone,
-      mobileMoneyNumber: r.mobileMoneyNumber,
-      mobileMoneyProvider: r.mobileMoneyProvider,
+      mobileMoneyLines: paymentLines,
+      // Kept for clients that predate the two-line split (the Expo app), and
+      // now carrying a display-ready provider name rather than a raw enum.
+      mobileMoneyNumber: paymentLines[0]?.number ?? null,
+      mobileMoneyProvider: paymentLines[0]?.provider ?? null,
       mobileMoneyAccountName: r.mobileMoneyAccountName,
       online: r.pharmacyOnline,
       estimatedDistanceKm:

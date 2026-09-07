@@ -15,9 +15,25 @@ export const pharmaciesTable = pgTable("pharmacies", {
   username: text("username").notNull().unique(),
   phone: text("phone").unique(),
   address: text("address"),
+  /** Contact address for HQ correspondence. Not a login — pharmacies sign in with a username. */
+  email: text("email"),
+
+  // ── Mobile money ───────────────────────────────────────────────────────────
+  // Patients pay the pharmacy directly, so these are the numbers shown at
+  // checkout. Two named lines rather than one provider/number pair: a pharmacy
+  // commonly holds both an Orange Money and an AfriMoney line, and a patient
+  // who has only one wallet needs to see whether the pharmacy takes it.
+  orangeMoneyNumber: text("orange_money_number"),
+  afriMoneyNumber: text("afri_money_number"),
+  /** Registered name on the mobile money account, shared by both lines. */
+  mobileMoneyAccountName: text("mobile_money_account_name"),
+
+  // Superseded by the two named lines above and backfilled into them by
+  // migration 0024. Kept, not dropped: they are the only record of what a
+  // pharmacy's payment details were before the split, and checkout still falls
+  // back to them for any row the backfill could not classify.
   mobileMoneyNumber: text("mobile_money_number"),
   mobileMoneyProvider: text("mobile_money_provider"),
-  mobileMoneyAccountName: text("mobile_money_account_name"),
   // New explicit coordinate fields. Legacy locationLat/locationLng remain for
   // historical compatibility and are never overwritten by this migration.
   latitude: text("latitude"),

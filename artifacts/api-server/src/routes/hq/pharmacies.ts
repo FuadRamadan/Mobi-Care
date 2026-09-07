@@ -16,6 +16,15 @@ import {
 const router = safeRouter();
 const coordinateSchema = z.number().finite();
 
+/**
+ * A mobile money line. Trimmed and length-checked only: Sierra Leonean numbers
+ * are written several ways (+232…, 076…, with spaces) and rejecting a real
+ * number on a format guess would leave a pharmacy unpayable, which is worse
+ * than storing it as the operator typed it.
+ */
+const mobileMoneyLine = z.string().trim().min(6).max(32);
+const emailSchema = z.string().trim().email().max(254);
+
 function publicPharmacy(p: typeof pharmaciesTable.$inferSelect) {
   const { passwordHash: _ph, ...rest } = p;
   return {
@@ -75,9 +84,10 @@ router.post("/", async (req: AuthRequest, res) => {
           "username may only contain letters, numbers, and _.-",
         ),
       phone: z.string().min(5).optional(),
+      email: emailSchema.optional(),
       address: z.string().optional(),
-      mobileMoneyNumber: z.string().trim().min(3).optional(),
-      mobileMoneyProvider: z.string().trim().min(2).optional(),
+      orangeMoneyNumber: mobileMoneyLine.optional(),
+      afriMoneyNumber: mobileMoneyLine.optional(),
       mobileMoneyAccountName: z.string().trim().min(2).optional(),
       latitude: coordinateSchema.min(-90).max(90).optional(),
       longitude: coordinateSchema.min(-180).max(180).optional(),
@@ -134,9 +144,10 @@ router.post("/", async (req: AuthRequest, res) => {
         name: body.data.name,
         username: body.data.username,
         phone: body.data.phone ?? null,
+        email: body.data.email ?? null,
         address: body.data.address ?? null,
-        mobileMoneyNumber: body.data.mobileMoneyNumber ?? null,
-        mobileMoneyProvider: body.data.mobileMoneyProvider ?? null,
+        orangeMoneyNumber: body.data.orangeMoneyNumber ?? null,
+        afriMoneyNumber: body.data.afriMoneyNumber ?? null,
         mobileMoneyAccountName: body.data.mobileMoneyAccountName ?? null,
         latitude:
           body.data.latitude === undefined ? null : String(body.data.latitude),
@@ -304,8 +315,9 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       name: z.string().min(1).optional(),
       phone: z.string().min(5).nullable().optional(),
       address: z.string().nullable().optional(),
-      mobileMoneyNumber: z.string().trim().min(3).nullable().optional(),
-      mobileMoneyProvider: z.string().trim().min(2).nullable().optional(),
+      email: emailSchema.nullable().optional(),
+      orangeMoneyNumber: mobileMoneyLine.nullable().optional(),
+      afriMoneyNumber: mobileMoneyLine.nullable().optional(),
       mobileMoneyAccountName: z.string().trim().min(2).nullable().optional(),
       latitude: coordinateSchema.min(-90).max(90).nullable().optional(),
       longitude: coordinateSchema.min(-180).max(180).nullable().optional(),
