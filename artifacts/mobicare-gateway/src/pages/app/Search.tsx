@@ -44,6 +44,16 @@ export default function PatientSearch() {
   const q = useDebounced(query);
   const enabled = q.trim().length >= 2 || category !== "";
 
+  /**
+   * Whether the patient is looking for something specific.
+   *
+   * Keyed off the raw query rather than the debounced one, so the screen
+   * responds on the first keystroke. Waiting for the debounce would leave a
+   * promotion sitting there for a third of a second after someone has already
+   * started searching.
+   */
+  const searching = query.trim().length > 0 || category !== "";
+
   const { data: categories } = useListPatientDrugCategories();
 
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -99,7 +109,7 @@ export default function PatientSearch() {
           Find medicines
         </h1>
         <p className="text-sm text-muted-foreground">
-          Compare prices across licensed pharmacies before you order.
+          Every Pharmacy in your pocket. Medicine Found, Lives Saved !!
         </p>
       </div>
 
@@ -214,10 +224,11 @@ export default function PatientSearch() {
         )}
       </div>
 
-      {/* Promotions sit here, above the results, so they are on screen when
-          someone arrives rather than buried under a search they have not run
-          yet. It renders nothing until HQ has published something. */}
-      <PromotionsCarousel />
+      {/* Only while nobody is searching. On arrival this is the most valuable
+          space on the screen; the moment someone types or picks a category it
+          belongs to their results, and an advert in front of those is in the
+          way. It renders nothing until HQ has published something. */}
+      {!searching && <PromotionsCarousel />}
 
       {/* Only once someone has started typing. On arrival the category grid is
           already the invitation, and a box below it saying "select a category"
