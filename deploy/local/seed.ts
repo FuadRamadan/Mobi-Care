@@ -16,17 +16,24 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import {
   db,
   pool,
+  advertisementsTable,
   drugCatalogueTable,
   hqStaffTable,
   patientsTable,
   pharmaciesTable,
   pharmacyInventoryTable,
 } from "@workspace/db";
+import {
+  isObjectStorageConfigured,
+  ObjectStorageService,
+} from "../../artifacts/api-server/src/lib/storage/objectStorage.js";
 
 /** Deliberately obvious, and printed at the end. Local use only. */
 export const CREDENTIALS = {
@@ -284,6 +291,41 @@ async function main(): Promise<void> {
     }
   }
 
+  // ── A promotion, so the patient home screen shows its advert slot ─────────
+  // Uploaded the same way HQ uploads one, to the same path shape the HQ route
+  // accepts, so the local app exercises the real serving path rather than a
+  // shortcut that only works in development.
+  const [anyAdvert] = await db.select({ id: advertisementsTable.id }).from(advertisementsTable).limit(1);
+  if (anyAdvert) {
+    console.log("  exists   advertisement");
+  } else if (!isObjectStorageConfigured()) {
+    console.log("  skipped  advertisement (object storage is not configured)");
+  } else {
+    const [staff] = await db.select({ id: hqStaffTable.id }).from(hqStaffTable)
+      .where(eq(hqStaffTable.username, CREDENTIALS.hq.username)).limit(1);
+    // The runner bundles this script into .local/ and runs it from the repo
+    // root, so resolve against that rather than the bundle's own location.
+    const file = path.resolve(process.cwd(), "deploy/local/demo-advert.png");
+    const bytes = await readFile(file);
+    const objectPath = await new ObjectStorageService().uploadObjectEntity(
+      `advertisements/${randomUUID()}.png`,
+      bytes,
+      "image/png",
+    );
+    await db.insert(advertisementsTable).values({
+      title: "Free blood pressure checks",
+      alt: "Free blood pressure checks at partner pharmacies across Freetown, every Saturday this month",
+      // No caption: this banner carries its own words, and the caption overlay
+      // would print them a second time across the artwork.
+      mediaKind: "image",
+      objectPath,
+      contentType: "image/png",
+      fileSize: bytes.byteLength,
+      createdByHqStaffId: staff!.id,
+    });
+    console.log("  created  advertisement \"Free blood pressure checks\"");
+  }
+
   console.log("\nDone. Sign in with:\n");
   console.log(`  HQ dashboard    /hq                  ${CREDENTIALS.hq.username} / ${CREDENTIALS.hq.password}`);
   console.log(`  Pharmacy portal /pharmacy-portal/    ${CREDENTIALS.pharmacy.username} / ${CREDENTIALS.pharmacy.password}`);
@@ -299,4 +341,3 @@ main()
     process.exit(1);
   });
 
-void randomUUID;

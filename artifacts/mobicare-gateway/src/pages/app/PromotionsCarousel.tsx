@@ -47,7 +47,7 @@ export function PromotionsCarousel() {
   if (!ads || ads.length === 0) return null;
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4 pt-6">
+    <div className="w-full max-w-2xl mx-auto space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Featured Promotions

@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
 import { PromotionsCarousel } from "./PromotionsCarousel";
-import { categoryEmoji, categoryLabel } from "@/patient/categories";
+import { categoryIcon, categoryLabel } from "@/patient/categories";
 import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 
 function useDebounced(value: string, ms = 350): string {
@@ -124,7 +124,7 @@ export default function PatientSearch() {
         </div>
 
         {categories && categories.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-baseline justify-between">
               <p className="text-sm font-medium">Browse by category</p>
               {category !== "" && (
@@ -139,33 +139,38 @@ export default function PatientSearch() {
               )}
             </div>
 
-            {/* Three across on a phone keeps the whole range on one screen
-                without scrolling, which is the point of browsing rather than
-                searching, while leaving each label room to wrap. */}
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {/* One scrolling row rather than a block that fills the screen.
+                Browsing is a shortcut, not the main event — the space below
+                belongs to what is being promoted. Bleeding into the page
+                padding lets a tile sit half-cut at the edge, which is what
+                tells you the row scrolls. */}
+            <div
+              className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1 [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: "none" }}
+            >
               {categories.map((cat) => {
                 const selected = category === cat.value;
+                const Icon = categoryIcon(cat.value);
                 return (
                   <button
                     key={cat.value}
                     type="button"
                     aria-pressed={selected}
                     onClick={() => chooseCategory(cat.value)}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-colors ${
+                    className={`shrink-0 w-[104px] h-[88px] rounded-xl border flex flex-col items-center justify-center gap-2 px-2 transition-colors ${
                       selected
                         ? "border-primary bg-primary/10"
                         : "border-border bg-card hover:bg-secondary/40"
                     }`}
                     data-testid={`tile-category-${cat.value}`}
                   >
-                    {/* Decorative: the label below is the accessible name, so a
-                        screen reader says "Pain & fever", not "face with
-                        head-bandage, Pain & fever". */}
-                    <span className="text-2xl leading-none" aria-hidden="true">
-                      {categoryEmoji(cat.value)}
-                    </span>
+                    <Icon
+                      className={`w-5 h-5 shrink-0 ${selected ? "text-primary" : "text-primary/70"}`}
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                    />
                     <span
-                      className={`text-[11px] leading-tight ${
+                      className={`text-[10.5px] leading-tight text-center line-clamp-2 ${
                         selected ? "font-semibold text-primary" : "text-foreground"
                       }`}
                     >
@@ -209,6 +214,11 @@ export default function PatientSearch() {
         )}
       </div>
 
+      {/* Promotions sit here, above the results, so they are on screen when
+          someone arrives rather than buried under a search they have not run
+          yet. It renders nothing until HQ has published something. */}
+      <PromotionsCarousel />
+
       {/* Only once someone has started typing. On arrival the category grid is
           already the invitation, and a box below it saying "select a category"
           just repeats what is on screen. */}
@@ -228,7 +238,6 @@ export default function PatientSearch() {
         ))}
       </div>
 
-      <PromotionsCarousel />
     </div>
   );
 }
