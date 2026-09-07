@@ -176,6 +176,21 @@ test("hashed assets cache for a year, entry points not at all", async () => {
   assert.equal(favicon.headers.get("cache-control"), "public, max-age=300");
 });
 
+test("serves from a directory whose name starts with a dot", async () => {
+  // Local development puts builds under .local/public. Express refuses dotted
+  // paths by default, which turned every page into a 500 until sendFile was
+  // told the path is ours, not the request's.
+  const root = mkdtempSync(path.join(tmpdir(), "mobicare-dot-"));
+  const dotted = path.join(root, ".local", "public");
+  mkdirSync(path.join(dotted, "gateway"), { recursive: true });
+  writeFileSync(path.join(dotted, "gateway", "index.html"), "<!doctype html><title>Gateway</title>");
+
+  const app = makeApp(dotted);
+  const response = await get(app, "/");
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Gateway/);
+});
+
 test("a site that was not built is simply not mounted", () => {
   const root = mkdtempSync(path.join(tmpdir(), "mobicare-partial-"));
   mkdirSync(path.join(root, "gateway"), { recursive: true });

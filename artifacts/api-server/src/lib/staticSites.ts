@@ -87,8 +87,21 @@ function spaFallback(indexFile: string) {
     // The entry point must never be cached, or a released build keeps loading
     // asset URLs that no longer exist.
     res.setHeader("Cache-Control", "no-store");
-    res.sendFile(indexFile, (error) => {
-      if (error) next(error);
+
+    // dotfiles must be allowed: this path is chosen by the operator through
+    // SERVE_STATIC_DIR, not by the request, and a directory like ".local/public"
+    // would otherwise be refused as a hidden file. The request path is not used
+    // here at all — only this one fixed file is ever sent.
+    res.sendFile(indexFile, { dotfiles: "allow" }, (error) => {
+      if (!error) return;
+      // A missing or unreadable entry point is a 404, not a server error: the
+      // site simply is not there. Anything else is genuinely unexpected.
+      const status = (error as NodeJS.ErrnoException & { status?: number }).status;
+      if (status === 404 || (error as NodeJS.ErrnoException).code === "ENOENT") {
+        if (!res.headersSent) res.status(404).end();
+        return;
+      }
+      next(error);
     });
   };
 }
