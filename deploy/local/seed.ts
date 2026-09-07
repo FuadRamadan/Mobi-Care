@@ -37,13 +37,21 @@ export const CREDENTIALS = {
 
 const hash = (value: string): string => bcrypt.hashSync(value, 10);
 
-/** Medicines across all three tiers, so the tier rules are visible in the UI. */
+/**
+ * Medicines across all three tiers, so the tier rules are visible in the UI.
+ *
+ * The tiers run from most to least restricted, matching the application:
+ *   1 = controlled  — prescription, collection only, ID checked in person,
+ *                     and only from a pharmacy authorised for controlled stock
+ *   2 = prescription — a pharmacist reviews the order
+ *   3 = over the counter
+ */
 const DRUGS = [
   {
     name: "Paracetamol",
     genericName: "Paracetamol",
     description: "Pain and fever relief.",
-    tier: "1" as const,
+    tier: "3" as const,
     unit: "tablets",
     commonStrengths: ["500mg", "1000mg"],
     commonForms: ["tablet", "syrup"],
@@ -56,7 +64,7 @@ const DRUGS = [
     name: "Oral Rehydration Salts",
     genericName: "ORS",
     description: "Replaces fluids and salts lost through dehydration.",
-    tier: "1" as const,
+    tier: "3" as const,
     unit: "sachets",
     commonStrengths: ["20.5g"],
     commonForms: ["sachet"],
@@ -108,7 +116,7 @@ const DRUGS = [
     name: "Diazepam",
     genericName: "Diazepam",
     description: "Controlled medicine. Collection only, with ID checked in person.",
-    tier: "3" as const,
+    tier: "1" as const,
     unit: "tablets",
     commonStrengths: ["5mg"],
     commonForms: ["tablet"],
@@ -116,6 +124,8 @@ const DRUGS = [
     subcategory: "controlled_sedatives" as const,
     price: "95.00",
     stock: 25,
+    // HQ requires a per-order cap on controlled medicines.
+    maxUnitsPerOrder: 10,
   },
 ];
 
@@ -205,6 +215,9 @@ async function main(): Promise<void> {
           dateOfBirth: "1993-04-12",
           address: "12 Wilkinson Road, Freetown",
           nationality: "Sierra Leonean",
+          // A complete profile: without an email the app opens a "complete your
+          // registration" prompt over the home screen on every sign-in.
+          email: "aminata.kamara@example.sl",
         }).returning()
       )[0]!,
     `patient ${CREDENTIALS.patient.phone}`,
@@ -232,6 +245,9 @@ async function main(): Promise<void> {
             subcategory: drug.subcategory,
             isApproved: true,
             reviewStatus: "approved",
+            ...("maxUnitsPerOrder" in drug
+              ? { maxUnitsPerOrder: (drug as { maxUnitsPerOrder: number }).maxUnitsPerOrder }
+              : {}),
           }).returning()
         )[0]!,
       `medicine "${drug.name}" (tier ${drug.tier})`,
@@ -258,7 +274,7 @@ async function main(): Promise<void> {
         priceLeones: drug.price,
         stockQuantity: drug.stock,
         // Controlled medicines are collection-only, in person, with ID checked.
-        availableForDelivery: drug.tier !== "3",
+        availableForDelivery: drug.tier !== "1",
         availableForCollection: true,
       });
       console.log(`  created  stock for "${drug.name}" (${drug.stock} @ Le ${drug.price})`);

@@ -1,7 +1,7 @@
 import { safeRouter } from "../lib/safeRouter.js";
 import { eq } from "drizzle-orm";
 import { db, couriersTable } from "@workspace/db";
-import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage.js";
+import { ObjectNotFoundError, ObjectStorageService } from "../lib/storage/objectStorage.js";
 
 const router = safeRouter();
 const objectStorage = new ObjectStorageService();

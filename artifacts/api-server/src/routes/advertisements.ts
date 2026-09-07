@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db, advertisementsTable } from "@workspace/db";
 import { ListAdvertisementsResponse } from "@workspace/api-zod";
-import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage.js";
+import { ObjectNotFoundError, ObjectStorageService } from "../lib/storage/objectStorage.js";
 import { safeRouter } from "../lib/safeRouter.js";
 
 const router = safeRouter();

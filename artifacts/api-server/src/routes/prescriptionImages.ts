@@ -18,7 +18,7 @@ import { verifyImageToken } from "../lib/signedUrl.js";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
-} from "../lib/objectStorage.js";
+} from "../lib/storage/objectStorage.js";
 
 const router = safeRouter();
 

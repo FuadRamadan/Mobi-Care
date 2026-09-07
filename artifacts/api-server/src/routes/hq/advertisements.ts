@@ -7,8 +7,8 @@ import {
   RequestHqAdvertisementUploadResponse,
   UpdateHqAdvertisementResponse,
 } from "@workspace/api-zod";
-import { ObjectAclPolicy } from "../../lib/objectAcl.js";
-import { ObjectStorageService } from "../../lib/objectStorage.js";
+import { ObjectAclPolicy } from "../../lib/storage/objectAcl.js";
+import { ObjectStorageService } from "../../lib/storage/objectStorage.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { safeRouter } from "../../lib/safeRouter.js";

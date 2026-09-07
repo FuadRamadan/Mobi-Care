@@ -4,7 +4,7 @@ import { db, teamMembersTable } from "@workspace/db";
 import {
   ObjectNotFoundError,
   ObjectStorageService,
-} from "../lib/objectStorage.js";
+} from "../lib/storage/objectStorage.js";
 import { ensureTeamMembers } from "../lib/teamMembers.js";
 
 const router = safeRouter();

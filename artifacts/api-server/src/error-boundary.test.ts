@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 import {
   ObjectNotFoundError,
   ObjectStorageService,
-} from "./lib/objectStorage";
+} from "./lib/storage/objectStorage";
 import { mintImageToken } from "./lib/signedUrl";
 
 const INTERNAL_ERROR = { error: "Internal server error" };

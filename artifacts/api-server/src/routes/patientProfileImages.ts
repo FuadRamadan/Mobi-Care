@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import { db, patientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { verifyProfileImageToken } from "../lib/signedUrl.js";
-import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage.js";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/storage/objectStorage.js";
 
 const router = safeRouter();
 const PROFILE_UPLOAD_DIR = path.resolve(process.cwd(), "uploads/profiles");

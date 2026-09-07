@@ -5,8 +5,8 @@ import { courierPhotoUploadsTable, couriersTable, ordersTable } from "@workspace
 import { and, eq, desc, sql, inArray, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
-import { ObjectStorageService } from "../../lib/objectStorage.js";
-import { ObjectAclPolicy } from "../../lib/objectAcl.js";
+import { ObjectStorageService } from "../../lib/storage/objectStorage.js";
+import { ObjectAclPolicy } from "../../lib/storage/objectAcl.js";
 
 const router = safeRouter();
 const objectStorage = new ObjectStorageService();

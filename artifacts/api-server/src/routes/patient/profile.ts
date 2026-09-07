@@ -10,7 +10,7 @@ import { mintProfileImageToken } from "../../lib/signedUrl.js";
 import {
   isObjectStorageConfigured,
   ObjectStorageService,
-} from "../../lib/objectStorage.js";
+} from "../../lib/storage/objectStorage.js";
 import { calculatePatientAge } from "../../lib/patientAge.js";
 
 const router = safeRouter();

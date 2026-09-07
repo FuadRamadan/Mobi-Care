@@ -8,7 +8,7 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import {
   isObjectStorageConfigured,
   ObjectStorageService,
-} from "../../lib/objectStorage.js";
+} from "../../lib/storage/objectStorage.js";
 
 const router = safeRouter();
 const objectStorage = new ObjectStorageService();
