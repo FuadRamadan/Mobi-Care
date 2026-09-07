@@ -1292,6 +1292,90 @@ paths:
             text/csv:
               schema: { type: string }
 
+  /hq/insights/reset:
+    get:
+      operationId: previewHqPilotReset
+      tags: [hq]
+      summary: Row counts a pilot-data reset would remove, plus what it keeps
+      description: >
+        Read-only. Returns the confirmation phrase, per-table counts, and the
+        list of data the reset preserves, so the confirmation dialog can show
+        real numbers rather than a generic warning. Requires both the Data &
+        Insights and settlement-management permissions.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: What a reset would remove right now
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [confirmationPhrase, totalRows, steps, preserved]
+                properties:
+                  confirmationPhrase: { type: string }
+                  totalRows: { type: integer }
+                  steps:
+                    type: array
+                    items:
+                      type: object
+                      required: [table, label, rows]
+                      properties:
+                        table: { type: string }
+                        label: { type: string }
+                        rows: { type: integer }
+                  preserved:
+                    type: array
+                    items: { type: string }
+        "403": { description: Data & Insights and settlement permissions required }
+    post:
+      operationId: resetHqPilotData
+      tags: [hq]
+      summary: Permanently clear the searches, orders, prescriptions and commission ledger collected during the pilot
+      description: >
+        Irreversible, and applied as a single transaction. Pharmacies, patients,
+        HQ staff, the drug catalogue, inventory and the append-only audit log are
+        never touched; the reset writes its own entry to that audit log. The
+        request body must repeat the confirmation phrase exactly.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm:
+                  type: string
+                  description: Must equal the confirmationPhrase returned by GET.
+      responses:
+        "200":
+          description: Rows removed, by table
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted, totalRows, images, preserved]
+                properties:
+                  deleted:
+                    type: object
+                    additionalProperties: { type: integer }
+                  totalRows: { type: integer }
+                  images:
+                    type: object
+                    description: Prescription image files tidied from storage after the transaction committed.
+                    required: [found, deleted]
+                    properties:
+                      found: { type: integer }
+                      deleted: { type: integer }
+                  preserved:
+                    type: array
+                    items: { type: string }
+        "400": { description: Missing or incorrect confirmation phrase; nothing was removed }
+        "403": { description: Data & Insights and settlement permissions required }
+
   /hq/notifications:
     get:
       operationId: listHqNotifications

@@ -18,6 +18,7 @@ import passwordPolicyRouter from "./passwordPolicy.js";
 import teamRouter from "./team.js";
 import apiConnectionsRouter from "./apiConnections.js";
 import insightsRouter from "./insights.js";
+import pilotResetRouter from "./pilotReset.js";
 import exportsRouter from "./exports.js";
 import advertisementsRouter from "./advertisements.js";
 
@@ -36,6 +37,16 @@ router.use("/drugs", drugsRouter);
 router.use("/couriers", couriersRouter);
 router.use("/flags", flagsRouter);
 router.use("/settlements", requireManageSettlements, settlementsRouter);
+// Registered before /insights, which would otherwise match first and 404.
+// Clearing the pilot data destroys the commission ledger as well as the
+// reporting data, so it takes both permissions: seeing the numbers is not the
+// same authority as deciding the money records were never real.
+router.use(
+  "/insights/reset",
+  requireViewDataInsights,
+  requireManageSettlements,
+  pilotResetRouter,
+);
 router.use("/insights", requireViewDataInsights, insightsRouter);
 router.use("/exports", requireViewDataInsights, exportsRouter);
 router.use("/audit", auditRouter);

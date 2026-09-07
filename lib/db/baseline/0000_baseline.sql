@@ -1941,16 +1941,17 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 -- ── Seed rows ────────────────────────────────────────────────────────────────
 -- Written by migrations 0013 and 0018 and read by the application at runtime.
--- platform_settings holds financial configuration; financial_migration_state
--- marks reconciliation boundaries that a fresh database satisfies on creation.
+-- platform_settings holds the fixed 5% patient service commission;
+-- financial_migration_state marks reconciliation boundaries that a fresh
+-- database satisfies on creation.
+--
+-- The delivery_fee_minor and courier_payout_minor rows migration 0013 seeded
+-- are deliberately absent: MobiCare charges no delivery fee during the pilot,
+-- and migration 0023 removes them from databases that already have them.
 
 
 -- platform_settings
 INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-07 13:20:08.125832+00')
-ON CONFLICT DO NOTHING;
-INSERT INTO "public"."platform_settings" VALUES ('delivery_fee_minor', 2500000, '2026-09-07 13:20:08.125832+00')
-ON CONFLICT DO NOTHING;
-INSERT INTO "public"."platform_settings" VALUES ('courier_payout_minor', 2000000, '2026-09-07 13:20:08.125832+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state

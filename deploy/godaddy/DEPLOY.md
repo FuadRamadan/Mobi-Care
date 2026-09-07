@@ -55,6 +55,25 @@ DATABASE_URL='postgresql://...' node lib/db/scripts/migrate-tracked.mjs --adopt
 Do **not** use `pnpm run migrate`: it cannot build an empty database, applying
 zero migrations and failing on the first file. See `README.md` for why.
 
+Every release after that is the same command with no option, which applies only
+what is pending:
+
+```bash
+DATABASE_URL='postgresql://...' node lib/db/scripts/migrate-tracked.mjs
+```
+
+If it stops with *"0000_baseline.sql changed after it was applied"*, the baseline
+was regenerated in the repository. That is routine — it is a generated snapshot —
+and re-recording it executes nothing:
+
+```bash
+DATABASE_URL='postgresql://...' node lib/db/scripts/migrate-tracked.mjs --accept-baseline
+```
+
+The same message about a **numbered** migration is not routine: it means the
+database and the repository disagree about what actually ran, and
+`--accept-baseline` deliberately refuses it.
+
 Take a backup before touching a database that holds real data.
 
 ### 3. Object storage
@@ -178,6 +197,34 @@ Also outstanding:
   after the move; it is not needed, as team photos migrate with everything else
 - `exports/` is a stale 12 MB duplicate of the codebase and is where the leaked
   secret survived the first cleanup. Deleting it is recommended.
+
+## Ending the pilot
+
+The pilot collects real records — searches, orders, prescriptions, and the
+commission ledger derived from them — that should not be carried into live
+trading as if they were real business. HQ can clear them in one action:
+
+**Data & Insights → Reset pilot data.** The dialog shows the exact row counts it
+will remove and the list of what it keeps, and only enables the button once
+`RESET PILOT DATA` has been typed. The server requires the same phrase
+independently, so the endpoint cannot be triggered by a stray request.
+
+- **Removed:** patient searches, orders and order lines, fraud flags,
+  prescription reviews and uploaded prescription images (files included), the
+  commission settlement ledger with its payments and adjustments, and the
+  notifications that pointed at those orders.
+- **Kept:** pharmacies and their inventory and prices, patients, HQ staff, the
+  drug catalogue, adverts, platform settings, and the audit log — which records
+  the reset itself, so who cleared what survives the data being gone.
+
+The settlement ledger goes with the orders by necessity: every commission
+settlement is computed from orders, so keeping it would leave pharmacies
+invoiced for orders that no longer exist.
+
+It takes **both** the Data & Insights and settlement-management permissions.
+Reading the numbers is not the same authority as deciding the money records were
+never real. Export anything worth keeping first — the CSV exports on the same
+page — because there is no undo.
 
 ## Rolling back
 

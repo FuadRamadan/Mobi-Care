@@ -1,12 +1,17 @@
-import { db } from "@workspace/db";
-import { platformSettingsTable } from "@workspace/db/schema";
-import { inArray } from "drizzle-orm";
-
-const KEYS = [
-  "medicine_markup_basis_points",
-  "delivery_fee_minor",
-  "courier_payout_minor",
-] as const;
+/**
+ * Money conversion between the Leone amounts people type and the integer minor
+ * units the database stores.
+ *
+ * Prices are held as whole minor units (cents) so arithmetic is exact —
+ * floating point cannot represent most decimal amounts, and a rounding error in
+ * an order total is a real discrepancy someone has to reconcile by hand.
+ *
+ * There is deliberately no delivery pricing here. During the pilot MobiCare
+ * charges no delivery fee and pays riders outside the platform, so a fee or
+ * courier payout figure in code would be a number nobody set and nobody
+ * honours. Checkout writes zero to both order columns. When a delivery partner
+ * is contracted, the pricing rule that comes with that agreement belongs here.
+ */
 
 export function decimalLeonesToMinor(value: string | number): number {
   const text = String(value).trim();
@@ -22,33 +27,4 @@ export function minorToLeones(value: number): string {
     throw new Error("Invalid minor-unit amount");
   }
   return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`;
-}
-
-export async function getFinancialSettings() {
-  const rows = await db
-    .select()
-    .from(platformSettingsTable)
-    .where(inArray(platformSettingsTable.key, [...KEYS]));
-  const values = new Map(rows.map((row) => [row.key, row.value]));
-  for (const key of KEYS) {
-    if (!values.has(key)) throw new Error(`Missing required platform setting: ${key}`);
-  }
-  const medicineMarkupBasisPoints = values.get(KEYS[0])!;
-  const deliveryFeeMinor = values.get(KEYS[1])!;
-  const courierPayoutMinor = values.get(KEYS[2])!;
-  if (
-    // Patient service commission is a contractual fixed 5%; checkout must
-    // never silently drift when an administrator changes a generic markup.
-    medicineMarkupBasisPoints !== 500 ||
-    deliveryFeeMinor < 0 ||
-    courierPayoutMinor < 0 ||
-    courierPayoutMinor > deliveryFeeMinor
-  ) {
-    throw new Error("Invalid platform financial settings");
-  }
-  return {
-    medicineMarkupBasisPoints,
-    deliveryFeeMinor,
-    courierPayoutMinor,
-  };
 }

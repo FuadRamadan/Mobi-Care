@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useHqAuth } from '@/hq/auth';
 import { HQ_ACCESS_KEY } from '@/lib/portalToken';
 import { apiUrl } from '@/lib/apiUrl';
+import ResetPilotData from './ResetPilotData';
 
 type Insights = {
   minimumGroupSize: number;
@@ -81,6 +82,9 @@ export default function HqInsights() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.trends ?? {}).map(([key, rows]) => <Trend key={key} title={titleize(key)} rows={rows} />)}</div>
       <div className="grid gap-4 md:grid-cols-2">{Object.entries(data?.rankings ?? {}).map(([key, rows]) => <Ranking key={key} title={titleize(key)} rows={rows} />)}</div>
+      {/* Clearing the pilot data also clears the commission ledger it produced,
+          so it is offered only to staff who hold the settlement permission. */}
+      {user.canManageSettlements && <ResetPilotData onReset={() => void load()} />}
     </div>
   </HqLayout>;
 }
