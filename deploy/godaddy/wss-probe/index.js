@@ -16,7 +16,11 @@
  *   5. Neon query + interactive transaction — what MobiCare actually needs:
  *                                           payment claiming and stock
  *                                           deduction run inside a transaction
- *   6. S3 endpoint reachability           — object storage, if configured
+ *   6. Object storage round-trip          — writes, reads back, compares the
+ *                                           bytes, checks the access policy
+ *                                           survived, and exercises a
+ *                                           presigned upload. Photos do not
+ *                                           work unless this passes.
  *
  * Nothing here touches MobiCare's database or code. Delete the app once the
  * results are recorded.
@@ -24,7 +28,7 @@
 
 import { createServer } from "node:http";
 import net from "node:net";
-import { readFileSync } from "node:fs";
+import { storageRoundTrip } from "./storageCheck.js";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const TIMEOUT_MS = 10_000;
@@ -234,24 +238,10 @@ async function neonQuery(connectionString) {
   }
 }
 
-// ── 6. S3 endpoint ───────────────────────────────────────────────────────────
+// ── 6. Object storage round-trip ─────────────────────────────────────────────
 
-async function s3Reachable() {
-  const endpoint = process.env.S3_ENDPOINT;
-  if (!endpoint) {
-    return skip("S3_ENDPOINT is not set — object storage reachability not tested.");
-  }
-
-  const response = await fetch(endpoint, {
-    method: "HEAD",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  // Any HTTP response proves reachability; 403 from an unauthenticated request
-  // is normal and still means the endpoint is reachable.
-  return ok(
-    `${new URL(endpoint).host} responded ${response.status} over HTTPS. ` +
-      `Object storage is reachable from this host.`,
-  );
+async function storage() {
+  return storageRoundTrip();
 }
 
 // ── Runner ───────────────────────────────────────────────────────────────────
@@ -276,21 +266,38 @@ async function runChecks() {
     postgresPortBlocked: await timed(() => postgresPortBlocked(host)),
     websocketEgress: await timed(() => websocketEgress(host)),
     neonQuery: await timed(() => neonQuery(connectionString)),
-    s3Reachable: await timed(s3Reachable),
+    objectStorage: await timed(storage),
   };
 
   const failed = Object.values(checks).filter((c) => c.status === "fail").length;
-  const decisive = checks.neonQuery.status;
+  const database = checks.neonQuery.status;
+  const storageStatus = checks.objectStorage.status;
+
+  // Two things gate the deployment: the database must be reachable, and photo
+  // storage must actually round-trip. Either one failing is a stop.
+  let verdict;
+  if (database === "fail") {
+    verdict = "NO-GO — PostgreSQL could not be reached. See neonQuery below before committing to this host.";
+  } else if (storageStatus === "fail") {
+    // Do not claim the database is fine unless it was actually tested.
+    verdict =
+      database === "pass"
+        ? "NO-GO — the database works but photo storage does not. See objectStorage below."
+        : "NO-GO — photo storage does not work. See objectStorage below. The database was not tested.";
+  } else if (database === "skipped" || storageStatus === "skipped") {
+    const missing = [
+      database === "skipped" ? "NEON_DATABASE_URL" : null,
+      storageStatus === "skipped" ? "the S3_* variables" : null,
+    ].filter(Boolean).join(" and ");
+    verdict = `INCOMPLETE — set ${missing}, then reload to run the checks that decide this.`;
+  } else {
+    verdict = "GO — PostgreSQL and photo storage both work from this host. The planned architecture is viable.";
+  }
 
   return {
     startedAt: started,
     checkedAt: new Date().toISOString(),
-    verdict:
-      decisive === "pass"
-        ? "GO — PostgreSQL over WebSocket works from this host. The planned architecture is viable."
-        : decisive === "skipped"
-          ? "INCOMPLETE — set NEON_DATABASE_URL and reload to run the decisive test."
-          : "NO-GO — PostgreSQL could not be reached. See neonQuery below before committing to this host.",
+    verdict,
     failed,
     checks,
   };
@@ -391,6 +398,6 @@ if (process.argv.includes("--once")) {
   runChecks().then((report) => {
     console.log(JSON.stringify(report, null, 2));
     server.close();
-    process.exit(report.checks.neonQuery.status === "fail" ? 1 : 0);
+    process.exit(report.verdict.startsWith("GO") ? 0 : 1);
   });
 }

@@ -21,15 +21,27 @@ Run this **before** any further deployment work.
 | `postgresPortBlocked` | Port 5432 really is blocked, confirming why WebSocket is needed. A **warn** here is good news: the port is open and an ordinary connection would work |
 | `websocketEgress` | A `wss://` connection on 443 can be established |
 | `neonQuery` | **The decisive one.** A real query ran, and an interactive transaction committed — which MobiCare needs, because payment claiming and stock deduction run inside `db.transaction()` |
-| `s3Reachable` | Object storage is reachable, if `S3_ENDPOINT` is set |
+| `objectStorage` | **Photos will work.** Writes an object, reads it back, compares the bytes, confirms the access-control metadata survived, and performs a presigned upload the way the browser does — then deletes everything it made |
 
-The verdict line at the top says GO, NO-GO, or INCOMPLETE.
+The verdict line at the top says GO, NO-GO, or INCOMPLETE. **Both** the
+database and photo storage must pass for a GO — a working database with broken
+storage is still a stop, because prescriptions, profile photos, courier and team
+photos and advertisements all depend on storage.
 
 ## Before you deploy it
 
-Create a free Neon project at neon.tech and copy its connection string. Without
-it the probe still reports egress and port results, but skips the check that
-actually settles the question.
+Two things to have ready, or the corresponding checks are skipped:
+
+1. **A PostgreSQL connection string.** Create a free project at neon.tech.
+2. **Object storage credentials.** A private bucket at any S3-compatible
+   provider — AWS S3, Cloudflare R2, or Backblaze B2.
+
+GoDaddy's own offerings cover neither. Their included database is MySQL, and
+their persistent file area is served publicly, which is not somewhere
+prescription images can go.
+
+The storage check writes only under a `_probe/` prefix and removes everything it
+creates. Verified across repeated runs: no objects left behind.
 
 ## Deploying
 
@@ -47,7 +59,12 @@ actually settles the question.
 
    ```
    NEON_DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
-   S3_ENDPOINT=https://s3.eu-west-1.amazonaws.com    # optional
+
+   S3_ENDPOINT=https://s3.eu-west-1.amazonaws.com
+   S3_REGION=eu-west-1
+   S3_BUCKET=mobicare-media
+   S3_ACCESS_KEY_ID=...
+   S3_SECRET_ACCESS_KEY=...
    ```
 
    `PORT` is provided by the platform.
@@ -59,11 +76,15 @@ actually settles the question.
 
 - **GO** — the architecture in `../README.md` is viable. Proceed with
   deployment.
-- **NO-GO** — read the `neonQuery` detail. If `websocketEgress` also failed, the
-  platform is blocking outbound WebSockets and no PostgreSQL provider will work
-  from here. Ask GoDaddy support whether the restriction can be lifted for your
-  account before falling back to a VPS.
-- **INCOMPLETE** — `NEON_DATABASE_URL` is not set.
+- **NO-GO** — read the failing check's detail; each names the specific step that
+  broke. If `websocketEgress` also failed, the platform is blocking outbound
+  WebSockets and no PostgreSQL provider will work from here — ask GoDaddy support
+  whether that can be lifted before falling back to a VPS. If only
+  `objectStorage` failed, the message says which step failed: a write rejected
+  means wrong credentials or bucket, a write that succeeds followed by a failed
+  read means the key can write but not read.
+- **INCOMPLETE** — the database or storage variables are not set; the verdict
+  names which.
 
 Record the JSON output somewhere before deleting the app; it is the evidence
 behind the hosting decision.
@@ -90,6 +111,10 @@ trusted:
 - WebSocket failure against an unreachable host
 - Port 5432 detected as blocked (connection refused) and as open (live
   PostgreSQL) — both branches
+- The storage round-trip against a mock that recomputes and verifies every
+  signature: full pass including the presigned upload, correct failures for
+  wrong credentials and an unreachable endpoint, and no objects left behind
+  after repeated runs
 - A failed database connection reported as a failure without crashing the server
 - HTML page, `/json` and `/healthz` all served correctly
 
