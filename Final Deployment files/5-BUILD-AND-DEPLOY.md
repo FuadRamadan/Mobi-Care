@@ -36,6 +36,10 @@ Steps 1–3 must happen before the app first starts. The API validates its secre
 and its database schema at startup and exits if either is wrong, so a wrong
 order fails loudly rather than half-working.
 
+Step 6 can be done any time after the database exists, but nobody can use
+MobiCare until it has: HQ is what onboards the pharmacies, and there is no
+self-registration for it.
+
 ### 1. Confirm the platform can reach PostgreSQL
 
 Deploy `1-connectivity-probe/` and read its verdict. See `1-connectivity-probe/README.md`. Do not
@@ -152,7 +156,41 @@ user; wrong in the other, nobody is limited at all. 1 is right for a single
 reverse proxy. Confirm after deploying: the client address in the logs should be
 the real caller, not the proxy.
 
-### 6. Start, and check
+### 6. Create the first HQ administrator
+
+**Without this nobody can sign in to HQ**, and nothing else can happen: HQ is
+what onboards the pharmacies, and there is deliberately no self-registration
+for it. A freshly deployed MobiCare with no HQ account is an empty building
+with the door locked.
+
+Run once, from a machine with the repository, against the **production**
+database:
+
+```bash
+cd artifacts/api-server
+DATABASE_URL='postgresql://...' \
+HQ_ADMIN_USERNAME='youradmin' \
+HQ_ADMIN_PASSWORD='<a long, unique password>' \
+HQ_ADMIN_NAME='Your Name' \
+  pnpm run bootstrap-hq
+```
+
+The account is created active, with all three HQ permissions — integrations,
+settlements and Data & Insights. It is idempotent: running it again updates and
+reactivates that same account rather than creating a second one, which is also
+how you recover from a lost HQ password.
+
+`DATABASE_DRIVER` is not needed here. This runs from your machine, not from
+GoDaddy, so the ordinary driver on 5432 reaches Neon fine — the same as the
+migration commands in step 2.
+
+**These three variables do not belong in the GoDaddy environment.** The API
+never reads them; setting them there looks like it worked and creates nothing.
+
+Change the password after the first sign-in, and take the value out of your
+shell history.
+
+### 7. Start, and check
 
 ```
 GET https://mobicare.sl/api/health   →   {"status":"ok"}
@@ -176,6 +214,9 @@ Routing and headers:
 
 Behaviour:
 
+- [ ] The HQ account from step 6 signs in, and can onboard a pharmacy
+- [ ] A pharmacy onboarded through HQ has a mobile money number recorded, and
+      it appears at checkout — a pharmacy without one cannot be paid
 - [ ] Patient, pharmacy and HQ sign-in, refresh and sign-out
 - [ ] Search, checkout, cancellation, dispatch, delivery confirmation
 - [ ] Upload and read every media type: prescription, patient profile photo,
@@ -187,6 +228,18 @@ Behaviour:
 - [ ] Eleven failed logins in a row return 429, and a different device is
       unaffected
 - [ ] No secrets appear in the browser bundles, API responses, or logs
+
+Consent and data rights:
+
+- [ ] Registration is refused without accepting the terms, and the tick box for
+      the optional analytics consent starts **unticked**
+- [ ] A patient created before this release is prompted on next sign-in, and
+      can still read their orders and use Profile → Your data before agreeing
+- [ ] "Download my data" returns a JSON file naming that patient
+- [ ] Turning off "Help improve medicine access" stops new searches being
+      recorded — check `search_events` stops growing for that patient
+- [ ] "Delete my account" refuses a wrong password, and when it succeeds the
+      patient's orders survive with the name and phone number removed
 
 ## What is not finished
 

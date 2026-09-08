@@ -52,7 +52,12 @@ On GoDaddy, set `DATABASE_DRIVER=neon`.
 | 2 | Create and migrate the PostgreSQL database | [2-DATABASE.md](2-DATABASE.md) | Your machine |
 | 3 | Create the private object storage bucket | [3-OBJECT-STORAGE.md](3-OBJECT-STORAGE.md) | Your machine |
 | 4 | Generate the secrets | [4-SECRETS.md](4-SECRETS.md) | Your machine |
-| 5 | Build the release and deploy it | [5-BUILD-AND-DEPLOY.md](5-BUILD-AND-DEPLOY.md) | Your machine → GoDaddy |
+| 5 | Build the release, deploy it, create the first HQ administrator | [5-BUILD-AND-DEPLOY.md](5-BUILD-AND-DEPLOY.md) | Your machine → GoDaddy |
+
+**Nobody can use MobiCare until the first HQ administrator exists** — step 6
+inside that last file. HQ is what onboards the pharmacies, and there is
+deliberately no self-registration for it. It is the step easiest to finish the
+deployment without noticing.
 
 Steps 2, 3 and 4 must all be done before the app first starts. The API validates
 its secrets and its database schema at startup and exits if either is wrong, so

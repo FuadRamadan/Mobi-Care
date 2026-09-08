@@ -74,21 +74,19 @@ drop-in for `node-postgres`, with session and interactive transaction support �
 which MobiCare requires, because payment claiming and stock deduction run inside
 `db.transaction()`.
 
-For `lib/db/src/index.ts` that is a one-line import change:
+**Built.** `lib/db/src/index.ts` supports both drivers and chooses between them:
+`DATABASE_DRIVER=neon` selects the WebSocket one, and a `*.neon.tech`
+connection string selects it on its own. Development, the test suite and the
+migration runner keep the ordinary driver on 5432, so nothing local changed.
 
-```diff
--import pg from "pg";
--const { Pool } = pg;
-+import { Pool } from "@neondatabase/serverless";
-```
+Everything else — the schema, all 24 migrations, the baseline, the financial
+logic, the tests — is unchanged, because it stays PostgreSQL.
 
-Everything else — the schema, all 24 migrations, the baseline below, the
-financial logic, the tests — is unchanged, because it stays PostgreSQL.
-
-**Not yet implemented, deliberately.** Database connection code that has never
-opened a real connection should not be committed as though it were ready. This
-needs a Neon project and one connectivity test from a deployed app before it
-goes in.
+It was verified against a real PostgreSQL through a WebSocket rather than just
+typechecked, including interactive transactions and the whole application
+running on top of it. What that cannot prove is whether GoDaddy permits the
+outbound connection, which is what the probe is for. See
+[0-BLOCKERS.md](0-BLOCKERS.md).
 
 ### 3. Persistent files are public; prescriptions must not be
 
@@ -147,17 +145,19 @@ and what to do when the runner refuses are all in
 
 Kept current; the detail is in [KNOWN-GAPS.md](KNOWN-GAPS.md).
 
-1. **The database driver** still connects on 5432, which this platform blocks.
-   The change is ten lines and is written out in [0-BLOCKERS.md](0-BLOCKERS.md).
-   It waits on the connectivity probe.
-2. **Payment is unverified** — an order can be marked paid with no Orange Money
+1. **Payment is unverified** — an order can be marked paid with no Orange Money
    confirmation. This deployment goes out with that gap accepted.
+2. **The privacy policy text does not exist.** Patients are asked to agree to a
+   "terms and privacy notice" and their answer is recorded against a policy
+   version, but there is no document behind that phrase yet.
 3. Browser CORS on presigned uploads, and the object migration, are unverified
    until a real bucket exists.
+4. Nothing is purged on a retention schedule.
 
-Done since this document was first written: the S3 object storage adapter, the
-`JWT_SECRET` rotation and startup secret checks, rate limiting and security
-headers, single-origin static hosting, and the tracked migration runner.
+Done since this document was first written: the WebSocket database driver, the
+S3 object storage adapter, the `JWT_SECRET` rotation and startup secret checks,
+rate limiting and security headers, single-origin static hosting, the tracked
+migration runner, and recorded consent with patient data export and erasure.
 
 ## Sources
 
