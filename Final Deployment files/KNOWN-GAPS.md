@@ -24,13 +24,6 @@ patient pays the pharmacy directly today. What is missing is the platform
 
 ---
 
-## Blocking deployment
-
-### The database driver connects on port 5432
-
-GoDaddy blocks it. About ten lines in one file. See
-[0-BLOCKERS.md](0-BLOCKERS.md).
-
 ---
 
 ## Unverified until real infrastructure exists
@@ -47,7 +40,9 @@ bucket or a real deployment. Test them as part of step 5's checklist.
   `--dry-run` mode. It has never been run end to end because both ends have
   never existed at once.
 - **Outbound WebSocket on 443 from GoDaddy.** The assumption the whole
-  architecture rests on. This is exactly what step 1 exists to answer.
+  architecture rests on. The driver that uses it is built and has been run
+  against a real PostgreSQL end to end; what is unproven is whether GoDaddy's
+  network permits the connection. This is exactly what step 1 exists to answer.
 
 ---
 

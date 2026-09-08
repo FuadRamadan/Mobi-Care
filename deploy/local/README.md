@@ -102,3 +102,43 @@ anyone else can reach.
 - **The API did not start** — the last lines of `.local/logs/api.log` are printed
   automatically; they usually name the problem outright.
 - **Anything stale** — `bash deploy/local/run.sh --fresh` starts clean.
+
+## Running on the production database driver
+
+MobiCare deploys onto a host that allows outbound traffic on ports 80 and 443
+only, so in production the database connection goes through a WebSocket rather
+than the ordinary PostgreSQL port. That is a different driver, and it is worth
+being able to run the whole application on it before deploying.
+
+`ws-proxy.mjs` stands in for Neon's WebSocket endpoint: it accepts a WebSocket
+and pipes it to a local TCP port. With `deploy/local/run.sh` already running:
+
+```bash
+# Build the helpers once.
+pnpm --filter @workspace/api-server exec esbuild deploy/local/ws-proxy.mjs \
+  --bundle --platform=node --format=cjs --outfile=.local/ws-proxy.cjs
+pnpm --filter @workspace/api-server exec esbuild deploy/local/verify-neon-driver.ts \
+  --bundle --platform=node --format=cjs --external:pg-native \
+  --outfile=.local/verify-neon-driver.cjs
+
+node .local/ws-proxy.cjs --port 5433 --allow 127.0.0.1:55500 &
+
+# Six checks: the driver choice, a query, the schema, enum and numeric
+# decoding, and a transaction committing and rolling back.
+DATABASE_URL=postgresql://postgres@127.0.0.1:55500/mobicare \
+  node .local/verify-neon-driver.cjs
+```
+
+To run the API itself on it, add these to the API's environment:
+
+```
+DATABASE_DRIVER=neon
+NEON_WS_PROXY=127.0.0.1:5433
+```
+
+`NEON_WS_PROXY` is ignored when `NODE_ENV=production` — it also turns off
+transport hardening that only makes sense against a local proxy, and that is not
+something an environment variable should be able to do to a live deployment.
+
+Development only. The proxy has no authentication; never run it anywhere
+reachable.

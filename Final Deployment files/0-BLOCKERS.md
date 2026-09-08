@@ -1,81 +1,73 @@
-# The two things that are not done
+# Blockers
 
-Both are deliberate. Neither can be finished without access to the GoDaddy
-platform and a real database, and guessing at either would have produced code
-that looks finished and fails in production.
+Was two. One is now done and is kept here with the evidence, because "the
+driver is handled" is a claim worth being able to check. The other is a
+decision for you, not a piece of missing code.
 
 ---
 
-## 1. The database driver connects on a port GoDaddy blocks
+## 1. The database driver — done
 
-**Status:** not done. One file, about ten lines.
+**Status:** built and verified. Nothing to do beyond setting one environment
+variable.
 
-`lib/db/src/index.ts` uses `node-postgres`, which speaks the PostgreSQL wire
-protocol on **port 5432**. GoDaddy Node.js Hosting allows outbound connections
-on **ports 80 and 443 only**. As it stands, the deployed app cannot reach any
-external PostgreSQL at all — it will start, fail to connect, and every request
-will error.
+GoDaddy Node.js Hosting allows outbound traffic on **ports 80 and 443 only**,
+and `node-postgres` speaks the PostgreSQL wire protocol on 5432. The app now
+supports both drivers and chooses between them:
 
-The fix is a driver that speaks PostgreSQL over WebSocket on 443. Neon's
-`@neondatabase/serverless` does exactly that, and its `Pool` is documented as a
-drop-in replacement for `node-postgres` with session and interactive transaction
-support — which MobiCare requires, because payment claiming, stock deduction and
-the pilot-data reset all run inside `db.transaction()`.
+| `DATABASE_DRIVER` | Driver | Transport |
+|---|---|---|
+| unset (default) | `node-postgres` | PostgreSQL protocol on 5432 |
+| `neon` | `@neondatabase/serverless` | the same protocol inside a WebSocket on 443 |
 
-### The change
+A connection string pointing at a `*.neon.tech` host selects the Neon driver on
+its own, so forgetting the variable is not what breaks a deploy. An explicit
+setting always wins. The chosen driver and the reason are logged at startup.
 
-Add the dependency:
+**On GoDaddy, set `DATABASE_DRIVER=neon`.** Development, the test suite and the
+migration runner are unaffected — they keep the default.
+
+### What was verified, and how
+
+Not "it compiles". The Neon driver was run against a real PostgreSQL through a
+WebSocket, using `deploy/local/ws-proxy.mjs` in place of Neon's own endpoint:
+
+- a query returned `PostgreSQL 16.13` over the WebSocket
+- the application schema read back correctly, including the `enum` and `numeric`
+  columns that a port to MySQL would have broken
+- an interactive transaction committed, and a failing one rolled back — the
+  reason a plain HTTP driver is not enough, since payment claiming, stock
+  deduction and the pilot-data reset all run inside `db.transaction()`
+- the whole application ran on it: patient sign-in, category browse, search,
+  add to cart, a real order placed and paid, HQ dashboard, orders and insights,
+  and the pharmacy portal — all through a browser, with no errors logged
+- with `NODE_ENV=production` the driver connects on **443**, and the
+  development-only proxy setting is ignored
+
+Reproduce it yourself:
 
 ```bash
-pnpm --filter @workspace/db add @neondatabase/serverless
+bash deploy/local/run.sh                      # in one terminal
+node .local/ws-proxy.cjs --port 5433 --allow 127.0.0.1:55500 &
+DATABASE_URL=postgresql://postgres@127.0.0.1:55500/mobicare \
+  node .local/verify-neon-driver.cjs
 ```
 
-Then in `lib/db/src/index.ts`:
+### What is still unproven
 
-```diff
--import { drizzle } from "drizzle-orm/node-postgres";
--import pg from "pg";
-+import { drizzle } from "drizzle-orm/neon-serverless";
-+import { Pool } from "@neondatabase/serverless";
- import * as schema from "./schema";
+That **GoDaddy permits the outbound WebSocket at all**. That is a property of
+their network, not of this code, and only the
+[connectivity probe](1-connectivity-probe/README.md) deployed there can answer
+it. Run it first. If it says NO-GO, no driver helps and the answer is a VPS.
 
--const { Pool } = pg;
--
- if (!process.env.DATABASE_URL) {
-   throw new Error(
-     "DATABASE_URL must be set. Did you forget to provision a database?",
-   );
- }
-```
+### Found while testing this
 
-Nothing else changes. The schema, all 24 migrations, the baseline, the financial
-logic and the tests are untouched, because it is still PostgreSQL.
-
-### Before you make it
-
-Run the [connectivity probe](1-connectivity-probe/README.md) on GoDaddy first.
-If it comes back NO-GO, this change is pointless — the platform cannot open the
-connection whatever driver you use, and the answer is a VPS instead.
-
-### Watch out for
-
-- **`deploy/local/run.sh` uses a plain local PostgreSQL on 5432.** The Neon
-  driver can talk to an ordinary PostgreSQL over TCP as well, but if local
-  development breaks after the swap, that is the first place to look. Making the
-  driver selectable by an environment variable, defaulting to `pg`, is the
-  cleaner shape if you want both.
-- **`lib/db/scripts/migrate-tracked.mjs` uses `pg` directly** and runs from a
-  developer machine, not from GoDaddy. It does not need changing — but it does
-  mean migrations are applied from somewhere with 5432 access, which is normal.
-
-### Why it was left
-
-Database connection code that has never opened a real connection should not be
-committed as though it were ready. This needs a Neon project and one successful
-connection from a deployed app before it goes in — which is exactly what step 1
-establishes.
-
----
+A pool with no `error` listener exits the process when an idle connection dies —
+and a serverless PostgreSQL drops idle connections routinely when its compute
+suspends. The API now logs it and stays up. Verified by dropping every pooled
+connection at once: the process survived, the request in flight returned a clean
+500, and the next request after the database came back returned 200 with no
+restart.
 
 ## 2. Payment is not verified
 

@@ -11,22 +11,27 @@ probe that has to pass before any of it is worth doing.
 
 ## Read this before you plan the work
 
-Two things are **not** done, and neither can be finished from a laptop. Both are
-in [0-BLOCKERS.md](0-BLOCKERS.md), with the exact change to make.
+**The code is ready to deploy.** The API, both web frontends, the database
+schema and its migrations, object storage, secrets handling, rate limiting and
+the WebSocket database driver GoDaddy requires are all built, tested, and
+verified by running them.
 
-1. **The database driver still connects on port 5432, which GoDaddy blocks.**
-   One file, roughly ten lines. It has been left undone deliberately: connection
-   code that has never opened a real connection should not be committed as if it
-   were ready. It needs a Neon database and a probe run first.
+Two things are not code, and are yours to decide or provision.
 
-2. **Payment is not verified.** An order can be marked paid without any Orange
-   Money confirmation. This is a known, accepted state — see
-   [KNOWN-GAPS.md](KNOWN-GAPS.md) — but decide what you are doing about it
+1. **Payment is not verified.** An order can be marked paid without any Orange
+   Money confirmation. A known, accepted state — see
+   [0-BLOCKERS.md](0-BLOCKERS.md) — but decide what you are doing about it
    before real orders are taken.
 
-Everything else — the API, both web frontends, the database schema and its
-migrations, object storage, secrets handling, rate limiting — is built, tested
-and verified by running it.
+2. **One assumption is still unproven from here:** that GoDaddy actually permits
+   an outbound WebSocket on port 443. Everything rests on it, it is a property
+   of their network rather than of this code, and the
+   [connectivity probe](1-connectivity-probe/README.md) answers it in one
+   deploy. **Run it first.**
+
+The database driver that used to be a blocker is done — see
+[0-BLOCKERS.md](0-BLOCKERS.md) for what was verified and how to reproduce it.
+On GoDaddy, set `DATABASE_DRIVER=neon`.
 
 ---
 
@@ -34,7 +39,7 @@ and verified by running it.
 
 | # | Step | File | Where it runs |
 |---|---|---|---|
-| 0 | Understand the two blockers | [0-BLOCKERS.md](0-BLOCKERS.md) | — |
+| 0 | Read where things stand | [0-BLOCKERS.md](0-BLOCKERS.md) | — |
 | 1 | Prove the platform can reach a database and a bucket | [1-connectivity-probe/](1-connectivity-probe/README.md) | **On GoDaddy** |
 | 2 | Create and migrate the PostgreSQL database | [2-DATABASE.md](2-DATABASE.md) | Your machine |
 | 3 | Create the private object storage bucket | [3-OBJECT-STORAGE.md](3-OBJECT-STORAGE.md) | Your machine |
@@ -57,7 +62,7 @@ gives a one-word verdict; do not proceed on anything but GO.
 ```
 Final Deployment files/
 ├── README.md                  you are here
-├── 0-BLOCKERS.md              the two things that are not done
+├── 0-BLOCKERS.md              where the two former blockers stand
 ├── 1-connectivity-probe/      deploy this to GoDaddy first; it answers GO / NO-GO
 ├── 2-DATABASE.md              creating and migrating PostgreSQL
 ├── 3-OBJECT-STORAGE.md        the private bucket, and moving existing media into it
@@ -134,7 +139,7 @@ at http://localhost:8080. Sign-in details are printed at the end. See
 
 Everything claimed here was checked by running it, not by reading the code:
 
-- 89 automated tests pass
+- 97 automated tests pass
 - Every package typechecks
 - The database builds from empty and migrates forward; the baseline reproduces a
   migrated schema exactly
@@ -142,5 +147,10 @@ Everything claimed here was checked by running it, not by reading the code:
   prescriptions, media upload and retrieval all exercised through a browser
   against a real local stack
 
-The two things that could not be verified from here are the two blockers: they
-need the GoDaddy platform and a real Neon database.
+- The Neon WebSocket driver run end to end against a real PostgreSQL, including
+  interactive transactions, with the whole application on top of it
+- The packaged release extracted to an empty directory and started with no
+  `node_modules` at all
+
+The one thing that could not be verified from here is whether GoDaddy permits
+the outbound WebSocket. That is what step 1 is for.

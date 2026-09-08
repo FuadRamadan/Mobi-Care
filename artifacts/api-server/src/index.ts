@@ -3,7 +3,7 @@ import { logger } from "./lib/logger";
 import { assertSecretsAreSafe } from "./lib/secrets";
 import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
 import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
-import { db, pool } from "@workspace/db";
+import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 /**
@@ -198,6 +198,12 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start(): Promise<void> {
   assertSecretsAreSafe();
+  // Said out loud before the first query: a driver that cannot reach the host
+  // fails as a slow connection timeout, which does not point at the cause.
+  logger.info(
+    { driver: databaseDriver.driver, reason: databaseDriver.reason },
+    `Database driver: ${databaseDriver.driver} (${databaseDriver.reason})`,
+  );
   await assertSchemaUpToDate();
   const server = app.listen(port, "0.0.0.0", () => {
     logger.info(

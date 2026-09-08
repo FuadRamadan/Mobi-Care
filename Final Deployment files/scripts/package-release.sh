@@ -107,6 +107,7 @@ Required environment variables:
 
   NODE_ENV=production
   DATABASE_URL          PostgreSQL, reached over WebSocket on 443
+  DATABASE_DRIVER=neon  required where only ports 80/443 are open outbound
   JWT_SECRET            openssl rand -hex 32
   SESSION_SECRET        openssl rand -hex 32 (a different value)
   ALLOWED_ORIGINS       the public HTTPS origin, e.g. https://mobicare.sl

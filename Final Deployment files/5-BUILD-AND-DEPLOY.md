@@ -118,6 +118,7 @@ Upload the zip to a Node.js app in the GoDaddy hosting dashboard. Set:
 ```bash
 NODE_ENV=production
 DATABASE_URL=postgresql://...          # secret
+DATABASE_DRIVER=neon                   # required here — see below
 JWT_SECRET=<openssl rand -hex 32>      # secret — a NEW value, see SECRETS.md
 SESSION_SECRET=<openssl rand -hex 32>  # secret — a different value
 ALLOWED_ORIGINS=https://mobicare.sl
@@ -134,6 +135,13 @@ S3_SECRET_ACCESS_KEY=...               # secret
 
 `PORT` is supplied by the platform. Do not set `VITE_*` here — those are
 build-time only, and setting them at runtime does nothing.
+
+**`DATABASE_DRIVER=neon` is required on this platform.** It selects the driver
+that speaks PostgreSQL inside a WebSocket on 443; the default one uses port
+5432, which GoDaddy blocks. A `*.neon.tech` connection string selects it
+automatically, but set it anyway — without it the failure is a slow connection
+timeout that does not say what is wrong. The startup log names the driver it
+chose; check it after the first deploy.
 
 **`JWT_SECRET` must be a new value.** The old one was committed to the
 repository and the API refuses to start with it. See `4-SECRETS.md`.
@@ -156,6 +164,7 @@ Then walk the paths in the checklist below.
 
 Routing and headers:
 
+- [ ] The startup log says `Database driver: neon`
 - [ ] `/api/health` returns `{"status":"ok"}`
 - [ ] An unknown `/api` path returns a **JSON 404**, not an HTML page
 - [ ] `/` loads the gateway; `/patient`, `/hq` and other deep links load on

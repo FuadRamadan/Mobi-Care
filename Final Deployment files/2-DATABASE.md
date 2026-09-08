@@ -22,6 +22,15 @@ An ordinary PostgreSQL host will not work from the deployed app: they listen on
 
 Keep the connection string — it becomes `DATABASE_URL`.
 
+Also set **`DATABASE_DRIVER=neon`** on the deployed app. That selects the driver
+that speaks PostgreSQL inside a WebSocket on 443; the default one uses 5432,
+which GoDaddy blocks. A `*.neon.tech` connection string selects it automatically,
+but set it anyway — the failure without it is a slow connection timeout that
+does not say what is wrong. The startup log names the driver it chose.
+
+The migration commands below run from your machine, not from GoDaddy, so they
+use the ordinary driver and need no extra configuration.
+
 ---
 
 ## 2. Build the schema

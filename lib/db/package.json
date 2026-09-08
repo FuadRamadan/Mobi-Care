@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./driver": "./src/driver.ts"
   },
   "scripts": {
     "migrate": "node ./scripts/migrate.mjs",
@@ -14,14 +15,17 @@
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.22.0",
+    "ws": "^8.21.3",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.10"
   }
 }
