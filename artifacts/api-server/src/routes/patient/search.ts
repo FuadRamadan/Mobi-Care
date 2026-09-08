@@ -1,5 +1,6 @@
 import { safeRouter } from "../../lib/safeRouter.js";
 import { mobileMoneyLines } from "../../lib/mobileMoney.js";
+import { readConsentState } from "../../lib/patientConsent.js";
 import { db } from "@workspace/db";
 import {
   drugCatalogueTable,
@@ -279,9 +280,14 @@ router.get("/", async (req: AuthRequest, res) => {
     .from(patientsTable)
     .where(eq(patientsTable.id, req.pharmacy!.sub))
     .limit(1);
+  // Only with the patient's consent. The optional analytics consent is only
+  // meaningful if declining it actually stops the collection — recording the
+  // search anyway and filtering it out later would make the choice cosmetic.
+  const consent = await readConsentState(req.pharmacy!.sub);
+
   // Category/subcategory-only requests are filter changes, not a drug-search
   // submission. This prevents page/filter activity from inflating search KPIs.
-  if (q) {
+  if (q && consent.mayRecordAnalytics) {
     await db.insert(searchEventsTable).values({
       normalizedQuery: q.toLocaleLowerCase(),
       patientId: req.pharmacy!.sub,

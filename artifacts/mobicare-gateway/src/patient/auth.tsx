@@ -31,6 +31,7 @@ interface PatientAuthValue {
     phone: string,
     password: string,
     dateOfBirth: string,
+    consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
   ) => Promise<void>;
   updateUserName: (name: string) => void;
   dismissProfileCompletion: () => void;
@@ -102,9 +103,12 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
       phone: string,
       password: string,
       dateOfBirth: string,
+      // Typed as literal true: the account and the consent that permits holding
+      // it are created together, so there is no way to call this without it.
+      consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
     ) => {
       const res = await registerMutation
-        .mutateAsync({ data: { name, phone, password, dateOfBirth } })
+        .mutateAsync({ data: { name, phone, password, dateOfBirth, ...consent } })
         .catch((err: any) => {
           throw new Error(
             err?.status === 409 || /exists/i.test(String(err?.message))

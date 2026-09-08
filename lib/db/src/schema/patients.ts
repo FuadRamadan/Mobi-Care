@@ -18,6 +18,13 @@ export const patientsTable = pgTable("patients", {
   profileImageKey: text("profile_image_key"),
   sessionVersion: integer("session_version").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
+  /**
+   * Set when the patient exercised their right to erasure. The row survives,
+   * scrubbed of identity, because orders and prescriptions reference it and a
+   * pharmacy's dispensing record cannot simply vanish. Nothing signs in again:
+   * isActive is false and sessionVersion has moved on.
+   */
+  erasedAt: timestamp("erased_at", { withTimezone: true }),
   // Expo push token for the patient's most recent device (null = push not enabled)
   expoPushToken: text("expo_push_token"),
   createdAt: timestamp("created_at", { withTimezone: true })

@@ -15,4 +15,8 @@ export interface PatientRegisterInput {
   password: string;
   /** Date of birth in YYYY-MM-DD format; patient must be 18 or older */
   dateOfBirth: Date;
+  /** Must be true. The account and the consent that permits holding it are created in one transaction; an account cannot exist without it. */
+  acceptTermsAndPrivacy: true;
+  /** Optional. Allows the patient's searches to be counted in the anonymous aggregate reporting. Omitting it is a refusal, and refusing costs the patient nothing. */
+  acceptResearchAnalytics?: boolean;
 }

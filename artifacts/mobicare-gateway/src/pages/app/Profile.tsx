@@ -7,6 +7,7 @@ import { useGetPatientProfile, getGetPatientProfileQueryKey, useUpdatePatientPro
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { usePatientAuth } from '@/patient/auth';
+import { PrivacyPanel } from './PrivacyPanel';
 
 export default function PatientProfilePage() {
   const { user, updateUserName } = usePatientAuth();
@@ -208,6 +209,10 @@ export default function PatientProfilePage() {
             </Button>
           </div>
         </form>
+
+        <div className="mt-6">
+          <PrivacyPanel />
+        </div>
       </div>
     </div>
   );

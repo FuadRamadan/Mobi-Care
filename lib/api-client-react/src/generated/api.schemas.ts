@@ -233,6 +233,67 @@ export interface PatientRegisterInput {
   password: string;
   /** Date of birth in YYYY-MM-DD format; patient must be 18 or older */
   dateOfBirth: string;
+  /** Must be true. The account and the consent that permits holding it are created in one transaction; an account cannot exist without it. */
+  acceptTermsAndPrivacy: true;
+  /** Optional. Allows the patient's searches to be counted in the anonymous aggregate reporting. Omitting it is a refusal, and refusing costs the patient nothing. */
+  acceptResearchAnalytics?: boolean;
+}
+
+export interface ConsentDecision {
+  granted: boolean;
+  /** @nullable */
+  policyVersion: string | null;
+  /** @nullable */
+  recordedAt: string | null;
+  /** A decision made against superseded policy text. */
+  outdated: boolean;
+}
+
+export type PatientConsentStateConsentsItem = {
+  type: string;
+  title: string;
+  body: string;
+  required: boolean;
+  decision?: ConsentDecision;
+};
+
+export interface PatientConsentState {
+  policyVersion: string;
+  termsAndPrivacy: ConsentDecision;
+  researchAnalytics: ConsentDecision;
+  /** The patient must accept the current terms before creating anything further. */
+  needsConsent: boolean;
+  /** Whether this patient's searches may be recorded at all. */
+  mayRecordAnalytics: boolean;
+  /** The wording shown to the patient, served with the state so the two cannot drift. */
+  consents?: PatientConsentStateConsentsItem[];
+}
+
+export interface PatientConsentInput {
+  /** Required to keep using MobiCare. Setting it false withdraws consent. */
+  termsAndPrivacy: boolean;
+  researchAnalytics: boolean;
+}
+
+export interface PatientErasureInput {
+  /** The patient's current password. This cannot be undone. */
+  password: string;
+  /** Must be exactly "DELETE MY ACCOUNT". */
+  confirm: string;
+}
+
+export type PatientErasureResultRemoved = {
+  searchEvents?: number;
+  notifications?: number;
+  ordersAnonymised?: number;
+  images?: number;
+};
+
+export interface PatientErasureResult {
+  erased: boolean;
+  removed: PatientErasureResultRemoved;
+  /** Plain-language statement of what is kept, and why. */
+  retained: string;
 }
 
 export interface PatientProfile {

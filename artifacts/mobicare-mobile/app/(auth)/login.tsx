@@ -57,6 +57,9 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  // Both start unticked. A pre-ticked box is not a decision anybody made.
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptAnalytics, setAcceptAnalytics] = useState(false);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -134,7 +137,15 @@ export default function LoginScreen() {
           Alert.alert('Password reset', 'Sign in with your new password.');
         }
       } else {
-        await register(name.trim(), phone.trim(), password, dateOfBirth);
+        // Guarded here as well as by the disabled button: the required consent
+        // must never be inferred from the form having been submitted.
+        if (!acceptTerms) {
+          throw new Error('Please accept the terms and privacy notice to create an account.');
+        }
+        await register(name.trim(), phone.trim(), password, dateOfBirth, {
+          acceptTermsAndPrivacy: true,
+          acceptResearchAnalytics: acceptAnalytics,
+        });
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: unknown) {
@@ -311,10 +322,50 @@ export default function LoginScreen() {
             </View>
           )}
 
+          {mode === 'register' && (
+            <View style={s.consentBlock}>
+              <Pressable
+                style={s.consentRow}
+                onPress={() => setAcceptTerms((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptTerms }}
+              >
+                <View style={[s.checkbox, acceptTerms && s.checkboxOn]}>
+                  {acceptTerms && <Text style={s.checkboxTick}>✓</Text>}
+                </View>
+                <Text style={s.consentText}>
+                  <Text style={s.consentStrong}>I agree to the terms and privacy notice.</Text>{' '}
+                  MobiCare holds your details, prescriptions and orders. A pharmacy
+                  you order from sees what it needs to dispense your medicine.
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={s.consentRow}
+                onPress={() => setAcceptAnalytics((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptAnalytics }}
+              >
+                <View style={[s.checkbox, acceptAnalytics && s.checkboxOn]}>
+                  {acceptAnalytics && <Text style={s.checkboxTick}>✓</Text>}
+                </View>
+                <Text style={s.consentText}>
+                  <Text style={s.consentStrong}>Help improve medicine access.</Text>{' '}
+                  Optional. Lets your searches count towards the anonymous figures
+                  showing where medicines are hard to find — never your name,
+                  prescriptions or orders. Saying no changes nothing about your orders.
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <TouchableOpacity
-            style={[s.submitBtn, loading && s.submitBtnDisabled]}
+            style={[
+              s.submitBtn,
+              (loading || (mode === 'register' && !acceptTerms)) && s.submitBtnDisabled,
+            ]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || (mode === 'register' && !acceptTerms)}
             activeOpacity={0.85}
           >
             <Text style={s.submitText}>
@@ -411,7 +462,17 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     passwordRow: { position: 'relative' },
     passwordInput: { paddingRight: 46 },
     eyeBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 4 },
-    submitBtn: {
+    consentBlock: { gap: 12, marginBottom: 18 },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 5, borderWidth: 1.5,
+    borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginTop: 2,
+  },
+  checkboxOn: { backgroundColor: '#0B3D2E', borderColor: '#0B3D2E' },
+  checkboxTick: { color: '#FFFFFF', fontSize: 13, lineHeight: 16, fontWeight: '700' },
+  consentText: { flex: 1, fontSize: 12, lineHeight: 17, color: '#6B7280' },
+  consentStrong: { color: '#111827', fontWeight: '600' },
+  submitBtn: {
       backgroundColor: colors.primary,
       borderRadius: colors.radius,
       paddingVertical: 15,

@@ -61,6 +61,40 @@ bucket or a real deployment. Test them as part of step 5's checklist.
 
 ---
 
+## Consent and data rights — built, with one piece outstanding
+
+Patients are now asked, and the answer is recorded:
+
+- **Consent at registration.** Two separate decisions — the required terms and
+  privacy notice, and an optional consent for counting searches in the
+  anonymous aggregate figures. The optional one is genuinely optional:
+  declining it stops the recording rather than recording it and filtering it
+  out later, which is the difference between consent and a checkbox.
+- **A versioned, append-only record** (`patient_consents`). Withdrawing adds a
+  row saying so; it never edits the one that granted it. When the policy text
+  changes materially, `CURRENT_POLICY_VERSION` moves and everyone is asked
+  again — consent to old text is not consent to new text.
+- **Patients who registered before this** are prompted on next sign-in. Until
+  they answer, the server refuses to create anything new for them but still
+  lets them read their own data, export it, and delete it.
+- **Download my data** — profile, consents, orders, prescriptions, uploads,
+  notifications and searches, as one JSON file.
+- **Delete my account** — requires the current password and a typed phrase.
+  Removes the identity, search history, notifications, unused prescription
+  uploads and every session; keeps orders and the prescriptions attached to
+  them as the pharmacy's dispensing record, with the person removed from them.
+
+**Still outstanding: the policy text itself.** The app now asks people to agree
+to a "terms and privacy notice" and there is no document behind that phrase.
+The wording shown at the point of consent is accurate about what the system
+does, but it is not a privacy policy. Write one, and have it reviewed by
+someone who knows Sierra Leonean data-protection law — then publish it and bump
+`CURRENT_POLICY_VERSION` so everyone is asked against the real text.
+
+Also still open: **retention**. Nothing is purged automatically. Erasure clears
+a patient's search history on request, but a patient who never asks keeps one
+forever.
+
 ## Deliberately not built
 
 Not gaps — decisions, recorded so nobody rebuilds them by accident.

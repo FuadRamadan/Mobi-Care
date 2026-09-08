@@ -850,6 +850,99 @@ paths:
               schema:
                 $ref: "#/components/schemas/PrescriptionUploadResponse"
 
+  /patient/privacy:
+    get:
+      operationId: getPatientPrivacy
+      tags: [patient]
+      summary: The patient's consent decisions, and the wording of each choice
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current consent state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientConsentState"
+
+  /patient/privacy/consent:
+    post:
+      operationId: recordPatientConsent
+      tags: [patient]
+      summary: Record or withdraw the patient's consent decisions
+      description: >
+        Append-only. Withdrawing adds a decision saying so; it never edits the
+        one that granted it, because the history is the evidence.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientConsentInput"
+      responses:
+        "200":
+          description: The resulting consent state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientConsentState"
+        "400": { description: Both decisions must be supplied explicitly }
+
+  /patient/privacy/export:
+    get:
+      operationId: exportPatientData
+      tags: [patient]
+      summary: Download everything MobiCare holds about the authenticated patient
+      description: >
+        Profile, consents, orders and their lines, prescriptions, uploads,
+        notifications and search events, as one JSON file. Scoped to the caller;
+        there is no route by which one patient reaches another's record.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: >
+            A JSON file, sent as an attachment. Top-level keys: exportedAt,
+            notice, profile, consents, orders, orderItems, prescriptions,
+            prescriptionUploads, notifications, searchEvents.
+          content:
+            # No schema: the body is a file the patient downloads and keeps, not
+            # a contract any client parses. Describing every column of every
+            # table here would be a second copy of the schema to keep in step.
+            application/json: {}
+
+  /patient/privacy/erase:
+    post:
+      operationId: erasePatientAccount
+      tags: [patient]
+      summary: Erase the patient's identity and the data held only for them
+      description: >
+        Irreversible. Removes search history, notifications, unused prescription
+        uploads, every session, and the identity on the account. Orders and any
+        prescription attached to them are KEPT as the pharmacy's dispensing
+        record, with name, phone number and address removed — a record of what
+        was dispensed is not the patient's alone to delete. Requires the
+        patient's current password.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientErasureInput"
+      responses:
+        "200":
+          description: What was removed and what was kept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientErasureResult"
+        "400": { description: Missing password or confirmation phrase }
+        "403": { description: The password was not correct }
+
   /patient/profile:
     get:
       operationId: getPatientProfile
@@ -2744,7 +2837,7 @@ components:
     # ── Patient schemas ────────────────────────────────────────────────────
     PatientRegisterInput:
       type: object
-      required: [name, phone, password, dateOfBirth]
+      required: [name, phone, password, dateOfBirth, acceptTermsAndPrivacy]
       properties:
         name:
           type: string
@@ -2759,6 +2852,92 @@ components:
           type: string
           format: date
           description: Date of birth in YYYY-MM-DD format; patient must be 18 or older
+        acceptTermsAndPrivacy:
+          type: boolean
+          enum: [true]
+          description: >
+            Must be true. The account and the consent that permits holding it
+            are created in one transaction; an account cannot exist without it.
+        acceptResearchAnalytics:
+          type: boolean
+          default: false
+          description: >
+            Optional. Allows the patient's searches to be counted in the
+            anonymous aggregate reporting. Omitting it is a refusal, and
+            refusing costs the patient nothing.
+
+    ConsentDecision:
+      type: object
+      required: [granted, policyVersion, recordedAt, outdated]
+      properties:
+        granted: { type: boolean }
+        policyVersion: { type: ["string", "null"] }
+        recordedAt: { type: ["string", "null"], format: date-time }
+        outdated:
+          type: boolean
+          description: A decision made against superseded policy text.
+
+    PatientConsentState:
+      type: object
+      required: [policyVersion, termsAndPrivacy, researchAnalytics, needsConsent, mayRecordAnalytics]
+      properties:
+        policyVersion: { type: string }
+        termsAndPrivacy: { $ref: "#/components/schemas/ConsentDecision" }
+        researchAnalytics: { $ref: "#/components/schemas/ConsentDecision" }
+        needsConsent:
+          type: boolean
+          description: The patient must accept the current terms before creating anything further.
+        mayRecordAnalytics:
+          type: boolean
+          description: Whether this patient's searches may be recorded at all.
+        consents:
+          type: array
+          description: The wording shown to the patient, served with the state so the two cannot drift.
+          items:
+            type: object
+            required: [type, title, body, required]
+            properties:
+              type: { type: string }
+              title: { type: string }
+              body: { type: string }
+              required: { type: boolean }
+              decision: { $ref: "#/components/schemas/ConsentDecision" }
+
+    PatientConsentInput:
+      type: object
+      required: [termsAndPrivacy, researchAnalytics]
+      properties:
+        termsAndPrivacy:
+          type: boolean
+          description: Required to keep using MobiCare. Setting it false withdraws consent.
+        researchAnalytics: { type: boolean }
+
+    PatientErasureInput:
+      type: object
+      required: [password, confirm]
+      properties:
+        password:
+          type: string
+          description: The patient's current password. This cannot be undone.
+        confirm:
+          type: string
+          description: Must be exactly "DELETE MY ACCOUNT".
+
+    PatientErasureResult:
+      type: object
+      required: [erased, removed, retained]
+      properties:
+        erased: { type: boolean }
+        removed:
+          type: object
+          properties:
+            searchEvents: { type: number }
+            notifications: { type: number }
+            ordersAnonymised: { type: number }
+            images: { type: number }
+        retained:
+          type: string
+          description: Plain-language statement of what is kept, and why.
 
     PatientProfile:
       type: object

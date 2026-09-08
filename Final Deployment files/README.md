@@ -16,14 +16,22 @@ schema and its migrations, object storage, secrets handling, rate limiting and
 the WebSocket database driver GoDaddy requires are all built, tested, and
 verified by running them.
 
-Two things are not code, and are yours to decide or provision.
+Three things are not code, and are yours to decide, provision or write.
 
 1. **Payment is not verified.** An order can be marked paid without any Orange
    Money confirmation. A known, accepted state — see
    [0-BLOCKERS.md](0-BLOCKERS.md) — but decide what you are doing about it
    before real orders are taken.
 
-2. **One assumption is still unproven from here:** that GoDaddy actually permits
+2. **The privacy policy text does not exist.** Patients are now asked to agree
+   to a "terms and privacy notice" at registration, their answer is recorded
+   against a policy version, and they can export or delete their data — but
+   there is no document behind that phrase yet. Write it, have it reviewed
+   against Sierra Leonean data-protection law, publish it, and bump
+   `CURRENT_POLICY_VERSION` so everyone is asked against the real text. See
+   [KNOWN-GAPS.md](KNOWN-GAPS.md).
+
+3. **One assumption is still unproven from here:** that GoDaddy actually permits
    an outbound WebSocket on port 443. Everything rests on it, it is a property
    of their network rather than of this code, and the
    [connectivity probe](1-connectivity-probe/README.md) answers it in one
@@ -139,7 +147,7 @@ at http://localhost:8080. Sign-in details are printed at the end. See
 
 Everything claimed here was checked by running it, not by reading the code:
 
-- 97 automated tests pass
+- 109 automated tests pass
 - Every package typechecks
 - The database builds from empty and migrates forward; the baseline reproduces a
   migrated schema exactly

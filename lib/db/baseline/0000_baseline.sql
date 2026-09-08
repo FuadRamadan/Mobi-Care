@@ -21,7 +21,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
+SET client_encoding = 'SQL_ASCII';
 SET standard_conforming_strings = on;
 SET check_function_bodies = false;
 SET xmloption = content;
@@ -647,6 +647,21 @@ CREATE TABLE "public"."orders" (
 
 
 --
+-- Name: patient_consents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."patient_consents" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "patient_id" "uuid" NOT NULL,
+    "consent_type" "text" NOT NULL,
+    "policy_version" "text" NOT NULL,
+    "granted" boolean NOT NULL,
+    "source" "text" NOT NULL,
+    "recorded_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
 -- Name: patient_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -711,6 +726,7 @@ CREATE TABLE "public"."patients" (
     "profile_image_key" "text",
     "session_version" integer DEFAULT 1 NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
+    "erased_at" timestamp with time zone,
     "expo_push_token" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -731,9 +747,9 @@ CREATE TABLE "public"."pharmacies" (
     "email" "text",
     "orange_money_number" "text",
     "afri_money_number" "text",
+    "mobile_money_account_name" "text",
     "mobile_money_number" "text",
     "mobile_money_provider" "text",
-    "mobile_money_account_name" "text",
     "latitude" "text",
     "longitude" "text",
     "location_lat" "text",
@@ -1256,6 +1272,14 @@ ALTER TABLE ONLY "public"."orders"
 
 
 --
+-- Name: patient_consents patient_consents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."patient_consents"
+    ADD CONSTRAINT "patient_consents_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: patient_notifications patient_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1542,6 +1566,13 @@ CREATE UNIQUE INDEX "courier_settlements_courier_period_uq" ON "public"."courier
 
 
 --
+-- Name: patient_consents_patient_type_recorded_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "patient_consents_patient_type_recorded_idx" ON "public"."patient_consents" USING "btree" ("patient_id", "consent_type", "recorded_at");
+
+
+--
 -- Name: patient_password_reset_phone_created_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1795,6 +1826,14 @@ ALTER TABLE ONLY "public"."orders"
 
 
 --
+-- Name: patient_consents patient_consents_patient_id_patients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."patient_consents"
+    ADD CONSTRAINT "patient_consents_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id") ON DELETE CASCADE;
+
+
+--
 -- Name: patient_notifications patient_notifications_patient_id_patients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1944,21 +1983,16 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 -- ── Seed rows ────────────────────────────────────────────────────────────────
 -- Written by migrations 0013 and 0018 and read by the application at runtime.
--- platform_settings holds the fixed 5% patient service commission;
--- financial_migration_state marks reconciliation boundaries that a fresh
--- database satisfies on creation.
---
--- The delivery_fee_minor and courier_payout_minor rows migration 0013 seeded
--- are deliberately absent: MobiCare charges no delivery fee during the pilot,
--- and migration 0023 removes them from databases that already have them.
+-- platform_settings holds financial configuration; financial_migration_state
+-- marks reconciliation boundaries that a fresh database satisfies on creation.
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-07 13:20:08.125832+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-08 10:11:10.756097+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-07 13:20:08.12859+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-08 10:11:10.75854+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-07 13:20:08.171272+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-08 10:11:10.792361+00')
 ON CONFLICT DO NOTHING;

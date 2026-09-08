@@ -5,6 +5,7 @@ import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
 import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
 import { ProfileCompletionDialog } from './ProfileCompletionDialog';
+import { ConsentGate } from './ConsentGate';
 
 /**
  * Patient app shell — mobile-first (PWA style): sticky top bar + bottom nav.
@@ -36,6 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-secondary/40 flex flex-col">
+      <ConsentGate />
       <ProfileCompletionDialog />
       <header className="sticky top-0 z-20 bg-dark-green text-white shadow-md">
         <div className="max-w-3xl mx-auto flex items-center justify-between px-4 h-14">

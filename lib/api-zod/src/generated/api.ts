@@ -809,13 +809,15 @@ export const registerPatientBodyPhoneMin = 5;
 
 export const registerPatientBodyPasswordMin = 8;
 
-
+export const registerPatientBodyAcceptResearchAnalyticsDefault = false;
 
 export const RegisterPatientBody = zod.object({
   "name": zod.string().min(registerPatientBodyNameMin),
   "phone": zod.string().min(registerPatientBodyPhoneMin),
   "password": zod.string().min(registerPatientBodyPasswordMin),
-  "dateOfBirth": zod.coerce.date().describe('Date of birth in YYYY-MM-DD format; patient must be 18 or older')
+  "dateOfBirth": zod.coerce.date().describe('Date of birth in YYYY-MM-DD format; patient must be 18 or older'),
+  "acceptTermsAndPrivacy": zod.literal(true).describe('Must be true. The account and the consent that permits holding it are created in one transaction; an account cannot exist without it.\n'),
+  "acceptResearchAnalytics": zod.boolean().default(registerPatientBodyAcceptResearchAnalyticsDefault).describe('Optional. Allows the patient\'s searches to be counted in the anonymous aggregate reporting. Omitting it is a refusal, and refusing costs the patient nothing.\n')
 })
 
 export const RegisterPatientResponse = zod.object({
@@ -1402,6 +1404,108 @@ export const PatientUploadPrescriptionBody = zod.object({
 
 export const PatientUploadPrescriptionResponse = zod.object({
   "imageKey": zod.string()
+})
+
+
+/**
+ * @summary The patient's consent decisions, and the wording of each choice
+ */
+export const GetPatientPrivacyResponse = zod.object({
+  "policyVersion": zod.string(),
+  "termsAndPrivacy": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}),
+  "researchAnalytics": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}),
+  "needsConsent": zod.boolean().describe('The patient must accept the current terms before creating anything further.'),
+  "mayRecordAnalytics": zod.boolean().describe('Whether this patient\'s searches may be recorded at all.'),
+  "consents": zod.array(zod.object({
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "required": zod.boolean(),
+  "decision": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}).optional()
+})).optional().describe('The wording shown to the patient, served with the state so the two cannot drift.')
+})
+
+
+/**
+ * Append-only. Withdrawing adds a decision saying so; it never edits the one that granted it, because the history is the evidence.
+ * @summary Record or withdraw the patient's consent decisions
+ */
+export const RecordPatientConsentBody = zod.object({
+  "termsAndPrivacy": zod.boolean().describe('Required to keep using MobiCare. Setting it false withdraws consent.'),
+  "researchAnalytics": zod.boolean()
+})
+
+export const RecordPatientConsentResponse = zod.object({
+  "policyVersion": zod.string(),
+  "termsAndPrivacy": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}),
+  "researchAnalytics": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}),
+  "needsConsent": zod.boolean().describe('The patient must accept the current terms before creating anything further.'),
+  "mayRecordAnalytics": zod.boolean().describe('Whether this patient\'s searches may be recorded at all.'),
+  "consents": zod.array(zod.object({
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "required": zod.boolean(),
+  "decision": zod.object({
+  "granted": zod.boolean(),
+  "policyVersion": zod.string().nullable(),
+  "recordedAt": zod.coerce.date().nullable(),
+  "outdated": zod.boolean().describe('A decision made against superseded policy text.')
+}).optional()
+})).optional().describe('The wording shown to the patient, served with the state so the two cannot drift.')
+})
+
+
+/**
+ * Profile, consents, orders and their lines, prescriptions, uploads, notifications and search events, as one JSON file. Scoped to the caller; there is no route by which one patient reaches another's record.
+ * @summary Download everything MobiCare holds about the authenticated patient
+ */
+export const ExportPatientDataResponse = zod.unknown()
+
+
+/**
+ * Irreversible. Removes search history, notifications, unused prescription uploads, every session, and the identity on the account. Orders and any prescription attached to them are KEPT as the pharmacy's dispensing record, with name, phone number and address removed — a record of what was dispensed is not the patient's alone to delete. Requires the patient's current password.
+ * @summary Erase the patient's identity and the data held only for them
+ */
+export const ErasePatientAccountBody = zod.object({
+  "password": zod.string().describe('The patient\'s current password. This cannot be undone.'),
+  "confirm": zod.string().describe('Must be exactly \"DELETE MY ACCOUNT\".')
+})
+
+export const ErasePatientAccountResponse = zod.object({
+  "erased": zod.boolean(),
+  "removed": zod.object({
+  "searchEvents": zod.number().optional(),
+  "notifications": zod.number().optional(),
+  "ordersAnonymised": zod.number().optional(),
+  "images": zod.number().optional()
+}),
+  "retained": zod.string().describe('Plain-language statement of what is kept, and why.')
 })
 
 

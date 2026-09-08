@@ -23,7 +23,13 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (phone: string, password: string) => Promise<void>;
-  register: (name: string, phone: string, password: string, dateOfBirth: string) => Promise<void>;
+  register: (
+    name: string,
+    phone: string,
+    password: string,
+    dateOfBirth: string,
+    consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
+  ) => Promise<void>;
   updateUser: (updates: Pick<PatientUser, 'name'>) => Promise<void>;
   dismissProfileCompletion: () => Promise<void>;
   logout: () => Promise<void>;
@@ -205,8 +211,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncPushToken();
   }, [applyTokens, syncPushToken]);
 
-  const register = useCallback(async (name: string, phone: string, password: string, dateOfBirth: string) => {
-    const result = await apiRegisterPatient({ name, phone, password, dateOfBirth });
+  const register = useCallback(async (
+    name: string,
+    phone: string,
+    password: string,
+    dateOfBirth: string,
+    // Typed as literal true: an account cannot be created without the consent
+    // that permits holding it.
+    consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
+  ) => {
+    const result = await apiRegisterPatient({ name, phone, password, dateOfBirth, ...consent });
     await applyTokens(result.accessToken, result.refreshToken, {
       id: result.user.id,
       name: result.user.name,

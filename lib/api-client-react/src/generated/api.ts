@@ -91,6 +91,10 @@ import type {
   PasswordChangeResult,
   PasswordPolicy,
   PasswordPolicyUpdate,
+  PatientConsentInput,
+  PatientConsentState,
+  PatientErasureInput,
+  PatientErasureResult,
   PatientNotification,
   PatientOrder,
   PatientOrderInput,
@@ -2833,6 +2837,305 @@ export const usePatientUploadPrescription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPatientUploadPrescriptionMutationOptions(options));
+    }
+
+export const getGetPatientPrivacyUrl = () => {
+
+
+
+
+  return `/api/patient/privacy`
+}
+
+/**
+ * @summary The patient's consent decisions, and the wording of each choice
+ */
+export const getPatientPrivacy = async ( options?: Parameters<typeof customFetch>[1]): Promise<PatientConsentState> => {
+
+  return customFetch<PatientConsentState>(getGetPatientPrivacyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPatientPrivacyQueryKey = () => {
+    return [
+    `/api/patient/privacy`
+    ] as const;
+    }
+
+
+export const getGetPatientPrivacyQueryOptions = <TData = Awaited<ReturnType<typeof getPatientPrivacy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientPrivacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPatientPrivacyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPatientPrivacy>>> = ({ signal }) => getPatientPrivacy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPatientPrivacy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPatientPrivacyQueryResult = NonNullable<Awaited<ReturnType<typeof getPatientPrivacy>>>
+export type GetPatientPrivacyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The patient's consent decisions, and the wording of each choice
+ */
+
+export function useGetPatientPrivacy<TData = Awaited<ReturnType<typeof getPatientPrivacy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientPrivacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPatientPrivacyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecordPatientConsentUrl = () => {
+
+
+
+
+  return `/api/patient/privacy/consent`
+}
+
+/**
+ * Append-only. Withdrawing adds a decision saying so; it never edits the one that granted it, because the history is the evidence.
+ * @summary Record or withdraw the patient's consent decisions
+ */
+export const recordPatientConsent = async (patientConsentInput: PatientConsentInput, options?: Parameters<typeof customFetch>[1]): Promise<PatientConsentState> => {
+
+  return customFetch<PatientConsentState>(getRecordPatientConsentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientConsentInput)
+  }
+);}
+
+
+
+
+
+export const getRecordPatientConsentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordPatientConsent>>, TError,{data: BodyType<PatientConsentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordPatientConsent>>, TError,{data: BodyType<PatientConsentInput>}, TContext> => {
+
+const mutationKey = ['recordPatientConsent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordPatientConsent>>, {data: BodyType<PatientConsentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordPatientConsent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordPatientConsentMutationResult = NonNullable<Awaited<ReturnType<typeof recordPatientConsent>>>
+    export type RecordPatientConsentMutationBody = BodyType<PatientConsentInput>
+    export type RecordPatientConsentMutationError = ErrorType<void>
+
+    /**
+ * @summary Record or withdraw the patient's consent decisions
+ */
+export const useRecordPatientConsent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordPatientConsent>>, TError,{data: BodyType<PatientConsentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordPatientConsent>>,
+        TError,
+        {data: BodyType<PatientConsentInput>},
+        TContext
+      > => {
+      return useMutation(getRecordPatientConsentMutationOptions(options));
+    }
+
+export const getExportPatientDataUrl = () => {
+
+
+
+
+  return `/api/patient/privacy/export`
+}
+
+/**
+ * Profile, consents, orders and their lines, prescriptions, uploads, notifications and search events, as one JSON file. Scoped to the caller; there is no route by which one patient reaches another's record.
+ * @summary Download everything MobiCare holds about the authenticated patient
+ */
+export const exportPatientData = async ( options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getExportPatientDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportPatientDataQueryKey = () => {
+    return [
+    `/api/patient/privacy/export`
+    ] as const;
+    }
+
+
+export const getExportPatientDataQueryOptions = <TData = Awaited<ReturnType<typeof exportPatientData>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPatientData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportPatientDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPatientData>>> = ({ signal }) => exportPatientData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportPatientData>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportPatientDataQueryResult = NonNullable<Awaited<ReturnType<typeof exportPatientData>>>
+export type ExportPatientDataQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Download everything MobiCare holds about the authenticated patient
+ */
+
+export function useExportPatientData<TData = Awaited<ReturnType<typeof exportPatientData>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPatientData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportPatientDataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getErasePatientAccountUrl = () => {
+
+
+
+
+  return `/api/patient/privacy/erase`
+}
+
+/**
+ * Irreversible. Removes search history, notifications, unused prescription uploads, every session, and the identity on the account. Orders and any prescription attached to them are KEPT as the pharmacy's dispensing record, with name, phone number and address removed — a record of what was dispensed is not the patient's alone to delete. Requires the patient's current password.
+ * @summary Erase the patient's identity and the data held only for them
+ */
+export const erasePatientAccount = async (patientErasureInput: PatientErasureInput, options?: Parameters<typeof customFetch>[1]): Promise<PatientErasureResult> => {
+
+  return customFetch<PatientErasureResult>(getErasePatientAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(patientErasureInput)
+  }
+);}
+
+
+
+
+
+export const getErasePatientAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof erasePatientAccount>>, TError,{data: BodyType<PatientErasureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof erasePatientAccount>>, TError,{data: BodyType<PatientErasureInput>}, TContext> => {
+
+const mutationKey = ['erasePatientAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof erasePatientAccount>>, {data: BodyType<PatientErasureInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  erasePatientAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ErasePatientAccountMutationResult = NonNullable<Awaited<ReturnType<typeof erasePatientAccount>>>
+    export type ErasePatientAccountMutationBody = BodyType<PatientErasureInput>
+    export type ErasePatientAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Erase the patient's identity and the data held only for them
+ */
+export const useErasePatientAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof erasePatientAccount>>, TError,{data: BodyType<PatientErasureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof erasePatientAccount>>,
+        TError,
+        {data: BodyType<PatientErasureInput>},
+        TContext
+      > => {
+      return useMutation(getErasePatientAccountMutationOptions(options));
     }
 
 export const getGetPatientProfileUrl = () => {

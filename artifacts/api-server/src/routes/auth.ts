@@ -35,6 +35,7 @@ import {
 } from "../lib/passwordPolicy.js";
 import { sendSms } from "../lib/configuredSms.js";
 import { calculatePatientAge } from "../lib/patientAge.js";
+import { recordConsent } from "../lib/patientConsent.js";
 
 const router = safeRouter();
 const RESET_TTL_MS = 10 * 60 * 1000;
@@ -272,6 +273,13 @@ router.post("/register", async (req, res) => {
       phone: z.string().min(5),
       password: z.string().min(8),
       dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      // Required, and required to be true: an account cannot exist without the
+      // consent that permits holding it. z.literal(true) rather than a boolean
+      // so "false" is a validation failure rather than a quietly unusable
+      // account.
+      acceptTermsAndPrivacy: z.literal(true),
+      // Optional, and defaulting to NOT granted. A missing field is a no.
+      acceptResearchAnalytics: z.boolean().default(false),
     })
     .safeParse(req.body);
 
@@ -280,7 +288,8 @@ router.post("/register", async (req, res) => {
       .status(400)
       .json({
         error:
-          "name (min 2), phone (min 5), password (min 8 chars) and a valid date of birth are required",
+          "name (min 2), phone (min 5), password (min 8 chars), a valid date of " +
+          "birth, and acceptance of the terms and privacy notice are required",
       });
     return;
   }
@@ -310,17 +319,36 @@ router.post("/register", async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(body.data.password, 12);
-  const [created] = await db
-    .insert(patientsTable)
-    .values({
-      name: body.data.name,
-      phone: body.data.phone,
-      passwordHash,
-      age,
-      dateOfBirth: body.data.dateOfBirth,
-    })
-    .onConflictDoNothing({ target: patientsTable.phone })
-    .returning();
+  // One transaction: an account that exists without the consent that created it
+  // is the one state this must never leave behind.
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(patientsTable)
+      .values({
+        name: body.data.name,
+        phone: body.data.phone,
+        passwordHash,
+        age,
+        dateOfBirth: body.data.dateOfBirth,
+      })
+      .onConflictDoNothing({ target: patientsTable.phone })
+      .returning();
+    if (!row) return null;
+
+    await recordConsent(
+      [
+        { patientId: row.id, consentType: "terms_and_privacy", granted: true },
+        {
+          patientId: row.id,
+          consentType: "research_analytics",
+          granted: body.data.acceptResearchAnalytics,
+        },
+      ],
+      "registration",
+      tx,
+    );
+    return row;
+  });
   if (!created) {
     res
       .status(409)

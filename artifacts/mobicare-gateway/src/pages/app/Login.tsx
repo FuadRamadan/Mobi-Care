@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { usePatientAuth } from '@/patient/auth';
+import { ConsentChoices, EMPTY_CONSENT, type ConsentChoiceState } from '@/patient/ConsentChoices';
 import {
   useConfirmPatientPasswordReset,
   useRequestPatientPasswordReset,
@@ -18,6 +19,7 @@ export default function PatientLogin() {
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [consent, setConsent] = useState<ConsentChoiceState>(EMPTY_CONSENT);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,18 @@ export default function PatientLogin() {
     setBusy(true);
     try {
       if (mode === 'login') await login(phone, password);
-      else await register(name, phone, password, dateOfBirth);
+      else {
+        // Guarded here as well as by the disabled button: the required consent
+        // must never be inferred from the form having been submitted.
+        if (!consent.termsAndPrivacy) {
+          setError('Please accept the terms and privacy notice to create an account.');
+          return;
+        }
+        await register(name, phone, password, dateOfBirth, {
+          acceptTermsAndPrivacy: true,
+          acceptResearchAnalytics: consent.researchAnalytics,
+        });
+      }
       navigate('/app/search');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -235,6 +248,10 @@ export default function PatientLogin() {
             )}
           </div>}
 
+          {mode === 'register' && (
+            <ConsentChoices value={consent} onChange={setConsent} disabled={busy} />
+          )}
+
           {mode === 'recover' && requestId && (
             <>
               <p className="text-sm text-muted-foreground">
@@ -275,7 +292,7 @@ export default function PatientLogin() {
           <Button
             type="submit"
             className="w-full rounded-full"
-            disabled={busy}
+            disabled={busy || (mode === 'register' && !consent.termsAndPrivacy)}
             data-testid="button-submit"
           >
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : requestId ? 'Reset password' : 'Send verification code'}
