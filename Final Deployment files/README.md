@@ -63,6 +63,23 @@ Steps 2, 3 and 4 must all be done before the app first starts. The API validates
 its secrets and its database schema at startup and exits if either is wrong, so
 getting the order wrong fails loudly rather than half-working.
 
+### One script does the machine-side steps
+
+Steps 2, 4 and 5 all run on your own machine, and one script does them in order:
+
+```bash
+bash "Final Deployment files/scripts/prepare-deployment.sh"
+```
+
+It checks your tools, installs dependencies, migrates the database, generates the
+secrets, builds the release zip, offers to create the first HQ administrator, and
+prints the environment variables to paste into GoDaddy. It stops with a plain
+explanation rather than half-finishing, and every step is safe to run again.
+
+It deliberately does nothing inside your GoDaddy, Neon or storage accounts — that
+is steps 1 and 3, which need a person with a browser. The numbered files remain
+the reference for what each step means and for doing any of it by hand.
+
 **Do not skip step 1.** The whole architecture rests on the assumption that the
 GoDaddy Node app can open an outbound WebSocket on port 443. If it cannot, no
 amount of the rest of this works, and the answer is a VPS instead. The probe
@@ -86,6 +103,7 @@ Final Deployment files/
 ├── KNOWN-GAPS.md              what is unfinished, and what it means
 ├── env.production.example     every environment variable, annotated
 └── scripts/
+    ├── prepare-deployment.sh  does steps 2, 4 and 5 in one guided run
     ├── package-release.sh     builds the upload zip
     └── switch-object-storage.sh
 ```

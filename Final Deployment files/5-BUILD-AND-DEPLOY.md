@@ -30,6 +30,26 @@ The packaged bundle needs **no npm dependencies**. Everything is inlined by
 esbuild — verified by running it from a directory with no `node_modules` at all,
 which is what the platform install produces.
 
+## The short way: one script
+
+Steps 2, 3, 4 and 6 below are all things that happen on your own machine, and
+one script does them in order, checking as it goes:
+
+```bash
+bash "Final Deployment files/scripts/prepare-deployment.sh"
+```
+
+It checks your tools, installs dependencies, connects to the database and
+migrates it, generates the secrets, builds the release zip, offers to create the
+first HQ administrator, and finally prints the exact environment variables to
+paste into GoDaddy. Every step is safe to repeat, so run it again after fixing
+anything. It never touches your GoDaddy, Neon or storage accounts — those need a
+person with a browser, and they are steps 1, 3 and 5 here.
+
+The rest of this file is what the script does, written out. Read it if you want
+to do the steps by hand, or when the script stops and you need the detail behind
+the step it stopped on.
+
 ## Order of operations
 
 Steps 1–3 must happen before the app first starts. The API validates its secrets
