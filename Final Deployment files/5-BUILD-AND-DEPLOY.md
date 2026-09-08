@@ -164,31 +164,46 @@ for it. A freshly deployed MobiCare with no HQ account is an empty building
 with the door locked.
 
 Run once, from a machine with the repository, against the **production**
-database:
+database. It asks for the details at the terminal:
 
 ```bash
 cd artifacts/api-server
-DATABASE_URL='postgresql://...' \
-HQ_ADMIN_USERNAME='youradmin' \
-HQ_ADMIN_PASSWORD='<a long, unique password>' \
-HQ_ADMIN_NAME='Your Name' \
-  pnpm run bootstrap-hq
+DATABASE_URL='postgresql://...' pnpm run bootstrap-hq
 ```
 
-The account is created active, with all three HQ permissions — integrations,
-settlements and Data & Insights. It is idempotent: running it again updates and
+```
+Create or reset the HQ administrator.
+
+HQ username: youradmin
+Full name [HQ Administrator]: Your Name
+Password (not shown):
+Confirm password:
+
+HQ administrator "youradmin" created. Sign in at /hq.
+```
+
+The password is typed at a hidden prompt and confirmed, rather than passed on
+the command line — a command line lands in shell history and is readable from
+`/proc/<pid>/environ`, and this is the account that can see every order, every
+prescription and every settlement on the platform.
+
+It must meet the same password policy the platform enforces on everyone else:
+12 characters with upper case, lower case, a number and a symbol. The most
+privileged account should not be the weakest one.
+
+The account is created active with all three HQ permissions — integrations,
+settlements and Data & Insights. It is idempotent: running it again resets and
 reactivates that same account rather than creating a second one, which is also
-how you recover from a lost HQ password.
+the way back from a lost HQ password.
 
 `DATABASE_DRIVER` is not needed here. This runs from your machine, not from
 GoDaddy, so the ordinary driver on 5432 reaches Neon fine — the same as the
 migration commands in step 2.
 
-**These three variables do not belong in the GoDaddy environment.** The API
-never reads them; setting them there looks like it worked and creates nothing.
-
-Change the password after the first sign-in, and take the value out of your
-shell history.
+`HQ_ADMIN_USERNAME`, `HQ_ADMIN_PASSWORD` and `HQ_ADMIN_NAME` are still read when
+set, for automation with no terminal attached. **They do not belong in the
+GoDaddy environment** — the API never reads them, so setting them there looks
+like it worked and creates nothing.
 
 ### 7. Start, and check
 
