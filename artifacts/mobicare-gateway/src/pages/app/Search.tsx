@@ -353,7 +353,7 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
         )}
 
         <div className="divide-y rounded-xl border bg-secondary/30">
-          {offers.map((offer, idx) => (
+          {offers.map((offer) => (
             <div
               key={offer.inventoryId}
               className={`flex flex-col gap-3 p-3 ${!offer.inStock ? "opacity-60 grayscale-[50%]" : ""}`}
@@ -393,12 +393,11 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
 
                 <div className="text-right shrink-0">
                   <div className="font-display font-bold text-dark-green">
+                    {/* Deliberately no "best price" badge. Offers are listed
+                        cheapest first, which is information; singling one out
+                        is a recommendation, and MobiCare does not steer a
+                        patient towards any pharmacy. */}
                     {formatLeones(offer.priceLeones)}
-                    {idx === 0 && drug.offers.length > 1 && offer.inStock && (
-                      <span className="ml-1.5 text-[10px] font-sans font-semibold text-primary uppercase">
-                        Best
-                      </span>
-                    )}
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     per {offer.unitOfSale}
