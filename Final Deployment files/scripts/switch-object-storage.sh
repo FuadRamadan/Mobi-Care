@@ -18,7 +18,8 @@
 #
 # After switching, run:
 #   pnpm --filter @workspace/api-server run typecheck
-#   DATABASE_URL=<dev-url> pnpm --filter @workspace/api-server run test
+#   pnpm --filter @workspace/api-server run test
+#   DATABASE_URL=<dev-url> pnpm --filter @workspace/api-server run test:integration
 
 set -euo pipefail
 

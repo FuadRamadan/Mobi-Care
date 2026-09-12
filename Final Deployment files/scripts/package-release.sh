@@ -51,12 +51,18 @@ if ! $skip_checks; then
   echo "==> Typecheck"
   pnpm run typecheck >/dev/null
 
+  # The unit suite needs nothing but Node, so it always runs — a release
+  # should never be built without it. Only the integration suite needs a
+  # database, and it writes rows, so point it at staging and never production.
   echo "==> Tests"
+  pnpm --filter @workspace/api-server run test >/dev/null
+
   if [[ -z "${DATABASE_URL:-}" ]]; then
-    echo "    DATABASE_URL is not set — skipping tests that need a database." >&2
-    echo "    Set it to a staging database to run the full suite before releasing." >&2
+    echo "    DATABASE_URL is not set — skipping the integration tests." >&2
+    echo "    Set it to a staging database to run them before releasing." >&2
   else
-    pnpm --filter @workspace/api-server run test >/dev/null
+    echo "==> Integration tests"
+    pnpm --filter @workspace/api-server run test:integration >/dev/null
   fi
 fi
 
