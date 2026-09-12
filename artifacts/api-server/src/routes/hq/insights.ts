@@ -4,6 +4,7 @@ import { writeAudit } from "../../lib/audit.js";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import type { AuthRequest } from "../../middlewares/auth.js";
+import { BUSINESS_TIMEZONE, businessDateNow } from "../../lib/commissionSettlements.js";
 
 const router = safeRouter();
 // Reporting deliberately has no minimum cohort threshold. Small partners and
@@ -53,7 +54,7 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
   const pharmacyId = parsed.data.pharmacyId;
   const bucket = parsed.data.interval;
   const values = sql.join(completedStatuses.map(status => sql`${status}`), sql`, `);
-  const [searchResult, orderResult, prescriptionResult, searchTrend, orderTrend, pharmacyTrend, patientTrend, topDrugs, topCategories, pharmacyRevenue, categoryRevenue, demand, lowFulfillment, areas, categoryAreas] = await Promise.all([
+  const [searchResult, orderResult, prescriptionResult, searchTrend, orderTrend, pharmacyTrend, patientTrend, topDrugs, topCategories, pharmacyRevenue, categoryRevenue, demand, lowFulfillment, areas, categoryAreas, commissionTodayResult, commissionTrend] = await Promise.all([
     db.execute(sql`SELECT count(*)::int AS searches, count(DISTINCT normalized_query) FILTER (WHERE normalized_query IS NOT NULL)::int AS unique_drugs,
       count(*) FILTER (WHERE result_count = 0)::int AS zero_result_searches FROM search_events WHERE created_at >= ${start} AND created_at <= ${end}`),
     db.execute(sql`SELECT
@@ -77,6 +78,22 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL AND result_count = 0 GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC LIMIT 10`),
     db.execute(sql`SELECT area_district AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
     db.execute(sql`SELECT primary_category AS category, area_district AS area, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY primary_category, area_district HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
+    // Commission earned so far today, independent of the selected range: the
+    // Command Centre reports it as a live figure. It needs no nightly reset and
+    // no ledger row — the business-day filter moves on by itself at midnight in
+    // Freetown, and each order carries its own commission snapshot from
+    // checkout. This is deliberately the same shape the pharmacy portal runs
+    // for a single pharmacy, so HQ's total reconciles with what partners see.
+    db.execute(sql`SELECT (coalesce(sum(medicine_commission_minor), 0) / 100.0)::float AS commission_today
+      FROM orders WHERE status IN (${values})
+      AND to_char(completed_at AT TIME ZONE ${BUSINESS_TIMEZONE}, 'YYYY-MM-DD') = ${businessDateNow()}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``}`),
+    // Commission per bucket across the selected range. Bucketed on completion
+    // rather than creation, because commission is earned when the order
+    // completes — the same basis as platformRevenue and the daily ledger.
+    db.execute(sql`SELECT date_trunc(${bucket}, completed_at AT TIME ZONE ${BUSINESS_TIMEZONE})::date::text AS period,
+      (coalesce(sum(medicine_commission_minor), 0) / 100.0)::float AS revenue
+      FROM orders WHERE status IN (${values}) AND completed_at >= ${start} AND completed_at <= ${end}${pharmacyId ? sql` AND pharmacy_id = ${pharmacyId}` : sql``}
+      GROUP BY 1 ORDER BY 1`),
   ]);
   const search = searchResult.rows[0] ?? {};
   const order = orderResult.rows[0] ?? {};
@@ -92,8 +109,11 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
   res.json({
     minimumGroupSize: MINIMUM_GROUP_SIZE,
     dateRange: { start: start.toISOString(), end: end.toISOString(), interval: bucket },
-    totals: { ...searchTotals, zeroResultSearches, ...orderTotals, prescriptionApprovalRate: reportable(reviewed) ? Number(rates.approved) / reviewed : null, prescriptionRejectionRate: reportable(reviewed) ? Number(rates.rejected) / reviewed : null },
-    trends: { searches: searchTrend.rows, orders: orderTrend.rows, activePharmacies: pharmacyTrend.rows, registeredPatients: patientTrend.rows },
+    // commissionToday is not put through suppression: it is an operational
+    // figure on the command centre, like the order and pharmacy counts beside
+    // it, not a cohort that could identify anyone.
+    totals: { ...searchTotals, zeroResultSearches, ...orderTotals, commissionToday: Number(commissionTodayResult.rows[0]?.commission_today ?? 0), prescriptionApprovalRate: reportable(reviewed) ? Number(rates.approved) / reviewed : null, prescriptionRejectionRate: reportable(reviewed) ? Number(rates.rejected) / reviewed : null },
+    trends: { searches: searchTrend.rows, orders: orderTrend.rows, activePharmacies: pharmacyTrend.rows, registeredPatients: patientTrend.rows, commission: commissionTrend.rows },
     rankings: { topSearchedDrugs: topDrugs.rows, topSearchedCategories: topCategories.rows, platformRevenueByPharmacy: pharmacyRevenue.rows, drugValueByCategory: categoryRevenue.rows, demandByCategory: demand.rows, highSearchLowFulfillment: lowFulfillment.rows, searchVolumeByArea: areas.rows, demandByCategoryArea: categoryAreas.rows },
     suppression: {
       totalSearches: reportable(search.searches) ? "Reported." : SUPPRESSED,

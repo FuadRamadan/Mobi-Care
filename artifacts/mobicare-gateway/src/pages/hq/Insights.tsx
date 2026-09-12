@@ -11,7 +11,7 @@ import ResetPilotData from './ResetPilotData';
 type Insights = {
   minimumGroupSize: number;
   totals: Record<string, number | null>;
-  trends: Record<string, Array<{ period: string; count: number }>>;
+  trends: Record<string, Array<{ period: string; count?: number; revenue?: number }>>;
   rankings: Record<string, Array<{ label: string; count?: number; revenue?: number; category?: string; area?: string }>>;
   suppression: Record<string, string>;
 };
@@ -92,7 +92,12 @@ const titleize = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/_/
 function Ranking({ title, rows }: { title: string; rows: Array<{ label: string; count?: number; revenue?: number; category?: string; area?: string }> }) {
   return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <ul className="mt-3 space-y-2 text-sm">{rows.map((row, index) => <li key={`${row.label ?? row.category}-${index}`} className="flex justify-between gap-2 border-b pb-1 last:border-0"><span>{row.label ?? `${row.category} — ${row.area}`}</span><strong>{(row.revenue ?? row.count ?? 0).toLocaleString()}</strong></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">No reportable groups in this period.</p>}</section>;
 }
-function Trend({ title, rows }: { title: string; rows: Array<{ period: string; count: number }> }) {
-  const max = Math.max(...rows.map(row => Number(row.count)), 1);
-  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <div className="mt-4 space-y-2">{rows.map(row => <div key={row.period} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-xs"><span>{row.period}</span><div className="h-3 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${Math.max(3, Number(row.count) / max * 100)}%` }} /></div><strong className="text-right">{Number(row.count).toLocaleString()}</strong></div>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No data in this period.</p>}</section>;
+// A series is either a count of things (searches, orders) or an amount of money
+// (commission), exactly as rankings already are. Reading only `count` printed
+// NaN for any amount-based series.
+const trendValue = (row: { count?: number; revenue?: number }) => Number(row.revenue ?? row.count ?? 0);
+
+function Trend({ title, rows }: { title: string; rows: Array<{ period: string; count?: number; revenue?: number }> }) {
+  const max = Math.max(...rows.map(trendValue), 1);
+  return <section className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{title}</h2>{rows.length ? <div className="mt-4 space-y-2">{rows.map(row => <div key={row.period} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-xs"><span>{row.period}</span><div className="h-3 rounded bg-muted"><div className="h-full rounded bg-primary" style={{ width: `${Math.max(3, trendValue(row) / max * 100)}%` }} /></div><strong className="text-right">{trendValue(row).toLocaleString()}</strong></div>)}</div> : <p className="mt-3 text-sm text-muted-foreground">No data in this period.</p>}</section>;
 }
