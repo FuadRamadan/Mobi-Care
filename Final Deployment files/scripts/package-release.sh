@@ -13,6 +13,12 @@
 # unset — both frontends then call the API on the same origin, and there is no
 # cross-origin request to configure.
 #
+# Set PUBLIC_URL to the public origin, e.g. https://mobicare.sl. It is baked
+# into the gateway's OG/social meta tags, which must be absolute URLs — a
+# relative one is ignored by every link preview. It is build-time only: setting
+# it on the deployed app does nothing, so a release built without it ships with
+# empty previews that cannot be fixed without rebuilding.
+#
 # Options:
 #   --skip-checks   Skip typecheck and tests. For iterating only; never for a
 #                   release you intend to deploy.
@@ -69,8 +75,13 @@ fi
 echo "==> Building API"
 pnpm --filter @workspace/api-server run build >/dev/null
 
+if [[ -z "${PUBLIC_URL:-}" ]]; then
+  echo "    PUBLIC_URL is not set — social link previews will have no image or" >&2
+  echo "    canonical URL. Set it to the public origin and rebuild before launch." >&2
+fi
+
 echo "==> Building gateway (served at /)"
-PORT=8080 BASE_PATH=/ \
+PORT=8080 BASE_PATH=/ VITE_PUBLIC_URL="${PUBLIC_URL:-}" \
   pnpm --filter @workspace/mobicare-gateway run build >/dev/null
 
 echo "==> Building pharmacy portal (served at /pharmacy-portal/)"
