@@ -202,6 +202,21 @@ async function neonQuery(connectionString) {
     );
   }
 
+  // A string that does not parse never reaches the network, so calling that a
+  // NO-GO would blame the host for a typo — and this verdict is what decides
+  // whether someone abandons this plan and buys a VPS. Report it as the
+  // configuration error it is. Only four things produce an unparseable URL
+  // here, so name them rather than leaving the reader to guess.
+  if (!databaseHost(connectionString)) {
+    return skip(
+      "NEON_DATABASE_URL is set but is not a valid URL, so no connection was " +
+        "attempted and this host has NOT been judged. Usual causes: the value " +
+        "is wrapped in quotes, it has a space in the middle from a line wrap, " +
+        'it uses curly quotes, or the whole "NAME=value" line was pasted into ' +
+        "the value box. It must begin postgresql:// and contain no spaces.",
+    );
+  }
+
   const { neonConfig, Pool } = await import("@neondatabase/serverless");
   const WebSocketImpl = await resolveWebSocket();
   if (WebSocketImpl) neonConfig.webSocketConstructor = WebSocketImpl;
@@ -284,6 +299,11 @@ async function runChecks() {
       database === "pass"
         ? "NO-GO — the database works but photo storage does not. See objectStorage below."
         : "NO-GO — photo storage does not work. See objectStorage below. The database was not tested.";
+  } else if (connectionString && !host) {
+    verdict =
+      "INCOMPLETE — NEON_DATABASE_URL is malformed, so the database was never " +
+      "contacted and this host has NOT been ruled out. Fix the value and " +
+      "reload. See neonQuery below.";
   } else if (database === "skipped" || storageStatus === "skipped") {
     const missing = [
       database === "skipped" ? "NEON_DATABASE_URL" : null,
