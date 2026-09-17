@@ -311,8 +311,6 @@ Also outstanding:
 - The object migration has never been run end to end
 - `scripts/seed-team-photos.ts` still targets the old provider and will not work
   after the move; it is not needed, as team photos migrate with everything else
-- `exports/` is a stale 12 MB duplicate of the codebase and is where the leaked
-  secret survived the first cleanup. Deleting it is recommended.
 
 ## Ending the pilot
 

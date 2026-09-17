@@ -51,10 +51,9 @@ bucket or a real deployment. Test them as part of step 5's checklist.
 - **`scripts/seed-team-photos.ts`** still targets the old storage provider and
   will not work after the move. It is not needed — team photos migrate with
   everything else.
-- **`exports/`** is a stale 12 MB duplicate of the whole codebase, including a
-  zip. It is out of date with the current source, and it is where the leaked
-  `JWT_SECRET` survived the first cleanup. **Deleting it is recommended** — it
-  is one more place for a secret to hide.
+- **`exports/`** — removed. It was a stale 12 MB duplicate of the whole
+  codebase, out of date with the current source, and where the leaked
+  `JWT_SECRET` survived the first cleanup. Nothing depended on it.
 - **`DEPLOYMENT.md`** at the repository root is superseded and marked as such.
   It describes shared PHP hosting and a VPS, and a database path that does not
   work on an empty database. This folder replaces it.

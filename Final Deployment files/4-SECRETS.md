@@ -9,9 +9,8 @@ Part of the deployment handover; the order of work is in
 `2d6245b` until it was removed. It is 128 hex characters, and it is public to
 anyone who has ever had a copy of this repository.
 
-It has been removed from three places in the working tree: `.replit`, the stale
-copy under `exports/mobicare-source-export/`, and inside
-`exports/mobicare-source-export.zip`.
+It has been removed from `.replit`, and the stale `exports/` duplicate that held
+two further copies of it has been deleted outright.
 
 **It is still in git history, and removing it from there is not the fix.**
 Rewriting history would break every existing clone and would not reach copies
@@ -94,10 +93,10 @@ purpose.
   never values.
 - `.replit` no longer carries a secret, and should never carry one again — put
   values in the host's secret manager.
-- `exports/` is a stale duplicate of the whole codebase, 12 MB including a zip.
-  It is where the leaked secret survived the first cleanup. It is out of date
-  with the current source and serves no purpose in the repository. **Deleting it
-  is recommended** — it is one more place for a secret to hide.
+- `exports/` has been deleted. It was a stale 12 MB duplicate of the whole
+  codebase, including a zip, and it is where the leaked secret survived the
+  first cleanup. Do not reintroduce a snapshot of the source into the
+  repository: it is one more place for a secret to hide.
 
 ## Rate limiting and headers
 
