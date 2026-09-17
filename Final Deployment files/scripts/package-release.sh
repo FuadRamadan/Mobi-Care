@@ -99,15 +99,50 @@ cat > "$STAGE/package.json" <<'JSON'
     "node": ">=22 <25"
   },
   "scripts": {
-    "start": "node dist/index.mjs"
+    "start": "node dist/index.mjs",
+    "build": "echo Nothing to build - this bundle ships prebuilt"
   }
 }
 JSON
 
-cat > "$STAGE/README.txt" <<'TXT'
-MobiCare release bundle.
+# Some platforms run a build command whether or not one is needed, and refuse
+# to deploy when the script is missing; the no-op above satisfies them.
+#
+# They also decide to install when node_modules is absent. This bundle declares
+# no dependencies, so there is genuinely nothing to install, and an install
+# attempt is pure risk: it pulls a package manager down through corepack, which
+# fails outright on hosts that mount the cache directory noexec. Shipping the
+# directory, empty, stops that decision being made at all.
+mkdir -p "$STAGE/node_modules"
+cat > "$STAGE/node_modules/.mobicare-no-dependencies" <<'TXT'
+Deliberately empty.
 
-  npm start          runs the API and serves both frontends
+Every dependency is already inlined into dist/index.mjs by esbuild, so there is
+nothing to install. This directory exists only so a host that installs when
+node_modules is missing leaves the bundle alone.
+
+Do not run an install here. Do not upload the repository instead of this
+bundle: the repository is a pnpm workspace and building it on the host is slow,
+needs development dependencies, and is exactly what this bundle avoids.
+TXT
+
+cat > "$STAGE/README.txt" <<'TXT'
+MobiCare release bundle. Upload THIS, not the repository.
+
+How the hosting app must be configured:
+
+  Start command     node dist/index.mjs
+  Build command     none - leave it empty; everything here is already built
+  Install step      none - this bundle declares no dependencies
+
+  Do not route the start command through npm, pnpm or yarn. Some hosts cannot
+  run a package manager at all (corepack downloads one and then cannot execute
+  it), and none is needed: dist/index.mjs runs on Node by itself.
+
+  Uploading the repository instead of this bundle is the usual cause of a
+  failed deploy. The repository is a pnpm workspace: the host then tries to
+  install and build it, which is slower, needs development dependencies, and
+  fails on hosts where corepack cannot run.
 
 Required environment variables:
 

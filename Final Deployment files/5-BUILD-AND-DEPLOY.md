@@ -137,7 +137,23 @@ test suite as part of the build; point it at staging, never production.
 
 ### 5. Create the app and set its environment
 
-Upload the zip to a Node.js app in the GoDaddy hosting dashboard. Set:
+Upload **the zip from step 4** to a Node.js app in the GoDaddy hosting
+dashboard — not the repository, and not a zip of the checkout.
+
+Then set the app's commands. These matter as much as the variables below:
+
+| Setting | Value |
+|---|---|
+| Start command | `node dist/index.mjs` |
+| Build command | **empty** — the bundle is already built |
+| Install step | **none** — the bundle declares no dependencies |
+
+Do not route the start command through `npm`, `pnpm` or `yarn`. Nothing here
+needs a package manager, and some hosts cannot run one at all: they fetch it
+through corepack into a cache directory and then cannot execute it, which ends
+the deploy before the app is ever started.
+
+Then set:
 
 ```bash
 NODE_ENV=production
@@ -362,3 +378,14 @@ bash "Final Deployment files/scripts/switch-object-storage.sh" --revert
   every request looks like it comes from the proxy.
 - **Sessions all drop after a restart** — `JWT_SECRET` changed between starts.
   It must be stable across restarts.
+- **The deploy never starts: "frozen pnpm install failed", or "Could not run
+  the pnpm binary … EACCES"** — the host is trying to install dependencies,
+  which means it was given the repository rather than the release bundle. The
+  repository is a pnpm workspace, so the host resolves pnpm, fetches it through
+  corepack, and fails when it cannot execute what it downloaded. Nothing about
+  the pnpm version fixes this. Upload `mobicare-release.zip`, clear the build
+  command, and set the start command to `node dist/index.mjs`. Tell-tale in the
+  log: an archive size far larger than the bundle's ~3.6 MB.
+- **The deploy fails on a missing `build` script** — the host insists on
+  running one. The bundle carries a no-op `build` so this cannot happen; if it
+  does, an older bundle is deployed. Rebuild with `package-release.sh`.
