@@ -261,6 +261,54 @@ async function storage() {
 
 // ── Runner ───────────────────────────────────────────────────────────────────
 
+/**
+ * What the running process can actually see of its own configuration.
+ *
+ * "Saved in the dashboard" and "present in process.env" are different claims,
+ * and when they disagree there is no way to tell from the checks alone — every
+ * one of them just reports "not set". This answers it directly.
+ *
+ * Names and lengths only, never a value: the point is to distinguish absent
+ * from present, and a length does that without putting a live credential on a
+ * page anyone with the URL can read.
+ *
+ * DB_HOST and friends are the control. The platform injects those itself for
+ * its own MySQL, so if they are visible and the six below are not, the runtime
+ * is delivering environment variables correctly and the six were never applied
+ * to this environment — which is a dashboard problem, not a hosting one.
+ */
+function environmentReport() {
+  const expected = [
+    "NEON_DATABASE_URL",
+    "S3_ENDPOINT",
+    "S3_REGION",
+    "S3_BUCKET",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY",
+  ];
+  const platformInjected = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER"];
+
+  const describe = (names) =>
+    Object.fromEntries(
+      names.map((name) => {
+        const raw = process.env[name];
+        return [
+          name,
+          raw === undefined
+            ? { present: false }
+            : { present: true, length: raw.length, empty: raw.length === 0 },
+        ];
+      }),
+    );
+
+  return {
+    note: "Names and lengths only — no values are ever shown here.",
+    totalVariablesVisible: Object.keys(process.env).length,
+    expected: describe(expected),
+    platformInjected: describe(platformInjected),
+  };
+}
+
 /** Pull the hostname out of a Postgres URL without logging the credentials. */
 function databaseHost(connectionString) {
   if (!connectionString) return null;
@@ -318,6 +366,7 @@ async function runChecks() {
     startedAt: started,
     checkedAt: new Date().toISOString(),
     verdict,
+    environment: environmentReport(),
     failed,
     checks,
   };
@@ -346,6 +395,23 @@ function renderHtml(report) {
     )
     .join("");
 
+  const envRow = (name, info, source) => `
+      <tr>
+        <td><code>${name}</code></td>
+        <td><span style="color:${info.present && !info.empty ? COLOR.pass : COLOR.fail};font-weight:700">${
+          info.present ? (info.empty ? "EMPTY" : "YES") : "NO"
+        }</span></td>
+        <td style="color:#6b7280">${info.present ? `${info.length} chars` : "—"}</td>
+        <td style="color:#6b7280">${source}</td>
+      </tr>`;
+
+  const envRows = [
+    ...Object.entries(report.environment.expected).map(([n, i]) => envRow(n, i, "you")),
+    ...Object.entries(report.environment.platformInjected).map(([n, i]) =>
+      envRow(n, i, "the platform"),
+    ),
+  ].join("");
+
   return `<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MobiCare connectivity probe</title>
@@ -370,6 +436,17 @@ function renderHtml(report) {
   <table>
     <tr><th>Check</th><th>Result</th><th>Detail</th><th style="text-align:right">Time</th></tr>
     ${rows}
+  </table>
+  <h2 style="font-size:1rem;margin-top:1.75rem">What this process can see</h2>
+  <p class="meta">
+    Names and lengths only — never a value. ${report.environment.totalVariablesVisible}
+    variables visible in total. The <code>DB_*</code> row is the control: the platform
+    sets those itself, so if they are present and yours are not, the variables were
+    saved somewhere this app is not reading.
+  </p>
+  <table>
+    <tr><th>Variable</th><th>Present</th><th>Length</th><th>Set by</th></tr>
+    ${envRows}
   </table>
   <p class="meta">Delete this app once the results are recorded. It is a diagnostic, not part of MobiCare.</p>
 </main>`;
