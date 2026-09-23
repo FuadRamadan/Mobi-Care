@@ -470,6 +470,37 @@ CREATE TABLE "public"."couriers" (
 
 
 --
+-- Name: delivery_zone_fees; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."delivery_zone_fees" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "zone_id" "uuid" NOT NULL,
+    "fee_minor" integer NOT NULL,
+    "effective_from" timestamp with time zone NOT NULL,
+    "created_by_hq_staff_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "delivery_zone_fees_fee_minor_nonnegative" CHECK (("fee_minor" >= 0))
+);
+
+
+--
+-- Name: delivery_zones; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."delivery_zones" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text" DEFAULT ''::"text" NOT NULL,
+    "boundary" "jsonb" NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "updated_by_hq_staff_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
 -- Name: drug_catalogue; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -620,6 +651,11 @@ CREATE TABLE "public"."orders" (
     "patient_phone" "text" NOT NULL,
     "patient_id" "uuid",
     "delivery_address" "text",
+    "delivery_latitude" numeric(9,6),
+    "delivery_longitude" numeric(9,6),
+    "delivery_zone_id" "uuid",
+    "delivery_zone_name" "text",
+    "delivery_pricing" "text",
     "status" "public"."order_status" DEFAULT 'awaiting_payment'::"public"."order_status" NOT NULL,
     "fulfillment_type" "public"."fulfillment_type" NOT NULL,
     "id_checked" boolean DEFAULT false NOT NULL,
@@ -1176,6 +1212,30 @@ ALTER TABLE ONLY "public"."couriers"
 
 
 --
+-- Name: delivery_zone_fees delivery_zone_fees_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zone_fees"
+    ADD CONSTRAINT "delivery_zone_fees_pkey" PRIMARY KEY ("id");
+
+
+--
+-- Name: delivery_zones delivery_zones_name_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zones"
+    ADD CONSTRAINT "delivery_zones_name_unique" UNIQUE ("name");
+
+
+--
+-- Name: delivery_zones delivery_zones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zones"
+    ADD CONSTRAINT "delivery_zones_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: drug_catalogue drug_catalogue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1566,6 +1626,20 @@ CREATE UNIQUE INDEX "courier_settlements_courier_period_uq" ON "public"."courier
 
 
 --
+-- Name: delivery_zone_fees_effective_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "delivery_zone_fees_effective_idx" ON "public"."delivery_zone_fees" USING "btree" ("effective_from");
+
+
+--
+-- Name: delivery_zone_fees_zone_effective_uq; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "delivery_zone_fees_zone_effective_uq" ON "public"."delivery_zone_fees" USING "btree" ("zone_id", "effective_from");
+
+
+--
 -- Name: patient_consents_patient_type_recorded_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1738,6 +1812,30 @@ ALTER TABLE ONLY "public"."courier_settlements"
 
 
 --
+-- Name: delivery_zone_fees delivery_zone_fees_created_by_hq_staff_id_hq_staff_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zone_fees"
+    ADD CONSTRAINT "delivery_zone_fees_created_by_hq_staff_id_hq_staff_id_fk" FOREIGN KEY ("created_by_hq_staff_id") REFERENCES "public"."hq_staff"("id") ON DELETE SET NULL;
+
+
+--
+-- Name: delivery_zone_fees delivery_zone_fees_zone_id_delivery_zones_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zone_fees"
+    ADD CONSTRAINT "delivery_zone_fees_zone_id_delivery_zones_id_fk" FOREIGN KEY ("zone_id") REFERENCES "public"."delivery_zones"("id") ON DELETE RESTRICT;
+
+
+--
+-- Name: delivery_zones delivery_zones_updated_by_hq_staff_id_hq_staff_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_zones"
+    ADD CONSTRAINT "delivery_zones_updated_by_hq_staff_id_hq_staff_id_fk" FOREIGN KEY ("updated_by_hq_staff_id") REFERENCES "public"."hq_staff"("id") ON DELETE SET NULL;
+
+
+--
 -- Name: drug_catalogue drug_catalogue_proposed_by_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1815,6 +1913,14 @@ ALTER TABLE ONLY "public"."order_items"
 
 ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_delivery_confirmed_by_hq_user_id_hq_staff_id_fk" FOREIGN KEY ("delivery_confirmed_by_hq_user_id") REFERENCES "public"."hq_staff"("id") ON DELETE SET NULL;
+
+
+--
+-- Name: orders orders_delivery_zone_id_delivery_zones_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_delivery_zone_id_delivery_zones_id_fk" FOREIGN KEY ("delivery_zone_id") REFERENCES "public"."delivery_zones"("id") ON DELETE RESTRICT;
 
 
 --
@@ -1988,11 +2094,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-08 10:11:10.756097+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-23 18:57:10.260576+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-08 10:11:10.75854+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-23 18:57:10.26366+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-08 10:11:10.792361+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-23 18:57:10.305695+00')
 ON CONFLICT DO NOTHING;

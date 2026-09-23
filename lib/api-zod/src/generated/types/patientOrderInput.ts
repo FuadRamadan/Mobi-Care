@@ -5,13 +5,18 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DeliveryLocation } from './deliveryLocation';
 import type { PatientOrderInputFulfillmentType } from './patientOrderInputFulfillmentType';
 import type { PatientOrderItemInput } from './patientOrderItemInput';
 
 export interface PatientOrderInput {
   pharmacyId: string;
   fulfillmentType: PatientOrderInputFulfillmentType;
+  /** For delivery, the landmark or directions for the courier */
   deliveryAddress?: string;
+  deliveryLocation?: DeliveryLocation;
+  /** The delivery fee the patient was shown; a different current fee returns 409 */
+  quotedDeliveryFeeMinor?: number;
   prescriptionImageKey?: string;
   items: PatientOrderItemInput[];
 }

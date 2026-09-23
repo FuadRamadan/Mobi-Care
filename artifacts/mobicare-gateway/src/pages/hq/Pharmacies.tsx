@@ -5,6 +5,10 @@ import {
   useUpdateHqPharmacy,
   useResetPharmacyPassword,
   getListHqPharmaciesQueryKey,
+  useListDeliveryZones,
+  useLocateDeliveryZone,
+  getListDeliveryZonesQueryKey,
+  getLocateDeliveryZoneQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import HqLayout from './HqLayout';
@@ -31,6 +35,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Copy, KeyRound, AlertTriangle, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
+import { LocationPicker } from '@/components/map/LocationPicker';
 
 /**
  * Everything HQ records about a pharmacy beyond its login.
@@ -69,6 +74,14 @@ function DetailFields({
   setForm: (next: PharmacyDetails) => void;
   showLogin: boolean;
 }) {
+  const latitude = Number(form.locationLat);
+  const longitude = Number(form.locationLng);
+  const pin =
+    form.locationLat.trim() && form.locationLng.trim() &&
+    Number.isFinite(latitude) && Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+      ? { latitude, longitude }
+      : null;
   const field = (key: keyof PharmacyDetails) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value }),
@@ -128,12 +141,28 @@ function DetailFields({
 
       <div className="rounded-lg border p-3 space-y-3">
         <div>
-          <p className="text-sm font-medium">Location (optional)</p>
+          <p className="text-sm font-medium">Location</p>
           <p className="text-xs text-muted-foreground">
-            Used to sort search results by distance from the patient. Without it
-            the pharmacy still appears, just never as the nearest one.
+            Decides which delivery zone the pharmacy is in, and sorts search
+            results by distance. Without it the pharmacy is collection only.
+            When onboarding on site, stand inside the pharmacy and use this
+            device&apos;s location.
           </p>
         </div>
+        <LocationPicker
+          value={pin}
+          onChange={(next) =>
+            setForm({
+              ...form,
+              locationLat: next.latitude.toFixed(6),
+              locationLng: next.longitude.toFixed(6),
+            })
+          }
+          locateLabel="Use this device's location"
+          height={200}
+          testId="map-pharmacy-location"
+        />
+        <ZoneLine pin={pin} />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label>Latitude</Label>
@@ -149,13 +178,40 @@ function DetailFields({
   );
 }
 
+/** Which delivery zone a pin falls in, worked out live as the pin moves. */
+function ZoneLine({ pin }: { pin: { latitude: number; longitude: number } | null }) {
+  const params = pin ?? { latitude: 0, longitude: 0 };
+  const { data, isFetching } = useLocateDeliveryZone(params, {
+    query: { queryKey: getLocateDeliveryZoneQueryKey(params), enabled: !!pin },
+  });
+  if (!pin) {
+    return <p className="text-xs text-amber-700">No location yet — this pharmacy will be collection only.</p>;
+  }
+  if (isFetching && !data) return <p className="text-xs text-muted-foreground">Finding the delivery zone…</p>;
+  return data?.zoneName ? (
+    <p className="text-xs" data-testid="text-pharmacy-zone">
+      Delivery zone: <span className="font-medium">{data.zoneName}</span>
+      {data.feeMinor != null && <span className="text-muted-foreground"> · Le {(data.feeMinor / 100).toLocaleString('en-US')} per delivery</span>}
+    </p>
+  ) : (
+    <p className="text-xs text-amber-700" data-testid="text-pharmacy-zone">
+      Outside every delivery zone — this pharmacy will be collection only.
+    </p>
+  );
+}
+
 export default function HqPharmacies() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data, isLoading } = useListHqPharmacies();
   const pharmacies = data ?? [];
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: getListHqPharmaciesQueryKey() });
+  const { data: zoneData } = useListDeliveryZones();
+  const zoneByPharmacy = new Map((zoneData?.pharmacies ?? []).map((p) => [p.id, p.zoneName]));
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: getListHqPharmaciesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListDeliveryZonesQueryKey() });
+  };
   const onError = (err: unknown) =>
     toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
 
@@ -387,6 +443,7 @@ export default function HqPharmacies() {
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Zone</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Online</TableHead>
                 <TableHead>Tier 1 authorised</TableHead>
@@ -403,6 +460,11 @@ export default function HqPharmacies() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{p.username}</TableCell>
                   <TableCell>{p.phone ?? '—'}</TableCell>
+                  <TableCell className="text-xs" data-testid={`text-zone-${p.id}`}>
+                    {zoneByPharmacy.get(p.id) ?? (
+                      <span className="text-amber-700">Collection only</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {/* A pharmacy with no mobile money line cannot take an
                         order: checkout has no number to show the patient. That

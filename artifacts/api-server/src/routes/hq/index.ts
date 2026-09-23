@@ -21,6 +21,7 @@ import insightsRouter from "./insights.js";
 import pilotResetRouter from "./pilotReset.js";
 import exportsRouter from "./exports.js";
 import advertisementsRouter from "./advertisements.js";
+import deliveryZonesRouter from "./deliveryZones.js";
 
 const router = safeRouter();
 
@@ -35,6 +36,9 @@ router.get("/dispatch", dispatchHandler);
 router.use("/pharmacies", pharmaciesRouter);
 router.use("/drugs", drugsRouter);
 router.use("/couriers", couriersRouter);
+// Reading zones is open to HQ staff; changing them checks settlements
+// permission inside the router.
+router.use("/delivery-zones", deliveryZonesRouter);
 router.use("/flags", flagsRouter);
 router.use("/settlements", requireManageSettlements, settlementsRouter);
 // Registered before /insights, which would otherwise match first and 404.

@@ -674,6 +674,46 @@ paths:
                 items:
                   $ref: "#/components/schemas/DrugCategory"
 
+  /patient/delivery/coverage:
+    get:
+      operationId: patientDeliveryCoverage
+      tags: [patient]
+      summary: Outlines of the areas MobiCare delivers to
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Active delivery zones (names and outlines only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryCoverageZone"
+
+  /patient/delivery/quote:
+    post:
+      operationId: patientDeliveryQuote
+      tags: [patient]
+      summary: The delivery fee from a pharmacy to a pinned location
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryQuoteInput"
+      responses:
+        "200":
+          description: The fee, or why delivery is unavailable there
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryQuote"
+        "404":
+          description: Pharmacy not found or inactive
+
   /patient/orders:
     get:
       operationId: patientListOrders
@@ -709,8 +749,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientOrder"
+        "400":
+          description: Invalid order; code DELIVERY_LOCATION_REQUIRED when a delivery has no pinned location
         "409":
-          description: Stock, tier, or availability conflict
+          description: Stock, tier, or availability conflict; code DELIVERY_FEE_CHANGED when the quoted delivery fee is no longer current
+        "422":
+          description: code DELIVERY_UNAVAILABLE when the pharmacy or the pinned location is outside every delivery zone
 
   /patient/orders/{id}:
     get:
@@ -2395,6 +2439,199 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqFlag"
 
+  /hq/delivery-zones:
+    get:
+      operationId: listDeliveryZones
+      tags: [hq]
+      summary: Delivery zones with their fees, and the zone each pharmacy sits in
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Zones and pharmacy placements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZonesResponse"
+    post:
+      operationId: createDeliveryZone
+      tags: [hq]
+      summary: Draw a new delivery zone with its first fee (in force immediately)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZoneInput"
+      responses:
+        "201":
+          description: Created zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+        "409":
+          description: Overlaps an active zone, or the name is taken
+        "422":
+          description: The outline breaks a drawing rule
+
+  /hq/delivery-zones/locate:
+    get:
+      operationId: locateDeliveryZone
+      tags: [hq]
+      summary: The active zone a location falls in
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: The zone, or nulls when the location is outside every zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZoneLocation"
+
+  /hq/delivery-zones/preview:
+    post:
+      operationId: previewDeliveryZone
+      tags: [hq]
+      summary: Check an outline before saving it, and list the pharmacies it would move
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZonePreviewInput"
+      responses:
+        "200":
+          description: Validity, overlaps and pharmacy changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZonePreview"
+
+  /hq/delivery-zones/{id}:
+    patch:
+      operationId: updateDeliveryZone
+      tags: [hq]
+      summary: Rename, describe or redraw a zone
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZoneUpdate"
+      responses:
+        "200":
+          description: Updated zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+        "409":
+          description: Overlaps an active zone, or the name is taken
+        "422":
+          description: The outline breaks a drawing rule
+
+  /hq/delivery-zones/{id}/fee:
+    put:
+      operationId: scheduleDeliveryZoneFee
+      tags: [hq]
+      summary: Set a new fee, taking effect at the next midnight (Africa/Freetown)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZoneFeeInput"
+      responses:
+        "200":
+          description: Zone with the scheduled change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+
+  /hq/delivery-zones/{id}/fee/scheduled:
+    delete:
+      operationId: cancelScheduledDeliveryZoneFee
+      tags: [hq]
+      summary: Cancel a fee change that has not taken effect yet
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Zone without the scheduled change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+
+  /hq/delivery-zones/{id}/status:
+    post:
+      operationId: setDeliveryZoneStatus
+      tags: [hq]
+      summary: Switch a zone on or off (immediately)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZoneStatusInput"
+      responses:
+        "200":
+          description: Updated zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+        "409":
+          description: Switching it on would overlap an active zone
+
   /hq/settlements:
     get:
       operationId: listSettlements
@@ -3121,6 +3358,174 @@ components:
           type: number
           minimum: 1
 
+    ZoneBoundary:
+      type: object
+      description: GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          enum: [Polygon, MultiPolygon]
+        coordinates:
+          type: array
+          items: {}
+
+    DeliveryZone:
+      type: object
+      required: [id, name, description, boundary, isActive, areaSquareKm, currentFeeMinor, scheduledFee, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        boundary:
+          $ref: "#/components/schemas/ZoneBoundary"
+        isActive: { type: boolean }
+        areaSquareKm: { type: number }
+        currentFeeMinor: { type: ["number", "null"] }
+        scheduledFee:
+          oneOf:
+            - $ref: "#/components/schemas/ScheduledDeliveryFee"
+            - type: "null"
+        updatedAt: { type: string }
+
+    ScheduledDeliveryFee:
+      type: object
+      required: [feeMinor, effectiveFrom]
+      properties:
+        feeMinor: { type: number }
+        effectiveFrom: { type: string }
+
+    PharmacyZonePlacement:
+      type: object
+      required: [id, name, isActive, latitude, longitude, zoneId, zoneName]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        isActive: { type: boolean }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+        zoneId: { type: ["string", "null"] }
+        zoneName: { type: ["string", "null"] }
+
+    DeliveryZonesResponse:
+      type: object
+      required: [zones, pharmacies, feeChangesTakeEffectAt]
+      properties:
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeliveryZone"
+        pharmacies:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyZonePlacement"
+        feeChangesTakeEffectAt:
+          type: string
+          description: When a fee set now would take effect (the next midnight in Freetown)
+
+    DeliveryZoneInput:
+      type: object
+      required: [name, boundary, feeMinor]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        boundary:
+          $ref: "#/components/schemas/ZoneBoundary"
+        feeMinor: { type: number }
+
+    DeliveryZoneUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        boundary:
+          $ref: "#/components/schemas/ZoneBoundary"
+
+    DeliveryZoneFeeInput:
+      type: object
+      required: [feeMinor]
+      properties:
+        feeMinor: { type: number }
+
+    DeliveryZoneStatusInput:
+      type: object
+      required: [isActive]
+      properties:
+        isActive: { type: boolean }
+
+    DeliveryZoneLocation:
+      type: object
+      required: [zoneId, zoneName, feeMinor]
+      properties:
+        zoneId: { type: ["string", "null"] }
+        zoneName: { type: ["string", "null"] }
+        feeMinor: { type: ["number", "null"] }
+
+    DeliveryZonePreviewInput:
+      type: object
+      required: [boundary]
+      properties:
+        zoneId: { type: string }
+        name: { type: string }
+        boundary:
+          $ref: "#/components/schemas/ZoneBoundary"
+        isActive: { type: boolean }
+
+    DeliveryZonePreview:
+      type: object
+      required: [valid, error, overlaps, changes]
+      properties:
+        valid: { type: boolean }
+        error: { type: ["string", "null"] }
+        overlaps:
+          type: array
+          items: { type: string }
+        areaSquareKm: { type: number }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [pharmacyId, pharmacyName, fromZone, toZone]
+            properties:
+              pharmacyId: { type: string }
+              pharmacyName: { type: string }
+              fromZone: { type: ["string", "null"] }
+              toZone: { type: ["string", "null"] }
+
+    DeliveryCoverageZone:
+      type: object
+      required: [name, boundary]
+      properties:
+        name: { type: string }
+        boundary:
+          $ref: "#/components/schemas/ZoneBoundary"
+
+    DeliveryQuoteInput:
+      type: object
+      required: [pharmacyId, latitude, longitude]
+      properties:
+        pharmacyId: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+
+    DeliveryQuote:
+      type: object
+      required: [available, deliveryFeeMinor, zoneName, message]
+      properties:
+        available: { type: boolean }
+        deliveryFeeMinor: { type: ["number", "null"] }
+        zoneName: { type: ["string", "null"] }
+        message:
+          type: ["string", "null"]
+          description: Why delivery is unavailable, in words for the patient
+
+    DeliveryLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+
     PatientOrderInput:
       type: object
       required: [pharmacyId, fulfillmentType, items]
@@ -3132,6 +3537,12 @@ components:
           enum: [delivery, collection]
         deliveryAddress:
           type: string
+          description: For delivery, the landmark or directions for the courier
+        deliveryLocation:
+          $ref: "#/components/schemas/DeliveryLocation"
+        quotedDeliveryFeeMinor:
+          type: number
+          description: The delivery fee the patient was shown; a different current fee returns 409
         prescriptionImageKey:
           type: string
         items:
@@ -3261,6 +3672,8 @@ components:
         - type: object
           properties:
             deliveryAddress:
+              type: ["string", "null"]
+            deliveryZoneName:
               type: ["string", "null"]
             paymentMethod:
               type: string

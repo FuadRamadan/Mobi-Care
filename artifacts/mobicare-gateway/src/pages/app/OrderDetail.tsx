@@ -295,6 +295,14 @@ export default function OrderDetail() {
               </div>
             </div>
           ))}
+          {o.fulfillmentType === 'delivery' && (o.deliveryFeeMinor ?? 0) > 0 && (
+            <div className="flex items-center justify-between p-4 text-sm">
+              <span className="text-muted-foreground">
+                Delivery{o.deliveryZoneName ? ` · ${o.deliveryZoneName}` : ''}
+              </span>
+              <span>{formatLeones((o.deliveryFeeMinor ?? 0) / 100)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between p-4">
             <span className="font-medium">Total paid</span>
             <span className="font-display font-bold text-lg text-dark-green">{formatLeones(o.totalLeones)}</span>

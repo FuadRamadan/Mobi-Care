@@ -490,6 +490,145 @@ export interface PatientOrderItemInput {
   quantity: number;
 }
 
+export type ZoneBoundaryType = typeof ZoneBoundaryType[keyof typeof ZoneBoundaryType];
+
+
+export const ZoneBoundaryType = {
+  Polygon: 'Polygon',
+  MultiPolygon: 'MultiPolygon',
+} as const;
+
+/**
+ * GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]
+ */
+export interface ZoneBoundary {
+  type: ZoneBoundaryType;
+  coordinates: unknown[];
+}
+
+export interface ScheduledDeliveryFee {
+  feeMinor: number;
+  effectiveFrom: string;
+}
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  description: string;
+  boundary: ZoneBoundary;
+  isActive: boolean;
+  areaSquareKm: number;
+  /** @nullable */
+  currentFeeMinor: number | null;
+  scheduledFee: ScheduledDeliveryFee | null;
+  updatedAt: string;
+}
+
+export interface PharmacyZonePlacement {
+  id: string;
+  name: string;
+  isActive: boolean;
+  /** @nullable */
+  latitude: number | null;
+  /** @nullable */
+  longitude: number | null;
+  /** @nullable */
+  zoneId: string | null;
+  /** @nullable */
+  zoneName: string | null;
+}
+
+export interface DeliveryZonesResponse {
+  zones: DeliveryZone[];
+  pharmacies: PharmacyZonePlacement[];
+  /** When a fee set now would take effect (the next midnight in Freetown) */
+  feeChangesTakeEffectAt: string;
+}
+
+export interface DeliveryZoneInput {
+  name: string;
+  description?: string;
+  boundary: ZoneBoundary;
+  feeMinor: number;
+}
+
+export interface DeliveryZoneUpdate {
+  name?: string;
+  description?: string;
+  boundary?: ZoneBoundary;
+}
+
+export interface DeliveryZoneFeeInput {
+  feeMinor: number;
+}
+
+export interface DeliveryZoneStatusInput {
+  isActive: boolean;
+}
+
+export interface DeliveryZoneLocation {
+  /** @nullable */
+  zoneId: string | null;
+  /** @nullable */
+  zoneName: string | null;
+  /** @nullable */
+  feeMinor: number | null;
+}
+
+export interface DeliveryZonePreviewInput {
+  zoneId?: string;
+  name?: string;
+  boundary: ZoneBoundary;
+  isActive?: boolean;
+}
+
+export type DeliveryZonePreviewChangesItem = {
+  pharmacyId: string;
+  pharmacyName: string;
+  /** @nullable */
+  fromZone: string | null;
+  /** @nullable */
+  toZone: string | null;
+};
+
+export interface DeliveryZonePreview {
+  valid: boolean;
+  /** @nullable */
+  error: string | null;
+  overlaps: string[];
+  areaSquareKm?: number;
+  changes: DeliveryZonePreviewChangesItem[];
+}
+
+export interface DeliveryCoverageZone {
+  name: string;
+  boundary: ZoneBoundary;
+}
+
+export interface DeliveryQuoteInput {
+  pharmacyId: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface DeliveryQuote {
+  available: boolean;
+  /** @nullable */
+  deliveryFeeMinor: number | null;
+  /** @nullable */
+  zoneName: string | null;
+  /**
+     * Why delivery is unavailable, in words for the patient
+     * @nullable
+     */
+  message: string | null;
+}
+
+export interface DeliveryLocation {
+  latitude: number;
+  longitude: number;
+}
+
 export type PatientOrderInputFulfillmentType = typeof PatientOrderInputFulfillmentType[keyof typeof PatientOrderInputFulfillmentType];
 
 
@@ -501,7 +640,11 @@ export const PatientOrderInputFulfillmentType = {
 export interface PatientOrderInput {
   pharmacyId: string;
   fulfillmentType: PatientOrderInputFulfillmentType;
+  /** For delivery, the landmark or directions for the courier */
   deliveryAddress?: string;
+  deliveryLocation?: DeliveryLocation;
+  /** The delivery fee the patient was shown; a different current fee returns 409 */
+  quotedDeliveryFeeMinor?: number;
   prescriptionImageKey?: string;
   items: PatientOrderItemInput[];
 }
@@ -597,6 +740,8 @@ export interface OrderPrescriptionInfo {
 export type PatientOrder = Order & ({
   /** @nullable */
   deliveryAddress?: string | null;
+  /** @nullable */
+  deliveryZoneName?: string | null;
   paymentMethod?: string;
   pharmacy?: OrderPharmacyInfo | null;
   courier?: OrderCourierInfo | null;
@@ -2208,6 +2353,11 @@ export const ListFlagsStatus = {
   open: 'open',
   reviewed: 'reviewed',
 } as const;
+
+export type LocateDeliveryZoneParams = {
+latitude: number;
+longitude: number;
+};
 
 export type ListSettlementsParams = {
 /**

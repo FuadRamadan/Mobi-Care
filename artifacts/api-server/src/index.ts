@@ -164,6 +164,21 @@ async function assertSchemaUpToDate(): Promise<void> {
           IS NOT NULL AS exists
       `,
     },
+    {
+      label: "delivery zones (migration 0026)",
+      query: sql`
+        SELECT (
+          to_regclass(current_schema() || '.delivery_zones') IS NOT NULL
+          AND to_regclass(current_schema() || '.delivery_zone_fees') IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'orders'
+              AND column_name = 'delivery_zone_id'
+          )
+        ) AS exists
+      `,
+    },
   ];
 
   const missing: string[] = [];

@@ -13,6 +13,8 @@ import type { OrderPrescriptionInfo } from './orderPrescriptionInfo';
 export type PatientOrder = Order & ({
   /** @nullable */
   deliveryAddress?: string | null;
+  /** @nullable */
+  deliveryZoneName?: string | null;
   paymentMethod?: string;
   pharmacy?: OrderPharmacyInfo | null;
   courier?: OrderCourierInfo | null;

@@ -933,6 +933,36 @@ export const ListPatientDrugCategoriesResponse = zod.array(ListPatientDrugCatego
 
 
 /**
+ * @summary Outlines of the areas MobiCare delivers to
+ */
+export const PatientDeliveryCoverageResponseItem = zod.object({
+  "name": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]')
+})
+export const PatientDeliveryCoverageResponse = zod.array(PatientDeliveryCoverageResponseItem)
+
+
+/**
+ * @summary The delivery fee from a pharmacy to a pinned location
+ */
+export const PatientDeliveryQuoteBody = zod.object({
+  "pharmacyId": zod.string(),
+  "latitude": zod.number(),
+  "longitude": zod.number()
+})
+
+export const PatientDeliveryQuoteResponse = zod.object({
+  "available": zod.boolean(),
+  "deliveryFeeMinor": zod.number().nullable(),
+  "zoneName": zod.string().nullable(),
+  "message": zod.string().nullable().describe('Why delivery is unavailable, in words for the patient')
+})
+
+
+/**
  * @summary List the authenticated patient's own orders
  */
 export const PatientListOrdersResponseItem = zod.object({
@@ -973,6 +1003,7 @@ export const PatientListOrdersResponseItem = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -1012,7 +1043,12 @@ export const PatientListOrdersResponse = zod.array(PatientListOrdersResponseItem
 export const PatientCreateOrderBody = zod.object({
   "pharmacyId": zod.string(),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
-  "deliveryAddress": zod.string().optional(),
+  "deliveryAddress": zod.string().optional().describe('For delivery, the landmark or directions for the courier'),
+  "deliveryLocation": zod.object({
+  "latitude": zod.number(),
+  "longitude": zod.number()
+}).optional(),
+  "quotedDeliveryFeeMinor": zod.number().optional().describe('The delivery fee the patient was shown; a different current fee returns 409'),
   "prescriptionImageKey": zod.string().optional(),
   "items": zod.array(zod.object({
   "inventoryId": zod.string(),
@@ -1058,6 +1094,7 @@ export const PatientCreateOrderResponse = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -1132,6 +1169,7 @@ export const PatientGetOrderResponse = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -1218,6 +1256,7 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -1292,6 +1331,7 @@ export const CancelPatientOrderResponse = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -1366,6 +1406,7 @@ export const PatientPayOrderResponse = zod.object({
 }))
 }).and(zod.object({
   "deliveryAddress": zod.string().nullish(),
+  "deliveryZoneName": zod.string().nullish(),
   "paymentMethod": zod.string().optional(),
   "pharmacy": zod.union([zod.object({
   "id": zod.string(),
@@ -3651,6 +3692,235 @@ export const ReviewFlagResponse = zod.object({
   "patientName": zod.string().nullish(),
   "patientPhone": zod.string().nullish(),
   "pharmacyName": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delivery zones with their fees, and the zone each pharmacy sits in
+ */
+export const ListDeliveryZonesResponse = zod.object({
+  "zones": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
+})),
+  "pharmacies": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "latitude": zod.number().nullable(),
+  "longitude": zod.number().nullable(),
+  "zoneId": zod.string().nullable(),
+  "zoneName": zod.string().nullable()
+})),
+  "feeChangesTakeEffectAt": zod.string().describe('When a fee set now would take effect (the next midnight in Freetown)')
+})
+
+
+/**
+ * @summary Draw a new delivery zone with its first fee (in force immediately)
+ */
+export const CreateDeliveryZoneBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "feeMinor": zod.number()
+})
+
+export const CreateDeliveryZoneResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary The active zone a location falls in
+ */
+export const LocateDeliveryZoneQueryParams = zod.object({
+  "latitude": zod.coerce.number(),
+  "longitude": zod.coerce.number()
+})
+
+export const LocateDeliveryZoneResponse = zod.object({
+  "zoneId": zod.string().nullable(),
+  "zoneName": zod.string().nullable(),
+  "feeMinor": zod.number().nullable()
+})
+
+
+/**
+ * @summary Check an outline before saving it, and list the pharmacies it would move
+ */
+export const PreviewDeliveryZoneBody = zod.object({
+  "zoneId": zod.string().optional(),
+  "name": zod.string().optional(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean().optional()
+})
+
+export const PreviewDeliveryZoneResponse = zod.object({
+  "valid": zod.boolean(),
+  "error": zod.string().nullable(),
+  "overlaps": zod.array(zod.string()),
+  "areaSquareKm": zod.number().optional(),
+  "changes": zod.array(zod.object({
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string(),
+  "fromZone": zod.string().nullable(),
+  "toZone": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Rename, describe or redraw a zone
+ */
+export const UpdateDeliveryZoneParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateDeliveryZoneBody = zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().optional(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).optional().describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]')
+})
+
+export const UpdateDeliveryZoneResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Set a new fee, taking effect at the next midnight (Africa/Freetown)
+ */
+export const ScheduleDeliveryZoneFeeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ScheduleDeliveryZoneFeeBody = zod.object({
+  "feeMinor": zod.number()
+})
+
+export const ScheduleDeliveryZoneFeeResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel a fee change that has not taken effect yet
+ */
+export const CancelScheduledDeliveryZoneFeeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelScheduledDeliveryZoneFeeResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Switch a zone on or off (immediately)
+ */
+export const SetDeliveryZoneStatusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SetDeliveryZoneStatusBody = zod.object({
+  "isActive": zod.boolean()
+})
+
+export const SetDeliveryZoneStatusResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "boundary": zod.object({
+  "type": zod.enum(['Polygon', 'MultiPolygon']),
+  "coordinates": zod.array(zod.unknown())
+}).describe('GeoJSON Polygon or MultiPolygon; coordinates are [longitude, latitude]'),
+  "isActive": zod.boolean(),
+  "areaSquareKm": zod.number(),
+  "currentFeeMinor": zod.number().nullable(),
+  "scheduledFee": zod.union([zod.object({
+  "feeMinor": zod.number(),
+  "effectiveFrom": zod.string()
+}),zod.null()]),
+  "updatedAt": zod.string()
 })
 
 

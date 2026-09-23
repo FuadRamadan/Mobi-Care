@@ -6,6 +6,7 @@ import uploadsRouter from "./uploads.js";
 import notificationsRouter from "./notifications.js";
 import profileRouter from "./profile.js";
 import privacyRouter from "./privacy.js";
+import deliveryRouter from "./delivery.js";
 import { requireCurrentConsent } from "../../lib/patientConsent.js";
 
 const router = safeRouter();
@@ -27,6 +28,7 @@ router.use(requireCurrentConsent());
 
 router.use("/search", searchRouter);
 router.use("/orders", ordersRouter);
+router.use("/delivery", deliveryRouter);
 router.use("/uploads", uploadsRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/profile", profileRouter);

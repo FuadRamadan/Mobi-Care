@@ -4,6 +4,7 @@ export * from "./pharmacyPasswordPolicy";
 export * from "./pharmacyPasswordHistory";
 export * from "./drugCatalogue";
 export * from "./pharmacyInventory";
+export * from "./deliveryZones";
 export * from "./orders";
 export * from "./orderItems";
 export * from "./prescriptions";

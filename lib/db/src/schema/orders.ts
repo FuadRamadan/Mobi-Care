@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { pharmaciesTable } from "./pharmacies";
 import { hqStaffTable } from "./hqStaff";
+import { deliveryZonesTable } from "./deliveryZones";
 
 export const deliveryConfirmationMethodEnum = pgEnum(
   "delivery_confirmation_method",
@@ -67,8 +68,24 @@ export const ordersTable = pgTable("orders", {
   // "my orders" queries.
   patientId: uuid("patient_id"),
 
-  // Delivery address (delivery orders placed by patients).
+  // Delivery address (delivery orders placed by patients). Since delivery
+  // zones, this is the landmark and directions the rider reads; the location
+  // itself is the pin below.
   deliveryAddress: text("delivery_address"),
+
+  // Where the patient dropped the pin, and what that priced — all fixed when
+  // the order is placed. The zone name is copied so the order still reads
+  // correctly after a zone is renamed, and delivery_pricing records which
+  // pricing rule produced delivery_fee_minor ("zone-v1"), so a later rule can
+  // be introduced without reinterpreting old orders.
+  deliveryLatitude: numeric("delivery_latitude", { precision: 9, scale: 6 }),
+  deliveryLongitude: numeric("delivery_longitude", { precision: 9, scale: 6 }),
+  deliveryZoneId: uuid("delivery_zone_id").references(
+    () => deliveryZonesTable.id,
+    { onDelete: "restrict" },
+  ),
+  deliveryZoneName: text("delivery_zone_name"),
+  deliveryPricing: text("delivery_pricing"),
 
   status: orderStatusEnum("status").notNull().default("awaiting_payment"),
   fulfillmentType: fulfillmentTypeEnum("fulfillment_type").notNull(),

@@ -8,11 +8,15 @@ import {
   Store,
   FileText,
   Smartphone,
+  MapPin,
 } from "lucide-react";
 import {
   usePatientCreateOrder,
   usePatientUploadPrescription,
   usePatientPayOrder,
+  usePatientDeliveryCoverage,
+  usePatientDeliveryQuote,
+  type DeliveryQuote,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
 import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
+import { LocationPicker } from "@/components/map/LocationPicker";
+import type { LatLng, ZoneOutline } from "@/components/map/mapConfig";
+
+/** The API's error body, when a request was refused. */
+function errorBody(err: unknown): { status?: number; code?: string; error?: string; deliveryFeeMinor?: number } {
+  const e = err as { status?: number; data?: { code?: string; error?: string; deliveryFeeMinor?: number } | null };
+  return { status: e?.status, ...(e?.data ?? {}) };
+}
 
 export default function Checkout() {
   const {
@@ -44,6 +56,8 @@ export default function Checkout() {
     collectionOnly ? "collection" : "delivery",
   );
   const [address, setAddress] = useState("");
+  const [pin, setPin] = useState<LatLng | null>(null);
+  const [quote, setQuote] = useState<DeliveryQuote | null>(null);
   const [rxDataUrl, setRxDataUrl] = useState<string | null>(null);
   const [rxFileName, setRxFileName] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -51,6 +65,8 @@ export default function Checkout() {
   const uploadMutation = usePatientUploadPrescription();
   const createMutation = usePatientCreateOrder();
   const payMutation = usePatientPayOrder();
+  const quoteMutation = usePatientDeliveryQuote();
+  const { data: coverage } = usePatientDeliveryCoverage();
   const busy =
     uploadMutation.isPending ||
     createMutation.isPending ||
@@ -84,6 +100,39 @@ export default function Checkout() {
     effectiveFulfillment === "collection" &&
     cart.items.some((i) => !i.availableForCollection);
 
+  // The fee is worked out on the server from the pin; the one shown here is
+  // sent back with the order so a change in between is caught, not charged.
+  const isDelivery = effectiveFulfillment === "delivery";
+  const deliveryFeeLeones =
+    isDelivery && quote?.available && quote.deliveryFeeMinor != null
+      ? quote.deliveryFeeMinor / 100
+      : 0;
+  const payableLeones = totalLeones + deliveryFeeLeones;
+  const deliveryNotReady =
+    isDelivery && (!pin || quoteMutation.isPending || !quote?.available);
+
+  async function onPin(next: LatLng) {
+    setPin(next);
+    setQuote(null);
+    try {
+      const result = await quoteMutation.mutateAsync({
+        data: {
+          pharmacyId: cart!.pharmacyId,
+          latitude: next.latitude,
+          longitude: next.longitude,
+        },
+      });
+      setQuote(result);
+    } catch {
+      setQuote({
+        available: false,
+        deliveryFeeMinor: null,
+        zoneName: null,
+        message: "The delivery fee could not be worked out. Check your connection and move the pin to try again.",
+      });
+    }
+  }
+
   function onPickFile(file: File | undefined) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -104,10 +153,18 @@ export default function Checkout() {
 
   async function placeOrder() {
     try {
-      if (effectiveFulfillment === "delivery" && address.trim().length < 5) {
+      if (isDelivery && !pin) {
         toast({
-          title: "Delivery address needed",
-          description: "Tell us where to deliver (at least 5 characters).",
+          title: "Delivery location needed",
+          description: "Drop a pin on the map, or use your location, so we can work out the delivery fee.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (isDelivery && address.trim().length < 5) {
+        toast({
+          title: "Landmark needed",
+          description: "Tell the rider how to find you — a landmark or directions (at least 5 characters).",
           variant: "destructive",
         });
         return;
@@ -133,8 +190,14 @@ export default function Checkout() {
         data: {
           pharmacyId: cart!.pharmacyId,
           fulfillmentType: effectiveFulfillment,
-          ...(effectiveFulfillment === "delivery"
-            ? { deliveryAddress: address.trim() }
+          ...(isDelivery && pin
+            ? {
+                deliveryAddress: address.trim(),
+                deliveryLocation: pin,
+                ...(quote?.deliveryFeeMinor != null
+                  ? { quotedDeliveryFeeMinor: quote.deliveryFeeMinor }
+                  : {}),
+              }
             : {}),
           ...(prescriptionImageKey ? { prescriptionImageKey } : {}),
           items: cart!.items.map((i) => ({
@@ -156,9 +219,28 @@ export default function Checkout() {
       });
       navigate(`/app/orders/${order.id}`);
     } catch (err: any) {
+      const body = errorBody(err);
+      if (body.code === "DELIVERY_FEE_CHANGED" && body.deliveryFeeMinor != null) {
+        setQuote((current) => ({
+          available: true,
+          zoneName: current?.zoneName ?? null,
+          message: null,
+          deliveryFeeMinor: body.deliveryFeeMinor!,
+        }));
+        toast({
+          title: "Delivery fee updated",
+          description: `The delivery fee is now ${formatLeones(body.deliveryFeeMinor / 100)}. Check the new total, then place your order again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (body.code === "DELIVERY_UNAVAILABLE") {
+        setQuote({ available: false, deliveryFeeMinor: null, zoneName: null, message: body.error ?? null });
+      }
       toast({
         title: "Could not place order",
         description:
+          body.error ??
           err?.message ??
           "Something went wrong — please review your cart and try again.",
         variant: "destructive",
@@ -304,16 +386,61 @@ export default function Checkout() {
         )}
       </div>
 
-      {effectiveFulfillment === "delivery" && (
-        <div className="space-y-1.5">
-          <Label htmlFor="address">Delivery address</Label>
-          <Input
-            id="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Street, area, town"
-            data-testid="input-address"
-          />
+      {isDelivery && (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Where should we deliver?</Label>
+            <LocationPicker
+              value={pin}
+              onChange={onPin}
+              areas={(coverage ?? []).map((zone) => ({
+                name: zone.name,
+                boundary: zone.boundary as unknown as ZoneOutline,
+              }))}
+              testId="map-delivery-location"
+            />
+            {pin && (
+              <div
+                className={`text-sm rounded-xl border p-3 flex items-start gap-2 ${
+                  quote && !quote.available
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "bg-card"
+                }`}
+                data-testid="text-delivery-quote"
+              >
+                <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                {quoteMutation.isPending || !quote ? (
+                  <span className="text-muted-foreground">Working out the delivery fee…</span>
+                ) : quote.available ? (
+                  <span>
+                    Delivery to <span className="font-medium">{quote.zoneName}</span>:{" "}
+                    <span className="font-medium">{formatLeones(deliveryFeeLeones)}</span>
+                  </span>
+                ) : (
+                  <span>
+                    {quote.message}{" "}
+                    <button
+                      type="button"
+                      className="font-medium underline"
+                      onClick={() => setFulfillment("collection")}
+                    >
+                      Collect instead
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="address">Landmark or directions</Label>
+            <Input
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="e.g. Blue gate opposite Lumley police station"
+              data-testid="input-address"
+            />
+          </div>
         </div>
       )}
 
@@ -373,6 +500,16 @@ export default function Checkout() {
               <span className="text-muted-foreground">Service fee (5%)</span>
               <span>{formatLeones(serviceFeeLeones)}</span>
             </div>
+            {isDelivery && (
+              <div className="flex justify-between text-sm" data-testid="text-delivery-fee">
+                <span className="text-muted-foreground">
+                  Delivery{quote?.available && quote.zoneName ? ` · ${quote.zoneName}` : ""}
+                </span>
+                <span>
+                  {quote?.available ? formatLeones(deliveryFeeLeones) : "—"}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between pt-2 border-t">
             <span className="font-medium">Total payable</span>
@@ -380,13 +517,13 @@ export default function Checkout() {
               className="font-display font-bold text-xl text-dark-green"
               data-testid="text-total"
             >
-              {formatLeones(totalLeones)}
+              {formatLeones(payableLeones)}
             </span>
           </div>
           <div className="pt-2">
             <p className="text-sm font-medium mb-1">Pay directly to the pharmacy</p>
             <p className="text-xs text-muted-foreground mb-2">
-              Please use mobile money to pay <strong>{formatLeones(totalLeones)}</strong> to the pharmacy. Your order will be confirmed once payment is received.
+              Please use mobile money to pay <strong>{formatLeones(payableLeones)}</strong> to the pharmacy. Your order will be confirmed once payment is received.
             </p>
             <div className="bg-secondary/30 p-2 rounded-lg border text-sm">
               <MobileMoneyLines
@@ -399,7 +536,7 @@ export default function Checkout() {
           <Button
             className="w-full rounded-full h-12 text-base mt-2"
             onClick={placeOrder}
-            disabled={busy || deliveryBlocked || collectionBlocked}
+            disabled={busy || deliveryBlocked || collectionBlocked || deliveryNotReady}
             data-testid="button-place-order"
           >
             {busy

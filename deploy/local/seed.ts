@@ -24,6 +24,8 @@ import {
   db,
   pool,
   advertisementsTable,
+  deliveryZoneFeesTable,
+  deliveryZonesTable,
   drugCatalogueTable,
   hqStaffTable,
   patientsTable,
@@ -324,6 +326,37 @@ async function main(): Promise<void> {
       createdByHqStaffId: staff!.id,
     });
     console.log("  created  advertisement \"Free blood pressure checks\"");
+  }
+
+  // ── Delivery zones ─────────────────────────────────────────────────────────
+  // Three neighbouring demo areas across Freetown, sharing their borders, so
+  // checkout can price a delivery. Their outlines are rough rectangles, not
+  // real neighbourhood boundaries: HQ draws the real ones. Only created when
+  // there are no zones at all, so zones drawn locally are never touched.
+  const [anyZone] = await db.select({ id: deliveryZonesTable.id }).from(deliveryZonesTable).limit(1);
+  if (!anyZone) {
+    const box = (west: number, east: number) => ({
+      type: "Polygon" as const,
+      coordinates: [[[west, 8.43], [east, 8.43], [east, 8.5], [west, 8.5], [west, 8.43]]],
+    });
+    const zones = [
+      { name: "West Freetown (demo)", boundary: box(-13.305, -13.245), feeMinor: 3_000 },
+      { name: "Central Freetown (demo)", boundary: box(-13.245, -13.215), feeMinor: 3_500 },
+      { name: "East End (demo)", boundary: box(-13.215, -13.16), feeMinor: 4_000 },
+    ];
+    for (const zone of zones) {
+      const [created] = await db.insert(deliveryZonesTable).values({
+        name: zone.name,
+        description: "Demo zone for local development.",
+        boundary: zone.boundary,
+      }).returning({ id: deliveryZonesTable.id });
+      await db.insert(deliveryZoneFeesTable).values({
+        zoneId: created!.id,
+        feeMinor: zone.feeMinor,
+        effectiveFrom: new Date(),
+      });
+      console.log(`  created  delivery zone "${zone.name}"`);
+    }
   }
 
   console.log("\nDone. Sign in with:\n");

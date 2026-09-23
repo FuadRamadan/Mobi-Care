@@ -16,6 +16,14 @@ import {
 import { and, eq, desc, inArray, sql, gte, gt, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { isLatitude, isLongitude } from "../../lib/geo.js";
+import type { Position } from "../../lib/delivery/geometry.js";
+import {
+  roundCoordinate,
+  UNAVAILABLE_MESSAGES,
+  type DeliveryQuote,
+} from "../../lib/delivery/pricing.js";
+import { quoteForPharmacy } from "../../lib/delivery/zones.js";
 import { expireStaleOrders, paymentCutoff } from "../../lib/orderExpiry.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
@@ -404,7 +412,18 @@ router.post("/", async (req: AuthRequest, res) => {
     .object({
       pharmacyId: z.string().uuid(),
       fulfillmentType: z.enum(["delivery", "collection"]),
+      // For delivery: the landmark or directions a courier needs, alongside
+      // the pinned location, which is what the fee is worked out from.
       deliveryAddress: z.string().min(5).optional(),
+      deliveryLocation: z
+        .object({
+          latitude: z.number().refine(isLatitude),
+          longitude: z.number().refine(isLongitude),
+        })
+        .optional(),
+      // The fee the patient was shown. Only used to notice that it changed
+      // before they placed the order; the charge is always worked out here.
+      quotedDeliveryFeeMinor: z.number().int().min(0).optional(),
       prescriptionImageKey: z.string().min(1).optional(),
       items: z
         .array(
@@ -444,6 +463,14 @@ router.post("/", async (req: AuthRequest, res) => {
       .json({ error: "deliveryAddress is required for delivery orders" });
     return;
   }
+  if (input.fulfillmentType === "delivery" && !input.deliveryLocation) {
+    // Older app versions send only a typed address, which cannot be priced.
+    res.status(400).json({
+      error: "Pin your delivery location on the map to see the delivery fee.",
+      code: "DELIVERY_LOCATION_REQUIRED",
+    });
+    return;
+  }
 
   const [patient] = await db
     .select()
@@ -463,6 +490,36 @@ router.post("/", async (req: AuthRequest, res) => {
   if (!pharmacy || !pharmacy.isActive) {
     res.status(404).json({ error: "Pharmacy not found or inactive" });
     return;
+  }
+
+  let deliveryQuote: Extract<DeliveryQuote, { available: true }> | null = null;
+  let deliveryPoint: Position | null = null;
+  if (input.fulfillmentType === "delivery" && input.deliveryLocation) {
+    deliveryPoint = [
+      roundCoordinate(input.deliveryLocation.longitude),
+      roundCoordinate(input.deliveryLocation.latitude),
+    ];
+    const quote = await quoteForPharmacy(pharmacy, deliveryPoint);
+    if (!quote.available) {
+      res.status(422).json({
+        error: UNAVAILABLE_MESSAGES[quote.reason],
+        code: "DELIVERY_UNAVAILABLE",
+        reason: quote.reason,
+      });
+      return;
+    }
+    if (
+      input.quotedDeliveryFeeMinor !== undefined &&
+      input.quotedDeliveryFeeMinor !== quote.feeMinor
+    ) {
+      res.status(409).json({
+        error: "The delivery fee has changed since you saw it. Check the new total before paying.",
+        code: "DELIVERY_FEE_CHANGED",
+        deliveryFeeMinor: quote.feeMinor,
+      });
+      return;
+    }
+    deliveryQuote = quote;
   }
 
   // Load inventory + catalogue rows for every requested drug at this pharmacy.
@@ -572,12 +629,13 @@ router.post("/", async (req: AuthRequest, res) => {
     serviceFeeMinor: medicineCommissionMinor,
     totalPaidMinor: patientMedicineTotalMinor,
   } = calculateOrderPricing(pharmacyMedicineTotalMinor);
-  // Delivery is not added to the patient charge. The displayed and recorded
-  // total is always pharmacy drug subtotal + the fixed 5% MobiCare service fee.
-  const deliveryFeeMinor = 0;
+  // Delivery is priced by zone and fixed on the order now, so a later fee
+  // change never alters what this patient was quoted. The whole fee is
+  // MobiCare's: its own riders deliver, so there is no separate courier payout.
+  const deliveryFeeMinor = deliveryQuote?.feeMinor ?? 0;
   const courierPayoutMinor = 0;
-  const deliveryCommissionMinor = 0;
-  const totalMinor = patientMedicineTotalMinor;
+  const deliveryCommissionMinor = deliveryFeeMinor;
+  const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
   const total = minorToLeones(totalMinor);
 
   if (prescriptionRequired && !input.prescriptionImageKey) {
@@ -606,6 +664,11 @@ router.post("/", async (req: AuthRequest, res) => {
           patientPhone: patient.phone,
           fulfillmentType: input.fulfillmentType,
           deliveryAddress: input.deliveryAddress ?? null,
+          deliveryLatitude: deliveryPoint ? String(deliveryPoint[1]) : null,
+          deliveryLongitude: deliveryPoint ? String(deliveryPoint[0]) : null,
+          deliveryZoneId: deliveryQuote?.zoneId ?? null,
+          deliveryZoneName: deliveryQuote?.zoneName ?? null,
+          deliveryPricing: deliveryQuote?.pricing ?? null,
           status: "awaiting_payment",
           paymentMethod: "orange_money",
           totalLeones: total,
