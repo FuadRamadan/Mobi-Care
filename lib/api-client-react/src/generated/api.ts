@@ -29,6 +29,8 @@ import type {
   AssignCourierInput,
   AuditEntry,
   AuthResponse,
+  CatalogueImportPreview,
+  CatalogueImportResult,
   ChangePasswordInput,
   CollectedConfirmation,
   CommissionSettlement,
@@ -81,6 +83,8 @@ import type {
   HqPharmacyUpdate,
   ImageUrlRequest,
   ImageUrlResponse,
+  InventoryImportPreview,
+  InventoryImportResult,
   InventoryInput,
   InventoryItem,
   InventoryUpdate,
@@ -142,6 +146,9 @@ import type {
   SavedApiRequestHistory,
   SavedApiRequestInput,
   SettlementsResponse,
+  SpreadsheetApply,
+  SpreadsheetFile,
+  SpreadsheetUpload,
   TeamMember,
   TeamMemberUpdate,
   TeamPhotoUpdate,
@@ -1126,6 +1133,302 @@ export const useAddInventoryItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAddInventoryItemMutationOptions(options));
+    }
+
+export const getGetInventoryTemplateUrl = () => {
+
+
+
+
+  return `/api/pharmacy/inventory/import/template`
+}
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const getInventoryTemplate = async ( options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getGetInventoryTemplateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInventoryTemplateQueryKey = () => {
+    return [
+    `/api/pharmacy/inventory/import/template`
+    ] as const;
+    }
+
+
+export const getGetInventoryTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getInventoryTemplate>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventoryTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInventoryTemplateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInventoryTemplate>>> = ({ signal }) => getInventoryTemplate({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInventoryTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInventoryTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getInventoryTemplate>>>
+export type GetInventoryTemplateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+
+export function useGetInventoryTemplate<TData = Awaited<ReturnType<typeof getInventoryTemplate>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventoryTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInventoryTemplateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportInventoryUrl = () => {
+
+
+
+
+  return `/api/pharmacy/inventory/export`
+}
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const exportInventory = async ( options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getExportInventoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportInventoryQueryKey = () => {
+    return [
+    `/api/pharmacy/inventory/export`
+    ] as const;
+    }
+
+
+export const getExportInventoryQueryOptions = <TData = Awaited<ReturnType<typeof exportInventory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportInventoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportInventory>>> = ({ signal }) => exportInventory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportInventory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportInventoryQueryResult = NonNullable<Awaited<ReturnType<typeof exportInventory>>>
+export type ExportInventoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+
+export function useExportInventory<TData = Awaited<ReturnType<typeof exportInventory>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportInventoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewInventoryImportUrl = () => {
+
+
+
+
+  return `/api/pharmacy/inventory/import/preview`
+}
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const previewInventoryImport = async (spreadsheetUpload: SpreadsheetUpload, options?: Parameters<typeof customFetch>[1]): Promise<InventoryImportPreview> => {
+
+  return customFetch<InventoryImportPreview>(getPreviewInventoryImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetUpload)
+  }
+);}
+
+
+
+
+
+export const getPreviewInventoryImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewInventoryImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewInventoryImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext> => {
+
+const mutationKey = ['previewInventoryImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewInventoryImport>>, {data: BodyType<SpreadsheetUpload>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewInventoryImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewInventoryImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewInventoryImport>>>
+    export type PreviewInventoryImportMutationBody = BodyType<SpreadsheetUpload>
+    export type PreviewInventoryImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const usePreviewInventoryImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewInventoryImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewInventoryImport>>,
+        TError,
+        {data: BodyType<SpreadsheetUpload>},
+        TContext
+      > => {
+      return useMutation(getPreviewInventoryImportMutationOptions(options));
+    }
+
+export const getApplyInventoryImportUrl = () => {
+
+
+
+
+  return `/api/pharmacy/inventory/import/apply`
+}
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const applyInventoryImport = async (spreadsheetApply: SpreadsheetApply, options?: Parameters<typeof customFetch>[1]): Promise<InventoryImportResult> => {
+
+  return customFetch<InventoryImportResult>(getApplyInventoryImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetApply)
+  }
+);}
+
+
+
+
+
+export const getApplyInventoryImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInventoryImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyInventoryImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext> => {
+
+const mutationKey = ['applyInventoryImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyInventoryImport>>, {data: BodyType<SpreadsheetApply>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyInventoryImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyInventoryImportMutationResult = NonNullable<Awaited<ReturnType<typeof applyInventoryImport>>>
+    export type ApplyInventoryImportMutationBody = BodyType<SpreadsheetApply>
+    export type ApplyInventoryImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const useApplyInventoryImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInventoryImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyInventoryImport>>,
+        TError,
+        {data: BodyType<SpreadsheetApply>},
+        TContext
+      > => {
+      return useMutation(getApplyInventoryImportMutationOptions(options));
     }
 
 export const getUpdateInventoryItemUrl = (id: string,) => {
@@ -6239,6 +6542,304 @@ export const useUpdateHqPharmacy = <TError = ErrorType<unknown>,
       return useMutation(getUpdateHqPharmacyMutationOptions(options));
     }
 
+export const getGetPharmacyInventoryForHqTemplateUrl = (pharmacyId: string,) => {
+
+
+
+
+  return `/api/hq/pharmacies/${pharmacyId}/inventory/import/template`
+}
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const getPharmacyInventoryForHqTemplate = async (pharmacyId: string, options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getGetPharmacyInventoryForHqTemplateUrl(pharmacyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPharmacyInventoryForHqTemplateQueryKey = (pharmacyId: string,) => {
+    return [
+    `/api/hq/pharmacies/${pharmacyId}/inventory/import/template`
+    ] as const;
+    }
+
+
+export const getGetPharmacyInventoryForHqTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>, TError = ErrorType<unknown>>(pharmacyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPharmacyInventoryForHqTemplateQueryKey(pharmacyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>> = ({ signal }) => getPharmacyInventoryForHqTemplate(pharmacyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: pharmacyId !== null && pharmacyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPharmacyInventoryForHqTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>>
+export type GetPharmacyInventoryForHqTemplateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+
+export function useGetPharmacyInventoryForHqTemplate<TData = Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>, TError = ErrorType<unknown>>(
+ pharmacyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyInventoryForHqTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPharmacyInventoryForHqTemplateQueryOptions(pharmacyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportPharmacyInventoryForHqUrl = (pharmacyId: string,) => {
+
+
+
+
+  return `/api/hq/pharmacies/${pharmacyId}/inventory/export`
+}
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const exportPharmacyInventoryForHq = async (pharmacyId: string, options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getExportPharmacyInventoryForHqUrl(pharmacyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportPharmacyInventoryForHqQueryKey = (pharmacyId: string,) => {
+    return [
+    `/api/hq/pharmacies/${pharmacyId}/inventory/export`
+    ] as const;
+    }
+
+
+export const getExportPharmacyInventoryForHqQueryOptions = <TData = Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>, TError = ErrorType<unknown>>(pharmacyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportPharmacyInventoryForHqQueryKey(pharmacyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>> = ({ signal }) => exportPharmacyInventoryForHq(pharmacyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: pharmacyId !== null && pharmacyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportPharmacyInventoryForHqQueryResult = NonNullable<Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>>
+export type ExportPharmacyInventoryForHqQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+
+export function useExportPharmacyInventoryForHq<TData = Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>, TError = ErrorType<unknown>>(
+ pharmacyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportPharmacyInventoryForHq>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportPharmacyInventoryForHqQueryOptions(pharmacyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewPharmacyInventoryForHqImportUrl = (pharmacyId: string,) => {
+
+
+
+
+  return `/api/hq/pharmacies/${pharmacyId}/inventory/import/preview`
+}
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const previewPharmacyInventoryForHqImport = async (pharmacyId: string,
+    spreadsheetUpload: SpreadsheetUpload, options?: Parameters<typeof customFetch>[1]): Promise<InventoryImportPreview> => {
+
+  return customFetch<InventoryImportPreview>(getPreviewPharmacyInventoryForHqImportUrl(pharmacyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetUpload)
+  }
+);}
+
+
+
+
+
+export const getPreviewPharmacyInventoryForHqImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetUpload>}, TContext> => {
+
+const mutationKey = ['previewPharmacyInventoryForHqImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>, {pharmacyId: string;data: BodyType<SpreadsheetUpload>}> = (props) => {
+          const {pharmacyId,data} = props ?? {};
+
+          return  previewPharmacyInventoryForHqImport(pharmacyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewPharmacyInventoryForHqImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>>
+    export type PreviewPharmacyInventoryForHqImportMutationBody = BodyType<SpreadsheetUpload>
+    export type PreviewPharmacyInventoryForHqImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const usePreviewPharmacyInventoryForHqImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewPharmacyInventoryForHqImport>>,
+        TError,
+        {pharmacyId: string;data: BodyType<SpreadsheetUpload>},
+        TContext
+      > => {
+      return useMutation(getPreviewPharmacyInventoryForHqImportMutationOptions(options));
+    }
+
+export const getApplyPharmacyInventoryForHqImportUrl = (pharmacyId: string,) => {
+
+
+
+
+  return `/api/hq/pharmacies/${pharmacyId}/inventory/import/apply`
+}
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const applyPharmacyInventoryForHqImport = async (pharmacyId: string,
+    spreadsheetApply: SpreadsheetApply, options?: Parameters<typeof customFetch>[1]): Promise<InventoryImportResult> => {
+
+  return customFetch<InventoryImportResult>(getApplyPharmacyInventoryForHqImportUrl(pharmacyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetApply)
+  }
+);}
+
+
+
+
+
+export const getApplyPharmacyInventoryForHqImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetApply>}, TContext> => {
+
+const mutationKey = ['applyPharmacyInventoryForHqImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>, {pharmacyId: string;data: BodyType<SpreadsheetApply>}> = (props) => {
+          const {pharmacyId,data} = props ?? {};
+
+          return  applyPharmacyInventoryForHqImport(pharmacyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyPharmacyInventoryForHqImportMutationResult = NonNullable<Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>>
+    export type ApplyPharmacyInventoryForHqImportMutationBody = BodyType<SpreadsheetApply>
+    export type ApplyPharmacyInventoryForHqImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const useApplyPharmacyInventoryForHqImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>, TError,{pharmacyId: string;data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyPharmacyInventoryForHqImport>>,
+        TError,
+        {pharmacyId: string;data: BodyType<SpreadsheetApply>},
+        TContext
+      > => {
+      return useMutation(getApplyPharmacyInventoryForHqImportMutationOptions(options));
+    }
+
 export const getResetPharmacyPasswordUrl = (id: string,) => {
 
 
@@ -8014,6 +8615,302 @@ export const useUpdateHqTeamMemberPhoto = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateHqTeamMemberPhotoMutationOptions(options));
+    }
+
+export const getGetCatalogueTemplateUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/import/template`
+}
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const getCatalogueTemplate = async ( options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getGetCatalogueTemplateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCatalogueTemplateQueryKey = () => {
+    return [
+    `/api/hq/drugs/import/template`
+    ] as const;
+    }
+
+
+export const getGetCatalogueTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getCatalogueTemplate>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogueTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCatalogueTemplateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogueTemplate>>> = ({ signal }) => getCatalogueTemplate({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCatalogueTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCatalogueTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogueTemplate>>>
+export type GetCatalogueTemplateQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+
+export function useGetCatalogueTemplate<TData = Awaited<ReturnType<typeof getCatalogueTemplate>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCatalogueTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCatalogueTemplateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportCatalogueUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/export`
+}
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const exportCatalogue = async ( options?: Parameters<typeof customFetch>[1]): Promise<SpreadsheetFile> => {
+
+  return customFetch<SpreadsheetFile>(getExportCatalogueUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportCatalogueQueryKey = () => {
+    return [
+    `/api/hq/drugs/export`
+    ] as const;
+    }
+
+
+export const getExportCatalogueQueryOptions = <TData = Awaited<ReturnType<typeof exportCatalogue>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportCatalogue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportCatalogueQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportCatalogue>>> = ({ signal }) => exportCatalogue({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportCatalogue>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportCatalogueQueryResult = NonNullable<Awaited<ReturnType<typeof exportCatalogue>>>
+export type ExportCatalogueQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+
+export function useExportCatalogue<TData = Awaited<ReturnType<typeof exportCatalogue>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportCatalogue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportCatalogueQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewCatalogueImportUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/import/preview`
+}
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const previewCatalogueImport = async (spreadsheetUpload: SpreadsheetUpload, options?: Parameters<typeof customFetch>[1]): Promise<CatalogueImportPreview> => {
+
+  return customFetch<CatalogueImportPreview>(getPreviewCatalogueImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetUpload)
+  }
+);}
+
+
+
+
+
+export const getPreviewCatalogueImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCatalogueImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewCatalogueImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext> => {
+
+const mutationKey = ['previewCatalogueImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewCatalogueImport>>, {data: BodyType<SpreadsheetUpload>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewCatalogueImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewCatalogueImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewCatalogueImport>>>
+    export type PreviewCatalogueImportMutationBody = BodyType<SpreadsheetUpload>
+    export type PreviewCatalogueImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const usePreviewCatalogueImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCatalogueImport>>, TError,{data: BodyType<SpreadsheetUpload>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewCatalogueImport>>,
+        TError,
+        {data: BodyType<SpreadsheetUpload>},
+        TContext
+      > => {
+      return useMutation(getPreviewCatalogueImportMutationOptions(options));
+    }
+
+export const getApplyCatalogueImportUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/import/apply`
+}
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const applyCatalogueImport = async (spreadsheetApply: SpreadsheetApply, options?: Parameters<typeof customFetch>[1]): Promise<CatalogueImportResult> => {
+
+  return customFetch<CatalogueImportResult>(getApplyCatalogueImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(spreadsheetApply)
+  }
+);}
+
+
+
+
+
+export const getApplyCatalogueImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyCatalogueImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyCatalogueImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext> => {
+
+const mutationKey = ['applyCatalogueImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyCatalogueImport>>, {data: BodyType<SpreadsheetApply>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyCatalogueImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyCatalogueImportMutationResult = NonNullable<Awaited<ReturnType<typeof applyCatalogueImport>>>
+    export type ApplyCatalogueImportMutationBody = BodyType<SpreadsheetApply>
+    export type ApplyCatalogueImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const useApplyCatalogueImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyCatalogueImport>>, TError,{data: BodyType<SpreadsheetApply>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyCatalogueImport>>,
+        TError,
+        {data: BodyType<SpreadsheetApply>},
+        TContext
+      > => {
+      return useMutation(getApplyCatalogueImportMutationOptions(options));
     }
 
 export const getListHqDrugCategoriesUrl = () => {

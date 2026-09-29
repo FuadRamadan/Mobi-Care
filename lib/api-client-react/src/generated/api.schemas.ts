@@ -80,6 +80,8 @@ export interface PharmacyUser {
   canManageSettlements?: boolean;
   /** Present for HQ accounts; controls access to aggregate-only Data & Insights */
   canViewDataInsights?: boolean;
+  /** Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines */
+  canManageCatalogue?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -787,6 +789,144 @@ export interface DrugSummary {
   commonForms: string[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
+}
+
+export interface SpreadsheetFile {
+  fileName: string;
+  mimeType: string;
+  contentBase64: string;
+}
+
+export interface SpreadsheetUpload {
+  fileName: string;
+  /** The .xlsx or .csv file, base64-encoded (a data URL is accepted). At most 5 MB. */
+  contentBase64: string;
+}
+
+/**
+ * Override or skip for duplicate rows, keyed by spreadsheet row number
+ */
+export type SpreadsheetApplyDecisions = {[key: string]: 'override' | 'skip'};
+
+export type SpreadsheetApplyDuplicateDefault = typeof SpreadsheetApplyDuplicateDefault[keyof typeof SpreadsheetApplyDuplicateDefault] | null;
+
+
+export const SpreadsheetApplyDuplicateDefault = {
+  override: 'override',
+  skip: 'skip',
+} as const;
+
+export interface SpreadsheetApply {
+  fileName: string;
+  contentBase64: string;
+  /** Override or skip for duplicate rows, keyed by spreadsheet row number */
+  decisions?: SpreadsheetApplyDecisions;
+  duplicateDefault?: SpreadsheetApplyDuplicateDefault;
+}
+
+export interface ImportRowChange {
+  field: string;
+  from: string;
+  to: string;
+}
+
+export type InventoryImportRowStatus = typeof InventoryImportRowStatus[keyof typeof InventoryImportRowStatus];
+
+
+export const InventoryImportRowStatus = {
+  new: 'new',
+  change: 'change',
+  duplicate: 'duplicate',
+  unchanged: 'unchanged',
+  remove: 'remove',
+  review: 'review',
+  error: 'error',
+} as const;
+
+export interface InventoryImportRow {
+  rowNumber: number;
+  status: InventoryImportRowStatus;
+  message: string | null;
+  warnings: string[];
+  changes: ImportRowChange[];
+  summary: string;
+  listingId: string | null;
+}
+
+export type InventoryImportPreviewSummary = {
+  total: number;
+  new: number;
+  change: number;
+  duplicate: number;
+  unchanged: number;
+  remove: number;
+  review: number;
+  error: number;
+  warnings: number;
+};
+
+export interface InventoryImportPreview {
+  fileName: string;
+  summary: InventoryImportPreviewSummary;
+  rows: InventoryImportRow[];
+}
+
+export interface InventoryImportResult {
+  added: number;
+  updated: number;
+  removed: number;
+  sentForReview: number;
+  skipped: number;
+  unchanged: number;
+  failed: number;
+  errorReport: SpreadsheetFile | null;
+}
+
+export type CatalogueImportRowStatus = typeof CatalogueImportRowStatus[keyof typeof CatalogueImportRowStatus];
+
+
+export const CatalogueImportRowStatus = {
+  new: 'new',
+  change: 'change',
+  duplicate: 'duplicate',
+  unchanged: 'unchanged',
+  error: 'error',
+} as const;
+
+export interface CatalogueImportRow {
+  rowNumber: number;
+  status: CatalogueImportRowStatus;
+  message: string | null;
+  warnings: string[];
+  changes: ImportRowChange[];
+  summary: string;
+  catalogueId: string | null;
+}
+
+export type CatalogueImportPreviewSummary = {
+  total: number;
+  new: number;
+  change: number;
+  duplicate: number;
+  unchanged: number;
+  error: number;
+  warnings: number;
+};
+
+export interface CatalogueImportPreview {
+  fileName: string;
+  summary: CatalogueImportPreviewSummary;
+  rows: CatalogueImportRow[];
+}
+
+export interface CatalogueImportResult {
+  added: number;
+  updated: number;
+  skipped: number;
+  unchanged: number;
+  failed: number;
+  listingsTakenDown: number;
+  errorReport: SpreadsheetFile | null;
 }
 
 export type InventoryItemCompletionStatus = typeof InventoryItemCompletionStatus[keyof typeof InventoryItemCompletionStatus];

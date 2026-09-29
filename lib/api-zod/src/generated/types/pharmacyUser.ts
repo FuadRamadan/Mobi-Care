@@ -27,4 +27,6 @@ export interface PharmacyUser {
   canManageSettlements?: boolean;
   /** Present for HQ accounts; controls access to aggregate-only Data & Insights */
   canViewDataInsights?: boolean;
+  /** Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines */
+  canManageCatalogue?: boolean;
 }

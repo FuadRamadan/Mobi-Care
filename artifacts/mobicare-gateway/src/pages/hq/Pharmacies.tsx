@@ -9,7 +9,13 @@ import {
   useLocateDeliveryZone,
   getListDeliveryZonesQueryKey,
   getLocateDeliveryZoneQueryKey,
+  getPharmacyInventoryForHqTemplate,
+  exportPharmacyInventoryForHq,
+  previewPharmacyInventoryForHqImport,
+  applyPharmacyInventoryForHqImport,
+  type InventoryImportResult,
 } from '@workspace/api-client-react';
+import { BulkUploadDialog } from '@/components/BulkUploadDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import HqLayout from './HqLayout';
 import { EmptyState, formatDate } from './shared';
@@ -33,7 +39,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, KeyRound, AlertTriangle, Pencil } from 'lucide-react';
+import { Copy, KeyRound, AlertTriangle, Pencil, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { LocationPicker } from '@/components/map/LocationPicker';
 
@@ -219,6 +225,7 @@ export default function HqPharmacies() {
   const [form, setForm] = useState({ ...BLANK_DETAILS });
   /** The pharmacy whose details are being edited, if any. */
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [stockFor, setStockFor] = useState<{ id: string; name: string } | null>(null);
   const [editForm, setEditForm] = useState({ ...BLANK_DETAILS });
   const [tempPasswordRes, setTempPasswordRes] = useState<{ tempPassword: string; temporaryPasswordExpiresAt: string } | null>(null);
 
@@ -534,6 +541,16 @@ export default function HqPharmacies() {
                         <Pencil className="w-3.5 h-3.5" />
                         Edit
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5 h-8 w-full border-border/60"
+                        onClick={() => setStockFor({ id: p.id, name: p.name })}
+                        data-testid={`button-upload-stock-${p.id}`}
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        Stock upload
+                      </Button>
                       {p.isActive ? (
                         <Button
                           variant="outline"
@@ -558,6 +575,28 @@ export default function HqPharmacies() {
             </TableBody>
           </Table>
         </div>
+      )}
+      {stockFor && (
+        <BulkUploadDialog<InventoryImportResult>
+          open
+          onOpenChange={(open) => !open && setStockFor(null)}
+          title={`Stock upload for ${stockFor.name}`}
+          description="Upload this pharmacy's inventory on its behalf. The same checks apply as when the pharmacy uploads it, and the upload is recorded in the audit log under your name."
+          getTemplate={() => getPharmacyInventoryForHqTemplate(stockFor.id)}
+          getExport={() => exportPharmacyInventoryForHq(stockFor.id)}
+          exportLabel="Export its inventory"
+          preview={(upload) => previewPharmacyInventoryForHqImport(stockFor.id, upload)}
+          apply={(body) => applyPharmacyInventoryForHqImport(stockFor.id, body)}
+          describeResult={(result) => [
+            `${result.added} new listing${result.added === 1 ? '' : 's'} added`,
+            `${result.updated} listing${result.updated === 1 ? '' : 's'} updated`,
+            ...(result.removed ? [`${result.removed} taken down`] : []),
+            ...(result.sentForReview ? [`${result.sentForReview} new medicine${result.sentForReview === 1 ? '' : 's'} waiting in Catalogue → Held`] : []),
+            ...(result.skipped ? [`${result.skipped} duplicate${result.skipped === 1 ? '' : 's'} skipped`] : []),
+            ...(result.unchanged ? [`${result.unchanged} unchanged`] : []),
+            ...(result.failed ? [`${result.failed} row${result.failed === 1 ? '' : 's'} not saved because of problems`] : []),
+          ]}
+        />
       )}
     </HqLayout>
   );

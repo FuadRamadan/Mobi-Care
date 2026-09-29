@@ -22,6 +22,7 @@ export interface HqUser {
   username: string;
   canManageIntegrations: boolean;
   canManageSettlements: boolean;
+  canManageCatalogue: boolean;
   canViewDataInsights: boolean;
 }
 
@@ -67,6 +68,9 @@ export function HqAuthProvider({ children }: { children: ReactNode }) {
         username: u.username,
         canManageIntegrations: u.canManageIntegrations === true,
         canManageSettlements: u.canManageSettlements === true,
+        // Absent from logins made before the permission existed; the server
+        // is the real check, so the screen stays usable until the next login.
+        canManageCatalogue: u.canManageCatalogue !== false,
         canViewDataInsights: u.canViewDataInsights === true,
       };
       localStorage.setItem(USER_KEY, JSON.stringify(hqUser));

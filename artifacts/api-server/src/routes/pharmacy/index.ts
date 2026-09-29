@@ -2,6 +2,7 @@ import { safeRouter } from "../../lib/safeRouter.js";
 import { pharmacy } from "../../middlewares/auth.js";
 import ordersRouter from "./orders.js";
 import inventoryRouter from "./inventory.js";
+import { inventoryImportRouter } from "../inventoryImport.js";
 import catalogueRouter from "./catalogue.js";
 import prescriptionsRouter from "./prescriptions.js";
 import notificationsRouter from "./notifications.js";
@@ -14,6 +15,8 @@ const router = safeRouter();
 router.use(...pharmacy);
 
 router.use("/orders", ordersRouter);
+// Before the listing routes, so /inventory/export is not read as a listing id.
+router.use("/inventory", inventoryImportRouter("pharmacy"));
 router.use("/inventory", inventoryRouter);
 router.use("/catalogue", catalogueRouter);
 router.use("/prescriptions", prescriptionsRouter);

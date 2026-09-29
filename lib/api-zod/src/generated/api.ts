@@ -39,7 +39,8 @@ export const LoginResponse = zod.object({
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
   "canManageIntegrations": zod.boolean().optional(),
   "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
-  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -142,7 +143,8 @@ export const ChangePasswordResponse = zod.object({
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
   "canManageIntegrations": zod.boolean().optional(),
   "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
-  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
 }).optional(),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -481,6 +483,89 @@ export const AddInventoryItemResponse = zod.object({
   "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
   "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
 })
+})
+
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const GetInventoryTemplateResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const ExportInventoryResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const PreviewInventoryImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string().describe('The .xlsx or .csv file, base64-encoded (a data URL is accepted). At most 5 MB.')
+})
+
+export const PreviewInventoryImportResponse = zod.object({
+  "fileName": zod.string(),
+  "summary": zod.object({
+  "total": zod.number(),
+  "new": zod.number(),
+  "change": zod.number(),
+  "duplicate": zod.number(),
+  "unchanged": zod.number(),
+  "remove": zod.number(),
+  "review": zod.number(),
+  "error": zod.number(),
+  "warnings": zod.number()
+}),
+  "rows": zod.array(zod.object({
+  "rowNumber": zod.number(),
+  "status": zod.enum(['new', 'change', 'duplicate', 'unchanged', 'remove', 'review', 'error']),
+  "message": zod.string().nullable(),
+  "warnings": zod.array(zod.string()),
+  "changes": zod.array(zod.object({
+  "field": zod.string(),
+  "from": zod.string(),
+  "to": zod.string()
+})),
+  "summary": zod.string(),
+  "listingId": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const ApplyInventoryImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string(),
+  "decisions": zod.record(zod.string(), zod.enum(['override', 'skip'])).optional().describe('Override or skip for duplicate rows, keyed by spreadsheet row number'),
+  "duplicateDefault": zod.enum(['override', 'skip']).nullish()
+})
+
+export const ApplyInventoryImportResponse = zod.object({
+  "added": zod.number(),
+  "updated": zod.number(),
+  "removed": zod.number(),
+  "sentForReview": zod.number(),
+  "skipped": zod.number(),
+  "unchanged": zod.number(),
+  "failed": zod.number(),
+  "errorReport": zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+}).nullable()
 })
 
 
@@ -847,7 +932,8 @@ export const RegisterPatientResponse = zod.object({
   "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
   "canManageIntegrations": zod.boolean().optional(),
   "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
-  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights')
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
 }),
   "passwordPolicy": zod.object({
   "id": zod.number(),
@@ -2563,6 +2649,105 @@ export const UpdateHqPharmacyResponse = zod.object({
 
 
 /**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const GetPharmacyInventoryForHqTemplateParams = zod.object({
+  "pharmacyId": zod.coerce.string()
+})
+
+export const GetPharmacyInventoryForHqTemplateResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const ExportPharmacyInventoryForHqParams = zod.object({
+  "pharmacyId": zod.coerce.string()
+})
+
+export const ExportPharmacyInventoryForHqResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const PreviewPharmacyInventoryForHqImportParams = zod.object({
+  "pharmacyId": zod.coerce.string()
+})
+
+export const PreviewPharmacyInventoryForHqImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string().describe('The .xlsx or .csv file, base64-encoded (a data URL is accepted). At most 5 MB.')
+})
+
+export const PreviewPharmacyInventoryForHqImportResponse = zod.object({
+  "fileName": zod.string(),
+  "summary": zod.object({
+  "total": zod.number(),
+  "new": zod.number(),
+  "change": zod.number(),
+  "duplicate": zod.number(),
+  "unchanged": zod.number(),
+  "remove": zod.number(),
+  "review": zod.number(),
+  "error": zod.number(),
+  "warnings": zod.number()
+}),
+  "rows": zod.array(zod.object({
+  "rowNumber": zod.number(),
+  "status": zod.enum(['new', 'change', 'duplicate', 'unchanged', 'remove', 'review', 'error']),
+  "message": zod.string().nullable(),
+  "warnings": zod.array(zod.string()),
+  "changes": zod.array(zod.object({
+  "field": zod.string(),
+  "from": zod.string(),
+  "to": zod.string()
+})),
+  "summary": zod.string(),
+  "listingId": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const ApplyPharmacyInventoryForHqImportParams = zod.object({
+  "pharmacyId": zod.coerce.string()
+})
+
+export const ApplyPharmacyInventoryForHqImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string(),
+  "decisions": zod.record(zod.string(), zod.enum(['override', 'skip'])).optional().describe('Override or skip for duplicate rows, keyed by spreadsheet row number'),
+  "duplicateDefault": zod.enum(['override', 'skip']).nullish()
+})
+
+export const ApplyPharmacyInventoryForHqImportResponse = zod.object({
+  "added": zod.number(),
+  "updated": zod.number(),
+  "removed": zod.number(),
+  "sentForReview": zod.number(),
+  "skipped": zod.number(),
+  "unchanged": zod.number(),
+  "failed": zod.number(),
+  "errorReport": zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+}).nullable()
+})
+
+
+/**
  * @summary Generate a new temporary password for an active pharmacy (returns plaintext once)
  */
 export const resetPharmacyPasswordPathIdRegExp = new RegExp('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$');
@@ -3525,6 +3710,86 @@ export const UpdateHqTeamMemberPhotoResponse = zod.object({
   "sortOrder": zod.number().optional(),
   "updatedAt": zod.string().optional(),
   "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
+})
+
+
+/**
+ * @summary The spreadsheet template for a bulk upload
+ */
+export const GetCatalogueTemplateResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary The current entries in the bulk-upload format
+ */
+export const ExportCatalogueResponse = zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+})
+
+
+/**
+ * @summary Check an uploaded spreadsheet without saving anything
+ */
+export const PreviewCatalogueImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string().describe('The .xlsx or .csv file, base64-encoded (a data URL is accepted). At most 5 MB.')
+})
+
+export const PreviewCatalogueImportResponse = zod.object({
+  "fileName": zod.string(),
+  "summary": zod.object({
+  "total": zod.number(),
+  "new": zod.number(),
+  "change": zod.number(),
+  "duplicate": zod.number(),
+  "unchanged": zod.number(),
+  "error": zod.number(),
+  "warnings": zod.number()
+}),
+  "rows": zod.array(zod.object({
+  "rowNumber": zod.number(),
+  "status": zod.enum(['new', 'change', 'duplicate', 'unchanged', 'error']),
+  "message": zod.string().nullable(),
+  "warnings": zod.array(zod.string()),
+  "changes": zod.array(zod.object({
+  "field": zod.string(),
+  "from": zod.string(),
+  "to": zod.string()
+})),
+  "summary": zod.string(),
+  "catalogueId": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Save the valid rows of an uploaded spreadsheet
+ */
+export const ApplyCatalogueImportBody = zod.object({
+  "fileName": zod.string(),
+  "contentBase64": zod.string(),
+  "decisions": zod.record(zod.string(), zod.enum(['override', 'skip'])).optional().describe('Override or skip for duplicate rows, keyed by spreadsheet row number'),
+  "duplicateDefault": zod.enum(['override', 'skip']).nullish()
+})
+
+export const ApplyCatalogueImportResponse = zod.object({
+  "added": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number(),
+  "unchanged": zod.number(),
+  "failed": zod.number(),
+  "listingsTakenDown": zod.number(),
+  "errorReport": zod.object({
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "contentBase64": zod.string()
+}).nullable()
 })
 
 

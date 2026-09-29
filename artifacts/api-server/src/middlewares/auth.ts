@@ -254,6 +254,39 @@ export async function requireManageIntegrations(
   }
 }
 
+/** Require the HQ catalogue permission: medicines, tiers and catalogue imports. */
+export async function requireManageCatalogue(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.pharmacy?.role !== "hq") {
+    res.status(403).json({ error: "HQ role required" });
+    return;
+  }
+  try {
+    const [staff] = await db
+      .select({
+        isActive: hqStaffTable.isActive,
+        canManageCatalogue: hqStaffTable.canManageCatalogue,
+      })
+      .from(hqStaffTable)
+      .where(eq(hqStaffTable.id, req.pharmacy.sub))
+      .limit(1);
+    if (!staff?.isActive) {
+      res.status(401).json({ error: "Account inactive or not found" });
+      return;
+    }
+    if (!staff.canManageCatalogue) {
+      res.status(403).json({ error: "Catalogue management permission required" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Permission check failed" });
+  }
+}
+
 /** Require the distinct HQ Data & Insights permission. */
 export async function requireViewDataInsights(
   req: AuthRequest,

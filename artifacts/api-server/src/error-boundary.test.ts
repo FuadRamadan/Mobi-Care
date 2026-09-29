@@ -110,14 +110,29 @@ after(async () => {
   await pool.end();
 });
 
-test("malformed JSON is sanitized by the shared error boundary", async () => {
+test("malformed JSON is a sanitized client error", async () => {
   const response = await request("/api/auth/login", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: '{"identifier":',
   });
 
-  assertInternalError(response);
+  // The sender's mistake, so 400 rather than 500, with a fixed message that
+  // says nothing about the parser.
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.json, { error: "The request body is not valid JSON." });
+  assert.doesNotMatch(response.text, /stack|position|unexpected|SyntaxError/i);
+});
+
+test("an oversized body is a sanitized 413", async () => {
+  const response = await request("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ identifier: "x".repeat(200_000), password: "x" }),
+  });
+
+  assert.equal(response.status, 413);
+  assert.deepEqual(response.json, { error: "The upload is too large." });
 });
 
 test("rejected database routes are sanitized by the shared error boundary", async () => {

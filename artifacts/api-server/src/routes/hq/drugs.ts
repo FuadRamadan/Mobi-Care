@@ -11,7 +11,7 @@ import {
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
 import { and, eq, desc, count, ne, sql } from "drizzle-orm";
-import { AuthRequest } from "../../middlewares/auth.js";
+import { AuthRequest, requireManageCatalogue } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { createPharmacyNotification } from "../../lib/pharmacyNotifications.js";
 
@@ -46,7 +46,6 @@ function validateTierCap(
   return null;
 }
 
-// ── GET /hq/drugs?status=held|approved ───────────────────────────────────────
 // ── GET /hq/drugs/categories — the category taxonomy for the catalogue form ──
 // The same list pharmacies see. HQ has its own route because the pharmacy one
 // admits pharmacy logins only, which left HQ's category dropdowns empty.
@@ -54,6 +53,7 @@ router.get("/categories", (_req, res) => {
   res.json(DRUG_CATEGORY_TAXONOMY);
 });
 
+// ── GET /hq/drugs?status=held|approved ───────────────────────────────────────
 router.get("/", async (req, res) => {
   const status = req.query.status as string | undefined;
   let rows;
@@ -85,7 +85,7 @@ router.get("/", async (req, res) => {
 });
 
 // ── POST /hq/drugs — add to master catalogue (approved immediately) ──────────
-router.post("/", async (req: AuthRequest, res) => {
+router.post("/", requireManageCatalogue, async (req: AuthRequest, res) => {
   const body = z
     .object({
       name: z.string().min(1),
@@ -162,7 +162,7 @@ router.post("/", async (req: AuthRequest, res) => {
 });
 
 // ── PATCH /hq/drugs/:id — change tier / cap / release held drug ──────────────
-router.patch("/:id", async (req: AuthRequest, res) => {
+router.patch("/:id", requireManageCatalogue, async (req: AuthRequest, res) => {
   const id = req.params.id as string;
   const body = z
     .object({
@@ -300,7 +300,27 @@ router.patch("/:id", async (req: AuthRequest, res) => {
         .where(and(eq(drugCatalogueTable.id, id), eq(drugCatalogueTable.reviewStatus, existing.reviewStatus)))
         .returning();
       if (!releasedDrug) throw Object.assign(new Error("REQUEST_CHANGED"), { code: "REQUEST_CHANGED" });
-      if (requestedReviewStatus === "approved" && !existing.isApproved && existing.proposedByPharmacyId) {
+      // Listings sent in a bulk upload already exist, priced and stocked:
+      // they take the approved category instead of getting a placeholder.
+      const [uploadedListing] = requestedReviewStatus === "approved" && !existing.isApproved
+        ? await tx
+            .update(pharmacyInventoryTable)
+            .set({
+              primaryCategory: resultingPrimaryCategory,
+              subcategory: resultingSubcategory,
+              requiresHqReview: false,
+              updatedAt: new Date(),
+            })
+            .where(eq(pharmacyInventoryTable.drugId, id))
+            .returning({ id: pharmacyInventoryTable.id })
+        : [];
+      if (requestedReviewStatus === "rejected") {
+        await tx
+          .update(pharmacyInventoryTable)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(pharmacyInventoryTable.drugId, id));
+      }
+      if (requestedReviewStatus === "approved" && !existing.isApproved && existing.proposedByPharmacyId && !uploadedListing) {
         await tx.insert(pharmacyInventoryTable).values({
           pharmacyId: existing.proposedByPharmacyId,
           drugId: releasedDrug.id,
@@ -360,7 +380,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
 });
 
 // ── DELETE /hq/drugs/:id — remove from active catalogue safely ──────────────
-router.delete("/:id", async (req: AuthRequest, res) => {
+router.delete("/:id", requireManageCatalogue, async (req: AuthRequest, res) => {
   const id = req.params.id as string;
   const [existing] = await db
     .select()

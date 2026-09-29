@@ -264,6 +264,23 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 --
+-- Name: advertisement_media; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."advertisement_media" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "advertisement_id" "uuid" NOT NULL,
+    "object_path" "text" NOT NULL,
+    "content_type" "text" NOT NULL,
+    "file_size" integer NOT NULL,
+    "media_kind" "text" NOT NULL,
+    "alt" "text",
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
 -- Name: advertisement_uploads; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -288,6 +305,8 @@ CREATE TABLE "public"."advertisements" (
     "title" "text" NOT NULL,
     "alt" "text",
     "caption" "text",
+    "organisation" "text",
+    "body" "text",
     "media_kind" "text" NOT NULL,
     "object_path" "text" NOT NULL,
     "content_type" "text" NOT NULL,
@@ -597,6 +616,7 @@ CREATE TABLE "public"."hq_staff" (
     "is_active" boolean DEFAULT true NOT NULL,
     "can_manage_integrations" boolean DEFAULT false NOT NULL,
     "can_manage_settlements" boolean DEFAULT false NOT NULL,
+    "can_manage_catalogue" boolean DEFAULT false NOT NULL,
     "can_view_data_insights" boolean DEFAULT false NOT NULL,
     "password_hash" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -630,6 +650,9 @@ CREATE TABLE "public"."order_items" (
     "drug_id" "uuid" NOT NULL,
     "inventory_id" "uuid",
     "drug_name" "text" NOT NULL,
+    "brand" "text",
+    "manufacturer" "text",
+    "country_of_origin" "text",
     "quantity" integer NOT NULL,
     "unit_price_leones" numeric(12,2) NOT NULL,
     "base_unit_price_minor" integer DEFAULT 0 NOT NULL,
@@ -1100,6 +1123,22 @@ ALTER TABLE ONLY "public"."pharmacy_password_history" ALTER COLUMN "sequence" SE
 
 
 --
+-- Name: advertisement_media advertisement_media_object_path_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."advertisement_media"
+    ADD CONSTRAINT "advertisement_media_object_path_unique" UNIQUE ("object_path");
+
+
+--
+-- Name: advertisement_media advertisement_media_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."advertisement_media"
+    ADD CONSTRAINT "advertisement_media_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: advertisement_uploads advertisement_uploads_object_path_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1556,6 +1595,13 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 --
+-- Name: advertisement_media_advertisement_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "advertisement_media_advertisement_idx" ON "public"."advertisement_media" USING "btree" ("advertisement_id");
+
+
+--
 -- Name: advertisement_uploads_expiry_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1710,10 +1756,10 @@ CREATE UNIQUE INDEX "settlements_pharmacy_period_uq" ON "public"."settlements" U
 
 
 --
--- Name: uniq_active_pharmacy_drug_variant; Type: INDEX; Schema: public; Owner: -
+-- Name: uniq_active_pharmacy_listing; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX "uniq_active_pharmacy_drug_variant" ON "public"."pharmacy_inventory" USING "btree" ("pharmacy_id", "drug_id", "strength", "form", "unit_of_sale") WHERE ("is_active" = true);
+CREATE UNIQUE INDEX "uniq_active_pharmacy_listing" ON "public"."pharmacy_inventory" USING "btree" ("pharmacy_id", "drug_id", "strength", "form", "unit_of_sale", "lower"(("brand")::"text"), "lower"((COALESCE("manufacturer", ''::character varying))::"text")) WHERE ("is_active" = true);
 
 
 --
@@ -1721,6 +1767,14 @@ CREATE UNIQUE INDEX "uniq_active_pharmacy_drug_variant" ON "public"."pharmacy_in
 --
 
 CREATE TRIGGER "saved_api_request_history_trim" AFTER INSERT ON "public"."saved_api_request_history" FOR EACH ROW EXECUTE FUNCTION "public"."trim_saved_api_request_history"();
+
+
+--
+-- Name: advertisement_media advertisement_media_advertisement_id_advertisements_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."advertisement_media"
+    ADD CONSTRAINT "advertisement_media_advertisement_id_advertisements_id_fk" FOREIGN KEY ("advertisement_id") REFERENCES "public"."advertisements"("id") ON DELETE CASCADE;
 
 
 --
@@ -2094,11 +2148,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-23 18:57:10.260576+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-29 12:34:45.760587+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-23 18:57:10.26366+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-29 12:34:45.762625+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-23 18:57:10.305695+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-29 12:34:45.800724+00')
 ON CONFLICT DO NOTHING;

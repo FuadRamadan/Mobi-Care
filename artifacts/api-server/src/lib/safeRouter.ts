@@ -1,4 +1,4 @@
-import { Router, type RequestHandler, type Router as ExpressRouter } from "express";
+import { Router, type RequestHandler, type RouterOptions, type Router as ExpressRouter } from "express";
 
 type RouteMethod = "all" | "delete" | "get" | "head" | "options" | "patch" | "post" | "put" | "use";
 
@@ -8,8 +8,8 @@ type RouteMethod = "all" | "delete" | "get" | "head" | "options" | "patch" | "po
  * boundary makes the error-handling contract explicit and protects routes if
  * the framework behavior changes.
  */
-export function safeRouter(): ExpressRouter {
-  const router = Router();
+export function safeRouter(options?: RouterOptions): ExpressRouter {
+  const router = Router(options);
   const methods: RouteMethod[] = ["all", "delete", "get", "head", "options", "patch", "post", "put", "use"];
 
   for (const method of methods) {

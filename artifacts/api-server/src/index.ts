@@ -165,6 +165,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "catalogue permission (migration 0029)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'hq_staff'
+            AND column_name = 'can_manage_catalogue'
+        ) AS exists
+      `,
+    },
+    {
       label: "brand on order items (migration 0028)",
       query: sql`
         SELECT EXISTS (

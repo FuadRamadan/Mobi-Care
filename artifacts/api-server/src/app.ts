@@ -61,6 +61,10 @@ app.use(
 // about 6.7 MB once base64-encoded.
 app.use("/api/patient/uploads", express.json({ limit: "8mb" }));
 app.use("/api/patient/profile/photo", express.json({ limit: "8mb" }));
+// Spreadsheet uploads: a 5 MB file is about 6.7 MB once base64-encoded.
+app.use("/api/pharmacy/inventory/import", express.json({ limit: "8mb" }));
+app.use("/api/hq/pharmacies/:pharmacyId/inventory/import", express.json({ limit: "8mb" }));
+app.use("/api/hq/drugs/import", express.json({ limit: "8mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

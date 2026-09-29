@@ -17,6 +17,14 @@ export const hqStaffTable = pgTable("hq_staff", {
   canManageSettlements: boolean("can_manage_settlements")
     .notNull()
     .default(false),
+  /**
+   * Add, change, approve and bulk-import medicines in the master catalogue.
+   * A medicine's tier decides whether it needs a prescription, so this is not
+   * given to every HQ account by default.
+   */
+  canManageCatalogue: boolean("can_manage_catalogue")
+    .notNull()
+    .default(false),
   /** Access to privacy-safe, aggregate-only platform reporting. */
   canViewDataInsights: boolean("can_view_data_insights")
     .notNull()

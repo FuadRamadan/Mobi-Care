@@ -140,6 +140,7 @@ async function main() {
         canManageIntegrations: true,
         canManageSettlements: true,
         canViewDataInsights: true,
+        canManageCatalogue: true,
         updatedAt: new Date(),
       })
       .where(eq(hqStaffTable.id, existing.id));
@@ -171,6 +172,7 @@ async function main() {
       canManageIntegrations: true,
       canManageSettlements: true,
       canViewDataInsights: true,
+      canManageCatalogue: true,
     })
     .returning({ id: hqStaffTable.id });
 

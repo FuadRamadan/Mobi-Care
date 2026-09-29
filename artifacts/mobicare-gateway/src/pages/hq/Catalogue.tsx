@@ -12,6 +12,15 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import HqLayout from "./HqLayout";
+import { useHqAuth } from "@/hq/auth";
+import { BulkUploadDialog } from "@/components/BulkUploadDialog";
+import {
+  getCatalogueTemplate,
+  exportCatalogue,
+  previewCatalogueImport,
+  applyCatalogueImport,
+  type CatalogueImportResult,
+} from "@workspace/api-client-react";
 import { EmptyState } from "./shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +122,9 @@ const DEFAULT_FORM = {
 export default function HqCatalogue() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useHqAuth();
+  const canEdit = user?.canManageCatalogue !== false;
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [tab, setTab] = useState<"all" | "held">("all");
   const drugParams = tab === "held" ? { status: "held" as const } : undefined;
   const { data, isLoading } = useListHqDrugs(
@@ -277,6 +289,31 @@ export default function HqCatalogue() {
           </TabsList>
         </Tabs>
 
+        {canEdit && (
+        <div className="flex gap-2">
+        <Button variant="outline" onClick={() => setBulkOpen(true)} data-testid="button-bulk-catalogue">
+          Bulk upload
+        </Button>
+        <BulkUploadDialog<CatalogueImportResult>
+          open={bulkOpen}
+          onOpenChange={setBulkOpen}
+          title="Bulk upload the catalogue"
+          description="Add or update many medicines at once. New medicines are saved held until someone confirms their tier."
+          getTemplate={() => getCatalogueTemplate()}
+          getExport={() => exportCatalogue()}
+          exportLabel="Export the catalogue"
+          preview={(upload) => previewCatalogueImport(upload)}
+          apply={(body) => applyCatalogueImport(body)}
+          describeResult={(result) => [
+            `${result.added} new medicine${result.added === 1 ? "" : "s"} saved held: confirm their tiers in the Held tab`,
+            `${result.updated} entr${result.updated === 1 ? "y" : "ies"} updated`,
+            ...(result.listingsTakenDown ? [`${result.listingsTakenDown} listing${result.listingsTakenDown === 1 ? "" : "s"} taken down at pharmacies not authorised for controlled medicines`] : []),
+            ...(result.skipped ? [`${result.skipped} duplicate${result.skipped === 1 ? "" : "s"} skipped`] : []),
+            ...(result.unchanged ? [`${result.unchanged} unchanged`] : []),
+            ...(result.failed ? [`${result.failed} row${result.failed === 1 ? "" : "s"} not saved because of problems`] : []),
+          ]}
+          onSaved={refresh}
+        />
         <Dialog
           open={open}
           onOpenChange={(v) => {
@@ -490,6 +527,8 @@ export default function HqCatalogue() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
+        )}
 
         <Dialog
           open={!!rejectDrug}
@@ -638,6 +677,7 @@ export default function HqCatalogue() {
                       })()}
                   </TableCell>
                   <TableCell className="text-right">
+                    {canEdit ? (
                     <div className="flex justify-end gap-2">
                       <Button
                         size="sm"
@@ -658,6 +698,9 @@ export default function HqCatalogue() {
                         Delete Drug
                       </Button>
                     </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">View only</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

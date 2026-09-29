@@ -313,6 +313,84 @@ paths:
               schema:
                 $ref: "#/components/schemas/InventoryItem"
 
+  /pharmacy/inventory/import/template:
+    get:
+      operationId: getInventoryTemplate
+      tags: [inventory]
+      summary: The spreadsheet template for a bulk upload
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The template as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /pharmacy/inventory/export:
+    get:
+      operationId: exportInventory
+      tags: [inventory]
+      summary: The current entries in the bulk-upload format
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The entries as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /pharmacy/inventory/import/preview:
+    post:
+      operationId: previewInventoryImport
+      tags: [inventory]
+      summary: Check an uploaded spreadsheet without saving anything
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetUpload"
+      responses:
+        "200":
+          description: What saving the file would do, row by row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryImportPreview"
+        "400":
+          description: The file could not be read
+
+  /pharmacy/inventory/import/apply:
+    post:
+      operationId: applyInventoryImport
+      tags: [inventory]
+      summary: Save the valid rows of an uploaded spreadsheet
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetApply"
+      responses:
+        "200":
+          description: What was saved, and a file of the rows that were not
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryImportResult"
+        "400":
+          description: The file could not be read
+        "409":
+          description: Some duplicate rows need an Override or Skip decision
+
   /pharmacy/inventory/{id}:
     patch:
       operationId: updateInventoryItem
@@ -1758,6 +1836,108 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqPharmacy"
 
+  /hq/pharmacies/{pharmacyId}/inventory/import/template:
+    get:
+      operationId: getPharmacyInventoryForHqTemplate
+      tags: [hq]
+      summary: The spreadsheet template for a bulk upload
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pharmacyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The template as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /hq/pharmacies/{pharmacyId}/inventory/export:
+    get:
+      operationId: exportPharmacyInventoryForHq
+      tags: [hq]
+      summary: The current entries in the bulk-upload format
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pharmacyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The entries as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /hq/pharmacies/{pharmacyId}/inventory/import/preview:
+    post:
+      operationId: previewPharmacyInventoryForHqImport
+      tags: [hq]
+      summary: Check an uploaded spreadsheet without saving anything
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pharmacyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetUpload"
+      responses:
+        "200":
+          description: What saving the file would do, row by row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryImportPreview"
+        "400":
+          description: The file could not be read
+
+  /hq/pharmacies/{pharmacyId}/inventory/import/apply:
+    post:
+      operationId: applyPharmacyInventoryForHqImport
+      tags: [hq]
+      summary: Save the valid rows of an uploaded spreadsheet
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pharmacyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetApply"
+      responses:
+        "200":
+          description: What was saved, and a file of the rows that were not
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryImportResult"
+        "400":
+          description: The file could not be read
+        "409":
+          description: Some duplicate rows need an Override or Skip decision
+
   /hq/pharmacies/{id}/reset-password:
     post:
       operationId: resetPharmacyPassword
@@ -2193,6 +2373,84 @@ paths:
           description: Invalid uploaded photo
         "404":
           description: Team member or upload not found
+
+  /hq/drugs/import/template:
+    get:
+      operationId: getCatalogueTemplate
+      tags: [hq]
+      summary: The spreadsheet template for a bulk upload
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The template as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /hq/drugs/export:
+    get:
+      operationId: exportCatalogue
+      tags: [hq]
+      summary: The current entries in the bulk-upload format
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The entries as a base64-encoded .xlsx file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpreadsheetFile"
+
+  /hq/drugs/import/preview:
+    post:
+      operationId: previewCatalogueImport
+      tags: [hq]
+      summary: Check an uploaded spreadsheet without saving anything
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetUpload"
+      responses:
+        "200":
+          description: What saving the file would do, row by row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogueImportPreview"
+        "400":
+          description: The file could not be read
+
+  /hq/drugs/import/apply:
+    post:
+      operationId: applyCatalogueImport
+      tags: [hq]
+      summary: Save the valid rows of an uploaded spreadsheet
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpreadsheetApply"
+      responses:
+        "200":
+          description: What was saved, and a file of the rows that were not
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogueImportResult"
+        "400":
+          description: The file could not be read
+        "409":
+          description: Some duplicate rows need an Override or Skip decision
 
   /hq/drugs/categories:
     get:
@@ -2989,6 +3247,9 @@ components:
         canViewDataInsights:
           type: boolean
           description: Present for HQ accounts; controls access to aggregate-only Data & Insights
+        canManageCatalogue:
+          type: boolean
+          description: Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines
 
     TokenPair:
       type: object
@@ -3830,6 +4091,151 @@ components:
             - $ref: "#/components/schemas/DrugSubcategory"
             - type: "null"
 
+    SpreadsheetFile:
+      type: object
+      required: [fileName, mimeType, contentBase64]
+      properties:
+        fileName: { type: string }
+        mimeType: { type: string }
+        contentBase64: { type: string }
+    SpreadsheetUpload:
+      type: object
+      required: [fileName, contentBase64]
+      properties:
+        fileName: { type: string }
+        contentBase64:
+          type: string
+          description: "The .xlsx or .csv file, base64-encoded (a data URL is accepted). At most 5 MB."
+    SpreadsheetApply:
+      type: object
+      required: [fileName, contentBase64]
+      properties:
+        fileName: { type: string }
+        contentBase64: { type: string }
+        decisions:
+          type: object
+          description: "Override or skip for duplicate rows, keyed by spreadsheet row number"
+          additionalProperties:
+            type: string
+            enum: [override, skip]
+        duplicateDefault:
+          type: string
+          nullable: true
+          enum: [override, skip]
+    ImportRowChange:
+      type: object
+      required: [field, from, to]
+      properties:
+        field: { type: string }
+        from: { type: string }
+        to: { type: string }
+    InventoryImportRow:
+      type: object
+      required: [rowNumber, status, message, warnings, changes, summary, listingId]
+      properties:
+        rowNumber: { type: number }
+        status:
+          type: string
+          enum: [new, change, duplicate, unchanged, remove, review, error]
+        message: { type: string, nullable: true }
+        warnings:
+          type: array
+          items: { type: string }
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRowChange"
+        summary: { type: string }
+        listingId: { type: string, nullable: true }
+    InventoryImportPreview:
+      type: object
+      required: [fileName, summary, rows]
+      properties:
+        fileName: { type: string }
+        summary:
+          type: object
+          required: [total, new, change, duplicate, unchanged, remove, review, error, warnings]
+          properties:
+            total: { type: number }
+            new: { type: number }
+            change: { type: number }
+            duplicate: { type: number }
+            unchanged: { type: number }
+            remove: { type: number }
+            review: { type: number }
+            error: { type: number }
+            warnings: { type: number }
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryImportRow"
+    InventoryImportResult:
+      type: object
+      required: [added, updated, removed, sentForReview, skipped, unchanged, failed, errorReport]
+      properties:
+        added: { type: number }
+        updated: { type: number }
+        removed: { type: number }
+        sentForReview: { type: number }
+        skipped: { type: number }
+        unchanged: { type: number }
+        failed: { type: number }
+        errorReport:
+          allOf:
+            - $ref: "#/components/schemas/SpreadsheetFile"
+          nullable: true
+    CatalogueImportRow:
+      type: object
+      required: [rowNumber, status, message, warnings, changes, summary, catalogueId]
+      properties:
+        rowNumber: { type: number }
+        status:
+          type: string
+          enum: [new, change, duplicate, unchanged, error]
+        message: { type: string, nullable: true }
+        warnings:
+          type: array
+          items: { type: string }
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRowChange"
+        summary: { type: string }
+        catalogueId: { type: string, nullable: true }
+    CatalogueImportPreview:
+      type: object
+      required: [fileName, summary, rows]
+      properties:
+        fileName: { type: string }
+        summary:
+          type: object
+          required: [total, new, change, duplicate, unchanged, error, warnings]
+          properties:
+            total: { type: number }
+            new: { type: number }
+            change: { type: number }
+            duplicate: { type: number }
+            unchanged: { type: number }
+            error: { type: number }
+            warnings: { type: number }
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogueImportRow"
+    CatalogueImportResult:
+      type: object
+      required: [added, updated, skipped, unchanged, failed, listingsTakenDown, errorReport]
+      properties:
+        added: { type: number }
+        updated: { type: number }
+        skipped: { type: number }
+        unchanged: { type: number }
+        failed: { type: number }
+        listingsTakenDown: { type: number }
+        errorReport:
+          allOf:
+            - $ref: "#/components/schemas/SpreadsheetFile"
+          nullable: true
     InventoryItem:
       type: object
       required:

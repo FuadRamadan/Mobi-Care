@@ -8,7 +8,9 @@ import {
 import dashboardRouter from "./dashboard.js";
 import ordersRouter, { dispatchHandler } from "./orders.js";
 import pharmaciesRouter from "./pharmacies.js";
+import { inventoryImportRouter } from "../inventoryImport.js";
 import drugsRouter from "./drugs.js";
+import catalogueImportRouter from "./catalogueImport.js";
 import couriersRouter from "./couriers.js";
 import flagsRouter from "./flags.js";
 import settlementsRouter from "./settlements.js";
@@ -33,7 +35,9 @@ router.use("/dashboard", dashboardRouter);
 router.use("/orders", ordersRouter);
 // Contract alias: GET /hq/dispatch (same handler as GET /hq/orders/dispatch)
 router.get("/dispatch", dispatchHandler);
+router.use("/pharmacies/:pharmacyId/inventory", inventoryImportRouter("hq"));
 router.use("/pharmacies", pharmaciesRouter);
+router.use("/drugs", catalogueImportRouter);
 router.use("/drugs", drugsRouter);
 router.use("/couriers", couriersRouter);
 // Reading zones is open to HQ staff; changing them checks settlements

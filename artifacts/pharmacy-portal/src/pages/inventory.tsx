@@ -14,7 +14,13 @@ import {
   DrugSubcategory,
   getListInventoryQueryKey,
   getListCatalogueQueryKey,
+  getInventoryTemplate,
+  exportInventory,
+  previewInventoryImport,
+  applyInventoryImport,
+  type InventoryImportResult,
 } from "@workspace/api-client-react";
+import { BulkUploadDialog } from "@/components/BulkUploadDialog";
 import { formatLeones } from "@/lib/format";
 import {
   Table,
@@ -39,6 +45,7 @@ import {
   Clock,
   Info,
   CheckCircle2,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   Dialog,
@@ -1164,6 +1171,7 @@ export default function Inventory() {
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
 
   const { data: inventory, isLoading: isLoadingInventory } = useListInventory();
   const { data: catalogue = [] } = useListCatalogue();
@@ -1236,6 +1244,14 @@ export default function Inventory() {
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
+            onClick={() => setIsBulkOpen(true)}
+            className="gap-2 shrink-0 bg-background"
+            data-testid="btn-bulk-upload"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Bulk upload
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => setIsRequestModalOpen(true)}
             className="gap-2 shrink-0 bg-background"
             data-testid="btn-request-drug"
@@ -1251,6 +1267,31 @@ export default function Inventory() {
           </Button>
         </div>
       </div>
+
+      <BulkUploadDialog<InventoryImportResult>
+        open={isBulkOpen}
+        onOpenChange={setIsBulkOpen}
+        title="Bulk upload inventory"
+        description="Add or update many listings at once from a spreadsheet. List each brand on its own row."
+        getTemplate={() => getInventoryTemplate()}
+        getExport={() => exportInventory()}
+        exportLabel="Export my inventory"
+        preview={(upload) => previewInventoryImport(upload)}
+        apply={(body) => applyInventoryImport(body)}
+        describeResult={(result) => [
+          `${result.added} new listing${result.added === 1 ? "" : "s"} added`,
+          `${result.updated} listing${result.updated === 1 ? "" : "s"} updated`,
+          ...(result.removed ? [`${result.removed} taken down`] : []),
+          ...(result.sentForReview ? [`${result.sentForReview} sent to MobiCare HQ for review (hidden from patients until approved)`] : []),
+          ...(result.skipped ? [`${result.skipped} duplicate${result.skipped === 1 ? "" : "s"} skipped`] : []),
+          ...(result.unchanged ? [`${result.unchanged} unchanged`] : []),
+          ...(result.failed ? [`${result.failed} row${result.failed === 1 ? "" : "s"} not saved because of problems`] : []),
+        ]}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: getListInventoryQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListCatalogueQueryKey() });
+        }}
+      />
 
       {/* Search */}
       <div className="relative w-full shadow-sm">
