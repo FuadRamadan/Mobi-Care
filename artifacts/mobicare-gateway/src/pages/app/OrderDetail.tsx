@@ -286,6 +286,11 @@ export default function OrderDetail() {
             <div key={item.id} className="flex items-center justify-between p-4 text-sm">
               <div>
                 <div className="font-medium">{item.drugName}</div>
+                {item.brand && (
+                  <div className="text-xs text-muted-foreground">
+                    {[item.brand, item.manufacturer, item.countryOfOrigin].filter(Boolean).join(' · ')}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground">
                   {item.quantity} × {formatLeones(item.unitPriceLeones)}
                 </div>

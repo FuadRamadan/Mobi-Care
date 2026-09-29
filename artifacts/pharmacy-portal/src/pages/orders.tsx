@@ -330,7 +330,14 @@ function OrderDetailsSheet({
                       (item.patientUnitPriceMinor ?? 0) * item.quantity;
                     return (
                       <TableRow key={item.id} className="hover:bg-transparent">
-                        <TableCell className="py-2 text-sm">{item.drugName}</TableCell>
+                        <TableCell className="py-2 text-sm">
+                          {item.drugName}
+                          {item.brand && (
+                            <div className="text-xs text-muted-foreground">
+                              {[item.brand, item.manufacturer, item.countryOfOrigin].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="py-2 text-sm text-right">x{item.quantity}</TableCell>
                         <TableCell className="py-2 text-sm text-right">{formatLeones((item.baseUnitPriceMinor ?? 0) / 100)}</TableCell>
                         <TableCell className="py-2 text-sm text-right font-medium">{formatLeones(baseLineTotalMinor / 100)}</TableCell>

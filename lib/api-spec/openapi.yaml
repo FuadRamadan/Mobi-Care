@@ -3056,6 +3056,13 @@ components:
 
         drugName:
           type: string
+        brand:
+          type: ["string", "null"]
+          description: The product bought, copied from the listing when the order was placed
+        manufacturer:
+          type: ["string", "null"]
+        countryOfOrigin:
+          type: ["string", "null"]
         quantity:
           type: number
         unitPriceLeones:
@@ -3363,6 +3370,8 @@ components:
         brand:
           type: ["string", "null"]
         manufacturer:
+          type: ["string", "null"]
+        countryOfOrigin:
           type: ["string", "null"]
         priceLeones:
           type: number
@@ -3897,6 +3906,8 @@ components:
           form,
           unitOfSale,
           expiryDate,
+          manufacturer,
+          countryOfOrigin,
           priceLeones,
           stockQuantity,
         ]
@@ -3916,6 +3927,7 @@ components:
           type: string
         brand:
           type: string
+          description: Brand name, or blank / "Generic" for an unbranded product
         manufacturer:
           type: string
         countryOfOrigin:
@@ -3945,10 +3957,11 @@ components:
       properties:
         brand:
           type: ["string", "null"]
+          description: Blank or null saves "Generic"
         manufacturer:
-          type: ["string", "null"]
+          type: string
         countryOfOrigin:
-          type: ["string", "null"]
+          type: string
         strength:
           type: string
           minLength: 1

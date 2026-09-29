@@ -253,11 +253,34 @@ export default function PatientSearch() {
   );
 }
 
+/** One pharmacy's versions of a medicine: its brands, or generics from different makers. */
+interface PharmacyOffers {
+  pharmacyId: string;
+  first: DrugOffer;
+  options: DrugOffer[];
+}
+
+function groupByPharmacy(offers: DrugOffer[]): PharmacyOffers[] {
+  const groups = new Map<string, PharmacyOffers>();
+  for (const offer of offers) {
+    const group = groups.get(offer.pharmacyId);
+    if (group) group.options.push(offer);
+    else groups.set(offer.pharmacyId, { pharmacyId: offer.pharmacyId, first: offer, options: [offer] });
+  }
+  return [...groups.values()];
+}
+
+function versionLabel(offer: DrugOffer): string {
+  return offer.brand?.trim() || "Generic";
+}
+
 function DrugCard({ drug }: { drug: DrugSearchResult }) {
   const { addItem, cart } = useCart();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
-  const offers = expanded ? drug.offers : drug.offers.slice(0, 3);
+  const [openPharmacy, setOpenPharmacy] = useState<string | null>(null);
+  const groups = groupByPharmacy(drug.offers);
+  const visible = expanded ? groups : groups.slice(0, 3);
 
   function add(offer: DrugOffer, replace = false) {
     const ok = addItem(
@@ -280,6 +303,9 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
         prescriptionRequired: drug.prescriptionRequired,
         collectionOnly: drug.collectionOnly,
         priceLeones: offer.priceLeones,
+        brand: versionLabel(offer),
+        manufacturer: offer.manufacturer ?? null,
+        countryOfOrigin: offer.countryOfOrigin ?? null,
         availableForDelivery: offer.availableForDelivery,
         availableForCollection: offer.availableForCollection,
       },
@@ -305,7 +331,7 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
     }
     toast({
       title: `${drug.name} added`,
-      description: `From ${offer.pharmacyName} — ${formatLeones(offer.priceLeones)}`,
+      description: `${versionLabel(offer)} from ${offer.pharmacyName} — ${formatLeones(offer.priceLeones)}`,
     });
   }
 
@@ -353,100 +379,161 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
         )}
 
         <div className="divide-y rounded-xl border bg-secondary/30">
-          {offers.map((offer) => (
-            <div
-              key={offer.inventoryId}
-              className={`flex flex-col gap-3 p-3 ${!offer.inStock ? "opacity-60 grayscale-[50%]" : ""}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
+          {visible.map(({ pharmacyId, first, options }) => {
+            const many = options.length > 1;
+            const isOpen = openPharmacy === pharmacyId;
+            const prices = options.map((option) => option.priceLeones);
+            const anyInStock = options.some((option) => option.inStock);
+            return (
+              <div
+                key={pharmacyId}
+                className={`flex flex-col gap-3 p-3 ${!anyInStock ? "opacity-60 grayscale-[50%]" : ""}`}
+                data-testid={`pharmacy-${drug.listingKey}-${pharmacyId}`}
+              >
+                <div className="min-w-0">
                   <div className="font-medium text-sm flex items-center gap-2">
-                    {offer.pharmacyName}
-                    <span className={`w-2 h-2 rounded-full ${offer.online ? 'bg-green-500' : 'bg-gray-300'}`} title={offer.online ? 'Online' : 'Offline'} />
+                    {first.pharmacyName}
+                    <span className={`w-2 h-2 rounded-full ${first.online ? 'bg-green-500' : 'bg-gray-300'}`} title={first.online ? 'Online' : 'Offline'} />
                   </div>
-                  {offer.pharmacyAddress && (
+                  {first.pharmacyAddress && (
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {offer.pharmacyAddress}
+                      {first.pharmacyAddress}
                     </div>
                   )}
-                  {offer.estimatedDistanceKm != null && (
+                  {first.estimatedDistanceKm != null && (
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {offer.estimatedDistanceKm.toFixed(1)} km away
+                      {first.estimatedDistanceKm.toFixed(1)} km away
                     </div>
                   )}
                   <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                    {offer.availableForDelivery && (
+                    {options.some((option) => option.availableForDelivery) && (
                       <span className="inline-flex items-center gap-1 text-primary">
                         <Truck className="w-3 h-3" /> Delivery
                       </span>
                     )}
-                    {offer.availableForCollection && (
+                    {options.some((option) => option.availableForCollection) && (
                       <span className="inline-flex items-center gap-1 text-primary">
                         <Store className="w-3 h-3" /> Collection
                       </span>
                     )}
-                    <span className={`inline-flex items-center gap-1 ${offer.inStock ? 'text-green-600' : 'text-red-600'}`}>
-                      {offer.inStock ? `${offer.stockQuantity} in stock` : 'Out of stock'}
-                    </span>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <div className="font-display font-bold text-dark-green">
-                    {/* Deliberately no "best price" badge. Offers are listed
-                        cheapest first, which is information; singling one out
-                        is a recommendation, and MobiCare does not steer a
-                        patient towards any pharmacy. */}
-                    {formatLeones(offer.priceLeones)}
+                {/* Versions are listed as they come, cheapest first, with no
+                    option singled out: MobiCare does not steer a patient
+                    towards a brand or a pharmacy. */}
+                {many ? (
+                  <div className="rounded-lg border bg-background/60">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-2 p-2.5 text-left"
+                      onClick={() => setOpenPharmacy(isOpen ? null : pharmacyId)}
+                      aria-expanded={isOpen}
+                      data-testid={`button-options-${drug.listingKey}-${pharmacyId}`}
+                    >
+                      <span className="text-sm font-medium">
+                        {options.length} options
+                        <span className="text-muted-foreground font-normal">
+                          {" · "}
+                          {formatLeones(Math.min(...prices))}
+                          {Math.max(...prices) !== Math.min(...prices) && `–${formatLeones(Math.max(...prices)).replace(/^Le /, "")}`}
+                        </span>
+                      </span>
+                      <span className="text-xs text-primary font-medium">
+                        {isOpen ? "Hide" : "See options"}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="divide-y border-t">
+                        {options.map((option) => (
+                          <OptionRow key={option.inventoryId} offer={option} listingKey={drug.listingKey} onAdd={() => add(option)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    per {offer.unitOfSale}
+                ) : (
+                  <div className="rounded-lg border bg-background/60">
+                    <OptionRow offer={first} listingKey={drug.listingKey} onAdd={() => add(first)} />
                   </div>
-                  <Button
-                    size="sm"
-                    className="rounded-full mt-2 w-full"
-                    onClick={() => add(offer)}
-                    disabled={!offer.inStock}
-                    variant={offer.inStock ? "default" : "secondary"}
-                    data-testid={`button-add-${drug.listingKey}-${offer.pharmacyId}`}
-                  >
-                    {offer.inStock ? "Add to cart" : "Out of stock"}
-                  </Button>
-                </div>
-              </div>
+                )}
 
-              <div className="grid grid-cols-2 gap-2 text-xs bg-background/50 rounded-lg p-2 border border-border/50">
-                <div>
-                  <span className="text-muted-foreground block mb-0.5">Contact</span>
-                  {offer.pharmacyPhone ? (
-                    <a href={`tel:${offer.pharmacyPhone}`} className="font-medium text-primary hover:underline">{offer.pharmacyPhone}</a>
-                  ) : (
-                    <span className="text-muted-foreground italic">Not provided</span>
-                  )}
-                </div>
-                <div>
-                  <span className="text-muted-foreground block mb-0.5">Mobile Money</span>
-                  <MobileMoneyLines
-                    lines={offer.mobileMoneyLines}
-                    accountName={offer.mobileMoneyAccountName}
-                  />
+                <div className="grid grid-cols-2 gap-2 text-xs bg-background/50 rounded-lg p-2 border border-border/50">
+                  <div>
+                    <span className="text-muted-foreground block mb-0.5">Contact</span>
+                    {first.pharmacyPhone ? (
+                      <a href={`tel:${first.pharmacyPhone}`} className="font-medium text-primary hover:underline">{first.pharmacyPhone}</a>
+                    ) : (
+                      <span className="text-muted-foreground italic">Not provided</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-0.5">Mobile Money</span>
+                    <MobileMoneyLines
+                      lines={first.mobileMoneyLines}
+                      accountName={first.mobileMoneyAccountName}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {drug.offers.length > 3 && (
+        {groups.length > 3 && (
           <button
             className="text-xs text-primary font-medium hover:underline"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded
               ? "Show fewer pharmacies"
-              : `Compare all ${drug.offers.length} pharmacies`}
+              : `Compare all ${groups.length} pharmacies`}
           </button>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** One version of the medicine at one pharmacy: what it is, what it costs, and Add. */
+function OptionRow({
+  offer,
+  listingKey,
+  onAdd,
+}: {
+  offer: DrugOffer;
+  listingKey: string;
+  onAdd: () => void;
+}) {
+  const origin = [offer.manufacturer, offer.countryOfOrigin].filter(Boolean).join(" · ");
+  return (
+    <div className={`flex items-start justify-between gap-3 p-2.5 ${!offer.inStock ? "opacity-60" : ""}`}>
+      <div className="min-w-0">
+        <div className="text-sm font-medium">
+          {versionLabel(offer) === "Generic" ? (
+            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">Generic</span>
+          ) : (
+            versionLabel(offer)
+          )}
+        </div>
+        {origin && <div className="text-xs text-muted-foreground mt-0.5">{origin}</div>}
+        <div className={`text-xs mt-0.5 ${offer.inStock ? "text-green-600" : "text-red-600"}`}>
+          {offer.inStock ? `${offer.stockQuantity} in stock` : "Out of stock"}
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <div className="font-display font-bold text-dark-green">{formatLeones(offer.priceLeones)}</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">per {offer.unitOfSale}</div>
+        <Button
+          size="sm"
+          className="rounded-full mt-2 w-full"
+          onClick={onAdd}
+          disabled={!offer.inStock}
+          variant={offer.inStock ? "default" : "secondary"}
+          data-testid={`button-add-${listingKey}-${offer.inventoryId}`}
+        >
+          {offer.inStock ? "Add to cart" : "Out of stock"}
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -13,6 +13,15 @@ export interface OrderItem {
   /** @nullable */
   inventoryId?: string | null;
   drugName: string;
+  /**
+     * The product bought, copied from the listing when the order was placed
+     * @nullable
+     */
+  brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   quantity: number;
   unitPriceLeones: number;
   baseUnitPriceMinor: number;

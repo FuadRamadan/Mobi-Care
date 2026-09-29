@@ -496,6 +496,8 @@ function ListingModal({
   const [unitOfSale, setUnitOfSale] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [brand, setBrand] = useState("");
+  // Unbranded products are listed as "Generic", the label patients see.
+  const [isGeneric, setIsGeneric] = useState(false);
   const [manufacturer, setManufacturer] = useState("");
   const [countryOfOrigin, setCountryOfOrigin] = useState("");
   const [primaryCategory, setPrimaryCategory] = useState<
@@ -520,7 +522,9 @@ function ListingModal({
         setForm(item.form || "");
         setUnitOfSale(item.unitOfSale || "");
         setExpiryDate(item.expiryDate ? item.expiryDate.split("T")[0] : "");
-        setBrand(item.brand || "");
+        const generic = !item.brand || item.brand.toLowerCase() === "generic";
+        setIsGeneric(generic);
+        setBrand(generic ? "" : item.brand || "");
         setManufacturer(item.manufacturer || "");
         setCountryOfOrigin(item.countryOfOrigin || "");
         setPrimaryCategory(item.primaryCategory || "");
@@ -539,6 +543,7 @@ function ListingModal({
         setUnitOfSale("");
         setExpiryDate("");
         setBrand("");
+        setIsGeneric(false);
         setManufacturer("");
         setCountryOfOrigin("");
         setPrimaryCategory("");
@@ -564,6 +569,11 @@ function ListingModal({
     if (!form.trim()) newErrors.form = "Form is required";
     if (!unitOfSale.trim()) newErrors.unitOfSale = "Unit of sale is required";
     if (!expiryDate) newErrors.expiryDate = "Expiry date is required";
+    if (!isGeneric && !brand.trim())
+      newErrors.brand = "Enter the brand, or tick Generic for an unbranded product";
+    if (!manufacturer.trim()) newErrors.manufacturer = "Manufacturer is required";
+    if (!countryOfOrigin.trim())
+      newErrors.countryOfOrigin = "Country of origin is required";
 
     const priceNum = parseFloat(priceLeones);
     if (isNaN(priceNum) || priceNum <= 0)
@@ -579,18 +589,22 @@ function ListingModal({
     }
 
     const currentDrugId = isEdit ? item!.drugId : selectedDrug?.id;
+    const chosenBrand = (isGeneric ? "Generic" : brand.trim()).toLowerCase();
     const existing = inventory.find(
       (i) =>
+        i.isActive !== false &&
         i.drugId === currentDrugId &&
         i.strength === strength.trim() &&
         i.form === form.trim() &&
         i.unitOfSale === unitOfSale.trim() &&
+        (i.brand || "Generic").toLowerCase() === chosenBrand &&
+        (i.manufacturer || "").trim().toLowerCase() === manufacturer.trim().toLowerCase() &&
         i.id !== item?.id,
     );
 
     if (existing) {
       newErrors.duplicate =
-        "You already have this drug, strength, form, and unit of sale. Edit the existing listing instead.";
+        "You already list this exact product (same medicine, strength, form, pack, brand and manufacturer). Edit that listing instead.";
     }
 
     setErrors(newErrors);
@@ -607,9 +621,9 @@ function ListingModal({
         form: form.trim(),
         unitOfSale: unitOfSale.trim(),
         expiryDate,
-        brand: brand.trim() || undefined,
-        manufacturer: manufacturer.trim() || undefined,
-        countryOfOrigin: countryOfOrigin.trim() || undefined,
+        brand: isGeneric ? "Generic" : brand.trim(),
+        manufacturer: manufacturer.trim(),
+        countryOfOrigin: countryOfOrigin.trim(),
         primaryCategory: (primaryCategory as DrugPrimaryCategory) || undefined,
         subcategory: (subcategory as DrugSubcategory) || undefined,
         otherCategoryText: otherCategoryText.trim() || undefined,
@@ -625,9 +639,9 @@ function ListingModal({
           id: item!.id,
           data: {
             ...payloadBase,
-            brand: payloadBase.brand || null,
-            manufacturer: payloadBase.manufacturer || null,
-            countryOfOrigin: payloadBase.countryOfOrigin || null,
+            brand: payloadBase.brand,
+            manufacturer: payloadBase.manufacturer,
+            countryOfOrigin: payloadBase.countryOfOrigin,
             primaryCategory: payloadBase.primaryCategory || null,
             subcategory: payloadBase.subcategory || null,
             otherCategoryText: payloadBase.otherCategoryText || null,
@@ -939,38 +953,66 @@ function ListingModal({
           {/* Section: Origin & Classification */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b pb-1">
-              Origin & Classification (Optional)
+              Brand & Origin
             </h3>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Patients see these when choosing between versions of the same
+              medicine. List each brand, or each maker&apos;s generic, separately
+              with its own price.
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>Brand</Label>
+                <Label>Brand *</Label>
                 <Input
-                  value={brand}
+                  value={isGeneric ? "Generic" : brand}
                   onChange={(e) => setBrand(e.target.value)}
                   placeholder="e.g. Panadol"
+                  disabled={isGeneric}
                   data-testid="input-brand"
                 />
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={isGeneric}
+                    onChange={(e) => setIsGeneric(e.target.checked)}
+                    data-testid="checkbox-generic"
+                  />
+                  Generic (no brand)
+                </label>
+                {errors.brand && (
+                  <p className="text-xs text-destructive">{errors.brand}</p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label>Manufacturer</Label>
+                <Label>Manufacturer *</Label>
                 <Input
                   value={manufacturer}
                   onChange={(e) => setManufacturer(e.target.value)}
                   placeholder="e.g. GSK"
                   data-testid="input-manufacturer"
                 />
+                {errors.manufacturer && (
+                  <p className="text-xs text-destructive">{errors.manufacturer}</p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label>Country</Label>
+                <Label>Country of origin *</Label>
                 <Input
                   value={countryOfOrigin}
                   onChange={(e) => setCountryOfOrigin(e.target.value)}
-                  placeholder="e.g. UK"
+                  placeholder="e.g. United Kingdom"
                   data-testid="input-country"
                 />
+                {errors.countryOfOrigin && (
+                  <p className="text-xs text-destructive">{errors.countryOfOrigin}</p>
+                )}
               </div>
             </div>
+
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b pb-1 pt-2">
+              Classification (Optional)
+            </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -1416,6 +1458,14 @@ export default function Inventory() {
                           <span className="text-muted-foreground/40 italic">
                             —
                           </span>
+                        )}
+                        {(!item.manufacturer || !item.countryOfOrigin) && (
+                          <div
+                            className="text-[10px] font-medium text-amber-700 mt-0.5"
+                            data-testid={`missing-origin-${item.id}`}
+                          >
+                            Add manufacturer and country
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>

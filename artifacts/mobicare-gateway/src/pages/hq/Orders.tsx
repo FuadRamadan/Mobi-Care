@@ -72,7 +72,7 @@ export default function HqOrders() {
                   </TableCell>
                   <TableCell>{o.pharmacyName ?? '—'}</TableCell>
                   <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground">
-                    {o.items.map((i) => `${i.drugName} ×${i.quantity}`).join(', ') || '—'}
+                    {o.items.map((i) => `${i.drugName}${i.brand ? ` (${i.brand})` : ''} ×${i.quantity}`).join(', ') || '—'}
                   </TableCell>
                   <TableCell>{formatLeones(o.totalLeones)}</TableCell>
                   <TableCell className="capitalize">{o.fulfillmentType}</TableCell>

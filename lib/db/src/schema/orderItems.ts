@@ -27,6 +27,11 @@ export const orderItemsTable = pgTable("order_items", {
   ),
   // Snapshot of drug name at order time (catalogue name can change later)
   drugName: text("drug_name").notNull(),
+  // The exact product sold, copied from the listing when the order is placed,
+  // so the pharmacy dispenses the brand the patient chose.
+  brand: text("brand"),
+  manufacturer: text("manufacturer"),
+  countryOfOrigin: text("country_of_origin"),
   quantity: integer("quantity").notNull(),
   unitPriceLeones: numeric("unit_price_leones", {
     precision: 12,

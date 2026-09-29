@@ -38,6 +38,8 @@ export interface DrugOffer {
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   priceLeones: number;
   unitOfSale: string;
   inStock: boolean;

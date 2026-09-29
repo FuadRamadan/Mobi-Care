@@ -147,13 +147,13 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
-      label: "active inventory variant uniqueness index",
+      label: "active inventory listing uniqueness index (migration 0028)",
       query: sql`
         SELECT EXISTS (
           SELECT 1 FROM pg_indexes
           WHERE schemaname = current_schema()
             AND tablename = 'pharmacy_inventory'
-            AND indexname = 'uniq_active_pharmacy_drug_variant'
+            AND indexname = 'uniq_active_pharmacy_listing'
         ) AS exists
       `,
     },
@@ -162,6 +162,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       query: sql`
         SELECT to_regclass(current_schema() || '.commission_settlements')
           IS NOT NULL AS exists
+      `,
+    },
+    {
+      label: "brand on order items (migration 0028)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'order_items'
+            AND column_name = 'brand'
+        ) AS exists
       `,
     },
     {

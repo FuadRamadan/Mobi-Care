@@ -276,6 +276,11 @@ export default function Checkout() {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {item.strength} {item.form}
                 </div>
+                {item.brand && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {[item.brand, item.manufacturer, item.countryOfOrigin].filter(Boolean).join(" · ")}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {formatLeones(item.priceLeones)} per {item.unitOfSale}
                   {item.prescriptionRequired && " · prescription"}
@@ -492,7 +497,10 @@ export default function Checkout() {
           <div className="space-y-1.5 pt-2 border-t">
             {cart.items.map((item) => (
               <div key={item.inventoryId} className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{item.quantity} × {item.drugName}</span>
+                <span className="text-muted-foreground">
+                  {item.quantity} × {item.drugName}
+                  {item.brand ? ` (${item.brand})` : ""}
+                </span>
                 <span>{formatLeones(item.priceLeones * item.quantity)}</span>
               </div>
             ))}

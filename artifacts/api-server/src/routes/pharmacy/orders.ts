@@ -102,6 +102,9 @@ router.get("/", async (req: AuthRequest, res) => {
              patientUnitPriceMinor: orderItemsTable.patientUnitPriceMinor,
              patientLineTotalMinor: orderItemsTable.patientLineTotalMinor,
             prescriptionId: orderItemsTable.prescriptionId,
+            brand: orderItemsTable.brand,
+            manufacturer: orderItemsTable.manufacturer,
+            countryOfOrigin: orderItemsTable.countryOfOrigin,
           })
           .from(orderItemsTable)
           .where(inArray(orderItemsTable.orderId, orderIds))

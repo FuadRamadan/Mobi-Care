@@ -1,95 +1,26 @@
 import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import {
-  pharmacyInventoryTable,
-  drugCatalogueTable,
-  DRUG_PRIMARY_CATEGORIES,
-  DRUG_SUBCATEGORIES,
-  isValidDrugCategoryPair,
-} from "@workspace/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { pharmacyInventoryTable, drugCatalogueTable } from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { pharmaciesTable } from "@workspace/db/schema";
+import {
+  DUPLICATE_LISTING_MESSAGE,
+  findActiveDuplicate,
+  inventoryFields,
+  normalizeBrand,
+  normalizeOptional,
+  primaryCategorySchema,
+  subcategorySchema,
+  validateListing,
+} from "../../lib/inventory/listing.js";
+
+// Kept exported from here for the existing unit tests.
+export { catalogueAllowsValue } from "../../lib/inventory/listing.js";
 
 const router = safeRouter();
-
-const primaryCategorySchema = z.enum(
-  DRUG_PRIMARY_CATEGORIES as [string, ...string[]],
-);
-const subcategorySchema = z.enum(DRUG_SUBCATEGORIES as [string, ...string[]]);
-const dateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD expiry date");
-
-const inventoryFields = z.object({
-  strength: z.string().trim().min(1).max(50),
-  form: z.string().trim().min(1).max(50),
-  unitOfSale: z.string().trim().min(1).max(80),
-  expiryDate: dateSchema,
-  brand: z.string().trim().max(100).nullable().optional(),
-  manufacturer: z.string().trim().max(150).nullable().optional(),
-  countryOfOrigin: z.string().trim().max(100).nullable().optional(),
-  primaryCategory: primaryCategorySchema.nullable().optional(),
-  subcategory: subcategorySchema.nullable().optional(),
-  otherCategoryText: z.string().trim().max(300).nullable().optional(),
-  priceLeones: z.number().finite().positive().multipleOf(0.01),
-  stockQuantity: z.number().int().min(0),
-  lowStockAlertAt: z.number().int().min(0).default(10),
-  availableForDelivery: z.boolean().default(true),
-  availableForCollection: z.boolean().default(true),
-});
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function normalizeOptional(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-export function catalogueAllowsValue(
-  approvedValues: string[],
-  submittedValue: string,
-): boolean {
-  return approvedValues.length === 0 || approvedValues.includes(submittedValue);
-}
-
-function validateListing(
-  data: z.infer<typeof inventoryFields>,
-  drug: typeof drugCatalogueTable.$inferSelect,
-): string | null {
-  if (data.expiryDate <= todayIso()) {
-    return "Expired stock cannot be saved. Enter an expiry date after today.";
-  }
-  if (!catalogueAllowsValue(drug.commonStrengths, data.strength)) {
-    return "Select a strength approved in the MobiCare catalogue.";
-  }
-  if (!catalogueAllowsValue(drug.commonForms, data.form)) {
-    return "Select a form approved in the MobiCare catalogue.";
-  }
-  const primaryCategory = data.primaryCategory ?? drug.primaryCategory;
-  const subcategory = data.subcategory ?? drug.subcategory;
-  if ((primaryCategory == null) !== (subcategory == null)) {
-    return "Select both a category and subcategory.";
-  }
-  if (
-    primaryCategory &&
-    subcategory &&
-    !isValidDrugCategoryPair(primaryCategory, subcategory)
-  ) {
-    return "The selected subcategory does not belong to that category.";
-  }
-  if (
-    (primaryCategory === "other" || subcategory === "other") &&
-    !normalizeOptional(data.otherCategoryText)
-  ) {
-    return "Explain the category when selecting Other.";
-  }
-  return null;
-}
 
 function serializeInventoryPrice<T extends { priceLeones: string }>(row: T) {
   return { ...row, priceLeones: Number(row.priceLeones) };
@@ -227,9 +158,9 @@ router.post("/", async (req: AuthRequest, res) => {
     .insert(pharmacyInventoryTable)
     .values({
       ...body.data,
-      brand: normalizeOptional(body.data.brand),
-      manufacturer: normalizeOptional(body.data.manufacturer),
-      countryOfOrigin: normalizeOptional(body.data.countryOfOrigin),
+      brand: normalizeBrand(body.data.brand),
+      manufacturer: body.data.manufacturer.trim(),
+      countryOfOrigin: body.data.countryOfOrigin.trim(),
       otherCategoryText: normalizeOptional(body.data.otherCategoryText),
       priceLeones: body.data.priceLeones.toFixed(2),
       primaryCategory,
@@ -243,8 +174,7 @@ router.post("/", async (req: AuthRequest, res) => {
 
   if (!inserted) {
     res.status(409).json({
-      error:
-        "An active listing with this drug, strength, form, and unit of sale already exists. Edit the existing listing instead.",
+      error: DUPLICATE_LISTING_MESSAGE,
       code: "DUPLICATE_ACTIVE_LISTING",
     });
     return;
@@ -262,6 +192,8 @@ router.post("/", async (req: AuthRequest, res) => {
       strength: inserted.strength,
       form: inserted.form,
       unitOfSale: inserted.unitOfSale,
+      brand: inserted.brand,
+      manufacturer: inserted.manufacturer,
       priceLeones: inserted.priceLeones,
     },
   });
@@ -278,8 +210,9 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     .partial()
     .extend({
       brand: z.string().trim().max(100).nullable().optional(),
-      manufacturer: z.string().trim().max(150).nullable().optional(),
-      countryOfOrigin: z.string().trim().max(100).nullable().optional(),
+      // Older listings may lack these; once given they cannot be cleared.
+      manufacturer: z.string().trim().min(1, "Enter the manufacturer").max(150).optional(),
+      countryOfOrigin: z.string().trim().min(1, "Enter the country of origin").max(100).optional(),
       primaryCategory: primaryCategorySchema.nullable().optional(),
       subcategory: subcategorySchema.nullable().optional(),
       otherCategoryText: z.string().trim().max(300).nullable().optional(),
@@ -376,25 +309,19 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     primaryCategory === "other" || subcategory === "other";
 
   if (body.data.isActive !== false) {
-    const [duplicate] = await db
-      .select({ id: pharmacyInventoryTable.id })
-      .from(pharmacyInventoryTable)
-      .where(
-        and(
-          eq(pharmacyInventoryTable.pharmacyId, pharmacyId),
-          eq(pharmacyInventoryTable.drugId, existing.inventory.drugId),
-          eq(pharmacyInventoryTable.strength, merged.strength),
-          eq(pharmacyInventoryTable.form, merged.form),
-          eq(pharmacyInventoryTable.unitOfSale, merged.unitOfSale),
-          eq(pharmacyInventoryTable.isActive, true),
-          ne(pharmacyInventoryTable.id, id),
-        ),
-      )
-      .limit(1);
+    const duplicate = await findActiveDuplicate({
+      pharmacyId,
+      drugId: existing.inventory.drugId,
+      strength: merged.strength,
+      form: merged.form,
+      unitOfSale: merged.unitOfSale,
+      brand: normalizeBrand(merged.brand),
+      manufacturer: normalizeOptional(merged.manufacturer),
+      exceptId: id,
+    });
     if (duplicate) {
       res.status(409).json({
-        error:
-          "An active listing with this drug, strength, form, and unit of sale already exists. Edit that listing instead.",
+        error: DUPLICATE_LISTING_MESSAGE,
         code: "DUPLICATE_ACTIVE_LISTING",
       });
       return;
@@ -405,7 +332,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     .update(pharmacyInventoryTable)
     .set({
       ...body.data,
-      brand: normalizeOptional(merged.brand),
+      brand: normalizeBrand(merged.brand),
       manufacturer: normalizeOptional(merged.manufacturer),
       countryOfOrigin: normalizeOptional(merged.countryOfOrigin),
       otherCategoryText: normalizeOptional(merged.otherCategoryText),

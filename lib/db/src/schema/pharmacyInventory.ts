@@ -69,13 +69,19 @@ export const pharmacyInventoryTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("uniq_active_pharmacy_drug_variant")
+    // One active listing per product: the same medicine, strength, form and
+    // pack from the same brand and manufacturer. Different brands (or generics
+    // from different manufacturers) are separate listings with their own
+    // prices. Compared ignoring case; a missing manufacturer counts as blank.
+    uniqueIndex("uniq_active_pharmacy_listing")
       .on(
         table.pharmacyId,
         table.drugId,
         table.strength,
         table.form,
         table.unitOfSale,
+        sql`lower(${table.brand})`,
+        sql`lower(coalesce(${table.manufacturer}, ''))`,
       )
       .where(sql`${table.isActive} = true`),
   ],

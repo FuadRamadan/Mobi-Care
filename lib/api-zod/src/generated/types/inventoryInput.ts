@@ -17,9 +17,10 @@ export interface InventoryInput {
   /** @minLength 1 */
   unitOfSale: string;
   expiryDate: string;
+  /** Brand name, or blank / "Generic" for an unbranded product */
   brand?: string;
-  manufacturer?: string;
-  countryOfOrigin?: string;
+  manufacturer: string;
+  countryOfOrigin: string;
   primaryCategory?: DrugPrimaryCategory;
   subcategory?: DrugSubcategory;
   otherCategoryText?: string;

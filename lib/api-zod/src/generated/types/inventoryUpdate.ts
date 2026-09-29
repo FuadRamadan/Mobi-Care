@@ -9,12 +9,13 @@ import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
 
 export interface InventoryUpdate {
-  /** @nullable */
+  /**
+     * Blank or null saves "Generic"
+     * @nullable
+     */
   brand?: string | null;
-  /** @nullable */
-  manufacturer?: string | null;
-  /** @nullable */
-  countryOfOrigin?: string | null;
+  manufacturer?: string;
+  countryOfOrigin?: string;
   /** @minLength 1 */
   strength?: string;
   /** @minLength 1 */

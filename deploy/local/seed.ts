@@ -278,6 +278,7 @@ async function main(): Promise<void> {
         // A year out, so nothing shows as expiring during a demo.
         expiryDate: new Date(Date.now() + 365 * 24 * 3600 * 1000)
           .toISOString().slice(0, 10),
+        brand: "Generic",
         manufacturer: "Generic Pharma Ltd",
         countryOfOrigin: "India",
         primaryCategory: drug.primaryCategory,
@@ -290,6 +291,31 @@ async function main(): Promise<void> {
         availableForCollection: true,
       });
       console.log(`  created  stock for "${drug.name}" (${drug.stock} @ Le ${drug.price})`);
+
+      // A branded version beside the generic, so search shows a pharmacy
+      // offering more than one version of the same medicine.
+      if (drug.name === "Paracetamol") {
+        await db.insert(pharmacyInventoryTable).values({
+          pharmacyId: pharmacy.id,
+          drugId: catalogue.id,
+          strength: drug.commonStrengths[0]!,
+          form: drug.commonForms[0]!,
+          unitOfSale: `Pack of 10 ${drug.unit}`,
+          expiryDate: new Date(Date.now() + 365 * 24 * 3600 * 1000)
+            .toISOString().slice(0, 10),
+          brand: "Panadol",
+          manufacturer: "GSK",
+          countryOfOrigin: "United Kingdom",
+          primaryCategory: drug.primaryCategory,
+          subcategory: drug.subcategory,
+          completionStatus: "complete",
+          priceLeones: "32.00",
+          stockQuantity: 60,
+          availableForDelivery: true,
+          availableForCollection: true,
+        });
+        console.log(`  created  branded stock for "${drug.name}" (Panadol @ Le 32)`);
+      }
     }
   }
 

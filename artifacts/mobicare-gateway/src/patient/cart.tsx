@@ -23,6 +23,10 @@ export interface CartItem {
   prescriptionRequired: boolean;
   collectionOnly: boolean;
   priceLeones: number;
+  /** The version chosen, when a pharmacy stocks several. Older carts lack it. */
+  brand?: string | null;
+  manufacturer?: string | null;
+  countryOfOrigin?: string | null;
   quantity: number;
   availableForDelivery: boolean;
   availableForCollection: boolean;

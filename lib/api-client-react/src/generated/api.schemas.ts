@@ -148,6 +148,15 @@ export interface OrderItem {
   /** @nullable */
   inventoryId?: string | null;
   drugName: string;
+  /**
+     * The product bought, copied from the listing when the order was placed
+     * @nullable
+     */
+  brand?: string | null;
+  /** @nullable */
+  manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   quantity: number;
   unitPriceLeones: number;
   baseUnitPriceMinor: number;
@@ -385,6 +394,8 @@ export interface DrugOffer {
   brand?: string | null;
   /** @nullable */
   manufacturer?: string | null;
+  /** @nullable */
+  countryOfOrigin?: string | null;
   priceLeones: number;
   unitOfSale: string;
   inStock: boolean;
@@ -828,9 +839,10 @@ export interface InventoryInput {
   /** @minLength 1 */
   unitOfSale: string;
   expiryDate: string;
+  /** Brand name, or blank / "Generic" for an unbranded product */
   brand?: string;
-  manufacturer?: string;
-  countryOfOrigin?: string;
+  manufacturer: string;
+  countryOfOrigin: string;
   primaryCategory?: DrugPrimaryCategory;
   subcategory?: DrugSubcategory;
   otherCategoryText?: string;
@@ -845,12 +857,13 @@ export interface InventoryInput {
 }
 
 export interface InventoryUpdate {
-  /** @nullable */
+  /**
+     * Blank or null saves "Generic"
+     * @nullable
+     */
   brand?: string | null;
-  /** @nullable */
-  manufacturer?: string | null;
-  /** @nullable */
-  countryOfOrigin?: string | null;
+  manufacturer?: string;
+  countryOfOrigin?: string;
   /** @minLength 1 */
   strength?: string;
   /** @minLength 1 */
