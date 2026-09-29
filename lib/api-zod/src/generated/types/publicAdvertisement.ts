@@ -5,6 +5,7 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { AdvertisementMediaItem } from './advertisementMediaItem';
 import type { PublicAdvertisementContentType } from './publicAdvertisementContentType';
 import type { PublicAdvertisementMediaKind } from './publicAdvertisementMediaKind';
 
@@ -15,6 +16,15 @@ export interface PublicAdvertisement {
   alt: string | null;
   /** @nullable */
   caption: string | null;
+  /** @nullable */
+  organisation: string | null;
+  /**
+     * The full article shown behind "Read more"
+     * @nullable
+     */
+  body: string | null;
+  /** Every picture or video of the promotion in display order, the first one first */
+  media: AdvertisementMediaItem[];
   mediaKind: PublicAdvertisementMediaKind;
   contentType: PublicAdvertisementContentType;
   fileSize: number;

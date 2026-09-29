@@ -1,6 +1,12 @@
 import { and, asc, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
-import { advertisementUploadsTable, advertisementsTable, db } from "@workspace/db";
+import {
+  advertisementMediaTable,
+  advertisementUploadsTable,
+  advertisementsTable,
+  db,
+  type AdvertisementMedia,
+} from "@workspace/db";
 import {
   CreateHqAdvertisementResponse,
   ListHqAdvertisementsResponse,
@@ -12,6 +18,7 @@ import { ObjectStorageService } from "../../lib/storage/objectStorage.js";
 import { writeAudit } from "../../lib/audit.js";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { safeRouter } from "../../lib/safeRouter.js";
+import { loadExtraMedia, MAX_EXTRA_MEDIA, mediaList } from "../../lib/advertisementMedia.js";
 
 const router = safeRouter();
 const objectStorage = new ObjectStorageService();
@@ -26,6 +33,8 @@ const ADVERTISEMENT_PATH = /^\/objects\/advertisements\/[0-9a-f]{8}-[0-9a-f]{4}-
 const UPLOAD_TTL_MS = 15 * 60 * 1000;
 
 const nullableText = z.string().trim().max(500).nullable().optional();
+const organisation = z.string().trim().max(120).nullable().optional();
+const articleBody = z.string().trim().max(5000).nullable().optional();
 const scheduleFields = {
   startsAt: z.coerce.date().nullable().optional(),
   endsAt: z.coerce.date().nullable().optional(),
@@ -35,6 +44,8 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(200),
   alt: nullableText,
   caption: nullableText,
+  organisation,
+  body: articleBody,
   objectPath: z.string().regex(ADVERTISEMENT_PATH, "Invalid advertisement upload path"),
   linkUrl,
   isActive: z.boolean().optional(),
@@ -45,6 +56,8 @@ const patchSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   alt: nullableText,
   caption: nullableText,
+  organisation,
+  body: articleBody,
   linkUrl,
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
@@ -60,9 +73,10 @@ function mediaKind(contentType: (typeof CONTENT_TYPES)[number]) {
   return contentType.startsWith("image/") ? "image" : "video";
 }
 
-function response(advertisement: typeof advertisementsTable.$inferSelect) {
+function response(advertisement: typeof advertisementsTable.$inferSelect, extras: AdvertisementMedia[] = []) {
   return {
     id: advertisement.id, title: advertisement.title, alt: advertisement.alt, caption: advertisement.caption,
+    organisation: advertisement.organisation, body: advertisement.body, media: mediaList(advertisement, extras),
     mediaKind: advertisement.mediaKind, contentType: advertisement.contentType, fileSize: advertisement.fileSize,
     linkUrl: advertisement.linkUrl, isActive: advertisement.isActive, sortOrder: advertisement.sortOrder,
     startsAt: advertisement.startsAt, endsAt: advertisement.endsAt, createdByHqStaffId: advertisement.createdByHqStaffId,
@@ -92,7 +106,10 @@ router.get("/", async (req: AuthRequest, res) => {
   await cleanExpiredUploads(req.log);
   const advertisements = await db.select().from(advertisementsTable)
     .orderBy(asc(advertisementsTable.sortOrder), desc(advertisementsTable.createdAt));
-  res.json(ListHqAdvertisementsResponse.parse(advertisements.map(response)));
+  const extras = await loadExtraMedia(advertisements.map((advertisement) => advertisement.id));
+  res.json(ListHqAdvertisementsResponse.parse(
+    advertisements.map((advertisement) => response(advertisement, extras.get(advertisement.id))),
+  ));
 });
 
 router.post("/upload", async (req: AuthRequest, res) => {
@@ -153,7 +170,8 @@ router.post("/", async (req: AuthRequest, res) => {
         return null;
       }
       const [advertisement] = await tx.insert(advertisementsTable).values({
-        title: body.data.title, alt: body.data.alt ?? null, caption: body.data.caption ?? null, objectPath: upload.objectPath,
+        title: body.data.title, alt: body.data.alt ?? null, caption: body.data.caption ?? null,
+        organisation: body.data.organisation || null, body: body.data.body || null, objectPath: upload.objectPath,
         contentType: upload.contentType, fileSize: upload.fileSize, mediaKind: mediaKind(upload.contentType as (typeof CONTENT_TYPES)[number]),
         linkUrl: body.data.linkUrl ?? null, isActive: body.data.isActive ?? true, sortOrder: body.data.sortOrder ?? 0,
         startsAt: body.data.startsAt ?? null, endsAt: body.data.endsAt ?? null, createdByHqStaffId: req.pharmacy!.sub,
@@ -183,7 +201,8 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   if (startsAt && endsAt && endsAt <= startsAt) { res.status(400).json({ error: "End time must be after start time" }); return; }
   const [updated] = await db.update(advertisementsTable).set({ ...body.data, updatedAt: new Date() }).where(eq(advertisementsTable.id, existing.id)).returning();
   await writeAudit({ actorType: "hq", actorId: req.pharmacy!.sub, actorName: req.pharmacy!.name, action: "advertisement.update", entityType: "advertisement", entityId: existing.id, details: { fields: Object.keys(body.data) } });
-  res.json(UpdateHqAdvertisementResponse.parse(response(updated!)));
+  const extras = await loadExtraMedia([existing.id]);
+  res.json(UpdateHqAdvertisementResponse.parse(response(updated!, extras.get(existing.id))));
 });
 
 router.delete("/:id", async (req: AuthRequest, res) => {
@@ -194,9 +213,12 @@ router.delete("/:id", async (req: AuthRequest, res) => {
     .where(eq(advertisementsTable.id, id))
     .returning();
   if (!existing) { res.status(404).json({ error: "Advertisement not found" }); return; }
+  const extras = (await loadExtraMedia([existing.id])).get(existing.id) ?? [];
   try {
-    const file = await objectStorage.getObjectEntityFile(existing.objectPath);
-    await file.delete({ ignoreNotFound: true });
+    for (const objectPath of [existing.objectPath, ...extras.map((extra) => extra.objectPath)]) {
+      const file = await objectStorage.getObjectEntityFile(objectPath);
+      await file.delete({ ignoreNotFound: true });
+    }
   } catch (error) {
     if (!(error instanceof Error && error.name === "ObjectNotFoundError")) {
       req.log.warn(error, "Unable to remove advertisement media; advertisement remains inactive for retry");
@@ -207,6 +229,99 @@ router.delete("/:id", async (req: AuthRequest, res) => {
   await db.delete(advertisementsTable).where(eq(advertisementsTable.id, id));
   await writeAudit({ actorType: "hq", actorId: req.pharmacy!.sub, actorName: req.pharmacy!.name, action: "advertisement.delete", entityType: "advertisement", entityId: existing.id, details: { title: existing.title } });
   res.json({ message: "Advertisement deleted" });
+});
+
+const mediaCreateSchema = z.object({
+  objectPath: z.string().regex(ADVERTISEMENT_PATH, "Invalid advertisement upload path"),
+  alt: nullableText,
+});
+
+// ── POST /hq/advertisements/:id/media — attach an extra picture ─────────────
+// Uses the same single-use upload claim as creating a promotion: request an
+// upload, send the file to storage, then attach it here.
+router.post("/:id/media", async (req: AuthRequest, res) => {
+  await cleanExpiredUploads(req.log);
+  const body = mediaCreateSchema.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.issues[0]?.message ?? "Invalid picture" }); return; }
+  const [advertisement] = await db.select().from(advertisementsTable)
+    .where(eq(advertisementsTable.id, req.params.id as string)).limit(1);
+  if (!advertisement) { res.status(404).json({ error: "Advertisement not found" }); return; }
+  const existingExtras = (await loadExtraMedia([advertisement.id])).get(advertisement.id) ?? [];
+  if (existingExtras.length >= MAX_EXTRA_MEDIA) {
+    res.status(400).json({ error: `A promotion can have at most ${MAX_EXTRA_MEDIA + 1} pictures` });
+    return;
+  }
+  const [upload] = await db.select().from(advertisementUploadsTable).where(and(
+    eq(advertisementUploadsTable.requestedByHqStaffId, req.pharmacy!.sub), eq(advertisementUploadsTable.objectPath, body.data.objectPath),
+    isNull(advertisementUploadsTable.consumedAt), gt(advertisementUploadsTable.expiresAt, new Date()),
+  )).limit(1);
+  if (!upload) { res.status(400).json({ error: "This upload is expired or was not requested for you" }); return; }
+  if (!IMAGE_TYPES.includes(upload.contentType as (typeof IMAGE_TYPES)[number])) {
+    await discardUpload(upload, req.log);
+    res.status(400).json({ error: "Extra media must be a JPG, PNG, or WebP picture" });
+    return;
+  }
+  try {
+    const file = await objectStorage.getObjectEntityFile(upload.objectPath);
+    const [metadata] = await file.getMetadata();
+    const actualType = String(metadata.contentType ?? "").toLowerCase();
+    const actualSize = Number(metadata.size ?? 0);
+    if (actualType !== upload.contentType || actualSize !== upload.fileSize || actualSize <= 0 || actualSize > MAX_BYTES[upload.contentType as (typeof CONTENT_TYPES)[number]]) {
+      await discardUpload(upload, req.log);
+      res.status(400).json({ error: "Uploaded file metadata does not match the requested media" });
+      return;
+    }
+    await objectStorage.trySetObjectEntityAclPolicy(upload.objectPath, { owner: req.pharmacy!.sub, visibility: "public" } satisfies ObjectAclPolicy);
+    const added = await db.transaction(async (tx) => {
+      const [claimed] = await tx.select().from(advertisementUploadsTable).where(
+        eq(advertisementUploadsTable.id, upload.id),
+      ).for("update").limit(1);
+      if (!claimed || claimed.consumedAt || claimed.requestedByHqStaffId !== req.pharmacy!.sub || claimed.expiresAt <= new Date()) {
+        return null;
+      }
+      const [media] = await tx.insert(advertisementMediaTable).values({
+        advertisementId: advertisement.id,
+        objectPath: upload.objectPath,
+        contentType: upload.contentType,
+        fileSize: upload.fileSize,
+        mediaKind: "image",
+        alt: body.data.alt ?? null,
+        sortOrder: existingExtras.length + 1,
+      }).returning();
+      await tx.update(advertisementUploadsTable).set({ consumedAt: new Date() }).where(eq(advertisementUploadsTable.id, upload.id));
+      return media!;
+    });
+    if (!added) { res.status(400).json({ error: "This upload is expired or was already used" }); return; }
+    await writeAudit({ actorType: "hq", actorId: req.pharmacy!.sub, actorName: req.pharmacy!.name, action: "advertisement.media_added", entityType: "advertisement", entityId: advertisement.id, details: { mediaId: added.id } });
+    res.status(201).json(UpdateHqAdvertisementResponse.parse(response(advertisement, [...existingExtras, added])));
+  } catch (error) {
+    if (error instanceof Error && error.name === "ObjectNotFoundError") { res.status(404).json({ error: "Uploaded media was not found. Please upload it again." }); return; }
+    throw error;
+  }
+});
+
+// ── DELETE /hq/advertisements/:id/media/:mediaId — remove an extra picture ──
+router.delete("/:id/media/:mediaId", async (req: AuthRequest, res) => {
+  const [media] = await db.select().from(advertisementMediaTable).where(and(
+    eq(advertisementMediaTable.id, req.params.mediaId as string),
+    eq(advertisementMediaTable.advertisementId, req.params.id as string),
+  )).limit(1);
+  if (!media) { res.status(404).json({ error: "Picture not found" }); return; }
+  try {
+    const file = await objectStorage.getObjectEntityFile(media.objectPath);
+    await file.delete({ ignoreNotFound: true });
+  } catch (error) {
+    if (!(error instanceof Error && error.name === "ObjectNotFoundError")) {
+      req.log.warn(error, "Unable to remove advertisement picture");
+      res.status(503).json({ error: "Media cleanup is temporarily unavailable. Please try again shortly." });
+      return;
+    }
+  }
+  await db.delete(advertisementMediaTable).where(eq(advertisementMediaTable.id, media.id));
+  await writeAudit({ actorType: "hq", actorId: req.pharmacy!.sub, actorName: req.pharmacy!.name, action: "advertisement.media_removed", entityType: "advertisement", entityId: media.advertisementId, details: { mediaId: media.id } });
+  const [advertisement] = await db.select().from(advertisementsTable).where(eq(advertisementsTable.id, media.advertisementId)).limit(1);
+  const extras = (await loadExtraMedia([media.advertisementId])).get(media.advertisementId) ?? [];
+  res.json(UpdateHqAdvertisementResponse.parse(response(advertisement!, extras)));
 });
 
 export default router;

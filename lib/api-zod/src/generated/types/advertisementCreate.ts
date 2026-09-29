@@ -22,6 +22,16 @@ export interface AdvertisementCreate {
      * @nullable
      */
   caption?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  organisation?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  body?: string | null;
   /** @pattern ^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|mp4)$ */
   objectPath: string;
   /**

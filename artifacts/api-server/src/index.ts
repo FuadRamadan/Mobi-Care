@@ -165,6 +165,20 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "promotion articles and galleries (migration 0027)",
+      query: sql`
+        SELECT (
+          to_regclass(current_schema() || '.advertisement_media') IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'advertisements'
+              AND column_name = 'body'
+          )
+        ) AS exists
+      `,
+    },
+    {
       label: "delivery zones (migration 0026)",
       query: sql`
         SELECT (

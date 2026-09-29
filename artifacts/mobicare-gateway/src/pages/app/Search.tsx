@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
-import { PromotionsCarousel } from "./PromotionsCarousel";
+import { Promotions } from "./Promotions";
 import { categoryIcon, categoryLabel } from "@/patient/categories";
 import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 
@@ -228,7 +228,7 @@ export default function PatientSearch() {
           space on the screen; the moment someone types or picks a category it
           belongs to their results, and an advert in front of those is in the
           way. It renders nothing until HQ has published something. */}
-      {!searching && <PromotionsCarousel />}
+      {!searching && <Promotions />}
 
       {/* Only once someone has started typing. On arrival the category grid is
           already the invitation, and a box below it saying "select a category"

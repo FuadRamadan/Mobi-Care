@@ -89,10 +89,13 @@ export default function PatientProfilePage() {
       return;
     }
 
-    // Convert to base64
+    // Convert to base64, shrinking large phone photos first: a profile
+    // picture never needs more than 1024px, and a smaller upload is faster
+    // and cheaper on mobile data.
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
+      const original = event.target?.result as string;
+      const base64 = await shrinkImage(original).catch(() => original);
       try {
         const updated = await updatePhoto.mutateAsync({
           data: {
@@ -216,4 +219,30 @@ export default function PatientProfilePage() {
       </div>
     </div>
   );
+}
+
+/** Scales an image data URL down to at most 1024px on its longest side, as JPEG. */
+function shrinkImage(dataUrl: string, maxSide = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      if (scale === 1 && dataUrl.length < 400_000) {
+        resolve(dataUrl);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const context = canvas.getContext('2d');
+      if (!context) {
+        reject(new Error('Canvas unavailable'));
+        return;
+      }
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => reject(new Error('Image could not be read'));
+    img.src = dataUrl;
+  });
 }

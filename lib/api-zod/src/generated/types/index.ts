@@ -7,6 +7,9 @@
  */
 
 export * from './advertisementCreate';
+export * from './advertisementMediaCreate';
+export * from './advertisementMediaItem';
+export * from './advertisementMediaItemMediaKind';
 export * from './advertisementUpdate';
 export * from './advertisementUploadRequest';
 export * from './advertisementUploadRequestContentType';

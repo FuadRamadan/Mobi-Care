@@ -23,6 +23,16 @@ export interface AdvertisementUpdate {
      */
   caption?: string | null;
   /**
+     * @maxLength 120
+     * @nullable
+     */
+  organisation?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  body?: string | null;
+  /**
      * @nullable
      * @pattern ^https?://
      */

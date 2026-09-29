@@ -1336,6 +1336,26 @@ paths:
         "404":
           description: Advertisement or media not found
 
+  /advertisements/{id}/media/{mediaId}:
+    get:
+      operationId: getAdvertisementGalleryMedia
+      tags: [advertisements]
+      summary: Stream an extra picture belonging to an existing advertisement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Picture bytes
+        "404":
+          description: Advertisement or picture not found
+
   # ── HQ ────────────────────────────────────────────────────────────────────
   /hq/dashboard:
     get:
@@ -2020,6 +2040,54 @@ paths:
               schema: { $ref: "#/components/schemas/MessageResponse" }
         "404": { description: Advertisement not found }
 
+  /hq/advertisements/{id}/media:
+    post:
+      operationId: addHqAdvertisementMedia
+      tags: [advertisements]
+      summary: Attach an extra uploaded picture to a promotion
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdvertisementMediaCreate" }
+      responses:
+        "201":
+          description: The promotion with its pictures
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HqAdvertisement" }
+        "400": { description: "Invalid, expired or already used upload, or too many pictures" }
+        "404": { description: Advertisement not found }
+
+  /hq/advertisements/{id}/media/{mediaId}:
+    delete:
+      operationId: deleteHqAdvertisementMedia
+      tags: [advertisements]
+      summary: Remove an extra picture from a promotion
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The promotion with its remaining pictures
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HqAdvertisement" }
+        "404": { description: Advertisement or picture not found }
+
   /hq/team:
     get:
       operationId: listHqTeamMembers
@@ -2125,6 +2193,23 @@ paths:
           description: Invalid uploaded photo
         "404":
           description: Team member or upload not found
+
+  /hq/drugs/categories:
+    get:
+      operationId: listHqDrugCategories
+      tags: [hq]
+      summary: The medicine category taxonomy, for the HQ catalogue form
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Controlled two-tier category taxonomy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrugCategory"
 
   /hq/drugs:
     get:
@@ -4902,12 +4987,21 @@ components:
 
     PublicAdvertisement:
       type: object
-      required: [id, title, alt, caption, mediaKind, contentType, fileSize, linkUrl, sortOrder, startsAt, endsAt, createdAt, mediaUrl]
+      required: [id, title, alt, caption, organisation, body, mediaKind, contentType, fileSize, linkUrl, sortOrder, startsAt, endsAt, createdAt, mediaUrl, media]
       properties:
         id: { type: string }
         title: { type: string }
         alt: { type: [string, "null"] }
         caption: { type: [string, "null"] }
+        organisation: { type: [string, "null"] }
+        body:
+          type: [string, "null"]
+          description: The full article shown behind "Read more"
+        media:
+          type: array
+          description: Every picture or video of the promotion in display order, the first one first
+          items:
+            $ref: "#/components/schemas/AdvertisementMediaItem"
         mediaKind: { type: string, enum: [image, video] }
         contentType: { type: string, enum: [image/jpeg, image/png, image/webp, video/mp4] }
         fileSize: { type: number }
@@ -4927,6 +5021,24 @@ components:
             isActive: { type: boolean }
             createdByHqStaffId: { type: string }
             updatedAt: { type: string, format: date-time }
+
+    AdvertisementMediaItem:
+      type: object
+      required: [id, mediaKind, alt, url]
+      properties:
+        id:
+          type: string
+          description: The advertisement id for the first picture, otherwise the extra picture's id
+        mediaKind: { type: string, enum: [image, video] }
+        alt: { type: [string, "null"] }
+        url: { type: string }
+
+    AdvertisementMediaCreate:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath: { type: string, pattern: "^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp)$" }
+        alt: { type: [string, "null"], maxLength: 500 }
 
     AdvertisementUploadRequest:
       type: object
@@ -4949,6 +5061,8 @@ components:
         title: { type: string, minLength: 1, maxLength: 200 }
         alt: { type: [string, "null"], maxLength: 500 }
         caption: { type: [string, "null"], maxLength: 500 }
+        organisation: { type: [string, "null"], maxLength: 120 }
+        body: { type: [string, "null"], maxLength: 5000 }
         objectPath: { type: string, pattern: "^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp|mp4)$" }
         linkUrl: { type: [string, "null"], pattern: "^https?://" }
         isActive: { type: boolean }
@@ -4962,6 +5076,8 @@ components:
         title: { type: string, minLength: 1, maxLength: 200 }
         alt: { type: [string, "null"], maxLength: 500 }
         caption: { type: [string, "null"], maxLength: 500 }
+        organisation: { type: [string, "null"], maxLength: 120 }
+        body: { type: [string, "null"], maxLength: 5000 }
         linkUrl: { type: [string, "null"], pattern: "^https?://" }
         isActive: { type: boolean }
         sortOrder: { type: number, minimum: 0 }

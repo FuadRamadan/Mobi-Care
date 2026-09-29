@@ -8,6 +8,8 @@ import {
   useCreateHqAdvertisement,
   useUpdateHqAdvertisement,
   useDeleteHqAdvertisement,
+  useAddHqAdvertisementMedia,
+  useDeleteHqAdvertisementMedia,
   type HqAdvertisement,
 } from "@workspace/api-client-react";
 import {
@@ -61,6 +63,8 @@ export default function HqAdvertisements() {
   const createAd = useCreateHqAdvertisement();
   const updateAd = useUpdateHqAdvertisement();
   const deleteAd = useDeleteHqAdvertisement();
+  const addMedia = useAddHqAdvertisementMedia();
+  const removeMedia = useDeleteHqAdvertisementMedia();
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingAd, setEditingAd] = useState<HqAdvertisement | null>(null);
@@ -68,6 +72,12 @@ export default function HqAdvertisements() {
   // Form state
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
+  const [organisation, setOrganisation] = useState("");
+  const [articleBody, setArticleBody] = useState("");
+  // Extra pictures chosen while creating; attached once the promotion exists.
+  const [extraFiles, setExtraFiles] = useState<File[]>([]);
+  const [isAddingPicture, setIsAddingPicture] = useState(false);
+  const extraInputRef = useRef<HTMLInputElement>(null);
   const [alt, setAlt] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
@@ -83,10 +93,84 @@ export default function HqAdvertisements() {
     queryClient.invalidateQueries({ queryKey: getListHqAdvertisementsQueryKey() });
   };
 
+  /** Sends a file to storage through a single-use upload slot; returns its path. */
+  const uploadToStorage = async (file: File) => {
+    const contentType = file.type as any;
+    const slot = await requestUpload.mutateAsync({ data: { contentType, fileSize: file.size } });
+    const stored = await fetch(slot.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!stored.ok) throw new Error("Failed to upload media to storage.");
+    return slot.objectPath;
+  };
+
+  const validExtraPicture = (file: File) => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast({ title: "Extra media must be a picture", description: "Use JPG, PNG or WebP.", variant: "destructive" });
+      return false;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast({ title: "Image too large", description: "Image files must be under 10MB.", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
+  const handleExtraFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter(validExtraPicture);
+    e.target.value = "";
+    if (files.length === 0) return;
+    if (!editingAd) {
+      setExtraFiles((current) => [...current, ...files]);
+      return;
+    }
+    // Editing: attach straight away, so what HQ sees is what patients see.
+    setIsAddingPicture(true);
+    try {
+      let latest: HqAdvertisement = editingAd;
+      for (const file of files) {
+        const objectPath = await uploadToStorage(file);
+        latest = await addMedia.mutateAsync({ id: editingAd.id, data: { objectPath } });
+      }
+      setEditingAd(latest);
+      refresh();
+      toast({ title: files.length === 1 ? "Picture added" : `${files.length} pictures added` });
+    } catch (error) {
+      toast({
+        title: "Could not add the picture",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingPicture(false);
+    }
+  };
+
+  const handleRemovePicture = async (mediaId: string) => {
+    if (!editingAd) return;
+    try {
+      const updated = await removeMedia.mutateAsync({ id: editingAd.id, mediaId });
+      setEditingAd(updated);
+      refresh();
+      toast({ title: "Picture removed" });
+    } catch (error) {
+      toast({
+        title: "Could not remove the picture",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingAd(null);
     setTitle("");
     setCaption("");
+    setOrganisation("");
+    setArticleBody("");
+    setExtraFiles([]);
     setAlt("");
     setLinkUrl("");
     setSortOrder(0);
@@ -101,6 +185,9 @@ export default function HqAdvertisements() {
     setEditingAd(ad);
     setTitle(ad.title);
     setCaption(ad.caption ?? "");
+    setOrganisation(ad.organisation ?? "");
+    setArticleBody(ad.body ?? "");
+    setExtraFiles([]);
     setAlt(ad.alt ?? "");
     setLinkUrl(ad.linkUrl ?? "");
     setSortOrder(ad.sortOrder);
@@ -169,6 +256,8 @@ export default function HqAdvertisements() {
         title: title.trim(),
         alt: alt.trim() || null,
         caption: caption.trim() || null,
+        organisation: organisation.trim() || null,
+        body: articleBody.trim() || null,
         linkUrl: linkUrl.trim() || null,
         sortOrder,
         isActive,
@@ -184,31 +273,18 @@ export default function HqAdvertisements() {
         toast({ title: "Promotion updated successfully." });
       } else {
         // Handle upload if there's a new file
-        let objectPath = "";
-        if (uploadFile) {
-          const contentType = uploadFile.type as any;
-          const uploadRes = await requestUpload.mutateAsync({
-            data: { contentType, fileSize: uploadFile.size },
-          });
+        const objectPath = uploadFile ? await uploadToStorage(uploadFile) : "";
 
-          const s3Res = await fetch(uploadRes.uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": contentType },
-            body: uploadFile,
-          });
-
-          if (!s3Res.ok) {
-            throw new Error("Failed to upload media to storage.");
-          }
-          objectPath = uploadRes.objectPath;
-        }
-
-        await createAd.mutateAsync({
+        const created = await createAd.mutateAsync({
           data: {
             ...payload,
             objectPath,
           },
         });
+        for (const file of extraFiles) {
+          const extraPath = await uploadToStorage(file);
+          await addMedia.mutateAsync({ id: created.id, data: { objectPath: extraPath } });
+        }
         toast({ title: "Promotion created successfully." });
       }
 
@@ -316,6 +392,13 @@ export default function HqAdvertisements() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-dark-green">{ad.title}</div>
+                      {(ad.organisation || ad.media.length > 1) && (
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {[ad.organisation, ad.media.length > 1 ? `${ad.media.length} pictures` : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      )}
                       {ad.caption && (
                         <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                           {ad.caption}
@@ -444,21 +527,107 @@ export default function HqAdvertisements() {
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label>Internal Title <span className="text-destructive">*</span></Label>
+                <Label>More pictures (optional)</Label>
+                <p className="text-[10px] text-muted-foreground">
+                  For a promotion with several pictures from one organisation. Patients swipe through them sideways.
+                </p>
+                {editingAd && editingAd.media.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editingAd.media.slice(1).map((item) => (
+                      <div key={item.id} className="relative h-16 w-16 rounded-md border overflow-hidden bg-muted">
+                        <img src={item.url} alt={item.alt || ""} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => void handleRemovePicture(item.id)}
+                          className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white p-0.5"
+                          aria-label="Remove this picture"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!editingAd && extraFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {extraFiles.map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="rounded-lg border bg-muted p-2 flex items-center justify-between">
+                        <span className="text-sm truncate flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 shrink-0" /> {file.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => setExtraFiles((current) => current.filter((_, i) => i !== index))}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  ref={extraInputRef}
+                  onChange={(e) => void handleExtraFiles(e)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isAddingPicture}
+                  onClick={() => extraInputRef.current?.click()}
+                  data-testid="button-add-pictures"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {isAddingPicture ? "Adding…" : "Add pictures"}
+                </Button>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Subject <span className="text-destructive">*</span></Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Summer Malaria Campaign"
+                  placeholder="e.g. Free blood pressure checks this Saturday"
+                  data-testid="input-ad-title"
+                />
+                <p className="text-[10px] text-muted-foreground">Shown to patients under the picture, one or two lines.</p>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Organisation (Optional)</Label>
+                <Input
+                  value={organisation}
+                  onChange={(e) => setOrganisation(e.target.value)}
+                  placeholder="e.g. Connaught Hospital"
+                  data-testid="input-ad-organisation"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label>Caption (Optional)</Label>
+                <Label>Short intro (Optional)</Label>
                 <Textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Visible text overlay or description"
+                  placeholder="One sentence shown at the top of the article"
                   rows={2}
+                />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Full article (Optional)</Label>
+                <Textarea
+                  value={articleBody}
+                  onChange={(e) => setArticleBody(e.target.value)}
+                  placeholder="What patients read after tapping Read more"
+                  rows={6}
+                  maxLength={5000}
+                  data-testid="input-ad-body"
                 />
               </div>
 

@@ -1809,6 +1809,14 @@ export const ListAdvertisementsResponseItem = zod.object({
   "title": zod.string(),
   "alt": zod.string().nullable(),
   "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
   "mediaKind": zod.enum(['image', 'video']),
   "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
   "fileSize": zod.number(),
@@ -1830,6 +1838,17 @@ export const GetAdvertisementMediaParams = zod.object({
 })
 
 export const GetAdvertisementMediaResponse = zod.unknown()
+
+
+/**
+ * @summary Stream an extra picture belonging to an existing advertisement
+ */
+export const GetAdvertisementGalleryMediaParams = zod.object({
+  "id": zod.coerce.string(),
+  "mediaId": zod.coerce.string()
+})
+
+export const GetAdvertisementGalleryMediaResponse = zod.unknown()
 
 
 /**
@@ -3104,6 +3123,14 @@ export const ListHqAdvertisementsResponseItem = zod.object({
   "title": zod.string(),
   "alt": zod.string().nullable(),
   "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
   "mediaKind": zod.enum(['image', 'video']),
   "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
   "fileSize": zod.number(),
@@ -3130,6 +3157,10 @@ export const createHqAdvertisementBodyAltMax = 500;
 
 export const createHqAdvertisementBodyCaptionMax = 500;
 
+export const createHqAdvertisementBodyOrganisationMax = 120;
+
+export const createHqAdvertisementBodyBodyMax = 5000;
+
 export const createHqAdvertisementBodyObjectPathRegExp = new RegExp('^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp|mp4)$');
 export const createHqAdvertisementBodyLinkUrlRegExp = new RegExp('^https?:/');
 export const createHqAdvertisementBodySortOrderMin = 0;
@@ -3140,6 +3171,8 @@ export const CreateHqAdvertisementBody = zod.object({
   "title": zod.string().min(1).max(createHqAdvertisementBodyTitleMax),
   "alt": zod.string().max(createHqAdvertisementBodyAltMax).nullish(),
   "caption": zod.string().max(createHqAdvertisementBodyCaptionMax).nullish(),
+  "organisation": zod.string().max(createHqAdvertisementBodyOrganisationMax).nullish(),
+  "body": zod.string().max(createHqAdvertisementBodyBodyMax).nullish(),
   "objectPath": zod.string().regex(createHqAdvertisementBodyObjectPathRegExp),
   "linkUrl": zod.string().regex(createHqAdvertisementBodyLinkUrlRegExp).nullish(),
   "isActive": zod.boolean().optional(),
@@ -3153,6 +3186,14 @@ export const CreateHqAdvertisementResponse = zod.object({
   "title": zod.string(),
   "alt": zod.string().nullable(),
   "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
   "mediaKind": zod.enum(['image', 'video']),
   "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
   "fileSize": zod.number(),
@@ -3199,6 +3240,10 @@ export const updateHqAdvertisementBodyAltMax = 500;
 
 export const updateHqAdvertisementBodyCaptionMax = 500;
 
+export const updateHqAdvertisementBodyOrganisationMax = 120;
+
+export const updateHqAdvertisementBodyBodyMax = 5000;
+
 export const updateHqAdvertisementBodyLinkUrlRegExp = new RegExp('^https?:/');
 export const updateHqAdvertisementBodySortOrderMin = 0;
 
@@ -3208,6 +3253,8 @@ export const UpdateHqAdvertisementBody = zod.object({
   "title": zod.string().min(1).max(updateHqAdvertisementBodyTitleMax).optional(),
   "alt": zod.string().max(updateHqAdvertisementBodyAltMax).nullish(),
   "caption": zod.string().max(updateHqAdvertisementBodyCaptionMax).nullish(),
+  "organisation": zod.string().max(updateHqAdvertisementBodyOrganisationMax).nullish(),
+  "body": zod.string().max(updateHqAdvertisementBodyBodyMax).nullish(),
   "linkUrl": zod.string().regex(updateHqAdvertisementBodyLinkUrlRegExp).nullish(),
   "isActive": zod.boolean().optional(),
   "sortOrder": zod.number().min(updateHqAdvertisementBodySortOrderMin).optional(),
@@ -3220,6 +3267,14 @@ export const UpdateHqAdvertisementResponse = zod.object({
   "title": zod.string(),
   "alt": zod.string().nullable(),
   "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
   "mediaKind": zod.enum(['image', 'video']),
   "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
   "fileSize": zod.number(),
@@ -3246,6 +3301,89 @@ export const DeleteHqAdvertisementParams = zod.object({
 export const DeleteHqAdvertisementResponse = zod.object({
   "message": zod.string()
 })
+
+
+/**
+ * @summary Attach an extra uploaded picture to a promotion
+ */
+export const AddHqAdvertisementMediaParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const addHqAdvertisementMediaBodyObjectPathRegExp = new RegExp('^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(jpg|png|webp)$');
+export const addHqAdvertisementMediaBodyAltMax = 500;
+
+
+
+export const AddHqAdvertisementMediaBody = zod.object({
+  "objectPath": zod.string().regex(addHqAdvertisementMediaBodyObjectPathRegExp),
+  "alt": zod.string().max(addHqAdvertisementMediaBodyAltMax).nullish()
+})
+
+export const AddHqAdvertisementMediaResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+}).and(zod.object({
+  "isActive": zod.boolean(),
+  "createdByHqStaffId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Remove an extra picture from a promotion
+ */
+export const DeleteHqAdvertisementMediaParams = zod.object({
+  "id": zod.coerce.string(),
+  "mediaId": zod.coerce.string()
+})
+
+export const DeleteHqAdvertisementMediaResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "alt": zod.string().nullable(),
+  "caption": zod.string().nullable(),
+  "organisation": zod.string().nullable(),
+  "body": zod.string().nullable().describe('The full article shown behind \"Read more\"'),
+  "media": zod.array(zod.object({
+  "id": zod.string().describe('The advertisement id for the first picture, otherwise the extra picture\'s id'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "alt": zod.string().nullable(),
+  "url": zod.string()
+})).describe('Every picture or video of the promotion in display order, the first one first'),
+  "mediaKind": zod.enum(['image', 'video']),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4']),
+  "fileSize": zod.number(),
+  "linkUrl": zod.string().nullable(),
+  "sortOrder": zod.number(),
+  "startsAt": zod.coerce.date().nullable(),
+  "endsAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "mediaUrl": zod.string()
+}).and(zod.object({
+  "isActive": zod.boolean(),
+  "createdByHqStaffId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
 
 
 /**
@@ -3339,6 +3477,20 @@ export const UpdateHqTeamMemberPhotoResponse = zod.object({
   "updatedAt": zod.string().optional(),
   "photoUrl": zod.string().nullable().describe('Public profile-photo URL, null only before the first photo is uploaded')
 })
+
+
+/**
+ * @summary The medicine category taxonomy, for the HQ catalogue form
+ */
+export const ListHqDrugCategoriesResponseItem = zod.object({
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "label": zod.string(),
+  "subcategories": zod.array(zod.object({
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "label": zod.string()
+}))
+})
+export const ListHqDrugCategoriesResponse = zod.array(ListHqDrugCategoriesResponseItem)
 
 
 /**

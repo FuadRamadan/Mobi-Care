@@ -5,6 +5,7 @@ import {
   drugCatalogueTable,
   pharmacyInventoryTable,
   orderItemsTable,
+  DRUG_CATEGORY_TAXONOMY,
   DRUG_PRIMARY_CATEGORIES,
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
@@ -46,6 +47,13 @@ function validateTierCap(
 }
 
 // ── GET /hq/drugs?status=held|approved ───────────────────────────────────────
+// ── GET /hq/drugs/categories — the category taxonomy for the catalogue form ──
+// The same list pharmacies see. HQ has its own route because the pharmacy one
+// admits pharmacy logins only, which left HQ's category dropdowns empty.
+router.get("/categories", (_req, res) => {
+  res.json(DRUG_CATEGORY_TAXONOMY);
+});
+
 router.get("/", async (req, res) => {
   const status = req.query.status as string | undefined;
   let rows;

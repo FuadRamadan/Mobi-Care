@@ -4,7 +4,7 @@ import {
   useCreateHqDrug,
   useUpdateHqDrug,
   useDeleteHqDrug,
-  useListDrugCategories,
+  useListHqDrugCategories,
   getListHqDrugsQueryKey,
   type HqDrug,
   type DrugPrimaryCategory,
@@ -124,7 +124,7 @@ export default function HqCatalogue() {
       },
     },
   );
-  const { data: categories = [] } = useListDrugCategories();
+  const { data: categories = [] } = useListHqDrugCategories();
   const drugs = data ?? [];
 
   const refresh = () => {

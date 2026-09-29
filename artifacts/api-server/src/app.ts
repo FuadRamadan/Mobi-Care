@@ -55,10 +55,12 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-// Patient prescription uploads carry a base64 image — allow a larger body
-// on that path only (mounted before the default parser; already-parsed
-// bodies are skipped by the second parser).
+// Patient prescription and profile-photo uploads carry a base64 image — allow
+// a larger body on those paths only (mounted before the default parser;
+// already-parsed bodies are skipped by the second parser). A 5 MB image is
+// about 6.7 MB once base64-encoded.
 app.use("/api/patient/uploads", express.json({ limit: "8mb" }));
+app.use("/api/patient/profile/photo", express.json({ limit: "8mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -89,6 +91,19 @@ const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   if (res.headersSent) {
     next(error);
+    return;
+  }
+
+  // The body parser rejects oversized or malformed requests before any route
+  // runs. Those are the client's to fix, so say what went wrong instead of
+  // reporting a server fault.
+  const type = (error as { type?: unknown })?.type;
+  if (type === "entity.too.large") {
+    res.status(413).json({ error: "The upload is too large." });
+    return;
+  }
+  if (type === "entity.parse.failed") {
+    res.status(400).json({ error: "The request body is not valid JSON." });
     return;
   }
 

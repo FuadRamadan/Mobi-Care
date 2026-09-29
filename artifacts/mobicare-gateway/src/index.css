@@ -146,3 +146,11 @@
   padding: 3px 7px;
   text-align: center;
 }
+
+/* Swipeable promotion galleries: scroll sideways without a visible bar. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

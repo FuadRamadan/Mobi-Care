@@ -21,6 +21,7 @@ import type {
 
 import type {
   AdvertisementCreate,
+  AdvertisementMediaCreate,
   AdvertisementUpdate,
   AdvertisementUploadRequest,
   AdvertisementUploadResponse,
@@ -4785,6 +4786,88 @@ export function useGetAdvertisementMedia<TData = Awaited<ReturnType<typeof getAd
 
 
 
+export const getGetAdvertisementGalleryMediaUrl = (id: string,
+    mediaId: string,) => {
+
+
+
+
+  return `/api/advertisements/${id}/media/${mediaId}`
+}
+
+/**
+ * @summary Stream an extra picture belonging to an existing advertisement
+ */
+export const getAdvertisementGalleryMedia = async (id: string,
+    mediaId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getGetAdvertisementGalleryMediaUrl(id,mediaId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdvertisementGalleryMediaQueryKey = (id: string,
+    mediaId: string,) => {
+    return [
+    `/api/advertisements/${id}/media/${mediaId}`
+    ] as const;
+    }
+
+
+export const getGetAdvertisementGalleryMediaQueryOptions = <TData = Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>, TError = ErrorType<void>>(id: string,
+    mediaId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdvertisementGalleryMediaQueryKey(id,mediaId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>> = ({ signal }) => getAdvertisementGalleryMedia(id,mediaId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && mediaId !== null && mediaId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdvertisementGalleryMediaQueryResult = NonNullable<Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>>
+export type GetAdvertisementGalleryMediaQueryError = ErrorType<void>
+
+
+/**
+ * @summary Stream an extra picture belonging to an existing advertisement
+ */
+
+export function useGetAdvertisementGalleryMedia<TData = Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>, TError = ErrorType<void>>(
+ id: string,
+    mediaId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdvertisementGalleryMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdvertisementGalleryMediaQueryOptions(id,mediaId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetHqDashboardUrl = () => {
 
 
@@ -7495,6 +7578,151 @@ export const useDeleteHqAdvertisement = <TError = ErrorType<void>,
       return useMutation(getDeleteHqAdvertisementMutationOptions(options));
     }
 
+export const getAddHqAdvertisementMediaUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/advertisements/${id}/media`
+}
+
+/**
+ * @summary Attach an extra uploaded picture to a promotion
+ */
+export const addHqAdvertisementMedia = async (id: string,
+    advertisementMediaCreate: AdvertisementMediaCreate, options?: Parameters<typeof customFetch>[1]): Promise<HqAdvertisement> => {
+
+  return customFetch<HqAdvertisement>(getAddHqAdvertisementMediaUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(advertisementMediaCreate)
+  }
+);}
+
+
+
+
+
+export const getAddHqAdvertisementMediaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addHqAdvertisementMedia>>, TError,{id: string;data: BodyType<AdvertisementMediaCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addHqAdvertisementMedia>>, TError,{id: string;data: BodyType<AdvertisementMediaCreate>}, TContext> => {
+
+const mutationKey = ['addHqAdvertisementMedia'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addHqAdvertisementMedia>>, {id: string;data: BodyType<AdvertisementMediaCreate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addHqAdvertisementMedia(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddHqAdvertisementMediaMutationResult = NonNullable<Awaited<ReturnType<typeof addHqAdvertisementMedia>>>
+    export type AddHqAdvertisementMediaMutationBody = BodyType<AdvertisementMediaCreate>
+    export type AddHqAdvertisementMediaMutationError = ErrorType<void>
+
+    /**
+ * @summary Attach an extra uploaded picture to a promotion
+ */
+export const useAddHqAdvertisementMedia = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addHqAdvertisementMedia>>, TError,{id: string;data: BodyType<AdvertisementMediaCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addHqAdvertisementMedia>>,
+        TError,
+        {id: string;data: BodyType<AdvertisementMediaCreate>},
+        TContext
+      > => {
+      return useMutation(getAddHqAdvertisementMediaMutationOptions(options));
+    }
+
+export const getDeleteHqAdvertisementMediaUrl = (id: string,
+    mediaId: string,) => {
+
+
+
+
+  return `/api/hq/advertisements/${id}/media/${mediaId}`
+}
+
+/**
+ * @summary Remove an extra picture from a promotion
+ */
+export const deleteHqAdvertisementMedia = async (id: string,
+    mediaId: string, options?: Parameters<typeof customFetch>[1]): Promise<HqAdvertisement> => {
+
+  return customFetch<HqAdvertisement>(getDeleteHqAdvertisementMediaUrl(id,mediaId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteHqAdvertisementMediaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>, TError,{id: string;mediaId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>, TError,{id: string;mediaId: string}, TContext> => {
+
+const mutationKey = ['deleteHqAdvertisementMedia'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>, {id: string;mediaId: string}> = (props) => {
+          const {id,mediaId} = props ?? {};
+
+          return  deleteHqAdvertisementMedia(id,mediaId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteHqAdvertisementMediaMutationResult = NonNullable<Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>>
+
+    export type DeleteHqAdvertisementMediaMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove an extra picture from a promotion
+ */
+export const useDeleteHqAdvertisementMedia = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>, TError,{id: string;mediaId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteHqAdvertisementMedia>>,
+        TError,
+        {id: string;mediaId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteHqAdvertisementMediaMutationOptions(options));
+    }
+
 export const getListHqTeamMembersUrl = () => {
 
 
@@ -7787,6 +8015,83 @@ export const useUpdateHqTeamMemberPhoto = <TError = ErrorType<void>,
       > => {
       return useMutation(getUpdateHqTeamMemberPhotoMutationOptions(options));
     }
+
+export const getListHqDrugCategoriesUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/categories`
+}
+
+/**
+ * @summary The medicine category taxonomy, for the HQ catalogue form
+ */
+export const listHqDrugCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<DrugCategory[]> => {
+
+  return customFetch<DrugCategory[]>(getListHqDrugCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHqDrugCategoriesQueryKey = () => {
+    return [
+    `/api/hq/drugs/categories`
+    ] as const;
+    }
+
+
+export const getListHqDrugCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listHqDrugCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHqDrugCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHqDrugCategories>>> = ({ signal }) => listHqDrugCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHqDrugCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHqDrugCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listHqDrugCategories>>>
+export type ListHqDrugCategoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The medicine category taxonomy, for the HQ catalogue form
+ */
+
+export function useListHqDrugCategories<TData = Awaited<ReturnType<typeof listHqDrugCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHqDrugCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHqDrugCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListHqDrugsUrl = (params?: ListHqDrugsParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -1634,6 +1634,23 @@ export const PublicAdvertisementContentType = {
   'video/mp4': 'video/mp4',
 } as const;
 
+export type AdvertisementMediaItemMediaKind = typeof AdvertisementMediaItemMediaKind[keyof typeof AdvertisementMediaItemMediaKind];
+
+
+export const AdvertisementMediaItemMediaKind = {
+  image: 'image',
+  video: 'video',
+} as const;
+
+export interface AdvertisementMediaItem {
+  /** The advertisement id for the first picture, otherwise the extra picture's id */
+  id: string;
+  mediaKind: AdvertisementMediaItemMediaKind;
+  /** @nullable */
+  alt: string | null;
+  url: string;
+}
+
 export interface PublicAdvertisement {
   id: string;
   title: string;
@@ -1641,6 +1658,15 @@ export interface PublicAdvertisement {
   alt: string | null;
   /** @nullable */
   caption: string | null;
+  /** @nullable */
+  organisation: string | null;
+  /**
+     * The full article shown behind "Read more"
+     * @nullable
+     */
+  body: string | null;
+  /** Every picture or video of the promotion in display order, the first one first */
+  media: AdvertisementMediaItem[];
   mediaKind: PublicAdvertisementMediaKind;
   contentType: PublicAdvertisementContentType;
   fileSize: number;
@@ -1660,6 +1686,16 @@ export type HqAdvertisement = PublicAdvertisement & {
   createdByHqStaffId: string;
   updatedAt: string;
 };
+
+export interface AdvertisementMediaCreate {
+  /** @pattern ^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$ */
+  objectPath: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  alt?: string | null;
+}
 
 export type AdvertisementUploadRequestContentType = typeof AdvertisementUploadRequestContentType[keyof typeof AdvertisementUploadRequestContentType];
 
@@ -1698,6 +1734,16 @@ export interface AdvertisementCreate {
      * @nullable
      */
   caption?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  organisation?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  body?: string | null;
   /** @pattern ^/objects/advertisements/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp|mp4)$ */
   objectPath: string;
   /**
@@ -1730,6 +1776,16 @@ export interface AdvertisementUpdate {
      * @nullable
      */
   caption?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  organisation?: string | null;
+  /**
+     * @maxLength 5000
+     * @nullable
+     */
+  body?: string | null;
   /**
      * @nullable
      * @pattern ^https?://

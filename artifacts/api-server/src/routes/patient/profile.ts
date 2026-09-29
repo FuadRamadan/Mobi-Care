@@ -140,8 +140,14 @@ router.put("/photo", async (req: AuthRequest, res) => {
   try {
     imageKey = await storeProfileImage(body.data.image);
   } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code !== "PROFILE_IMAGE_SIZE" && code !== "PROFILE_IMAGE_FORMAT") {
+      // Storage failed: a server fault, not a bad image. Logged by the error
+      // handler rather than blamed on the patient's file.
+      throw error;
+    }
     const message =
-      error instanceof Error && error.message === "PROFILE_IMAGE_SIZE"
+      code === "PROFILE_IMAGE_SIZE"
         ? "Profile image must be between 1 byte and 5 MB"
         : "Profile image must be a PNG, JPEG, or WebP image";
     res.status(400).json({ error: message });
