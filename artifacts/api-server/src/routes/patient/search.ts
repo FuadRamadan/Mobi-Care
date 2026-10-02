@@ -13,7 +13,8 @@ import {
   patientsTable,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { and, eq, gt, ilike, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, ilike, or, sql, type SQL } from "drizzle-orm";
+import { isSameSearch, normaliseSearch } from "../../lib/search/searchEvents.js";
 import type { AuthRequest } from "../../middlewares/auth.js";
 import {
   haversineDistanceKm,
@@ -290,14 +291,32 @@ router.get("/", async (req: AuthRequest, res) => {
   // Category/subcategory-only requests are filter changes, not a drug-search
   // submission. This prevents page/filter activity from inflating search KPIs.
   if (q && consent.mayRecordAnalytics) {
-    await db.insert(searchEventsTable).values({
-      normalizedQuery: q.toLocaleLowerCase(),
-      patientId: req.pharmacy!.sub,
+    const patientId = req.pharmacy!.sub;
+    const event = {
+      normalizedQuery: normaliseSearch(q),
+      patientId,
       pharmacyId: pharmacyId || null,
       primaryCategory: category || null,
       subcategory: subcategory || null,
       areaDistrict: coarseDistrict(patient?.address),
       resultCount: results.length,
+    };
+    await db.transaction(async (tx) => {
+      // One patient's searches are recorded one at a time, so two requests
+      // from the same typing cannot both be counted.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`search:${patientId}`}))`);
+      const [previous] = await tx
+        .select({ id: searchEventsTable.id, query: searchEventsTable.normalizedQuery, createdAt: searchEventsTable.createdAt })
+        .from(searchEventsTable)
+        .where(eq(searchEventsTable.patientId, patientId))
+        .orderBy(desc(searchEventsTable.createdAt))
+        .limit(1);
+      if (previous?.query && isSameSearch(previous.query, event.normalizedQuery, Date.now() - previous.createdAt.getTime())) {
+        // Still the same search: keep what the patient ended up searching for.
+        await tx.update(searchEventsTable).set({ ...event, createdAt: new Date() }).where(eq(searchEventsTable.id, previous.id));
+      } else {
+        await tx.insert(searchEventsTable).values(event);
+      }
     });
   }
   res.json(results);

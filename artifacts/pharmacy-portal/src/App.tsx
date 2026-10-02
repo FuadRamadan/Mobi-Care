@@ -33,9 +33,13 @@ setAuthTokenGetter(freshAccessToken);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      // Data older than a few seconds is fetched again when the portal tab
+      // comes back into view (for example after approving something in HQ),
+      // instead of waiting for the next timed refresh, which browsers pause
+      // while the tab is in the background.
+      staleTime: 5_000,
       gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
     },
   },

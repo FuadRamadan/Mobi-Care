@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetUnreadCount,
@@ -26,7 +28,7 @@ const accountItems = [
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const LIVE_REFRESH_MS = 15_000;
+  const LIVE_REFRESH_MS = 10_000;
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
@@ -49,6 +51,19 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   });
 
   const unread = unreadData?.unreadCount ?? 0;
+
+  // A new notification usually means something changed elsewhere: HQ
+  // approved a medicine, an order came in. Refresh whatever page is open so
+  // it shows straight away, without switching sections.
+  const queryClient = useQueryClient();
+  const previousUnread = useRef<number | null>(null);
+  useEffect(() => {
+    if (unreadData === undefined) return;
+    if (previousUnread.current !== null && unread > previousUnread.current) {
+      void queryClient.invalidateQueries();
+    }
+    previousUnread.current = unread;
+  }, [unread, unreadData, queryClient]);
   const pendingRx = analytics?.pendingPrescriptions ?? 0;
   const lowStock = analytics?.lowStockItems ?? 0;
 

@@ -78,7 +78,15 @@ export function createMap(element: HTMLElement, options: L.MapOptions = {}): L.M
     FREETOWN,
     12,
   );
-  L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIBUTION }).addTo(map);
+  L.tileLayer(TILE_URL, {
+    maxZoom: 19,
+    attribution: TILE_ATTRIBUTION,
+    // The site sends no referrer anywhere (Referrer-Policy: no-referrer), but
+    // OpenStreetMap's tile servers refuse tiles requested without one, which
+    // left every map blank. Map tiles alone send the site's origin
+    // (https://mobicaresl.com/), never the page's path.
+    referrerPolicy: 'strict-origin-when-cross-origin',
+  }).addTo(map);
   return map;
 }
 
