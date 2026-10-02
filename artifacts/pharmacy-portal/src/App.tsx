@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { Shell } from '@/components/layout/Shell';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 import { isInsideWarningWindow } from '@/utils/password';
+import { freshAccessToken } from '@/lib/session';
 
 const Login = lazy(() => import('@/pages/login'));
 const ChangePassword = lazy(() => import('@/pages/change-password'));
@@ -26,8 +27,8 @@ const Prescriptions = lazy(() => import('@/pages/prescriptions'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Notifications = lazy(() => import('@/pages/notifications'));
 
-// Setup auth token getter for api client
-setAuthTokenGetter(() => localStorage.getItem('mc_access'));
+// Every request gets a valid token: one about to expire is renewed first.
+setAuthTokenGetter(freshAccessToken);
 
 const queryClient = new QueryClient({
   defaultOptions: {

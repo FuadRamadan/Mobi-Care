@@ -254,7 +254,7 @@ export default function OrderDetail() {
             )}
             <div>
               <div className="font-medium">
-                {o.fulfillmentType === 'delivery' ? 'Delivery' : 'Collection'} · {o.pharmacy?.name ?? 'Pharmacy'}
+                {o.fulfillmentType === 'delivery' ? 'Delivery' : 'Collection'} · <span className="font-bold">{o.pharmacy?.name ?? 'Pharmacy'}</span>
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">
                 {o.fulfillmentType === 'delivery'

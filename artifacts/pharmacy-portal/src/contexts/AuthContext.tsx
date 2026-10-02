@@ -7,10 +7,11 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { PharmacyUser, PasswordChangeResult, PasswordPolicy, useLogin, useLogout, useRefreshToken } from "@workspace/api-client-react";
+import { PharmacyUser, PasswordChangeResult, PasswordPolicy, useLogin, useLogout } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { freshAccessToken, SESSION_EXPIRED_EVENT, tokenSecondsLeft } from "@/lib/session";
 
 interface AuthContextType {
   user: PharmacyUser | null;
@@ -60,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
-  const refreshMutation = useRefreshToken();
 
   useEffect(() => {
     const handleInvalidatedSession = () => {
@@ -76,9 +76,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error("Your session was ended after a security update. Please sign in again.");
     };
 
+    const handleExpiredSession = () => {
+      queryClient.clear();
+      localStorage.removeItem("mc_access");
+      localStorage.removeItem("mc_refresh");
+      sessionStorage.removeItem("mc_user");
+      sessionStorage.removeItem("mc_policy");
+      setUser(null);
+      setPasswordPolicy(null);
+      setLocation("/login");
+      toast.error("Your session has ended. Please sign in again.");
+    };
+
     window.addEventListener("mobicare:session-invalidated", handleInvalidatedSession);
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
     return () => {
       window.removeEventListener("mobicare:session-invalidated", handleInvalidatedSession);
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpiredSession);
     };
   }, [queryClient, setLocation]);
 
@@ -151,10 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (refresh) {
         try {
-          const res = await refreshMutation.mutateAsync({ data: { refreshToken: refresh } });
-          localStorage.setItem("mc_access", res.accessToken);
-          localStorage.setItem("mc_refresh", res.refreshToken);
-          const decoded = decodeJwt(res.accessToken);
+          // The same renewal every request uses, so the single-use refresh
+          // token is never sent twice.
+          const accessToken = await freshAccessToken();
+          if (!accessToken || !(tokenSecondsLeft(accessToken) > 0)) throw new Error("session expired");
+          const decoded = decodeJwt(accessToken);
           const decodedUser = decoded?.user || decoded;
           const savedUser = readSessionJson<PharmacyUser>("mc_user");
           const sameUser =
@@ -183,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initAuth();
-  }, [queryClient, refreshMutation]);
+  }, [queryClient]);
 
   const login = async (...args: Parameters<typeof loginMutation.mutateAsync>) => {
     const res = await loginMutation.mutateAsync(...args);

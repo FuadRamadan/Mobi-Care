@@ -244,8 +244,8 @@ export default function PatientSearch() {
       )}
 
       <div className="space-y-4">
-        {results?.map((drug) => (
-          <DrugCard key={drug.listingKey} drug={drug} />
+        {groupByMedicine(results ?? []).map((medicine) => (
+          <MedicineCard key={medicine.drugId} medicine={medicine} />
         ))}
       </div>
 
@@ -253,36 +253,111 @@ export default function PatientSearch() {
   );
 }
 
-/** One pharmacy's versions of a medicine: its brands, or generics from different makers. */
-interface PharmacyOffers {
-  pharmacyId: string;
-  first: DrugOffer;
-  options: DrugOffer[];
+/**
+ * One product a pharmacy sells: a strength and form of the medicine (the
+ * search result it came from) in one brand or maker's generic (the offer).
+ */
+interface Option {
+  listing: DrugSearchResult;
+  offer: DrugOffer;
 }
 
-function groupByPharmacy(offers: DrugOffer[]): PharmacyOffers[] {
-  const groups = new Map<string, PharmacyOffers>();
-  for (const offer of offers) {
-    const group = groups.get(offer.pharmacyId);
-    if (group) group.options.push(offer);
-    else groups.set(offer.pharmacyId, { pharmacyId: offer.pharmacyId, first: offer, options: [offer] });
+/** Everything one pharmacy sells of a medicine, across strengths, forms and brands. */
+interface PharmacyOptions {
+  pharmacyId: string;
+  first: DrugOffer;
+  options: Option[];
+}
+
+/** A medicine with every strength and form any pharmacy lists, shown as one card. */
+interface Medicine {
+  drugId: string;
+  /** The first listing: name, tier, badges and limits are the same on all of them. */
+  drug: DrugSearchResult;
+  listings: DrugSearchResult[];
+  pharmacies: PharmacyOptions[];
+}
+
+/**
+ * The search returns one result per strength + form, each with its
+ * pharmacies. Patients see one card per medicine instead, each pharmacy once,
+ * with everything it sells of that medicine behind its options.
+ */
+function groupByMedicine(results: DrugSearchResult[]): Medicine[] {
+  const medicines = new Map<string, Medicine>();
+  for (const listing of results) {
+    let medicine = medicines.get(listing.drugId);
+    if (!medicine) {
+      medicine = { drugId: listing.drugId, drug: listing, listings: [], pharmacies: [] };
+      medicines.set(listing.drugId, medicine);
+    }
+    medicine.listings.push(listing);
+    for (const offer of listing.offers) {
+      let pharmacy = medicine.pharmacies.find((p) => p.pharmacyId === offer.pharmacyId);
+      if (!pharmacy) {
+        pharmacy = { pharmacyId: offer.pharmacyId, first: offer, options: [] };
+        medicine.pharmacies.push(pharmacy);
+      }
+      pharmacy.options.push({ listing, offer });
+    }
   }
-  return [...groups.values()];
+  const cheapest = (pharmacy: PharmacyOptions) => Math.min(...pharmacy.options.map((o) => o.offer.priceLeones));
+  for (const medicine of medicines.values()) {
+    // Grouped by strength and form in the order the card lists them,
+    // cheapest first within each.
+    const position = (listing: DrugSearchResult) => medicine.listings.indexOf(listing);
+    for (const pharmacy of medicine.pharmacies) {
+      pharmacy.options.sort(
+        (a, b) => position(a.listing) - position(b.listing) || a.offer.priceLeones - b.offer.priceLeones,
+      );
+    }
+    // In order of price, as before: MobiCare does not steer a patient to a pharmacy.
+    medicine.pharmacies.sort((a, b) => cheapest(a) - cheapest(b));
+  }
+  return [...medicines.values()];
 }
 
 function versionLabel(offer: DrugOffer): string {
   return offer.brand?.trim() || "Generic";
 }
 
-function DrugCard({ drug }: { drug: DrugSearchResult }) {
+/** "500mg Tablet" */
+function productLabel(listing: DrugSearchResult): string {
+  return [listing.strength, listing.form].filter(Boolean).join(" ");
+}
+
+/** The strengths and forms on a card, shortened after a few. */
+function productsLine(listings: DrugSearchResult[]): string {
+  const labels = [...new Set(listings.map(productLabel))];
+  return labels.length > 3 ? `${labels.slice(0, 3).join(" · ")} +${labels.length - 3} more` : labels.join(" · ");
+}
+
+/**
+ * How many are in stock. Counts are per strength and form, never added up
+ * across them: 80 packs of tablets and 12 bottles of syrup are not 92 of anything.
+ */
+function stockLine(options: Option[], severalProducts: boolean): string {
+  const byProduct = new Map<string, number>();
+  for (const { listing, offer } of options) {
+    const label = productLabel(listing);
+    byProduct.set(label, (byProduct.get(label) ?? 0) + Math.max(offer.stockQuantity, 0));
+  }
+  const total = [...byProduct.values()].reduce((sum, count) => sum + count, 0);
+  if (total === 0) return "Out of stock";
+  if (!severalProducts || byProduct.size === 1) return `${total} in stock`;
+  return `In stock: ${[...byProduct].map(([label, count]) => `${label} (${count})`).join(" · ")}`;
+}
+
+function MedicineCard({ medicine }: { medicine: Medicine }) {
   const { addItem, cart } = useCart();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
   const [openPharmacy, setOpenPharmacy] = useState<string | null>(null);
-  const groups = groupByPharmacy(drug.offers);
-  const visible = expanded ? groups : groups.slice(0, 3);
+  const { drug, pharmacies } = medicine;
+  const visible = expanded ? pharmacies : pharmacies.slice(0, 3);
+  const severalProducts = new Set(medicine.listings.map(productLabel)).size > 1;
 
-  function add(offer: DrugOffer, replace = false) {
+  function add({ listing, offer }: Option, replace = false) {
     const ok = addItem(
       {
         id: offer.pharmacyId,
@@ -293,15 +368,15 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
       },
       {
         inventoryId: offer.inventoryId,
-        drugId: drug.drugId,
-        drugName: drug.name,
-        strength: drug.strength,
-        form: drug.form,
+        drugId: listing.drugId,
+        drugName: listing.name,
+        strength: listing.strength,
+        form: listing.form,
         unitOfSale: offer.unitOfSale,
-        tier: drug.tier,
-        maxUnitsPerOrder: drug.maxUnitsPerOrder ?? null,
-        prescriptionRequired: drug.prescriptionRequired,
-        collectionOnly: drug.collectionOnly,
+        tier: listing.tier,
+        maxUnitsPerOrder: listing.maxUnitsPerOrder ?? null,
+        prescriptionRequired: listing.prescriptionRequired,
+        collectionOnly: listing.collectionOnly,
         priceLeones: offer.priceLeones,
         brand: versionLabel(offer),
         manufacturer: offer.manufacturer ?? null,
@@ -320,7 +395,7 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
           <Button
             size="sm"
             variant="destructive"
-            onClick={() => add(offer, true)}
+            onClick={() => add({ listing, offer }, true)}
             data-testid="button-replace-cart"
           >
             Start new cart
@@ -330,23 +405,21 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
       return;
     }
     toast({
-      title: `${drug.name} added`,
+      title: `${listing.name} ${productLabel(listing)} added`,
       description: `${versionLabel(offer)} from ${offer.pharmacyName} — ${formatLeones(offer.priceLeones)}`,
     });
   }
 
   return (
-    <Card data-testid={`card-drug-${drug.listingKey}`}>
+    <Card data-testid={`card-drug-${drug.drugId}`}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="font-display font-semibold text-lg text-dark-green leading-tight">
               {drug.name}
             </h3>
-            <p className="text-sm font-medium mt-0.5">
-              {drug.strength} {drug.form}
-            </p>
-            {drug.genericName && (
+            <p className="text-sm font-medium mt-0.5">{productsLine(medicine.listings)}</p>
+            {drug.genericName && drug.genericName !== drug.name && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 {drug.genericName}
               </p>
@@ -382,16 +455,18 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
           {visible.map(({ pharmacyId, first, options }) => {
             const many = options.length > 1;
             const isOpen = openPharmacy === pharmacyId;
-            const prices = options.map((option) => option.priceLeones);
-            const anyInStock = options.some((option) => option.inStock);
+            const prices = options.map((option) => option.offer.priceLeones);
+            const totalStock = options.reduce((sum, option) => sum + Math.max(option.offer.stockQuantity, 0), 0);
+            const stock = stockLine(options, severalProducts);
+            const anyInStock = options.some((option) => option.offer.inStock);
             return (
               <div
                 key={pharmacyId}
                 className={`flex flex-col gap-3 p-3 ${!anyInStock ? "opacity-60 grayscale-[50%]" : ""}`}
-                data-testid={`pharmacy-${drug.listingKey}-${pharmacyId}`}
+                data-testid={`pharmacy-${drug.drugId}-${pharmacyId}`}
               >
                 <div className="min-w-0">
-                  <div className="font-medium text-sm flex items-center gap-2">
+                  <div className="font-bold text-base text-foreground flex items-center gap-2" data-testid="text-pharmacy-name">
                     {first.pharmacyName}
                     <span className={`w-2 h-2 rounded-full ${first.online ? 'bg-green-500' : 'bg-gray-300'}`} title={first.online ? 'Online' : 'Offline'} />
                   </div>
@@ -406,12 +481,12 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
                     </div>
                   )}
                   <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                    {options.some((option) => option.availableForDelivery) && (
+                    {options.some((option) => option.offer.availableForDelivery) && (
                       <span className="inline-flex items-center gap-1 text-primary">
                         <Truck className="w-3 h-3" /> Delivery
                       </span>
                     )}
-                    {options.some((option) => option.availableForCollection) && (
+                    {options.some((option) => option.offer.availableForCollection) && (
                       <span className="inline-flex items-center gap-1 text-primary">
                         <Store className="w-3 h-3" /> Collection
                       </span>
@@ -419,9 +494,9 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
                   </div>
                 </div>
 
-                {/* Versions are listed as they come, cheapest first, with no
-                    option singled out: MobiCare does not steer a patient
-                    towards a brand or a pharmacy. */}
+                {/* Every strength, form and brand this pharmacy sells of the
+                    medicine, listed as they come with no option singled out:
+                    MobiCare does not steer a patient towards a brand. */}
                 {many ? (
                   <div className="rounded-lg border bg-background/60">
                     <button
@@ -429,31 +504,45 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
                       className="w-full flex items-center justify-between gap-2 p-2.5 text-left"
                       onClick={() => setOpenPharmacy(isOpen ? null : pharmacyId)}
                       aria-expanded={isOpen}
-                      data-testid={`button-options-${drug.listingKey}-${pharmacyId}`}
+                      data-testid={`button-options-${drug.drugId}-${pharmacyId}`}
                     >
-                      <span className="text-sm font-medium">
-                        {options.length} options
-                        <span className="text-muted-foreground font-normal">
-                          {" · "}
-                          {formatLeones(Math.min(...prices))}
-                          {Math.max(...prices) !== Math.min(...prices) && `–${formatLeones(Math.max(...prices)).replace(/^Le /, "")}`}
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">
+                          {options.length} options
+                          <span className="text-muted-foreground font-normal">
+                            {" · "}
+                            {formatLeones(Math.min(...prices))}
+                            {Math.max(...prices) !== Math.min(...prices) && `–${formatLeones(Math.max(...prices)).replace(/^Le /, "")}`}
+                          </span>
+                        </span>
+                        <span className={`block text-xs mt-0.5 ${totalStock > 0 ? "text-green-600" : "text-red-600"}`}>
+                          {stock}
                         </span>
                       </span>
-                      <span className="text-xs text-primary font-medium">
+                      <span className="text-xs text-primary font-medium shrink-0">
                         {isOpen ? "Hide" : "See options"}
                       </span>
                     </button>
                     {isOpen && (
                       <div className="divide-y border-t">
                         {options.map((option) => (
-                          <OptionRow key={option.inventoryId} offer={option} listingKey={drug.listingKey} onAdd={() => add(option)} />
+                          <OptionRow
+                            key={option.offer.inventoryId}
+                            offer={option.offer}
+                            product={severalProducts ? productLabel(option.listing) : null}
+                            onAdd={() => add(option)}
+                          />
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="rounded-lg border bg-background/60">
-                    <OptionRow offer={first} listingKey={drug.listingKey} onAdd={() => add(first)} />
+                    <OptionRow
+                      offer={options[0]!.offer}
+                      product={severalProducts ? productLabel(options[0]!.listing) : null}
+                      onAdd={() => add(options[0]!)}
+                    />
                   </div>
                 )}
 
@@ -479,14 +568,14 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
           })}
         </div>
 
-        {groups.length > 3 && (
+        {pharmacies.length > 3 && (
           <button
             className="text-xs text-primary font-medium hover:underline"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded
               ? "Show fewer pharmacies"
-              : `Compare all ${groups.length} pharmacies`}
+              : `Compare all ${pharmacies.length} pharmacies`}
           </button>
         )}
       </CardContent>
@@ -497,17 +586,19 @@ function DrugCard({ drug }: { drug: DrugSearchResult }) {
 /** One version of the medicine at one pharmacy: what it is, what it costs, and Add. */
 function OptionRow({
   offer,
-  listingKey,
+  product,
   onAdd,
 }: {
   offer: DrugOffer;
-  listingKey: string;
+  /** The strength and form, when the medicine comes in more than one. */
+  product: string | null;
   onAdd: () => void;
 }) {
   const origin = [offer.manufacturer, offer.countryOfOrigin].filter(Boolean).join(" · ");
   return (
     <div className={`flex items-start justify-between gap-3 p-2.5 ${!offer.inStock ? "opacity-60" : ""}`}>
       <div className="min-w-0">
+        {product && <div className="text-sm font-semibold text-dark-green">{product}</div>}
         <div className="text-sm font-medium">
           {versionLabel(offer) === "Generic" ? (
             <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">Generic</span>
@@ -529,7 +620,7 @@ function OptionRow({
           onClick={onAdd}
           disabled={!offer.inStock}
           variant={offer.inStock ? "default" : "secondary"}
-          data-testid={`button-add-${listingKey}-${offer.inventoryId}`}
+          data-testid={`button-add-${offer.inventoryId}`}
         >
           {offer.inStock ? "Add to cart" : "Out of stock"}
         </Button>

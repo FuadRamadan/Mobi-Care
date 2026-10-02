@@ -12,9 +12,10 @@ import {
   HQ_ACCESS_KEY as ACCESS_KEY,
   HQ_REFRESH_KEY as REFRESH_KEY,
   HQ_USER_KEY as USER_KEY,
+  freshToken,
+  sessionExpiredEvent,
   tokenSecondsLeft,
 } from '@/lib/portalToken';
-import { apiUrl } from '@/lib/apiUrl';
 
 export interface HqUser {
   id: string;
@@ -95,32 +96,20 @@ export function HqAuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function ensureFresh() {
-      const secondsLeft = tokenSecondsLeft(ACCESS_KEY);
-      if (Number.isNaN(secondsLeft)) return logout();
-      if (secondsLeft > 120) return;
-      const refreshToken = localStorage.getItem(REFRESH_KEY);
-      if (!refreshToken) return logout();
-      try {
-        const res = await fetch(apiUrl('/api/auth/refresh'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-        if (!res.ok) throw new Error(`refresh failed (${res.status})`);
-        const data = (await res.json()) as { accessToken: string; refreshToken: string };
-        if (cancelled) return;
-        localStorage.setItem(ACCESS_KEY, data.accessToken);
-        localStorage.setItem(REFRESH_KEY, data.refreshToken);
-      } catch {
-        if (!cancelled) logout();
-      }
+      // The same renewal every request uses, so the refresh token is never
+      // sent twice.
+      const token = await freshToken('hq');
+      if (!cancelled && !(token && tokenSecondsLeft(ACCESS_KEY) > 0)) logout();
     }
+    const onExpired = () => logout();
+    window.addEventListener(sessionExpiredEvent('hq'), onExpired);
 
     void ensureFresh();
     const interval = setInterval(ensureFresh, 60_000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener(sessionExpiredEvent('hq'), onExpired);
     };
   }, [user, logout]);
 

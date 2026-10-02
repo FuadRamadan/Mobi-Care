@@ -256,7 +256,7 @@ export default function Checkout() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Ordering from{" "}
-          <span className="font-medium text-foreground">
+          <span className="font-bold text-foreground">
             {cart.pharmacyName}
           </span>
           {cart.pharmacyAddress ? ` · ${cart.pharmacyAddress}` : ""}

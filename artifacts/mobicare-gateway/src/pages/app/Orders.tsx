@@ -72,7 +72,7 @@ export default function PatientOrders() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {(order as any).pharmacy?.name ?? 'Pharmacy'} · {formatDate(order.createdAt)}
+                    <span className="font-bold text-foreground">{(order as any).pharmacy?.name ?? 'Pharmacy'}</span> · {formatDate(order.createdAt)}
                   </div>
                 </div>
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
