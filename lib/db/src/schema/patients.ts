@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, integer, date, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, integer, date, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 /**
  * Patient accounts for the unified-site patient experience.
@@ -9,6 +9,10 @@ export const patientsTable = pgTable("patients", {
   name: text("name").notNull(),
   phone: text("phone").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  /** False for an account created with Google: the hash is of a random value nobody knows. */
+  hasPassword: boolean("has_password").notNull().default(true),
+  /** Google's permanent ID for the patient's Google account, when they sign in with Google. */
+  googleSub: text("google_sub"),
   age: integer("age").notNull().default(18),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
   nin: text("nin"),
@@ -33,7 +37,9 @@ export const patientsTable = pgTable("patients", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("patients_google_sub_unique").on(table.googleSub),
+]);
 
 export type Patient = typeof patientsTable.$inferSelect;
 

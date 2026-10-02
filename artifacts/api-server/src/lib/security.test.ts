@@ -85,7 +85,7 @@ test("security headers are set and the server is not advertised", async () => {
   const response = await once(app, "/x");
 
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
   assert.match(
     response.headers.get("strict-transport-security") ?? "",
     /max-age=31536000/,

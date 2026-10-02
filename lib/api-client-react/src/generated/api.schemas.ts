@@ -46,7 +46,8 @@ export interface RefreshInput {
 }
 
 export interface ChangePasswordInput {
-  currentPassword: string;
+  /** Required, except for a patient setting a first password after signing up with Google */
+  currentPassword?: string;
   /** @minLength 8 */
   newPassword: string;
 }
@@ -117,6 +118,52 @@ export interface PasswordChangeResult {
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
+}
+
+export interface GoogleSignInConfig {
+  /** @nullable */
+  clientId: string | null;
+}
+
+export interface GoogleCredentialInput {
+  /** The ID token Google's button returned */
+  credential: string;
+}
+
+export type GoogleSignInResultStatus = typeof GoogleSignInResultStatus[keyof typeof GoogleSignInResultStatus];
+
+
+export const GoogleSignInResultStatus = {
+  signed_in: 'signed_in',
+  needs_profile: 'needs_profile',
+} as const;
+
+export interface GoogleSignInResult {
+  status: GoogleSignInResultStatus;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: PharmacyUser;
+  /** For needs_profile, sent back with the phone number and date of birth */
+  signupToken?: string;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  email?: string | null;
+}
+
+export interface GoogleSignUpInput {
+  signupToken: string;
+  /** @minLength 2 */
+  name: string;
+  /** @minLength 5 */
+  phone: string;
+  dateOfBirth: string;
+  acceptTermsAndPrivacy: true;
+  acceptResearchAnalytics?: boolean;
+}
+
+export interface GoogleConnection {
+  googleConnected: boolean;
 }
 
 export interface AuthResponse {
@@ -288,7 +335,9 @@ export interface PatientConsentInput {
 
 export interface PatientErasureInput {
   /** The patient's current password. This cannot be undone. */
-  password: string;
+  password?: string;
+  /** For an account with no password, a fresh Google sign-in instead */
+  googleCredential?: string;
   /** Must be exactly "DELETE MY ACCOUNT". */
   confirm: string;
 }
@@ -324,6 +373,8 @@ export interface PatientProfile {
   nationality: string | null;
   /** @nullable */
   profileImageUrl: string | null;
+  googleConnected?: boolean;
+  hasPassword?: boolean;
   profileComplete: boolean;
 }
 

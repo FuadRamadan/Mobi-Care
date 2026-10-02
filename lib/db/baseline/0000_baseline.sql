@@ -803,6 +803,8 @@ CREATE TABLE "public"."patients" (
     "name" "text" NOT NULL,
     "phone" "text" NOT NULL,
     "password_hash" "text" NOT NULL,
+    "has_password" boolean DEFAULT true NOT NULL,
+    "google_sub" "text",
     "age" integer DEFAULT 18 NOT NULL,
     "date_of_birth" "date",
     "nin" "text",
@@ -1734,6 +1736,13 @@ CREATE INDEX "patient_password_reset_requester_created_idx" ON "public"."patient
 
 
 --
+-- Name: patients_google_sub_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "patients_google_sub_unique" ON "public"."patients" USING "btree" ("google_sub");
+
+
+--
 -- Name: saved_api_request_execution_claims_actor_created_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2175,11 +2184,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-02 20:14:49.182482+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-02 21:41:02.167692+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-02 20:14:49.186708+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-02 21:41:02.172397+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-02 20:14:49.265715+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-02 21:41:02.23764+00')
 ON CONFLICT DO NOTHING;

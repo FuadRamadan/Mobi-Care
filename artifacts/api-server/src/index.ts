@@ -186,6 +186,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "Google sign-in for patients (migration 0032)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'patients'
+            AND column_name = 'google_sub'
+        ) AS exists
+      `,
+    },
+    {
       label: "catalogue permission (migration 0029)",
       query: sql`
         SELECT EXISTS (

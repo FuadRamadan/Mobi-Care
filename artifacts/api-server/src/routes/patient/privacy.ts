@@ -10,6 +10,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import bcrypt from "bcryptjs";
+import { verifyGoogleCredential } from "../../lib/googleSignIn.js";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -269,14 +270,19 @@ async function deleteImage(imageKey: string): Promise<boolean> {
  * claim on those.
  *
  * The password is required because this cannot be undone and a signed-in phone
- * left on a table should not be enough to do it.
+ * left on a table should not be enough to do it. A patient who signed up with
+ * Google and has no password confirms with a fresh Google sign-in instead.
  */
 router.post("/erase", async (req: AuthRequest, res): Promise<void> => {
   const body = z
-    .object({ password: z.string().min(1), confirm: z.string() })
+    .object({
+      password: z.string().min(1).optional(),
+      googleCredential: z.string().min(20).max(5000).optional(),
+      confirm: z.string(),
+    })
     .safeParse(req.body);
 
-  if (!body.success || body.data.confirm !== ERASURE_PHRASE) {
+  if (!body.success || body.data.confirm !== ERASURE_PHRASE || (!body.data.password && !body.data.googleCredential)) {
     res.status(400).json({
       error: `Your password and confirm: "${ERASURE_PHRASE}" are both required.`,
     });
@@ -287,6 +293,8 @@ router.post("/erase", async (req: AuthRequest, res): Promise<void> => {
   const [patient] = await db
     .select({
       passwordHash: patientsTable.passwordHash,
+      hasPassword: patientsTable.hasPassword,
+      googleSub: patientsTable.googleSub,
       profileImageKey: patientsTable.profileImageKey,
       erasedAt: patientsTable.erasedAt,
     })
@@ -298,9 +306,20 @@ router.post("/erase", async (req: AuthRequest, res): Promise<void> => {
     res.status(404).json({ error: "Account not found" });
     return;
   }
-  if (!(await bcrypt.compare(body.data.password, patient.passwordHash))) {
-    res.status(403).json({ error: "That password is not correct." });
-    return;
+  if (patient.hasPassword) {
+    if (!body.data.password || !(await bcrypt.compare(body.data.password, patient.passwordHash))) {
+      res.status(403).json({ error: "That password is not correct." });
+      return;
+    }
+  } else {
+    // No password: the patient proves it is them by signing in with Google again.
+    const identity = body.data.googleCredential
+      ? await verifyGoogleCredential(body.data.googleCredential).catch(() => null)
+      : null;
+    if (!identity || identity.sub !== patient.googleSub) {
+      res.status(403).json({ error: "Confirm with the Google account this MobiCare account uses." });
+      return;
+    }
   }
 
   const orphanImages: string[] = [];
@@ -380,6 +399,7 @@ router.post("/erase", async (req: AuthRequest, res): Promise<void> => {
         phone: `erased:${crypto.randomUUID()}`,
         // An unusable hash, not a blank one: nothing should ever match it.
         passwordHash: `erased:${crypto.randomBytes(32).toString("hex")}`,
+        googleSub: null,
         email: null,
         address: null,
         nin: null,

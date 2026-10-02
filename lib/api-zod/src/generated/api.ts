@@ -123,7 +123,7 @@ export const changePasswordBodyNewPasswordMin = 8;
 
 
 export const ChangePasswordBody = zod.object({
-  "currentPassword": zod.string(),
+  "currentPassword": zod.string().optional().describe('Required, except for a patient setting a first password after signing up with Google'),
   "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
 })
 
@@ -973,6 +973,109 @@ export const RegisterPatientResponse = zod.object({
 
 
 /**
+ * @summary The Google Client ID for the patient app's sign-in button (null when not set up)
+ */
+export const GetGoogleSignInConfigResponse = zod.object({
+  "clientId": zod.string().nullable()
+})
+
+
+/**
+ * @summary Sign a patient in with a Google ID token; a new Google account gets a sign-up token instead
+ */
+export const SignInWithGoogleBody = zod.object({
+  "credential": zod.string().describe('The ID token Google\'s button returned')
+})
+
+export const SignInWithGoogleResponse = zod.object({
+  "status": zod.enum(['signed_in', 'needs_profile']),
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
+  "user": zod.object({
+  "id": zod.string(),
+  "role": zod.enum(['pharmacy', 'hq', 'patient']),
+  "name": zod.string(),
+  "username": zod.string(),
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
+}).optional(),
+  "signupToken": zod.string().optional().describe('For needs_profile, sent back with the phone number and date of birth'),
+  "name": zod.string().nullish(),
+  "email": zod.string().nullish()
+})
+
+
+/**
+ * @summary Finish a Google sign-up with phone number, date of birth and consent
+ */
+export const completeGoogleSignUpBodyNameMin = 2;
+
+export const completeGoogleSignUpBodyPhoneMin = 5;
+
+
+
+export const CompleteGoogleSignUpBody = zod.object({
+  "signupToken": zod.string(),
+  "name": zod.string().min(completeGoogleSignUpBodyNameMin),
+  "phone": zod.string().min(completeGoogleSignUpBodyPhoneMin),
+  "dateOfBirth": zod.coerce.date(),
+  "acceptTermsAndPrivacy": zod.literal(true),
+  "acceptResearchAnalytics": zod.boolean().optional()
+})
+
+export const CompleteGoogleSignUpResponse = zod.object({
+  "status": zod.enum(['signed_in', 'needs_profile']),
+  "accessToken": zod.string().optional(),
+  "refreshToken": zod.string().optional(),
+  "user": zod.object({
+  "id": zod.string(),
+  "role": zod.enum(['pharmacy', 'hq', 'patient']),
+  "name": zod.string(),
+  "username": zod.string(),
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
+}).optional(),
+  "signupToken": zod.string().optional().describe('For needs_profile, sent back with the phone number and date of birth'),
+  "name": zod.string().nullish(),
+  "email": zod.string().nullish()
+})
+
+
+/**
+ * @summary Connect a Google account to the signed-in patient
+ */
+export const ConnectGoogleAccountBody = zod.object({
+  "credential": zod.string().describe('The ID token Google\'s button returned')
+})
+
+export const ConnectGoogleAccountResponse = zod.object({
+  "googleConnected": zod.boolean()
+})
+
+
+/**
+ * @summary Disconnect the signed-in patient's Google account (needs a password set)
+ */
+export const DisconnectGoogleAccountResponse = zod.object({
+  "googleConnected": zod.boolean()
+})
+
+
+/**
  * @summary Search medicines across all pharmacies with price comparison
  */
 export const patientSearchDrugsQueryPatientLatitudeMin = -90;
@@ -1671,7 +1774,8 @@ export const ExportPatientDataResponse = zod.unknown()
  * @summary Erase the patient's identity and the data held only for them
  */
 export const ErasePatientAccountBody = zod.object({
-  "password": zod.string().describe('The patient\'s current password. This cannot be undone.'),
+  "password": zod.string().optional().describe('The patient\'s current password. This cannot be undone.'),
+  "googleCredential": zod.string().optional().describe('For an account with no password, a fresh Google sign-in instead'),
   "confirm": zod.string().describe('Must be exactly \"DELETE MY ACCOUNT\".')
 })
 
@@ -1701,6 +1805,8 @@ export const GetPatientProfileResponse = zod.object({
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
+  "googleConnected": zod.boolean().optional(),
+  "hasPassword": zod.boolean().optional(),
   "profileComplete": zod.boolean()
 })
 
@@ -1738,6 +1844,8 @@ export const UpdatePatientProfileResponse = zod.object({
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
+  "googleConnected": zod.boolean().optional(),
+  "hasPassword": zod.boolean().optional(),
   "profileComplete": zod.boolean()
 })
 
@@ -1760,6 +1868,8 @@ export const UpdatePatientProfilePhotoResponse = zod.object({
   "email": zod.string().nullable(),
   "nationality": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable(),
+  "googleConnected": zod.boolean().optional(),
+  "hasPassword": zod.boolean().optional(),
   "profileComplete": zod.boolean()
 })
 

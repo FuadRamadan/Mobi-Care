@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { usePatientAuth } from '@/patient/auth';
 import { PrivacyPanel } from './PrivacyPanel';
+import { SignInMethods } from './SignInMethods';
 
 export default function PatientProfilePage() {
   const { user, updateUserName } = usePatientAuth();
@@ -213,8 +214,14 @@ export default function PatientProfilePage() {
           </div>
         </form>
 
+        {profile && (
+          <div className="mt-6">
+            <SignInMethods profile={profile} />
+          </div>
+        )}
+
         <div className="mt-6">
-          <PrivacyPanel />
+          <PrivacyPanel hasPassword={profile?.hasPassword !== false} />
         </div>
       </div>
     </div>

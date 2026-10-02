@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLogin, useRegisterPatient } from '@workspace/api-client-react';
+import { useCompleteGoogleSignUp, useLogin, useRegisterPatient, useSignInWithGoogle } from '@workspace/api-client-react';
 import {
   PT_ACCESS_KEY as ACCESS_KEY,
   PT_REFRESH_KEY as REFRESH_KEY,
@@ -34,9 +34,32 @@ interface PatientAuthValue {
     dateOfBirth: string,
     consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
   ) => Promise<void>;
+  /**
+   * Signs in with Google. A Google account not yet linked to a patient comes
+   * back as `needs_profile`: the phone number and date of birth come next.
+   */
+  signInWithGoogle: (credential: string) => Promise<GoogleOutcome>;
+  completeGoogleSignUp: (details: {
+    signupToken: string;
+    name: string;
+    phone: string;
+    dateOfBirth: string;
+    acceptTermsAndPrivacy: true;
+    acceptResearchAnalytics: boolean;
+  }) => Promise<void>;
   updateUserName: (name: string) => void;
   dismissProfileCompletion: () => void;
   logout: () => void;
+}
+
+export type GoogleOutcome =
+  | { status: 'signed_in' }
+  | { status: 'needs_profile'; signupToken: string; name: string | null; email: string | null };
+
+/** The server's own words where it gave some, otherwise the fallback. */
+function serverMessage(err: unknown, fallback: string): string {
+  const data = (err as { data?: { error?: unknown } } | null)?.data;
+  return typeof data?.error === 'string' ? data.error : fallback;
 }
 
 const PatientAuthContext = createContext<PatientAuthValue | null>(null);
@@ -87,8 +110,10 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
     async (phone: string, password: string) => {
       const res = await loginMutation
         .mutateAsync({ data: { identifier: phone, password } })
-        .catch(() => {
-          throw new Error('Wrong phone number or password');
+        .catch((err: unknown) => {
+          // An account made with Google has no password: say so instead.
+          const code = (err as { data?: { code?: string } } | null)?.data?.code;
+          throw new Error(code === 'GOOGLE_ACCOUNT' ? serverMessage(err, '') : 'Wrong phone number or password');
         });
       if (res.user.role !== 'patient') {
         throw new Error('This login is for patients. Pharmacies and HQ staff have their own portals.');
@@ -120,6 +145,37 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
       storeSession(res.accessToken, res.refreshToken, res.user);
     },
     [registerMutation, storeSession],
+  );
+
+  const googleSignIn = useSignInWithGoogle();
+  const googleSignUp = useCompleteGoogleSignUp();
+
+  const signInWithGoogle = useCallback(
+    async (credential: string): Promise<GoogleOutcome> => {
+      const res = await googleSignIn
+        .mutateAsync({ data: { credential } })
+        .catch((err: unknown) => {
+          throw new Error(serverMessage(err, 'Google sign-in did not work. Try again, or use your phone number.'));
+        });
+      if (res.status === 'needs_profile') {
+        return { status: 'needs_profile', signupToken: res.signupToken!, name: res.name ?? null, email: res.email ?? null };
+      }
+      storeSession(res.accessToken!, res.refreshToken!, res.user!);
+      return { status: 'signed_in' };
+    },
+    [googleSignIn, storeSession],
+  );
+
+  const completeGoogleSignUp = useCallback(
+    async (details: Parameters<PatientAuthValue['completeGoogleSignUp']>[0]) => {
+      const res = await googleSignUp
+        .mutateAsync({ data: details })
+        .catch((err: unknown) => {
+          throw new Error(serverMessage(err, 'Could not create your account. Check your details and try again.'));
+        });
+      storeSession(res.accessToken!, res.refreshToken!, res.user!);
+    },
+    [googleSignUp, storeSession],
   );
 
   const logout = useCallback(() => {
@@ -158,6 +214,8 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
       user,
       login,
       register,
+      signInWithGoogle,
+      completeGoogleSignUp,
       updateUserName,
       logout,
       profileCompletionPending,

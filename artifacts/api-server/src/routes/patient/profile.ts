@@ -68,6 +68,9 @@ function profileResponse(patient: typeof patientsTable.$inferSelect) {
     profileImageUrl: signed
       ? `/api/patient-profile-images/${patient.id}?expires=${signed.expiresAt}&sig=${signed.token}`
       : null,
+    /** Whether the patient can sign in with Google, and with a password. */
+    googleConnected: Boolean(patient.googleSub),
+    hasPassword: patient.hasPassword,
     profileComplete: Boolean(
       patient.address?.trim() &&
         patient.email?.trim() &&

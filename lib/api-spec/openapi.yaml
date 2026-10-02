@@ -690,6 +690,99 @@ paths:
         "409":
           description: Phone already registered
 
+  /auth/google/config:
+    get:
+      operationId: getGoogleSignInConfig
+      tags: [auth]
+      summary: The Google Client ID for the patient app's sign-in button (null when not set up)
+      responses:
+        "200":
+          description: Google sign-in settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleSignInConfig"
+
+  /auth/google:
+    post:
+      operationId: signInWithGoogle
+      tags: [auth]
+      summary: Sign a patient in with a Google ID token; a new Google account gets a sign-up token instead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleCredentialInput"
+      responses:
+        "200":
+          description: Signed in, or the profile step is needed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleSignInResult"
+        "401":
+          description: The Google sign-in could not be confirmed
+
+  /auth/google/complete:
+    post:
+      operationId: completeGoogleSignUp
+      tags: [auth]
+      summary: Finish a Google sign-up with phone number, date of birth and consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleSignUpInput"
+      responses:
+        "201":
+          description: Account created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleSignInResult"
+        "409":
+          description: Phone already registered
+
+  /auth/google/link:
+    post:
+      operationId: connectGoogleAccount
+      tags: [auth]
+      summary: Connect a Google account to the signed-in patient
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleCredentialInput"
+      responses:
+        "200":
+          description: Connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleConnection"
+        "409":
+          description: That Google account belongs to another patient
+    delete:
+      operationId: disconnectGoogleAccount
+      tags: [auth]
+      summary: Disconnect the signed-in patient's Google account (needs a password set)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleConnection"
+        "409":
+          description: No password set yet
+
   /patient/search:
     get:
       operationId: patientSearchDrugs
@@ -3208,10 +3301,11 @@ components:
 
     ChangePasswordInput:
       type: object
-      required: [currentPassword, newPassword]
+      required: [newPassword]
       properties:
         currentPassword:
           type: string
+          description: Required, except for a patient setting a first password after signing up with Google
         newPassword:
           type: string
           minLength: 8
@@ -3280,6 +3374,70 @@ components:
           type: string
         refreshToken:
           type: string
+
+    GoogleSignInConfig:
+      type: object
+      required: [clientId]
+      properties:
+        clientId:
+          type: ["string", "null"]
+
+    GoogleCredentialInput:
+      type: object
+      required: [credential]
+      properties:
+        credential:
+          type: string
+          description: The ID token Google's button returned
+
+    GoogleSignInResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [signed_in, needs_profile]
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/PharmacyUser"
+        signupToken:
+          type: string
+          description: For needs_profile, sent back with the phone number and date of birth
+        name:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+
+    GoogleSignUpInput:
+      type: object
+      required: [signupToken, name, phone, dateOfBirth, acceptTermsAndPrivacy]
+      properties:
+        signupToken:
+          type: string
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          minLength: 5
+        dateOfBirth:
+          type: string
+          format: date
+        acceptTermsAndPrivacy:
+          type: boolean
+          enum: [true]
+        acceptResearchAnalytics:
+          type: boolean
+
+    GoogleConnection:
+      type: object
+      required: [googleConnected]
+      properties:
+        googleConnected:
+          type: boolean
 
     AuthResponse:
       type: object
@@ -3525,11 +3683,14 @@ components:
 
     PatientErasureInput:
       type: object
-      required: [password, confirm]
+      required: [confirm]
       properties:
         password:
           type: string
           description: The patient's current password. This cannot be undone.
+        googleCredential:
+          type: string
+          description: For an account with no password, a fresh Google sign-in instead
         confirm:
           type: string
           description: Must be exactly "DELETE MY ACCOUNT".
@@ -3575,6 +3736,10 @@ components:
           type: ["string", "null"]
         profileImageUrl:
           type: ["string", "null"]
+        googleConnected:
+          type: boolean
+        hasPassword:
+          type: boolean
         profileComplete:
           type: boolean
 

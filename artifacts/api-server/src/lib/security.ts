@@ -33,7 +33,11 @@ export function securityHeaders(): RequestHandler {
       includeSubDomains: true,
       preload: false,
     },
-    referrerPolicy: { policy: "no-referrer" },
+    // Other sites learn only that a visitor came from MobiCare's address,
+    // never the page (an order or prescription link) or anything after it.
+    // "no-referrer" sent nothing at all, which Google sign-in and map tile
+    // servers reject. Same-site requests keep the full address.
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   });
 }
 
@@ -136,4 +140,5 @@ export const AUTH_RATE_LIMITED_PATHS = [
   "/auth/change-password",
   "/auth/patient-password-reset/request",
   "/auth/patient-password-reset/confirm",
+  "/auth/google",
 ];

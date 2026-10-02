@@ -6,15 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { usePatientAuth } from '@/patient/auth';
 import { ConsentChoices, EMPTY_CONSENT, type ConsentChoiceState } from '@/patient/ConsentChoices';
+import { GoogleButton, GoogleDivider } from '@/patient/GoogleButton';
 import {
   useConfirmPatientPasswordReset,
   useRequestPatientPasswordReset,
 } from '@workspace/api-client-react';
 
-type Mode = 'login' | 'register' | 'recover';
+// 'google' = signed in with Google for the first time: phone and date of birth next.
+type Mode = 'login' | 'register' | 'recover' | 'google';
 
 export default function PatientLogin() {
-  const { user, login, register } = usePatientAuth();
+  const { user, login, register, signInWithGoogle, completeGoogleSignUp } = usePatientAuth();
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
@@ -30,6 +32,7 @@ export default function PatientLogin() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [retryAfter, setRetryAfter] = useState(0);
+  const [googleSignup, setGoogleSignup] = useState<{ signupToken: string; email: string | null } | null>(null);
   const requestReset = useRequestPatientPasswordReset();
   const confirmReset = useConfirmPatientPasswordReset();
 
@@ -51,7 +54,21 @@ export default function PatientLogin() {
     setBusy(true);
     try {
       if (mode === 'login') await login(phone, password);
-      else {
+      else if (mode === 'google') {
+        if (!googleSignup) return;
+        if (!consent.termsAndPrivacy) {
+          setError('Please accept the terms and privacy notice to create an account.');
+          return;
+        }
+        await completeGoogleSignUp({
+          signupToken: googleSignup.signupToken,
+          name: name.trim(),
+          phone: phone.trim(),
+          dateOfBirth,
+          acceptTermsAndPrivacy: true,
+          acceptResearchAnalytics: consent.researchAnalytics,
+        });
+      } else {
         // Guarded here as well as by the disabled button: the required consent
         // must never be inferred from the form having been submitted.
         if (!consent.termsAndPrivacy) {
@@ -66,6 +83,26 @@ export default function PatientLogin() {
       navigate('/app/search');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onGoogle(credential: string) {
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      const outcome = await signInWithGoogle(credential);
+      if (outcome.status === 'signed_in') {
+        navigate('/app/search');
+        return;
+      }
+      setGoogleSignup({ signupToken: outcome.signupToken, email: outcome.email });
+      setName(outcome.name ?? '');
+      setMode('google');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-in did not work. Try again.');
     } finally {
       setBusy(false);
     }
@@ -152,14 +189,16 @@ export default function PatientLogin() {
 
         <div className="text-center mb-6">
           <h1 className="font-display font-bold text-2xl text-dark-green mb-2">
-            {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password'}
+            {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : mode === 'google' ? 'Finish creating your account' : 'Reset your password'}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Search medicines, compare prices, and order from trusted pharmacies.
+            {mode === 'google'
+              ? `Signed in with Google${googleSignup?.email ? ` as ${googleSignup.email}` : ''}. Add your phone number so the pharmacy and rider can reach you.`
+              : 'Search medicines, compare prices, and order from trusted pharmacies.'}
           </p>
         </div>
 
-        {mode !== 'recover' && <div className="grid grid-cols-2 gap-1 bg-secondary rounded-full p-1 mb-6 text-sm">
+        {(mode === 'login' || mode === 'register') && <div className="grid grid-cols-2 gap-1 bg-secondary rounded-full p-1 mb-6 text-sm">
           <button
             type="button"
             onClick={() => { setMode('login'); setError(null); }}
@@ -178,13 +217,20 @@ export default function PatientLogin() {
           </button>
         </div>}
 
+        {(mode === 'login' || mode === 'register') && (
+          <div className="space-y-4 mb-4">
+            <GoogleButton onCredential={(credential) => void onGoogle(credential)} text={mode === 'register' ? 'signup_with' : 'continue_with'} />
+            <GoogleDivider />
+          </div>
+        )}
+
         <form
           onSubmit={mode === 'recover' ? finishReset : onSubmit}
           className="space-y-4"
           autoComplete="on"
           name={mode === 'recover' ? 'patient-password-reset' : 'patient-auth'}
         >
-          {mode === 'register' && (
+          {(mode === 'register' || mode === 'google') && (
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="pt-name">Full name</Label>
@@ -230,7 +276,7 @@ export default function PatientLogin() {
               data-testid="input-phone"
             />
           </div>
-          {mode !== 'recover' && <div className="space-y-1.5">
+          {(mode === 'login' || mode === 'register') && <div className="space-y-1.5">
             <Label htmlFor="pt-password">Password</Label>
             <Input
               id="pt-password"
@@ -248,7 +294,7 @@ export default function PatientLogin() {
             )}
           </div>}
 
-          {mode === 'register' && (
+          {(mode === 'register' || mode === 'google') && (
             <ConsentChoices value={consent} onChange={setConsent} disabled={busy} />
           )}
 
@@ -292,14 +338,19 @@ export default function PatientLogin() {
           <Button
             type="submit"
             className="w-full rounded-full"
-            disabled={busy || (mode === 'register' && !consent.termsAndPrivacy)}
+            disabled={busy || ((mode === 'register' || mode === 'google') && !consent.termsAndPrivacy)}
             data-testid="button-submit"
           >
-            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : requestId ? 'Reset password' : 'Send verification code'}
+            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'register' || mode === 'google' ? 'Create account' : requestId ? 'Reset password' : 'Send verification code'}
           </Button>
           {mode === 'login' && (
             <button type="button" onClick={() => { setMode('recover'); setError(null); setNotice(null); }} className="w-full text-sm font-medium text-primary hover:underline" data-testid="button-forgot-password">
               Forgot password?
+            </button>
+          )}
+          {mode === 'google' && (
+            <button type="button" onClick={() => { setMode('login'); setGoogleSignup(null); setError(null); }} className="w-full text-sm font-medium text-primary hover:underline">
+              Use your phone number instead
             </button>
           )}
           {mode === 'recover' && (

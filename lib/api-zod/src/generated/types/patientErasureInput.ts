@@ -8,7 +8,9 @@
 
 export interface PatientErasureInput {
   /** The patient's current password. This cannot be undone. */
-  password: string;
+  password?: string;
+  /** For an account with no password, a fresh Google sign-in instead */
+  googleCredential?: string;
   /** Must be exactly "DELETE MY ACCOUNT". */
   confirm: string;
 }

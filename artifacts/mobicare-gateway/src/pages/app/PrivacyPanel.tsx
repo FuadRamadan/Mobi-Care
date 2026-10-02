@@ -21,7 +21,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePatientAuth } from "@/patient/auth";
 import { apiUrl } from "@/lib/apiUrl";
-import { PT_ACCESS_KEY } from "@/lib/portalToken";
+import { freshToken } from "@/lib/portalToken";
+import { GoogleButton } from "@/patient/GoogleButton";
 
 const ERASURE_PHRASE = "DELETE MY ACCOUNT";
 
@@ -40,11 +41,17 @@ interface ConsentState {
   mayRecordAnalytics: boolean;
 }
 
-const authHeaders = (): HeadersInit => ({
-  Authorization: `Bearer ${localStorage.getItem(PT_ACCESS_KEY)}`,
+// The same renewed token every other request uses, so these calls keep
+// working more than 15 minutes after signing in.
+const authHeaders = async (): Promise<Record<string, string>> => ({
+  Authorization: `Bearer ${(await freshToken("patient")) ?? ""}`,
 });
 
-export function PrivacyPanel() {
+/**
+ * `hasPassword` false = the account was made with Google and has no password,
+ * so deleting it is confirmed by signing in with that Google account again.
+ */
+export function PrivacyPanel({ hasPassword = true }: { hasPassword?: boolean }) {
   const { logout } = usePatientAuth();
   const { toast } = useToast();
 
@@ -53,12 +60,13 @@ export function PrivacyPanel() {
   const [saving, setSaving] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
   const [erasing, setErasing] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
-    const response = await fetch(apiUrl("/api/patient/privacy"), { headers: authHeaders() });
+    const response = await fetch(apiUrl("/api/patient/privacy"), { headers: await authHeaders() });
     if (!response.ok) return;
     const next = await response.json() as ConsentState;
     setState(next);
@@ -73,7 +81,7 @@ export function PrivacyPanel() {
     try {
       const response = await fetch(apiUrl("/api/patient/privacy/consent"), {
         method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
         // The required consent is not touched here — this control is only the
         // optional one. Withdrawing the other belongs with deleting the account.
         body: JSON.stringify({ termsAndPrivacy: true, researchAnalytics: granted }),
@@ -92,7 +100,7 @@ export function PrivacyPanel() {
   };
 
   const download = async () => {
-    const response = await fetch(apiUrl("/api/patient/privacy/export"), { headers: authHeaders() });
+    const response = await fetch(apiUrl("/api/patient/privacy/export"), { headers: await authHeaders() });
     if (!response.ok) {
       toast({ title: "Could not prepare your data. Please try again.", variant: "destructive" });
       return;
@@ -111,8 +119,10 @@ export function PrivacyPanel() {
     try {
       const response = await fetch(apiUrl("/api/patient/privacy/erase"), {
         method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ password, confirm: ERASURE_PHRASE }),
+        headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+        body: JSON.stringify(
+          hasPassword ? { password, confirm: ERASURE_PHRASE } : { googleCredential, confirm: ERASURE_PHRASE },
+        ),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -162,7 +172,7 @@ export function PrivacyPanel() {
           variant="outline"
           size="sm"
           className="gap-2 text-destructive border-destructive/40 hover:bg-destructive/5"
-          onClick={() => { setEraseOpen(true); setPassword(""); setTyped(""); setError(""); }}
+          onClick={() => { setEraseOpen(true); setPassword(""); setGoogleCredential(null); setTyped(""); setError(""); }}
           data-testid="button-delete-account"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -198,17 +208,26 @@ export function PrivacyPanel() {
 
             {error && <p className="text-destructive">{error}</p>}
 
-            <label className="block">
-              Your password
-              <Input
-                type="password"
-                className="mt-1"
-                value={password}
-                autoComplete="current-password"
-                onChange={(event) => setPassword(event.target.value)}
-                data-testid="input-erase-password"
-              />
-            </label>
+            {hasPassword ? (
+              <label className="block">
+                Your password
+                <Input
+                  type="password"
+                  className="mt-1"
+                  value={password}
+                  autoComplete="current-password"
+                  onChange={(event) => setPassword(event.target.value)}
+                  data-testid="input-erase-password"
+                />
+              </label>
+            ) : googleCredential ? (
+              <p className="text-primary" data-testid="text-erase-google-confirmed">Confirmed with your Google account.</p>
+            ) : (
+              <div className="space-y-2">
+                <p>Your account signs in with Google. Confirm it is you:</p>
+                <GoogleButton onCredential={setGoogleCredential} text="continue_with" />
+              </div>
+            )}
 
             <label className="block">
               Type <code className="rounded bg-muted px-1 font-mono">{ERASURE_PHRASE}</code> to confirm
@@ -227,7 +246,7 @@ export function PrivacyPanel() {
               </Button>
               <Button
                 variant="destructive"
-                disabled={erasing || password.length === 0 || typed.trim() !== ERASURE_PHRASE}
+                disabled={erasing || (hasPassword ? password.length === 0 : !googleCredential) || typed.trim() !== ERASURE_PHRASE}
                 onClick={() => void erase()}
                 data-testid="button-confirm-erase"
               >

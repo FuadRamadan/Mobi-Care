@@ -68,6 +68,11 @@ import type {
   GetHqDashboardTrendsParams,
   GetHqInsightsParams,
   GetPharmacyCommissionAnalyticsParams,
+  GoogleConnection,
+  GoogleCredentialInput,
+  GoogleSignInConfig,
+  GoogleSignInResult,
+  GoogleSignUpInput,
   HealthStatus,
   HqAdvertisement,
   HqDashboard,
@@ -2415,6 +2420,367 @@ export const useRegisterPatient = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRegisterPatientMutationOptions(options));
+    }
+
+export const getGetGoogleSignInConfigUrl = () => {
+
+
+
+
+  return `/api/auth/google/config`
+}
+
+/**
+ * @summary The Google Client ID for the patient app's sign-in button (null when not set up)
+ */
+export const getGoogleSignInConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<GoogleSignInConfig> => {
+
+  return customFetch<GoogleSignInConfig>(getGetGoogleSignInConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGoogleSignInConfigQueryKey = () => {
+    return [
+    `/api/auth/google/config`
+    ] as const;
+    }
+
+
+export const getGetGoogleSignInConfigQueryOptions = <TData = Awaited<ReturnType<typeof getGoogleSignInConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoogleSignInConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGoogleSignInConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGoogleSignInConfig>>> = ({ signal }) => getGoogleSignInConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGoogleSignInConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGoogleSignInConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getGoogleSignInConfig>>>
+export type GetGoogleSignInConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The Google Client ID for the patient app's sign-in button (null when not set up)
+ */
+
+export function useGetGoogleSignInConfig<TData = Awaited<ReturnType<typeof getGoogleSignInConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoogleSignInConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGoogleSignInConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSignInWithGoogleUrl = () => {
+
+
+
+
+  return `/api/auth/google`
+}
+
+/**
+ * @summary Sign a patient in with a Google ID token; a new Google account gets a sign-up token instead
+ */
+export const signInWithGoogle = async (googleCredentialInput: GoogleCredentialInput, options?: Parameters<typeof customFetch>[1]): Promise<GoogleSignInResult> => {
+
+  return customFetch<GoogleSignInResult>(getSignInWithGoogleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(googleCredentialInput)
+  }
+);}
+
+
+
+
+
+export const getSignInWithGoogleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signInWithGoogle>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signInWithGoogle>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext> => {
+
+const mutationKey = ['signInWithGoogle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signInWithGoogle>>, {data: BodyType<GoogleCredentialInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  signInWithGoogle(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignInWithGoogleMutationResult = NonNullable<Awaited<ReturnType<typeof signInWithGoogle>>>
+    export type SignInWithGoogleMutationBody = BodyType<GoogleCredentialInput>
+    export type SignInWithGoogleMutationError = ErrorType<void>
+
+    /**
+ * @summary Sign a patient in with a Google ID token; a new Google account gets a sign-up token instead
+ */
+export const useSignInWithGoogle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signInWithGoogle>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signInWithGoogle>>,
+        TError,
+        {data: BodyType<GoogleCredentialInput>},
+        TContext
+      > => {
+      return useMutation(getSignInWithGoogleMutationOptions(options));
+    }
+
+export const getCompleteGoogleSignUpUrl = () => {
+
+
+
+
+  return `/api/auth/google/complete`
+}
+
+/**
+ * @summary Finish a Google sign-up with phone number, date of birth and consent
+ */
+export const completeGoogleSignUp = async (googleSignUpInput: GoogleSignUpInput, options?: Parameters<typeof customFetch>[1]): Promise<GoogleSignInResult> => {
+
+  return customFetch<GoogleSignInResult>(getCompleteGoogleSignUpUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(googleSignUpInput)
+  }
+);}
+
+
+
+
+
+export const getCompleteGoogleSignUpMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeGoogleSignUp>>, TError,{data: BodyType<GoogleSignUpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeGoogleSignUp>>, TError,{data: BodyType<GoogleSignUpInput>}, TContext> => {
+
+const mutationKey = ['completeGoogleSignUp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeGoogleSignUp>>, {data: BodyType<GoogleSignUpInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  completeGoogleSignUp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteGoogleSignUpMutationResult = NonNullable<Awaited<ReturnType<typeof completeGoogleSignUp>>>
+    export type CompleteGoogleSignUpMutationBody = BodyType<GoogleSignUpInput>
+    export type CompleteGoogleSignUpMutationError = ErrorType<void>
+
+    /**
+ * @summary Finish a Google sign-up with phone number, date of birth and consent
+ */
+export const useCompleteGoogleSignUp = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeGoogleSignUp>>, TError,{data: BodyType<GoogleSignUpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeGoogleSignUp>>,
+        TError,
+        {data: BodyType<GoogleSignUpInput>},
+        TContext
+      > => {
+      return useMutation(getCompleteGoogleSignUpMutationOptions(options));
+    }
+
+export const getConnectGoogleAccountUrl = () => {
+
+
+
+
+  return `/api/auth/google/link`
+}
+
+/**
+ * @summary Connect a Google account to the signed-in patient
+ */
+export const connectGoogleAccount = async (googleCredentialInput: GoogleCredentialInput, options?: Parameters<typeof customFetch>[1]): Promise<GoogleConnection> => {
+
+  return customFetch<GoogleConnection>(getConnectGoogleAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(googleCredentialInput)
+  }
+);}
+
+
+
+
+
+export const getConnectGoogleAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectGoogleAccount>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof connectGoogleAccount>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext> => {
+
+const mutationKey = ['connectGoogleAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof connectGoogleAccount>>, {data: BodyType<GoogleCredentialInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  connectGoogleAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConnectGoogleAccountMutationResult = NonNullable<Awaited<ReturnType<typeof connectGoogleAccount>>>
+    export type ConnectGoogleAccountMutationBody = BodyType<GoogleCredentialInput>
+    export type ConnectGoogleAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Connect a Google account to the signed-in patient
+ */
+export const useConnectGoogleAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectGoogleAccount>>, TError,{data: BodyType<GoogleCredentialInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof connectGoogleAccount>>,
+        TError,
+        {data: BodyType<GoogleCredentialInput>},
+        TContext
+      > => {
+      return useMutation(getConnectGoogleAccountMutationOptions(options));
+    }
+
+export const getDisconnectGoogleAccountUrl = () => {
+
+
+
+
+  return `/api/auth/google/link`
+}
+
+/**
+ * @summary Disconnect the signed-in patient's Google account (needs a password set)
+ */
+export const disconnectGoogleAccount = async ( options?: Parameters<typeof customFetch>[1]): Promise<GoogleConnection> => {
+
+  return customFetch<GoogleConnection>(getDisconnectGoogleAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDisconnectGoogleAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectGoogleAccount>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disconnectGoogleAccount>>, TError,void, TContext> => {
+
+const mutationKey = ['disconnectGoogleAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnectGoogleAccount>>, void> = () => {
+
+
+          return  disconnectGoogleAccount(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectGoogleAccountMutationResult = NonNullable<Awaited<ReturnType<typeof disconnectGoogleAccount>>>
+
+    export type DisconnectGoogleAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Disconnect the signed-in patient's Google account (needs a password set)
+ */
+export const useDisconnectGoogleAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectGoogleAccount>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disconnectGoogleAccount>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDisconnectGoogleAccountMutationOptions(options));
     }
 
 export const getPatientSearchDrugsUrl = (params?: PatientSearchDrugsParams,) => {

@@ -1,6 +1,7 @@
 import { safeRouter } from "../lib/safeRouter.js";
 import healthRouter from "./health.js";
 import authRouter from "./auth.js";
+import googleAuthRouter from "./googleAuth.js";
 import pharmacyRouter from "./pharmacy/index.js";
 import hqRouter from "./hq/index.js";
 import patientRouter from "./patient/index.js";
@@ -15,6 +16,8 @@ import { pharmacy } from "../middlewares/auth.js";
 const router = safeRouter();
 
 router.use("/healthz", healthRouter);
+// Before /auth so its own paths are matched first.
+router.use("/auth/google", googleAuthRouter);
 router.use("/auth", authRouter);
 router.use("/pharmacy", pharmacyRouter);
 router.use("/hq", hqRouter);

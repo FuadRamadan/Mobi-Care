@@ -7,7 +7,8 @@
  */
 
 export interface ChangePasswordInput {
-  currentPassword: string;
+  /** Required, except for a patient setting a first password after signing up with Google */
+  currentPassword?: string;
   /** @minLength 8 */
   newPassword: string;
 }

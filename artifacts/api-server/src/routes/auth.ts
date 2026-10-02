@@ -232,6 +232,15 @@ router.post("/login", async (req, res) => {
     .where(eq(patientsTable.phone, identifier))
     .limit(1);
 
+  if (patientAcc && patientAcc.isActive && !patientAcc.hasPassword) {
+    // Created with Google: there is no password to check.
+    res.status(401).json({
+      error: "This account signs in with Google. Tap Continue with Google, or reset your password to set one.",
+      code: "GOOGLE_ACCOUNT",
+    });
+    return;
+  }
+
   if (patientAcc && patientAcc.isActive) {
     const valid = await bcrypt.compare(password, patientAcc.passwordHash);
     if (valid) {
@@ -586,6 +595,7 @@ router.post("/patient-password-reset/confirm", async (req, res) => {
       .update(patientsTable)
       .set({
         passwordHash,
+        hasPassword: true,
         sessionVersion: sql`${patientsTable.sessionVersion} + 1`,
         updatedAt: now,
       })
@@ -841,7 +851,9 @@ router.post("/refresh", async (req, res) => {
 router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   const body = z
     .object({
-      currentPassword: z.string().min(1),
+      // Optional only for a patient who signed up with Google and has never
+      // had a password; everyone else must give their current one.
+      currentPassword: z.string().optional(),
       newPassword: z.string().min(8),
     })
     .safeParse(req.body);
@@ -855,6 +867,13 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
 
   const accountId = req.pharmacy!.sub;
   const role = req.pharmacy!.role;
+  if (role !== "patient" && !body.data.currentPassword) {
+    res
+      .status(400)
+      .json({ error: "currentPassword and newPassword are required" });
+    return;
+  }
+  const currentPassword = body.data.currentPassword ?? "";
 
   if (role === "hq") {
     const [record] = await db
@@ -869,7 +888,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     }
 
     const valid = await bcrypt.compare(
-      body.data.currentPassword,
+      currentPassword,
       record.passwordHash,
     );
     if (!valid) {
@@ -909,7 +928,8 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
         .where(eq(patientsTable.id, accountId))
         .limit(1);
       if (!record) return "missing" as const;
-      if (!(await bcrypt.compare(body.data.currentPassword, record.passwordHash))) {
+      // A patient who signed up with Google is setting a first password.
+      if (record.hasPassword && !(await bcrypt.compare(currentPassword, record.passwordHash))) {
         return "invalid" as const;
       }
       const now = new Date();
@@ -917,6 +937,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
         .update(patientsTable)
         .set({
           passwordHash,
+          hasPassword: true,
           sessionVersion: sql`${patientsTable.sessionVersion} + 1`,
           updatedAt: now,
         })
@@ -977,7 +998,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
   }
 
   const valid = await bcrypt.compare(
-    body.data.currentPassword,
+    currentPassword,
     record.passwordHash,
   );
   if (!valid) {

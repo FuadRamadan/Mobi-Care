@@ -23,5 +23,7 @@ export interface PatientProfile {
   nationality: string | null;
   /** @nullable */
   profileImageUrl: string | null;
+  googleConnected?: boolean;
+  hasPassword?: boolean;
   profileComplete: boolean;
 }

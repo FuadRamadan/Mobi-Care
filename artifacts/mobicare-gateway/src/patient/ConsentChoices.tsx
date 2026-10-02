@@ -45,7 +45,12 @@ export function ConsentChoices({
           data-testid="checkbox-terms"
         />
         <span className="text-xs leading-relaxed">
-          <span className="font-medium">I agree to the terms and privacy notice.</span>{" "}
+          <span className="font-medium">
+            I agree to the{" "}
+            <a href="/terms" target="_blank" rel="noopener" className="text-primary underline">terms</a>{" "}
+            and{" "}
+            <a href="/privacy" target="_blank" rel="noopener" className="text-primary underline">privacy notice</a>.
+          </span>{" "}
           <span className="text-muted-foreground">
             MobiCare holds your details, prescriptions and orders. A pharmacy you
             order from sees what it needs to dispense your medicine.

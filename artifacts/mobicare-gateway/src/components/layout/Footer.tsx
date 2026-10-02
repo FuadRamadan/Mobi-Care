@@ -58,6 +58,11 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} MobiCare Sierra Leone. All rights reserved.
           </p>
           
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/privacy" className="text-secondary/70 hover:text-white transition-colors">Privacy notice</Link>
+            <Link href="/terms" className="text-secondary/70 hover:text-white transition-colors">Terms of service</Link>
+          </div>
+
           {/* De-emphasized HQ link */}
           <Link href="/hq" className="text-xs text-secondary/30 hover:text-secondary/60 transition-colors">
             HQ Access

@@ -15,6 +15,8 @@ import { CartProvider } from '@/patient/cart';
 // Route-only pages stay out of the first public bundle. Vite keeps shared
 // dependencies in reusable chunks, so returning visitors do not re-download them.
 const About = lazy(() => import('@/pages/About'));
+const Privacy = lazy(() => import('@/pages/legal/Privacy'));
+const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Patient = lazy(() => import('@/pages/Patient'));
 const Pharmacy = lazy(() => import('@/pages/Pharmacy'));
 const PatientLogin = lazy(() => import('@/pages/app/Login'));
@@ -79,6 +81,8 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/about" component={About} />
+            <Route path="/privacy" component={Privacy} />
+            <Route path="/terms" component={Terms} />
             <Route path="/patient" component={Patient} />
             <Route path="/pharmacy" component={Pharmacy} />
             {/* HQ section — same site, own layout (Layout renders bare for /hq*) */}
