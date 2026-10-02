@@ -8,6 +8,7 @@ import {
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
+import { matchVariant, sameText } from "../catalogue/variants.js";
 
 /**
  * The rules every pharmacy listing follows, shared by the one-at-a-time form
@@ -89,13 +90,18 @@ export function productKey(listing: {
   ].join("|");
 }
 
+/** Whether a value is in a catalogue list, ignoring capitals. An empty list allows anything. */
 export function catalogueAllowsValue(
   approvedValues: string[],
   submittedValue: string,
 ): boolean {
-  return approvedValues.length === 0 || approvedValues.includes(submittedValue);
+  return approvedValues.length === 0 || approvedValues.some((value) => sameText(value, submittedValue));
 }
 
+/**
+ * Checks a listing against its catalogue medicine. Returns the problem, or
+ * the strength and form as the catalogue spells them, which is what to save.
+ */
 export function validateListing(
   data: {
     expiryDate: string;
@@ -106,15 +112,19 @@ export function validateListing(
     otherCategoryText?: string | null;
   },
   drug: typeof drugCatalogueTable.$inferSelect,
+): { error: string } | { strength: string; form: string } {
+  const problem = listingProblem(data, drug);
+  if (problem) return { error: problem };
+  return matchVariant(drug, data.strength, data.form);
+}
+
+/** What is wrong with a listing apart from its strength and form, if anything. */
+export function listingProblem(
+  data: Parameters<typeof validateListing>[0],
+  drug: typeof drugCatalogueTable.$inferSelect,
 ): string | null {
   if (data.expiryDate <= todayIso()) {
     return "Expired stock cannot be saved. Enter an expiry date after today.";
-  }
-  if (!catalogueAllowsValue(drug.commonStrengths, data.strength)) {
-    return "Select a strength approved in the MobiCare catalogue.";
-  }
-  if (!catalogueAllowsValue(drug.commonForms, data.form)) {
-    return "Select a form approved in the MobiCare catalogue.";
   }
   const primaryCategory = data.primaryCategory ?? drug.primaryCategory;
   const subcategory = data.subcategory ?? drug.subcategory;

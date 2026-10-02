@@ -9,6 +9,15 @@ import {
   type DrugCatalogue,
 } from "@workspace/db/schema";
 import {
+  addVariants,
+  cleanForms,
+  cleanList,
+  listsFromVariants,
+  sameText,
+  variantsOf,
+  type DrugVariant,
+} from "./variants.js";
+import {
   addRangeValidation,
   editDistance,
   headerKey,
@@ -42,6 +51,7 @@ const COLUMNS = {
   subcategory: { header: "Subcategory", width: 32, required: true },
   strengths: { header: "Strengths", width: 26, required: true, note: "Separate several with commas, e.g. 250mg, 500mg" },
   forms: { header: "Forms", width: 22, required: true, note: "Separate several with commas, e.g. tablet, syrup" },
+  availableAs: { header: "Available as", width: 36, note: "Leave blank if every strength comes in every form. Otherwise list each strength with its form, separated by semicolons, e.g. 500mg Tablet; 125mg/5ml Syrup" },
   unit: { header: "Unit", width: 12, note: "e.g. tablets, ml. Default tablets" },
   maxUnits: { header: "Max units per order", width: 18, note: "Required for tier 1" },
   description: { header: "Description", width: 40 },
@@ -58,6 +68,7 @@ const ALIASES: Partial<Record<ColumnName, string[]>> = {
   strengths: ["strength", "commonstrengths"],
   forms: ["form", "commonforms"],
   maxUnits: ["maxunits", "maxunitsperorder"],
+  availableAs: ["combinations", "strengthandform", "variants"],
 };
 
 function cell(row: UploadedRow, column: ColumnName): string {
@@ -141,6 +152,7 @@ type DrugValues = {
   subcategory: string;
   commonStrengths: string[];
   commonForms: string[];
+  variants: DrugVariant[];
   unit: string;
   maxUnitsPerOrder: number | null;
   description: string | null;
@@ -193,13 +205,18 @@ function readRow(row: UploadedRow): { values: DrugValues } | { error: string } {
   const maxUnits = maxText ? parseWholeNumber(maxText) : null;
   if (maxText && (maxUnits == null || maxUnits < 1)) problems.push("Max units per order must be a whole number of 1 or more");
   if (tier === "1" && maxUnits == null) problems.push("Tier 1 (controlled) medicines need a Max units per order");
-  const strengths = splitList(cell(row, "strengths"));
-  const forms = splitList(cell(row, "forms"));
+  const strengths = cleanList(splitList(cell(row, "strengths")));
+  const forms = cleanForms(splitList(cell(row, "forms")));
   if (strengths.some((value) => value.length > 50)) problems.push("Each strength must be 50 characters or fewer");
   if (forms.some((value) => value.length > 50)) problems.push("Each form must be 50 characters or fewer");
+  const combinations = parseAvailableAs(cell(row, "availableAs"), strengths, forms);
+  if ("error" in combinations) problems.push(combinations.error);
   if (cell(row, "name").length > 200) problems.push("Medicine name is longer than 200 characters");
   if (problems.length) return { error: problems.join("; ") };
   const { primaryCategory, subcategory } = category as { primaryCategory: string; subcategory: string };
+  const lists = "variants" in combinations && combinations.variants.length
+    ? listsFromVariants(combinations.variants)
+    : { commonStrengths: strengths, commonForms: forms, variants: [] };
   return {
     values: {
       name: cell(row, "name").replace(/\s+/g, " "),
@@ -207,13 +224,32 @@ function readRow(row: UploadedRow): { values: DrugValues } | { error: string } {
       tier: tier!,
       primaryCategory,
       subcategory,
-      commonStrengths: strengths,
-      commonForms: forms,
+      ...lists,
       unit: cell(row, "unit") || DEFAULT_UNIT,
       maxUnitsPerOrder: tier === "1" ? maxUnits : maxUnits ?? null,
       description: cell(row, "description") || null,
     },
   };
+}
+
+/**
+ * "500mg Tablet; 125mg/5ml Syrup" read against the row's own strengths and
+ * forms, which is what tells the strength apart from the form. Blank means
+ * every strength comes in every form.
+ */
+export function parseAvailableAs(text: string, strengths: string[], forms: string[]): { variants: DrugVariant[] } | { error: string } {
+  const entries = text.split(/[;\n]/).map((entry) => entry.trim()).filter(Boolean);
+  const variants: DrugVariant[] = [];
+  for (const entry of entries) {
+    const variant = strengths
+      .flatMap((strength) => forms.map((form) => ({ strength, form })))
+      .find((pair) => sameText(`${pair.strength} ${pair.form}`, entry));
+    if (!variant) {
+      return { error: `Available as: "${entry}" is not one of this row's strengths followed by one of its forms (e.g. ${strengths[0] ?? "500mg"} ${forms[0] ?? "Tablet"})` };
+    }
+    variants.push(variant);
+  }
+  return { variants };
 }
 
 /**
@@ -227,15 +263,33 @@ export function mergeIntoExisting(existing: DrugCatalogue, values: DrugValues, u
     ...saved,
     ...typed.filter((value) => !saved.some((kept) => kept.toLowerCase() === value.toLowerCase())),
   ];
+  // The combinations of both, so a strength added in one form does not
+  // become available in every other form too.
+  const lists = existing.variants.length || values.variants.length
+    ? addVariants(existing, variantsOf(values))
+    : { commonStrengths: union(existing.commonStrengths, values.commonStrengths), commonForms: union(existing.commonForms, values.commonForms), variants: [] };
   return {
     ...values,
     name: existing.name,
     genericName: values.genericName ?? existing.genericName,
-    commonStrengths: union(existing.commonStrengths, values.commonStrengths),
-    commonForms: union(existing.commonForms, values.commonForms),
+    ...lists,
     unit: unitGiven ? values.unit : existing.unit,
     maxUnitsPerOrder: values.maxUnitsPerOrder ?? existing.maxUnitsPerOrder,
     description: values.description ?? existing.description,
+  };
+}
+
+/** The row's strengths, forms and combinations in the entry's saved spelling where only capitals differ. */
+function keepSavedSpelling(existing: DrugCatalogue, values: DrugValues): DrugValues {
+  const saved = (list: string[], value: string) => list.find((kept) => sameText(kept, value)) ?? value;
+  return {
+    ...values,
+    commonStrengths: values.commonStrengths.map((value) => saved(existing.commonStrengths, value)),
+    commonForms: values.commonForms.map((value) => saved(existing.commonForms, value)),
+    variants: values.variants.map((variant) => ({
+      strength: saved(existing.commonStrengths, variant.strength),
+      form: saved(existing.commonForms, variant.form),
+    })),
   };
 }
 
@@ -258,11 +312,17 @@ function diff(existing: DrugCatalogue, values: DrugValues): CatalogueRowChange[]
     ["Subcategory", categoryLabel(existing.subcategory), categoryLabel(values.subcategory)],
     ["Strengths", existing.commonStrengths.join(", "), values.commonStrengths.join(", ")],
     ["Forms", existing.commonForms.join(", "), values.commonForms.join(", ")],
+    ["Available as", availableAs(existing), availableAs(values)],
     ["Unit", existing.unit, values.unit],
     ["Max units per order", existing.maxUnitsPerOrder?.toString() ?? "—", values.maxUnitsPerOrder?.toString() ?? "—"],
     ["Description", existing.description ?? "—", values.description ?? "—"],
   ];
   return pairs.filter(([, from, to]) => from !== to).map(([field, from, to]) => ({ field, from, to }));
+}
+
+/** The "Available as" cell: blank when every strength comes in every form. */
+function availableAs(entry: { variants: DrugVariant[] }): string {
+  return entry.variants.map((variant) => `${variant.strength} ${variant.form}`).join("; ");
 }
 
 type Reader = Pick<typeof db, "select">;
@@ -337,7 +397,8 @@ export async function analyseCatalogueUpload(table: UploadedTable, reader: Reade
         if (clash && clash.name.toLowerCase() === nameKey) {
           result = fail(`Another catalogue entry is already called ${clash.name}`);
         } else {
-          const changes = diff(existing, values);
+          const updated = keepSavedSpelling(existing, values);
+          const changes = diff(existing, updated);
           const lastUpdated = Date.parse(cell(row, "lastUpdated"));
           const warnings: string[] = [];
           if (Number.isFinite(lastUpdated) && existing.updatedAt.getTime() > lastUpdated + 1000) {
@@ -347,7 +408,7 @@ export async function analyseCatalogueUpload(table: UploadedTable, reader: Reade
             ...base, warnings, changes, summary,
             status: changes.length ? "change" : "unchanged",
             message: existing.isApproved ? null : "Still held: confirm it in the Held queue",
-            plan: changes.length ? { kind: "update", drugId: existing.id, values, wasApproved: existing.isApproved } : { kind: "none" },
+            plan: changes.length ? { kind: "update", drugId: existing.id, values: updated, wasApproved: existing.isApproved } : { kind: "none" },
           };
           if (existing.tier !== values.tier) tierChanges.push({ result, drugId: existing.id, to: values.tier });
         }
@@ -538,6 +599,7 @@ export async function catalogueWorkbook(withEntries: boolean, fileName: string):
       drug.subcategory ? categoryLabel(drug.subcategory) : null,
       drug.commonStrengths.join(", "),
       drug.commonForms.join(", "),
+      availableAs(drug),
       drug.unit,
       drug.maxUnitsPerOrder,
       drug.description,
@@ -576,6 +638,7 @@ export async function catalogueWorkbook(withEntries: boolean, fileName: string):
     "How to use this file",
     "",
     "1. One row per medicine. Put all of its strengths and forms in one row, separated by commas.",
+    "   If not every strength comes in every form, list the real combinations in Available as, e.g. 500mg Tablet; 125mg/5ml Syrup.",
     "2. Green headers are required. Tier 1 (controlled) medicines also need Max units per order.",
     "3. Category and subcategory must match the Categories sheet.",
     "4. New medicines are saved held. Confirm each one's tier in Catalogue → Held before pharmacies can list it.",

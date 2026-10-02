@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 
 /**
  * Reading uploaded spreadsheets (Excel .xlsx or CSV) into plain rows of text,
@@ -118,6 +119,47 @@ function toTable(grid: Array<{ rowNumber: number; values: string[] }>): Uploaded
   return { headers, rows };
 }
 
+async function loadWorkbook(bytes: Buffer): Promise<ExcelJS.Workbook> {
+  const unreadable = () =>
+    new SpreadsheetError("The Excel file could not be read. Save it as .xlsx (not .xls), without a password, and try again.");
+  const workbook = new ExcelJS.Workbook();
+  try {
+    await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
+    return workbook;
+  } catch {
+    // ExcelJS reads cell notes (comments) only from the place Excel itself
+    // saves them, and fails on files from tools that store them elsewhere
+    // (openpyxl, some exporters). Notes are never needed to read the data,
+    // so try again with them removed.
+    const withoutNotes = await removeNotes(bytes).catch(() => null);
+    if (!withoutNotes) throw unreadable();
+    const retry = new ExcelJS.Workbook();
+    try {
+      await retry.xlsx.load(withoutNotes as unknown as ArrayBuffer);
+      return retry;
+    } catch {
+      throw unreadable();
+    }
+  }
+}
+
+/** The file with every sheet's links to its notes removed; null if it has none. */
+export async function removeNotes(bytes: Buffer): Promise<Buffer | null> {
+  const zip = await JSZip.loadAsync(bytes);
+  let changed = false;
+  for (const name of Object.keys(zip.files)) {
+    if (!/^xl\/worksheets\/_rels\/[^/]+\.rels$/.test(name)) continue;
+    const xml = await zip.file(name)!.async("string");
+    const stripped = xml.replace(/<Relationship\b[^>]*\/relationships\/(?:comments|vmlDrawing)"[^>]*\/>/g, "");
+    if (stripped !== xml) {
+      zip.file(name, stripped);
+      changed = true;
+    }
+  }
+  if (!changed) return null;
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
 /**
  * Reads an uploaded .xlsx or .csv file. For Excel, reads the sheet named
  * `preferredSheet` if there is one, otherwise the first sheet.
@@ -127,12 +169,7 @@ export async function readUpload(bytes: Buffer, preferredSheet: string): Promise
   if (bytes.length > MAX_UPLOAD_BYTES) throw new SpreadsheetError("The file is larger than 5 MB.");
 
   if (isZip(bytes)) {
-    const workbook = new ExcelJS.Workbook();
-    try {
-      await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
-    } catch {
-      throw new SpreadsheetError("The Excel file could not be read. Save it as .xlsx (not .xls), without a password, and try again.");
-    }
+    const workbook = await loadWorkbook(bytes);
     const sheet = workbook.getWorksheet(preferredSheet) ?? workbook.worksheets[0];
     if (!sheet) throw new SpreadsheetError("The Excel file has no sheets.");
     const grid: Array<{ rowNumber: number; values: string[] }> = [];

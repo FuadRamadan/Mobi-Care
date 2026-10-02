@@ -8,6 +8,7 @@
 import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
 import type { DrugSummaryTier } from './drugSummaryTier';
+import type { DrugVariant } from './drugVariant';
 
 export interface DrugSummary {
   name: string;
@@ -17,6 +18,8 @@ export interface DrugSummary {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants?: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
 }

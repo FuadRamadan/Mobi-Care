@@ -18,4 +18,10 @@ export const DrugPrimaryCategory = {
   respiratory_allergy: 'respiratory_allergy',
   psychiatric_mental_health: 'psychiatric_mental_health',
   blood_products_plasma_expanders: 'blood_products_plasma_expanders',
+  antidotes_poisoning: 'antidotes_poisoning',
+  cancer_immunosuppressants: 'cancer_immunosuppressants',
+  vaccines_immunologicals: 'vaccines_immunologicals',
+  eye_preparations: 'eye_preparations',
+  skin_preparations: 'skin_preparations',
+  ear_nose_throat: 'ear_nose_throat',
 } as const;

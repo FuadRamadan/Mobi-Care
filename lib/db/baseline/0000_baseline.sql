@@ -68,7 +68,13 @@ CREATE TYPE "public"."drug_primary_category" AS ENUM (
     'endocrine_reproductive',
     'respiratory_allergy',
     'psychiatric_mental_health',
-    'blood_products_plasma_expanders'
+    'blood_products_plasma_expanders',
+    'antidotes_poisoning',
+    'cancer_immunosuppressants',
+    'vaccines_immunologicals',
+    'eye_preparations',
+    'skin_preparations',
+    'ear_nose_throat'
 );
 
 
@@ -127,7 +133,27 @@ CREATE TYPE "public"."drug_subcategory" AS ENUM (
     'plasma_expanders',
     'human_albumin',
     'haematinics',
-    'other'
+    'other',
+    'heart_failure_arrhythmia_shock',
+    'antispasmodics',
+    'hormones',
+    'chelating_agents',
+    'diluents_iv_preparation',
+    'antidotes',
+    'adsorbents',
+    'antineoplastics',
+    'immunosuppressants',
+    'vaccines',
+    'antisera',
+    'immunoglobulins',
+    'glaucoma_medicines',
+    'mydriatics',
+    'eye_combinations',
+    'antiseptics',
+    'emollients',
+    'keratolytics',
+    'ear_preparations',
+    'mouth_throat'
 );
 
 
@@ -532,6 +558,7 @@ CREATE TABLE "public"."drug_catalogue" (
     "unit" "text" DEFAULT 'tablets'::"text" NOT NULL,
     "common_strengths" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "common_forms" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "variants" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
     "primary_category" "public"."drug_primary_category",
     "subcategory" "public"."drug_subcategory",
     "is_approved" boolean DEFAULT true NOT NULL,
@@ -2148,11 +2175,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-09-29 12:34:45.760587+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-02 20:14:49.182482+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-09-29 12:34:45.762625+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-02 20:14:49.186708+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-09-29 12:34:45.800724+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-02 20:14:49.265715+00')
 ON CONFLICT DO NOTHING;

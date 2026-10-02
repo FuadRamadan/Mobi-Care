@@ -393,8 +393,8 @@ export const ListInventoryResponseItem = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -412,8 +412,12 @@ export const ListInventoryResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).optional().describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional()
 })
 })
 export const ListInventoryResponse = zod.array(ListInventoryResponseItem)
@@ -441,8 +445,8 @@ export const AddInventoryItemBody = zod.object({
   "brand": zod.string().optional().describe('Brand name, or blank \/ \"Generic\" for an unbranded product'),
   "manufacturer": zod.string(),
   "countryOfOrigin": zod.string(),
-  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
-  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional(),
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']).optional(),
   "otherCategoryText": zod.string().optional(),
   "priceLeones": zod.number().min(1),
   "stockQuantity": zod.number().min(addInventoryItemBodyStockQuantityMin),
@@ -461,8 +465,8 @@ export const AddInventoryItemResponse = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -480,8 +484,12 @@ export const AddInventoryItemResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).optional().describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional()
 })
 })
 
@@ -594,8 +602,8 @@ export const UpdateInventoryItemBody = zod.object({
   "form": zod.string().min(1).optional(),
   "unitOfSale": zod.string().min(1).optional(),
   "expiryDate": zod.string().optional(),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "priceLeones": zod.number().min(1).optional(),
   "stockQuantity": zod.number().min(updateInventoryItemBodyStockQuantityMin).optional(),
@@ -615,8 +623,8 @@ export const UpdateInventoryItemResponse = zod.object({
   "brand": zod.string().nullish(),
   "manufacturer": zod.string().nullish(),
   "countryOfOrigin": zod.string().nullish(),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "otherCategoryText": zod.string().nullish(),
   "requiresHqReview": zod.boolean(),
   "completionStatus": zod.enum(['incomplete', 'complete']),
@@ -634,8 +642,12 @@ export const UpdateInventoryItemResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional()
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).optional().describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional()
 })
 })
 
@@ -664,8 +676,12 @@ export const ListCatalogueResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -692,8 +708,8 @@ export const ProposeDrugBody = zod.object({
   "genericName": zod.string().min(proposeDrugBodyGenericNameMin),
   "strength": zod.string().min(1),
   "form": zod.string().min(1),
-  "suggestedCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
-  "suggestedSubcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "suggestedCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),
+  "suggestedSubcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),
   "description": zod.string().optional(),
   "unit": zod.string().optional()
 })
@@ -707,8 +723,12 @@ export const ProposeDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -722,10 +742,10 @@ export const ProposeDrugResponse = zod.object({
  * @summary List the HQ-controlled medicine category taxonomy
  */
 export const ListDrugCategoriesResponseItem = zod.object({
-  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),
   "label": zod.string(),
   "subcategories": zod.array(zod.object({
-  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),
   "label": zod.string()
 }))
 })
@@ -965,8 +985,8 @@ export const patientSearchDrugsQueryPatientLongitudeMax = 180;
 
 export const PatientSearchDrugsQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
-  "category": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
-  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional(),
+  "category": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']).optional(),
   "pharmacyId": zod.coerce.string().optional(),
   "patientLatitude": zod.coerce.number().min(patientSearchDrugsQueryPatientLatitudeMin).max(patientSearchDrugsQueryPatientLatitudeMax).optional(),
   "patientLongitude": zod.coerce.number().min(patientSearchDrugsQueryPatientLongitudeMin).max(patientSearchDrugsQueryPatientLongitudeMax).optional()
@@ -983,8 +1003,8 @@ export const PatientSearchDrugsResponseItem = zod.object({
   "strength": zod.string(),
   "form": zod.string(),
   "unitOfSale": zod.string(),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "maxUnitsPerOrder": zod.number().nullish(),
   "prescriptionRequired": zod.boolean(),
   "collectionOnly": zod.boolean(),
@@ -1021,10 +1041,10 @@ export const PatientSearchDrugsResponse = zod.array(PatientSearchDrugsResponseIt
  * @summary List medicine categories available for patient search
  */
 export const ListPatientDrugCategoriesResponseItem = zod.object({
-  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),
   "label": zod.string(),
   "subcategories": zod.array(zod.object({
-  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),
   "label": zod.string()
 }))
 })
@@ -3797,10 +3817,10 @@ export const ApplyCatalogueImportResponse = zod.object({
  * @summary The medicine category taxonomy, for the HQ catalogue form
  */
 export const ListHqDrugCategoriesResponseItem = zod.object({
-  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
+  "value": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),
   "label": zod.string(),
   "subcategories": zod.array(zod.object({
-  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "value": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),
   "label": zod.string()
 }))
 })
@@ -3823,8 +3843,12 @@ export const ListHqDrugsResponseItem = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -3844,18 +3868,23 @@ export const ListHqDrugsResponse = zod.array(ListHqDrugsResponseItem)
 
 
 
+
 export const CreateHqDrugBody = zod.object({
   "name": zod.string().min(1),
   "genericName": zod.string().optional(),
   "description": zod.string().optional(),
   "tier": zod.enum(['1', '2', '3']),
   "unit": zod.string().optional(),
-  "commonStrengths": zod.array(zod.string()).min(1),
-  "commonForms": zod.array(zod.string()).min(1),
-  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),
-  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),
+  "commonStrengths": zod.array(zod.string()).min(1).optional(),
+  "commonForms": zod.array(zod.string()).min(1).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).min(1).optional(),
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),
   "maxUnitsPerOrder": zod.number().nullish()
-})
+}).describe('Give the strength and form lists, or the combinations in variants (which then decide the lists).')
 
 export const CreateHqDrugResponse = zod.object({
   "id": zod.string(),
@@ -3866,8 +3895,12 @@ export const CreateHqDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),
@@ -3879,11 +3912,34 @@ export const CreateHqDrugResponse = zod.object({
 
 
 /**
+ * @summary Approve several held medicines at once
+ */
+export const approveHqDrugsBodyIdsMax = 1000;
+
+
+
+export const ApproveHqDrugsBody = zod.object({
+  "ids": zod.array(zod.string()).min(1).max(approveHqDrugsBodyIdsMax)
+})
+
+export const ApproveHqDrugsResponse = zod.object({
+  "approved": zod.number(),
+  "alreadyReviewed": zod.number(),
+  "notApproved": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "reason": zod.string()
+}))
+})
+
+
+/**
  * @summary Change tier / cap, or release a held drug
  */
 export const UpdateHqDrugParams = zod.object({
   "id": zod.coerce.string()
 })
+
 
 
 
@@ -3901,8 +3957,12 @@ export const UpdateHqDrugBody = zod.object({
   "unit": zod.string().optional(),
   "commonStrengths": zod.array(zod.string()).min(1).optional(),
   "commonForms": zod.array(zod.string()).min(1).optional(),
-  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']).optional(),
-  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']).optional()
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).min(1).optional(),
+  "primaryCategory": zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']).optional(),
+  "subcategory": zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']).optional()
 })
 
 export const UpdateHqDrugResponse = zod.object({
@@ -3914,8 +3974,12 @@ export const UpdateHqDrugResponse = zod.object({
   "unit": zod.string(),
   "commonStrengths": zod.array(zod.string()),
   "commonForms": zod.array(zod.string()),
-  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders']),zod.null()]).optional(),
-  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other']),zod.null()]).optional(),
+  "variants": zod.array(zod.object({
+  "strength": zod.string(),
+  "form": zod.string()
+})).describe('The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form.'),
+  "primaryCategory": zod.union([zod.enum(['cardiovascular', 'pain_inflammation', 'anti_infectives', 'gastrointestinal_nutrition', 'endocrine_reproductive', 'respiratory_allergy', 'psychiatric_mental_health', 'blood_products_plasma_expanders', 'antidotes_poisoning', 'cancer_immunosuppressants', 'vaccines_immunologicals', 'eye_preparations', 'skin_preparations', 'ear_nose_throat']),zod.null()]).optional(),
+  "subcategory": zod.union([zod.enum(['antihypertensives', 'antianginals', 'anticoagulants', 'lipid_lowering', 'diuretics', 'analgesics_antipyretics', 'anti_inflammatory', 'anaesthetics', 'muscle_relaxants', 'gout_medicines', 'antibiotics', 'antimalarials', 'antifungals', 'antivirals', 'antiparasitics', 'antacids_antiulcer', 'antiemetics', 'laxatives', 'antidiarrheals_ors', 'vitamins_minerals', 'diabetes', 'thyroid_medicines', 'corticosteroids', 'contraceptives', 'maternal_health', 'asthma_copd', 'cough_cold', 'antihistamines', 'nasal_preparations', 'respiratory_other', 'controlled_sedatives', 'antidepressants', 'antipsychotics', 'antiepileptics', 'neurological_medicines', 'blood_products', 'plasma_expanders', 'human_albumin', 'haematinics', 'other', 'heart_failure_arrhythmia_shock', 'antispasmodics', 'hormones', 'chelating_agents', 'diluents_iv_preparation', 'antidotes', 'adsorbents', 'antineoplastics', 'immunosuppressants', 'vaccines', 'antisera', 'immunoglobulins', 'glaucoma_medicines', 'mydriatics', 'eye_combinations', 'antiseptics', 'emollients', 'keratolytics', 'ear_preparations', 'mouth_throat']),zod.null()]).optional(),
   "isApproved": zod.boolean(),
   "reviewStatus": zod.enum(['pending', 'approved', 'rejected']),
   "rejectionReason": zod.string().nullish(),

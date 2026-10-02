@@ -7,8 +7,12 @@
  */
 import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
+import type { DrugVariant } from './drugVariant';
 import type { HqDrugInputTier } from './hqDrugInputTier';
 
+/**
+ * Give the strength and form lists, or the combinations in variants (which then decide the lists).
+ */
 export interface HqDrugInput {
   /** @minLength 1 */
   name: string;
@@ -17,9 +21,11 @@ export interface HqDrugInput {
   tier: HqDrugInputTier;
   unit?: string;
   /** @minItems 1 */
-  commonStrengths: string[];
+  commonStrengths?: string[];
   /** @minItems 1 */
-  commonForms: string[];
+  commonForms?: string[];
+  /** @minItems 1 */
+  variants?: DrugVariant[];
   primaryCategory: DrugPrimaryCategory;
   subcategory: DrugSubcategory;
   /** @nullable */

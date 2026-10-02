@@ -7,6 +7,7 @@
  */
 import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
+import type { DrugVariant } from './drugVariant';
 import type { HqDrugUpdateReviewStatus } from './hqDrugUpdateReviewStatus';
 import type { HqDrugUpdateTier } from './hqDrugUpdateTier';
 
@@ -28,6 +29,8 @@ export interface HqDrugUpdate {
   commonStrengths?: string[];
   /** @minItems 1 */
   commonForms?: string[];
+  /** @minItems 1 */
+  variants?: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory;
   subcategory?: DrugSubcategory;
 }

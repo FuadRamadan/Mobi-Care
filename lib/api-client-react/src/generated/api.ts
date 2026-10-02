@@ -73,6 +73,8 @@ import type {
   HqDashboard,
   HqDashboardTrends,
   HqDrug,
+  HqDrugApproval,
+  HqDrugApprovalResult,
   HqDrugInput,
   HqDrugUpdate,
   HqFlag,
@@ -9143,6 +9145,77 @@ export const useCreateHqDrug = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateHqDrugMutationOptions(options));
+    }
+
+export const getApproveHqDrugsUrl = () => {
+
+
+
+
+  return `/api/hq/drugs/approve`
+}
+
+/**
+ * @summary Approve several held medicines at once
+ */
+export const approveHqDrugs = async (hqDrugApproval: HqDrugApproval, options?: Parameters<typeof customFetch>[1]): Promise<HqDrugApprovalResult> => {
+
+  return customFetch<HqDrugApprovalResult>(getApproveHqDrugsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hqDrugApproval)
+  }
+);}
+
+
+
+
+
+export const getApproveHqDrugsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveHqDrugs>>, TError,{data: BodyType<HqDrugApproval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveHqDrugs>>, TError,{data: BodyType<HqDrugApproval>}, TContext> => {
+
+const mutationKey = ['approveHqDrugs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveHqDrugs>>, {data: BodyType<HqDrugApproval>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  approveHqDrugs(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveHqDrugsMutationResult = NonNullable<Awaited<ReturnType<typeof approveHqDrugs>>>
+    export type ApproveHqDrugsMutationBody = BodyType<HqDrugApproval>
+    export type ApproveHqDrugsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Approve several held medicines at once
+ */
+export const useApproveHqDrugs = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveHqDrugs>>, TError,{data: BodyType<HqDrugApproval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveHqDrugs>>,
+        TError,
+        {data: BodyType<HqDrugApproval>},
+        TContext
+      > => {
+      return useMutation(getApproveHqDrugsMutationOptions(options));
     }
 
 export const getUpdateHqDrugUrl = (id: string,) => {

@@ -2512,6 +2512,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqDrug"
 
+  /hq/drugs/approve:
+    post:
+      operationId: approveHqDrugs
+      tags: [hq]
+      summary: Approve several held medicines at once
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HqDrugApproval"
+      responses:
+        "200":
+          description: How many were approved, and which could not be yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqDrugApprovalResult"
+
   /hq/drugs/{id}:
     patch:
       operationId: updateHqDrug
@@ -4082,6 +4103,13 @@ components:
           type: array
           items:
             type: string
+        variants:
+          description: >-
+            The strength + form combinations the medicine comes in. Empty
+            means every listed strength comes in every listed form.
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugVariant"
         primaryCategory:
           oneOf:
             - $ref: "#/components/schemas/DrugPrimaryCategory"
@@ -4416,6 +4444,7 @@ components:
           unit,
           commonStrengths,
           commonForms,
+          variants,
           isApproved,
           reviewStatus,
           createdAt,
@@ -4443,6 +4472,13 @@ components:
           type: array
           items:
             type: string
+        variants:
+          description: >-
+            The strength + form combinations the medicine comes in. Empty
+            means every listed strength comes in every listed form.
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugVariant"
         primaryCategory:
           oneOf:
             - $ref: "#/components/schemas/DrugPrimaryCategory"
@@ -4510,6 +4546,12 @@ components:
           respiratory_allergy,
           psychiatric_mental_health,
           blood_products_plasma_expanders,
+          antidotes_poisoning,
+          cancer_immunosuppressants,
+          vaccines_immunologicals,
+          eye_preparations,
+          skin_preparations,
+          ear_nose_throat,
         ]
 
     DrugSubcategory:
@@ -4533,6 +4575,14 @@ components:
           neurological_medicines,
           blood_products, plasma_expanders, human_albumin, haematinics,
           other,
+          heart_failure_arrhythmia_shock, antispasmodics, hormones,
+          chelating_agents, diluents_iv_preparation,
+          antidotes, adsorbents,
+          antineoplastics, immunosuppressants,
+          vaccines, antisera, immunoglobulins,
+          glaucoma_medicines, mydriatics, eye_combinations,
+          antiseptics, emollients, keratolytics,
+          ear_preparations, mouth_throat,
         ]
 
     DrugSubcategoryOption:
@@ -5601,6 +5651,7 @@ components:
           unit,
           commonStrengths,
           commonForms,
+          variants,
           isApproved,
           reviewStatus,
           createdAt,
@@ -5627,6 +5678,13 @@ components:
           type: array
           items:
             type: string
+        variants:
+          description: >-
+            The strength + form combinations the medicine comes in. Empty
+            means every listed strength comes in every listed form.
+          type: array
+          items:
+            $ref: "#/components/schemas/DrugVariant"
         primaryCategory:
           oneOf:
             - $ref: "#/components/schemas/DrugPrimaryCategory"
@@ -5651,10 +5709,53 @@ components:
         createdAt:
           type: string
 
+    DrugVariant:
+      type: object
+      required: [strength, form]
+      properties:
+        strength:
+          type: string
+        form:
+          type: string
+
+    HqDrugApproval:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+
+    HqDrugApprovalResult:
+      type: object
+      required: [approved, notApproved, alreadyReviewed]
+      properties:
+        approved:
+          type: number
+        alreadyReviewed:
+          type: number
+        notApproved:
+          type: array
+          items:
+            type: object
+            required: [id, name, reason]
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              reason:
+                type: string
+
     HqDrugInput:
       type: object
-      required:
-        [name, tier, commonStrengths, commonForms, primaryCategory, subcategory]
+      description: >-
+        Give the strength and form lists, or the combinations in variants
+        (which then decide the lists).
+      required: [name, tier, primaryCategory, subcategory]
       properties:
         name:
           type: string
@@ -5678,6 +5779,11 @@ components:
           minItems: 1
           items:
             type: string
+        variants:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/DrugVariant"
         primaryCategory:
           $ref: "#/components/schemas/DrugPrimaryCategory"
         subcategory:
@@ -5718,6 +5824,11 @@ components:
           minItems: 1
           items:
             type: string
+        variants:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/DrugVariant"
         primaryCategory:
           $ref: "#/components/schemas/DrugPrimaryCategory"
         subcategory:

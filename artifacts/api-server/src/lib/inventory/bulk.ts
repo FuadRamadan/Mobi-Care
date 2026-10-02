@@ -11,11 +11,12 @@ import {
 } from "@workspace/db/schema";
 import {
   GENERIC_BRAND,
+  listingProblem,
   normalizeBrand,
   productKey,
   todayIso,
-  validateListing,
 } from "./listing.js";
+import { addVariants, describeVariants, formatForm, listsFromVariants, matchVariant, sameText } from "../catalogue/variants.js";
 import {
   addRangeValidation,
   editDistance,
@@ -144,7 +145,7 @@ type Plan =
   | { kind: "insert"; drug: DrugCatalogue; values: ListingValues }
   | { kind: "update"; listingId: string; values: ListingValues }
   | { kind: "deactivate"; listingId: string }
-  | { kind: "propose"; medicine: string; existingProposal: DrugCatalogue | null; values: ListingValues }
+  | { kind: "propose"; medicine: string; values: ListingValues }
   | { kind: "none" };
 
 interface RowResult extends AnalysedRow {
@@ -303,18 +304,20 @@ export async function analyseInventoryUpload(
     reader.select().from(pharmacyInventoryTable).where(eq(pharmacyInventoryTable.pharmacyId, pharmacyId)),
     reader.select({ controlled: pharmaciesTable.controlledSubstanceAuthorized }).from(pharmaciesTable).where(eq(pharmaciesTable.id, pharmacyId)).limit(1),
   ]);
-  const approved = catalogue.filter((drug) => drug.isApproved);
-  const byName = new Map(approved.map((drug) => [drug.name.trim().toLowerCase(), drug]));
+  // Medicines still waiting for HQ approval are matched too, so a row naming
+  // one is attached to it instead of proposing the same medicine again.
+  // Approved entries win when two share a name.
+  const listable = catalogue
+    .filter((drug) => drug.isApproved || drug.reviewStatus === "pending")
+    .sort((a, b) => Number(b.isApproved) - Number(a.isApproved));
+  const byName = new Map<string, DrugCatalogue>();
   const byGeneric = new Map<string, DrugCatalogue>();
-  for (const drug of approved) {
+  for (const drug of listable) {
+    const name = drug.name.trim().toLowerCase();
+    if (!byName.has(name)) byName.set(name, drug);
     const generic = drug.genericName?.trim().toLowerCase();
     if (generic && !byGeneric.has(generic)) byGeneric.set(generic, drug);
   }
-  const ownProposals = new Map(
-    catalogue
-      .filter((drug) => !drug.isApproved && drug.reviewStatus === "pending" && drug.proposedByPharmacyId === pharmacyId)
-      .map((drug) => [drug.name.trim().toLowerCase(), drug]),
-  );
   const byId = new Map(listings.map((listing) => [listing.id, listing]));
   const activeByKey = new Map(
     listings
@@ -383,7 +386,7 @@ export async function analyseInventoryUpload(
     const drug = byName.get(medicine.toLowerCase()) ?? byGeneric.get(medicine.toLowerCase());
     if (!drug) {
       const lower = medicine.toLowerCase();
-      const suggestion = approved
+      const suggestion = listable
         .map((candidate) => ({ candidate, distance: editDistance(lower, candidate.name.toLowerCase()) }))
         .filter(({ distance }) => distance > 0 && distance <= 2)
         .sort((a, b) => a.distance - b.distance)[0]?.candidate;
@@ -405,9 +408,9 @@ export async function analyseInventoryUpload(
         message: "Not in the catalogue yet: sent to MobiCare HQ for review. It stays hidden from patients until approved.",
         warnings,
         summary,
-        plan: { kind: "propose", medicine, existingProposal: ownProposals.get(medicine.toLowerCase()) ?? null, values },
+        plan: { kind: "propose", medicine, values: { ...values, form: formatForm(values.form) } },
       };
-      const key = `proposal|${medicine.toLowerCase()}|${values.strength}|${values.form}|${values.unitOfSale}|${values.brand.toLowerCase()}|${values.manufacturer.toLowerCase()}`;
+      const key = `proposal|${[medicine, values.strength, values.form, values.unitOfSale, values.brand, values.manufacturer].join("|").toLowerCase()}`;
       const earlier = seenKeys.get(key);
       if (earlier) {
         const message = `Rows ${earlier.rowNumber} and ${row.rowNumber} are the same product. Keep one of them.`;
@@ -420,11 +423,27 @@ export async function analyseInventoryUpload(
       continue;
     }
 
-    const problem = validateListing({ ...values, primaryCategory: null, subcategory: null }, drug);
+    const problem = listingProblem({ ...values, primaryCategory: null, subcategory: null }, drug);
     if (problem) {
       results.push(fail(problem, summary));
       continue;
     }
+    // A pharmacy's own request is still being decided by HQ, so a strength or
+    // form it does not list yet is added to the request for HQ to review.
+    // Everything else must match what HQ approved (or is about to approve).
+    const match = matchVariant(drug, values.strength, values.form);
+    const isRequest = !drug.isApproved && drug.proposedByPharmacyId != null;
+    if ("error" in match && !isRequest) {
+      results.push(fail(match.error, summary));
+      continue;
+    }
+    const extendsRequest = "error" in match;
+    values.strength = "error" in match
+      ? drug.commonStrengths.find((value) => sameText(value, values.strength)) ?? values.strength
+      : match.strength;
+    values.form = "error" in match
+      ? drug.commonForms.find((value) => sameText(value, values.form)) ?? formatForm(values.form)
+      : match.form;
     if (drug.tier === "1" && !pharmacy?.controlled) {
       results.push(fail("Only pharmacies authorised by MobiCare HQ can list tier 1 (controlled) medicines", summary));
       continue;
@@ -486,6 +505,14 @@ export async function analyseInventoryUpload(
           summary,
           listingId: existing.id,
           plan: changes.length ? { kind: "update", listingId: existing.id, values: keepSpelling(existing, values) } : { kind: "none" },
+        };
+      } else if (!drug.isApproved) {
+        result = {
+          ...base, status: "review", warnings, summary,
+          message: extendsRequest
+            ? `${drug.name} is waiting for MobiCare HQ approval; this strength and form are added to the request. Saved now, shown to patients once approved.`
+            : `${drug.name} is waiting for MobiCare HQ approval. Saved now, shown to patients once approved.`,
+          plan: { kind: "insert", drug, values },
         };
       } else {
         result = { ...base, status: "new", message: null, warnings, summary, plan: { kind: "insert", drug, values } };
@@ -555,7 +582,19 @@ export async function applyInventoryUpload(
   const failures: Array<{ raw: string[]; problem: string }> = [];
 
   await db.transaction(async (tx) => {
-    const proposals = new Map<string, string>();
+    // The strength and form combinations of each request (a medicine waiting
+    // for HQ approval) as this upload adds to it, and requests it creates.
+    type Lists = ReturnType<typeof listsFromVariants>;
+    const requestLists = new Map<string, Lists>();
+    const newRequests = new Map<string, string>();
+    const addToRequest = async (drugId: string, current: Lists, variant: { strength: string; form: string }) => {
+      const lists = addVariants(current, [variant]);
+      requestLists.set(drugId, lists);
+      const same = (list: Lists) => JSON.stringify([list.commonStrengths, list.commonForms, list.variants]);
+      if (same(lists) === same(current)) return;
+      await tx.update(drugCatalogueTable).set({ ...lists, updatedAt: new Date() }).where(eq(drugCatalogueTable.id, drugId));
+    };
+
     for (const row of analysis.rows) {
       if (row.status === "error") {
         failures.push({ raw: row.raw, problem: row.message ?? "Invalid row" });
@@ -574,17 +613,24 @@ export async function applyInventoryUpload(
       }
       const plan = row.plan;
       if (plan.kind === "insert") {
+        const held = !plan.drug.isApproved;
+        if (held && plan.drug.proposedByPharmacyId) {
+          await addToRequest(plan.drug.id, requestLists.get(plan.drug.id) ?? plan.drug, { strength: plan.values.strength, form: plan.values.form });
+        }
         const [inserted] = await tx.insert(pharmacyInventoryTable).values({
           pharmacyId,
           drugId: plan.drug.id,
           ...plan.values,
           primaryCategory: plan.drug.primaryCategory,
           subcategory: plan.drug.subcategory,
-          requiresHqReview: plan.drug.primaryCategory === "other" || plan.drug.subcategory === "other",
+          // A medicine still waiting for HQ approval keeps its listings hidden
+          // until approval; approving it clears this flag.
+          requiresHqReview: held || plan.drug.primaryCategory === "other" || plan.drug.subcategory === "other",
           completionStatus: "complete",
         }).onConflictDoNothing().returning({ id: pharmacyInventoryTable.id });
-        if (inserted) result.added++;
-        else failures.push({ raw: row.raw, problem: "This exact product was listed while you were uploading. Upload again to update it" });
+        if (!inserted) failures.push({ raw: row.raw, problem: "This exact product was listed while you were uploading. Upload again to update it" });
+        else if (held) result.sentForReview++;
+        else result.added++;
       } else if (plan.kind === "update") {
         await tx.update(pharmacyInventoryTable)
           .set({ ...plan.values, completionStatus: "complete", updatedAt: new Date() })
@@ -597,15 +643,18 @@ export async function applyInventoryUpload(
         result.removed++;
       } else if (plan.kind === "propose") {
         const nameKey = plan.medicine.toLowerCase();
-        let drugId = plan.existingProposal?.id ?? proposals.get(nameKey);
-        if (!drugId) {
+        const variant = { strength: plan.values.strength, form: plan.values.form };
+        let drugId = newRequests.get(nameKey);
+        if (drugId) {
+          await addToRequest(drugId, requestLists.get(drugId)!, variant);
+        } else {
+          const lists = listsFromVariants([variant]);
           const [proposal] = await tx.insert(drugCatalogueTable).values({
             name: plan.medicine,
             genericName: plan.medicine,
             description: "Submitted in a bulk inventory upload; HQ to confirm the details and tier.",
             unit: "units",
-            commonStrengths: [plan.values.strength],
-            commonForms: [plan.values.form],
+            ...lists,
             // HQ sets the category and tier when it reviews the request.
             tier: "3",
             isApproved: false,
@@ -613,7 +662,8 @@ export async function applyInventoryUpload(
             proposedByPharmacyId: pharmacyId,
           }).returning({ id: drugCatalogueTable.id });
           drugId = proposal!.id;
-          proposals.set(nameKey, drugId);
+          newRequests.set(nameKey, drugId);
+          requestLists.set(drugId, lists);
         }
         // Saved now, shown to patients once HQ approves the medicine: search
         // and ordering only ever use approved catalogue entries.
@@ -699,10 +749,14 @@ export async function inventoryWorkbook(pharmacyId: string | null, fileName: str
     { header: "Tier", width: 20 },
     { header: "Allowed strengths", width: 30 },
     { header: "Allowed forms", width: 30 },
+    { header: "Available as", width: 44 },
   ]);
   const tierName: Record<string, string> = { "1": "1 · Controlled", "2": "2 · Prescription", "3": "3 · Over the counter" };
   for (const drug of catalogue) {
-    reference.addRow([drug.name, drug.genericName ?? "", tierName[drug.tier] ?? drug.tier, drug.commonStrengths.join(", "), drug.commonForms.join(", ")]);
+    reference.addRow([
+      drug.name, drug.genericName ?? "", tierName[drug.tier] ?? drug.tier, drug.commonStrengths.join(", "), drug.commonForms.join(", "),
+      drug.variants.length ? describeVariants(drug.variants) : "Any allowed strength in any allowed form",
+    ]);
   }
   const lists = workbook.addWorksheet("Lists", { state: "hidden" });
   const forms = [...new Set(catalogue.flatMap((drug) => drug.commonForms))].sort();
@@ -741,13 +795,14 @@ export async function inventoryWorkbook(pharmacyId: string | null, fileName: str
     "1. Fill in one row per product on the Inventory sheet. Green headers are required.",
     "2. List each brand separately. For an unbranded product, write Generic in the Brand column.",
     "   Two generics from different manufacturers are different products: list both.",
-    "3. Medicine names must match the Catalogue sheet. A medicine that is not there is sent to MobiCare HQ for review,",
+    "3. Strength and form must be one of the combinations in the Catalogue sheet's Available as column (capitals do not matter).",
+    "4. Medicine names must match the Catalogue sheet. A medicine that is not there is sent to MobiCare HQ for review,",
     "   and stays hidden from patients until HQ approves it.",
-    "4. To change listings you already have, export your inventory from the portal, edit it, and upload it again.",
+    "5. To change listings you already have, export your inventory from the portal, edit it, and upload it again.",
     "   Keep the Listing ID column: it tells MobiCare which listing each row updates.",
-    "5. Rows you leave out are never deleted. To take a listing down, write Remove in the Action column.",
-    "6. After uploading you see a preview. Nothing is saved until you confirm.",
-    "7. Rows with problems are not saved. Download the 'rows to fix' file, correct them, and upload that file.",
+    "6. Rows you leave out are never deleted. To take a listing down, write Remove in the Action column.",
+    "7. After uploading you see a preview. Nothing is saved until you confirm.",
+    "8. Rows with problems are not saved. Download the 'rows to fix' file, correct them, and upload that file.",
     "",
     "Example row:",
     "Medicine: Amoxicillin | Strength: 500mg | Form: capsule | Pack: Pack of 21 capsules | Brand: Amoxil | Manufacturer: GSK |",

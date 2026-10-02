@@ -9,6 +9,7 @@ import type { DrugCatalogueItemReviewStatus } from './drugCatalogueItemReviewSta
 import type { DrugCatalogueItemTier } from './drugCatalogueItemTier';
 import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
+import type { DrugVariant } from './drugVariant';
 
 export interface DrugCatalogueItem {
   id: string;
@@ -21,6 +22,8 @@ export interface DrugCatalogueItem {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
   isApproved: boolean;

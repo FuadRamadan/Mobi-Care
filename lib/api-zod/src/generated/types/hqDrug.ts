@@ -7,6 +7,7 @@
  */
 import type { DrugPrimaryCategory } from './drugPrimaryCategory';
 import type { DrugSubcategory } from './drugSubcategory';
+import type { DrugVariant } from './drugVariant';
 import type { HqDrugReviewStatus } from './hqDrugReviewStatus';
 import type { HqDrugTier } from './hqDrugTier';
 
@@ -21,6 +22,8 @@ export interface HqDrug {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
   isApproved: boolean;

@@ -8,9 +8,10 @@ import {
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { listsFromVariants } from "../../lib/catalogue/variants.js";
 
 const router = safeRouter();
 const primaryCategorySchema = z.enum(
@@ -78,6 +79,33 @@ router.post("/", async (req: AuthRequest, res) => {
     return;
   }
 
+  // The same medicine must not end up in the catalogue twice: one already
+  // approved is listed from the catalogue, and one already requested (by any
+  // pharmacy, or uploaded by HQ) is waiting for HQ.
+  const [existing] = await db
+    .select({ name: drugCatalogueTable.name, isApproved: drugCatalogueTable.isApproved })
+    .from(drugCatalogueTable)
+    .where(
+      and(
+        ne(drugCatalogueTable.reviewStatus, "rejected"),
+        or(
+          sql`lower(${drugCatalogueTable.name}) = lower(${body.data.name.trim()})`,
+          sql`lower(${drugCatalogueTable.genericName}) = lower(${body.data.name.trim()})`,
+        ),
+      ),
+    )
+    .limit(1);
+  if (existing) {
+    res.status(409).json({
+      error: existing.isApproved
+        ? `${existing.name} is already in the catalogue. Add it from the catalogue list instead.`
+        : `${existing.name} is already waiting for MobiCare HQ approval. You can list it once it is approved.`,
+      code: "DRUG_ALREADY_IN_CATALOGUE",
+    });
+    return;
+  }
+
+  const lists = listsFromVariants([{ strength: body.data.strength, form: body.data.form }]);
   const [inserted] = await db
     .insert(drugCatalogueTable)
     .values({
@@ -85,8 +113,7 @@ router.post("/", async (req: AuthRequest, res) => {
       genericName: body.data.genericName,
       description: body.data.description,
       unit: body.data.unit,
-      commonStrengths: [body.data.strength],
-      commonForms: [body.data.form],
+      ...lists,
       primaryCategory: body.data.suggestedCategory,
       subcategory: body.data.suggestedSubcategory,
       tier: "3", // Provisional — HQ will review and assign correct tier

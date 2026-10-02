@@ -427,6 +427,12 @@ export const DrugPrimaryCategory = {
   respiratory_allergy: 'respiratory_allergy',
   psychiatric_mental_health: 'psychiatric_mental_health',
   blood_products_plasma_expanders: 'blood_products_plasma_expanders',
+  antidotes_poisoning: 'antidotes_poisoning',
+  cancer_immunosuppressants: 'cancer_immunosuppressants',
+  vaccines_immunologicals: 'vaccines_immunologicals',
+  eye_preparations: 'eye_preparations',
+  skin_preparations: 'skin_preparations',
+  ear_nose_throat: 'ear_nose_throat',
 } as const;
 
 export type DrugSubcategory = typeof DrugSubcategory[keyof typeof DrugSubcategory];
@@ -473,6 +479,26 @@ export const DrugSubcategory = {
   human_albumin: 'human_albumin',
   haematinics: 'haematinics',
   other: 'other',
+  heart_failure_arrhythmia_shock: 'heart_failure_arrhythmia_shock',
+  antispasmodics: 'antispasmodics',
+  hormones: 'hormones',
+  chelating_agents: 'chelating_agents',
+  diluents_iv_preparation: 'diluents_iv_preparation',
+  antidotes: 'antidotes',
+  adsorbents: 'adsorbents',
+  antineoplastics: 'antineoplastics',
+  immunosuppressants: 'immunosuppressants',
+  vaccines: 'vaccines',
+  antisera: 'antisera',
+  immunoglobulins: 'immunoglobulins',
+  glaucoma_medicines: 'glaucoma_medicines',
+  mydriatics: 'mydriatics',
+  eye_combinations: 'eye_combinations',
+  antiseptics: 'antiseptics',
+  emollients: 'emollients',
+  keratolytics: 'keratolytics',
+  ear_preparations: 'ear_preparations',
+  mouth_throat: 'mouth_throat',
 } as const;
 
 export interface DrugSearchResult {
@@ -779,6 +805,11 @@ export const DrugSummaryTier = {
   NUMBER_3: '3',
 } as const;
 
+export interface DrugVariant {
+  strength: string;
+  form: string;
+}
+
 export interface DrugSummary {
   name: string;
   /** @nullable */
@@ -787,6 +818,8 @@ export interface DrugSummary {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants?: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
 }
@@ -1055,6 +1088,8 @@ export interface DrugCatalogueItem {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
   isApproved: boolean;
@@ -2055,6 +2090,8 @@ export interface HqDrug {
   unit: string;
   commonStrengths: string[];
   commonForms: string[];
+  /** The strength + form combinations the medicine comes in. Empty means every listed strength comes in every listed form. */
+  variants: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory | null;
   subcategory?: DrugSubcategory | null;
   isApproved: boolean;
@@ -2070,6 +2107,26 @@ export interface HqDrug {
   createdAt: string;
 }
 
+export interface HqDrugApproval {
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  ids: string[];
+}
+
+export type HqDrugApprovalResultNotApprovedItem = {
+  id: string;
+  name: string;
+  reason: string;
+};
+
+export interface HqDrugApprovalResult {
+  approved: number;
+  alreadyReviewed: number;
+  notApproved: HqDrugApprovalResultNotApprovedItem[];
+}
+
 export type HqDrugInputTier = typeof HqDrugInputTier[keyof typeof HqDrugInputTier];
 
 
@@ -2079,6 +2136,9 @@ export const HqDrugInputTier = {
   NUMBER_3: '3',
 } as const;
 
+/**
+ * Give the strength and form lists, or the combinations in variants (which then decide the lists).
+ */
 export interface HqDrugInput {
   /** @minLength 1 */
   name: string;
@@ -2087,9 +2147,11 @@ export interface HqDrugInput {
   tier: HqDrugInputTier;
   unit?: string;
   /** @minItems 1 */
-  commonStrengths: string[];
+  commonStrengths?: string[];
   /** @minItems 1 */
-  commonForms: string[];
+  commonForms?: string[];
+  /** @minItems 1 */
+  variants?: DrugVariant[];
   primaryCategory: DrugPrimaryCategory;
   subcategory: DrugSubcategory;
   /** @nullable */
@@ -2131,6 +2193,8 @@ export interface HqDrugUpdate {
   commonStrengths?: string[];
   /** @minItems 1 */
   commonForms?: string[];
+  /** @minItems 1 */
+  variants?: DrugVariant[];
   primaryCategory?: DrugPrimaryCategory;
   subcategory?: DrugSubcategory;
 }

@@ -61,6 +61,8 @@ const selectClass =
   "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 const PACKAGING_UNITS = ["Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube", "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece"];
+const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 const DOSAGE_FORMS = ["Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion", "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder", "Patch"];
 
 function TierBadge({
@@ -601,8 +603,8 @@ function ListingModal({
       (i) =>
         i.isActive !== false &&
         i.drugId === currentDrugId &&
-        i.strength === strength.trim() &&
-        i.form === form.trim() &&
+        sameText(i.strength || "", strength) &&
+        sameText(i.form || "", form) &&
         i.unitOfSale === unitOfSale.trim() &&
         (i.brand || "Generic").toLowerCase() === chosenBrand &&
         (i.manufacturer || "").trim().toLowerCase() === manufacturer.trim().toLowerCase() &&
@@ -691,6 +693,18 @@ function ListingModal({
   const commonForms = isEdit
     ? item!.drug.commonForms || []
     : selectedDrug?.commonForms || [];
+  // The strength + form combinations the medicine comes in; none recorded
+  // means every strength in every form.
+  const variants = (isEdit ? item!.drug.variants : selectedDrug?.variants) ?? [];
+  const formOptions = commonForms.length ? commonForms : DOSAGE_FORMS;
+  const strengthsFor = (chosenForm: string) =>
+    variants.length && chosenForm
+      ? variants.filter((v) => sameText(v.form, chosenForm)).map((v) => v.strength)
+      : commonStrengths;
+  const strengthOptions = strengthsFor(form);
+  // Shown in the catalogue's spelling; "tablet" and "Tablet" are the same.
+  const formValue = formOptions.find((f) => sameText(f, form)) ?? form;
+  const strengthValue = strengthOptions.find((s) => sameText(s, strength)) ?? strength;
 
   const selectedCategoryObj = categories.find(
     (c) => c.value === primaryCategory,
@@ -815,44 +829,61 @@ function ListingModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>
-                  Strength <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  list="strengths-list"
-                  value={strength}
-                  onChange={(e) => setStrength(e.target.value)}
-                  placeholder="e.g. 500mg"
-                  data-testid="input-strength"
-                />
-                <datalist id="strengths-list">
-                  {commonStrengths.map((s) => (
-                    <option key={s} value={s} />
-                  ))}
-                </datalist>
-                {errors.strength && (
-                  <p className="text-xs text-destructive">{errors.strength}</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label>
                   Form <span className="text-destructive">*</span>
                 </Label>
                 <select
-                  value={form}
-                  onChange={(e) => setForm(e.target.value)}
+                  value={formValue}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setForm(next);
+                    // A strength this form does not come in no longer applies.
+                    const available = strengthsFor(next);
+                    if (strength && available.length && !available.some((s) => sameText(s, strength))) setStrength("");
+                  }}
                   className={selectClass}
                   data-testid="select-form"
                 >
                   <option value="">Select form...</option>
-                  {DOSAGE_FORMS.map((f) => (
+                  {formOptions.map((f) => (
                     <option key={f} value={f}>{f}</option>
                   ))}
-                  {form && !DOSAGE_FORMS.includes(form) && (
-                    <option value={form}>{form} (Legacy)</option>
+                  {form && !formOptions.some((f) => sameText(f, form)) && (
+                    <option value={form}>{form} (not in the catalogue)</option>
                   )}
                 </select>
                 {errors.form && (
                   <p className="text-xs text-destructive">{errors.form}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Strength <span className="text-destructive">*</span>
+                </Label>
+                {commonStrengths.length ? (
+                  <select
+                    value={strengthValue}
+                    onChange={(e) => setStrength(e.target.value)}
+                    className={selectClass}
+                    data-testid="select-strength"
+                  >
+                    <option value="">{form ? "Select strength..." : "Select a form first, or any strength..."}</option>
+                    {strengthOptions.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    {strength && !strengthOptions.some((s) => sameText(s, strength)) && (
+                      <option value={strength}>{strength} (not available in this form)</option>
+                    )}
+                  </select>
+                ) : (
+                  <Input
+                    value={strength}
+                    onChange={(e) => setStrength(e.target.value)}
+                    placeholder="e.g. 500mg"
+                    data-testid="input-strength"
+                  />
+                )}
+                {errors.strength && (
+                  <p className="text-xs text-destructive">{errors.strength}</p>
                 )}
               </div>
             </div>

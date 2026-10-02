@@ -5,8 +5,11 @@ import {
   useUpdateHqDrug,
   useDeleteHqDrug,
   useListHqDrugCategories,
+  useApproveHqDrugs,
   getListHqDrugsQueryKey,
   type HqDrug,
+  type DrugVariant,
+  type HqDrugApprovalResult,
   type DrugPrimaryCategory,
   type DrugSubcategory,
 } from "@workspace/api-client-react";
@@ -64,48 +67,21 @@ const TIER_LABEL: Record<string, string> = {
   "3": "Tier 3 · OTC",
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  pain_fever: "Pain & Fever",
-  infection: "Infection",
-  malaria: "Malaria",
-  respiratory_allergy: "Respiratory & Allergy",
-  digestive: "Digestive",
-  cardiovascular: "Cardiovascular",
-  diabetes_endocrine: "Diabetes & Endocrine",
-  womens_reproductive: "Women's & Reproductive",
-  child_health: "Child Health",
-  mental_neurological: "Mental & Neurological",
-  skin_wound: "Skin & Wound",
-  eye_ear: "Eye & Ear",
-  vitamins_nutrition: "Vitamins & Nutrition",
-  other: "Other",
-};
+const FORM_OPTIONS = ["Tablet", "Capsule", "Syrup", "Suspension", "Injection", "Infusion", "Cream", "Ointment", "Gel", "Drops", "Inhaler", "Suppository", "Powder", "Patch"];
+const UNIT_OPTIONS = ["Box", "Bottle", "Vial", "Sachet", "Tablet", "Capsule", "Strip", "Tube", "Ampoule", "Syringe", "Pack", "Carton", "Jar", "Can", "Roll", "Piece"];
 
-const SUBCATEGORY_LABELS: Record<string, string> = {
-  analgesics_antipyretics: "Analgesics & Antipyretics",
-  anti_inflammatory: "Anti-inflammatory",
-  antibiotics: "Antibiotics",
-  antifungal_antiparasitic: "Antifungal & Antiparasitic",
-  antimalarials: "Antimalarials",
-  cough_cold: "Cough & Cold",
-  allergy: "Allergy",
-  gastrointestinal: "Gastrointestinal",
-  oral_rehydration: "Oral Rehydration",
-  hypertension: "Hypertension",
-  heart_health: "Heart Health",
-  diabetes: "Diabetes",
-  reproductive_health: "Reproductive Health",
-  maternal_health: "Maternal Health",
-  pediatric: "Pediatric",
-  neurological: "Neurological",
-  mental_health: "Mental Health",
-  dermatology: "Dermatology",
-  wound_care: "Wound Care",
-  eye_care: "Eye Care",
-  ear_care: "Ear Care",
-  vitamins_minerals: "Vitamins & Minerals",
-  other: "Other",
-};
+const splitList = (text: string) => text.split(",").map((value) => value.trim()).filter(Boolean);
+const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+/** A strength + form combination, compared ignoring capitals. */
+const pairKey = (strength: string, form: string) => `${strength.trim().toLowerCase()}|${form.trim().toLowerCase()}`;
+
+/** "500mg Tablet, 125mg/5ml Syrup", shortened after a few. */
+function availableAs(drug: HqDrug): string {
+  const pairs: string[] = drug.variants?.length
+    ? drug.variants.map((variant: DrugVariant) => `${variant.strength} ${variant.form}`)
+    : [`${drug.commonStrengths.join(", ")} · ${drug.commonForms.join(", ")}`];
+  return pairs.length > 4 ? `${pairs.slice(0, 4).join(", ")} +${pairs.length - 4} more` : pairs.join(", ");
+}
 
 const DEFAULT_FORM = {
   name: "",
@@ -117,6 +93,8 @@ const DEFAULT_FORM = {
   subcategory: "",
   commonStrengths: "",
   commonForms: "",
+  /** Combinations of the strengths and forms above that it does NOT come in. */
+  unavailable: [] as string[],
 };
 
 export default function HqCatalogue() {
@@ -158,6 +136,36 @@ export default function HqCatalogue() {
   const [form, setForm] = useState(DEFAULT_FORM);
   const selectedCategory = categories.find((category) => category.value === form.primaryCategory);
 
+  const categoryLabel = (value: string | null | undefined) =>
+    categories.find((category) => category.value === value)?.label ?? "—";
+  const subcategoryLabel = (value: string | null | undefined) =>
+    categories.flatMap((category) => category.subcategories).find((sub) => sub.value === value)?.label ?? "—";
+
+  const strengthList = splitList(form.commonStrengths);
+  const formList = splitList(form.commonForms);
+  const formOptions = [...FORM_OPTIONS, ...formList.filter((value) => !FORM_OPTIONS.some((option) => sameText(option, value)))];
+
+  // Approving many held medicines at once (after a bulk catalogue upload).
+  const [selected, setSelected] = useState<string[]>([]);
+  const [approvalResult, setApprovalResult] = useState<HqDrugApprovalResult | null>(null);
+  const approve = useApproveHqDrugs();
+  useEffect(() => setSelected([]), [tab]);
+  const heldIds = tab === "held" ? drugs.filter((d) => d.reviewStatus === "pending").map((d) => d.id) : [];
+  const approveSelected = async () => {
+    const ids = selected.filter((id) => heldIds.includes(id));
+    if (!ids.length) return;
+    if (!window.confirm(`Approve ${ids.length} medicine${ids.length === 1 ? "" : "s"}? Pharmacies can list ${ids.length === 1 ? "it" : "them"} straight away, at the tier and category shown.`)) return;
+    try {
+      const result = await approve.mutateAsync({ data: { ids } });
+      refresh();
+      setSelected([]);
+      if (result.notApproved.length) setApprovalResult(result);
+      else toast({ title: `${result.approved} medicine${result.approved === 1 ? "" : "s"} approved` });
+    } catch (error) {
+      onError(error);
+    }
+  };
+
   const [rejectDrug, setRejectDrug] = useState<HqDrug | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -198,6 +206,13 @@ export default function HqCatalogue() {
         subcategory: editDrug.subcategory || "",
         commonStrengths: (editDrug.commonStrengths || []).join(", "),
         commonForms: (editDrug.commonForms || []).join(", "),
+        unavailable: editDrug.variants?.length
+          ? (editDrug.commonStrengths || []).flatMap((strength) =>
+              (editDrug.commonForms || [])
+                .filter((dosageForm) => !editDrug.variants!.some((variant) => pairKey(variant.strength, variant.form) === pairKey(strength, dosageForm)))
+                .map((dosageForm) => pairKey(strength, dosageForm)),
+            )
+          : [],
       });
       setOpen(true);
     } else if (!open) {
@@ -234,6 +249,20 @@ export default function HqCatalogue() {
       return;
     }
 
+    const variants = formList.flatMap((dosageForm) =>
+      strengthList
+        .filter((strength) => !form.unavailable.includes(pairKey(strength, dosageForm)))
+        .map((strength) => ({ strength, form: dosageForm })),
+    );
+    if (!variants.length) {
+      toast({
+        title: "Nothing available",
+        description: "Tick at least one strength and form combination.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const payload = {
       name: form.name,
       genericName: form.genericName || undefined,
@@ -242,14 +271,8 @@ export default function HqCatalogue() {
       maxUnitsPerOrder: form.maxUnits ? Number(form.maxUnits) : null,
       primaryCategory: form.primaryCategory as DrugPrimaryCategory,
       subcategory: form.subcategory as DrugSubcategory,
-      commonStrengths: form.commonStrengths
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      commonForms: form.commonForms
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      // The combinations decide the strength and form lists on the server.
+      variants,
     };
 
     if (isNew) {
@@ -412,7 +435,7 @@ export default function HqCatalogue() {
                       <SelectValue placeholder="Select unit..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {["Box","Bottle","Vial","Sachet","Tablet","Capsule","Strip","Tube","Ampoule","Syringe","Pack","Carton","Jar","Can","Roll","Piece"].map(u => (
+                      {[...UNIT_OPTIONS, ...(form.unit && !UNIT_OPTIONS.includes(form.unit) ? [form.unit] : [])].map((u) => (
                         <SelectItem key={u} value={u}>{u}</SelectItem>
                       ))}
                     </SelectContent>
@@ -429,23 +452,24 @@ export default function HqCatalogue() {
                     </PopoverTrigger>
                     <PopoverContent className="w-64 p-0">
                       <div className="max-h-64 overflow-y-auto p-2 space-y-1">
-                        {["Tablet","Capsule","Syrup","Suspension","Injection","Infusion","Cream","Ointment","Gel","Drops","Inhaler","Suppository","Powder","Patch"].map(f => {
-                          const current = form.commonForms.split(',').map(s => s.trim()).filter(Boolean);
-                          const isChecked = current.includes(f);
+                        {formOptions.map((f) => {
+                          const isChecked = formList.some((value) => sameText(value, f));
                           return (
-                            <div key={f} className="flex items-center space-x-2 p-1 hover:bg-muted rounded">
+                            <label key={f} className="flex items-center space-x-2 p-1 hover:bg-muted rounded cursor-pointer">
                               <Checkbox
                                 checked={isChecked}
                                 onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setForm({ ...form, commonForms: [...current, f].join(', ') });
-                                  } else {
-                                    setForm({ ...form, commonForms: current.filter(x => x !== f).join(', ') });
-                                  }
+                                  setForm({
+                                    ...form,
+                                    commonForms: (checked
+                                      ? [...formList, f]
+                                      : formList.filter((value) => !sameText(value, f))
+                                    ).join(", "),
+                                  });
                                 }}
                               />
-                              <Label className="flex-1 cursor-pointer font-normal">{f}</Label>
-                            </div>
+                              <span className="flex-1 text-sm">{f}</span>
+                            </label>
                           );
                         })}
                       </div>
@@ -466,6 +490,57 @@ export default function HqCatalogue() {
                   />
                 </div>
               </div>
+
+              {strengthList.length * formList.length > 1 && (
+                <div className="space-y-1.5">
+                  <Label>Available as</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Untick the combinations this medicine does not come in. Pharmacies can only list ticked ones.
+                  </p>
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="text-sm" data-testid="table-available-as">
+                      <thead>
+                        <tr className="border-b bg-muted/40">
+                          <th className="px-3 py-1.5" aria-label="Strength" />
+                          {formList.map((dosageForm) => (
+                            <th key={dosageForm} scope="col" className="px-3 py-1.5 text-left font-medium whitespace-nowrap">
+                              {dosageForm}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {strengthList.map((strength) => (
+                          <tr key={strength} className="border-b last:border-0">
+                            <th scope="row" className="px-3 py-1.5 text-left font-medium whitespace-nowrap">
+                              {strength}
+                            </th>
+                            {formList.map((dosageForm) => {
+                              const key = pairKey(strength, dosageForm);
+                              return (
+                                <td key={dosageForm} className="px-3 py-1.5">
+                                  <Checkbox
+                                    checked={!form.unavailable.includes(key)}
+                                    aria-label={`${strength} ${dosageForm}`}
+                                    onCheckedChange={(checked) =>
+                                      setForm({
+                                        ...form,
+                                        unavailable: checked
+                                          ? form.unavailable.filter((value) => value !== key)
+                                          : [...form.unavailable, key],
+                                      })
+                                    }
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -595,6 +670,58 @@ export default function HqCatalogue() {
         </Dialog>
       </div>
 
+      <Dialog open={!!approvalResult} onOpenChange={(v) => !v && setApprovalResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {approvalResult?.approved ?? 0} approved, {approvalResult?.notApproved.length ?? 0} still held
+            </DialogTitle>
+            <DialogDescription>
+              These need a change before they can be approved. Open each one with Review.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-80 overflow-y-auto divide-y text-sm">
+            {approvalResult?.notApproved.map((item) => (
+              <li key={item.id} className="py-2">
+                <div className="font-medium">{item.name}</div>
+                <div className="text-muted-foreground">{item.reason}</div>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button onClick={() => setApprovalResult(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {tab === "held" && canEdit && heldIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-3 rounded-lg border bg-muted/30 px-3 py-2">
+          <span className="text-sm text-muted-foreground">
+            {selected.length
+              ? `${selected.length} of ${heldIds.length} selected`
+              : `${heldIds.length} waiting for approval. Check each one's tier and category before approving.`}
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelected(selected.length === heldIds.length ? [] : heldIds)}
+              data-testid="button-select-all-held"
+            >
+              {selected.length === heldIds.length ? "Clear selection" : "Select all"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void approveSelected()}
+              disabled={!selected.length || approve.isPending}
+              data-testid="button-approve-selected"
+            >
+              {approve.isPending ? "Approving…" : `Approve selected${selected.length ? ` (${selected.length})` : ""}`}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : drugs.length === 0 ? (
@@ -608,6 +735,15 @@ export default function HqCatalogue() {
           <Table>
             <TableHeader>
               <TableRow>
+                {tab === "held" && canEdit && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      aria-label="Select all held medicines"
+                      checked={heldIds.length > 0 && selected.length === heldIds.length}
+                      onCheckedChange={(checked) => setSelected(checked ? heldIds : [])}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Drug</TableHead>
                 <TableHead>Tier & Cap</TableHead>
                 <TableHead>Category</TableHead>
@@ -618,10 +754,26 @@ export default function HqCatalogue() {
             <TableBody>
               {drugs.map((d) => (
                 <TableRow key={d.id} data-testid={`row-drug-${d.id}`}>
+                  {tab === "held" && canEdit && (
+                    <TableCell>
+                      {d.reviewStatus === "pending" && (
+                        <Checkbox
+                          aria-label={`Select ${d.name}`}
+                          checked={selected.includes(d.id)}
+                          onCheckedChange={(checked) =>
+                            setSelected(checked ? [...selected, d.id] : selected.filter((id) => id !== d.id))
+                          }
+                        />
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="font-medium">{d.name}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {d.genericName ?? "—"}
+                      {d.genericName && d.genericName !== d.name ? d.genericName : null}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 max-w-sm">
+                      {availableAs(d)}
                     </div>
                     {d.reviewStatus === "rejected" && d.rejectionReason && (
                       <div className="text-xs text-destructive mt-1 font-medium bg-destructive/10 inline-block px-1.5 py-0.5 rounded">
@@ -639,14 +791,10 @@ export default function HqCatalogue() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm font-medium">
-                      {d.primaryCategory
-                        ? CATEGORY_LABELS[d.primaryCategory as string]
-                        : "—"}
+                      {categoryLabel(d.primaryCategory)}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {d.subcategory
-                        ? SUBCATEGORY_LABELS[d.subcategory as string]
-                        : "—"}
+                      {subcategoryLabel(d.subcategory)}
                     </div>
                   </TableCell>
                   <TableCell>

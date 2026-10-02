@@ -165,6 +165,27 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "new catalogue categories (migration 0030)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_enum e
+          JOIN pg_type t ON t.oid = e.enumtypid
+          WHERE t.typname = 'drug_subcategory' AND e.enumlabel = 'mouth_throat'
+        ) AS exists
+      `,
+    },
+    {
+      label: "strength and form combinations (migration 0031)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'drug_catalogue'
+            AND column_name = 'variants'
+        ) AS exists
+      `,
+    },
+    {
       label: "catalogue permission (migration 0029)",
       query: sql`
         SELECT EXISTS (

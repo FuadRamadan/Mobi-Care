@@ -10,10 +10,11 @@ import {
   DRUG_SUBCATEGORIES,
   isValidDrugCategoryPair,
 } from "@workspace/db/schema";
-import { and, eq, desc, count, ne, sql } from "drizzle-orm";
+import { and, eq, desc, count, inArray, ne, sql } from "drizzle-orm";
 import { AuthRequest, requireManageCatalogue } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { createPharmacyNotification } from "../../lib/pharmacyNotifications.js";
+import { cleanForms, cleanList, listsFromVariants, variantsOf, withLists } from "../../lib/catalogue/variants.js";
 
 const router = safeRouter();
 
@@ -22,6 +23,11 @@ const primaryCategorySchema = z.enum(
   DRUG_PRIMARY_CATEGORIES as [string, ...string[]],
 );
 const subcategorySchema = z.enum(DRUG_SUBCATEGORIES as [string, ...string[]]);
+
+const listSchema = z.array(z.string().trim().min(1).max(50));
+const variantsSchema = z
+  .array(z.object({ strength: z.string().trim().min(1).max(50), form: z.string().trim().min(1).max(50) }))
+  .min(1);
 
 function oneBusinessDayAfter(createdAt: Date): string {
   const due = new Date(createdAt);
@@ -93,8 +99,11 @@ router.post("/", requireManageCatalogue, async (req: AuthRequest, res) => {
       description: z.string().optional(),
       tier: z.enum(TIERS),
       unit: z.string().min(1).default("tablets"),
-      commonStrengths: z.array(z.string().trim().min(1).max(50)).min(1),
-      commonForms: z.array(z.string().trim().min(1).max(50)).min(1),
+      commonStrengths: listSchema.optional(),
+      commonForms: listSchema.optional(),
+      // The strength + form combinations it comes in. When given, the
+      // strength and form lists are taken from these.
+      variants: variantsSchema.optional(),
       primaryCategory: primaryCategorySchema,
       subcategory: subcategorySchema,
       maxUnitsPerOrder: z.number().min(1).nullable().optional(),
@@ -111,6 +120,13 @@ router.post("/", requireManageCatalogue, async (req: AuthRequest, res) => {
   const capError = validateTierCap(body.data.tier, body.data.maxUnitsPerOrder);
   if (capError) {
     res.status(400).json({ error: capError });
+    return;
+  }
+  const lists = body.data.variants
+    ? listsFromVariants(body.data.variants)
+    : { commonStrengths: cleanList(body.data.commonStrengths ?? []), commonForms: cleanForms(body.data.commonForms ?? []), variants: [] };
+  if (!lists.commonStrengths.length || !lists.commonForms.length) {
+    res.status(400).json({ error: "Add at least one strength and one form" });
     return;
   }
   if (
@@ -132,8 +148,7 @@ router.post("/", requireManageCatalogue, async (req: AuthRequest, res) => {
       description: body.data.description ?? null,
       tier: body.data.tier,
       unit: body.data.unit,
-      commonStrengths: [...new Set(body.data.commonStrengths)],
-      commonForms: [...new Set(body.data.commonForms)],
+      ...lists,
       primaryCategory: body.data.primaryCategory,
       subcategory: body.data.subcategory,
       maxUnitsPerOrder: body.data.maxUnitsPerOrder ?? null,
@@ -161,6 +176,218 @@ router.post("/", requireManageCatalogue, async (req: AuthRequest, res) => {
   res.status(201).json(withReviewDueAt(created!));
 });
 
+type Drug = typeof drugCatalogueTable.$inferSelect;
+type Staff = { sub: string; name: string };
+
+class ReviewError extends Error {
+  constructor(public readonly status: number, message: string, public readonly extra: Record<string, unknown> = {}) {
+    super(message);
+  }
+}
+
+/**
+ * Saves HQ's changes to one catalogue entry, including approving or rejecting
+ * a held one, with every rule a release has to pass. Used by the edit form
+ * and by approving many held medicines at once, so both behave the same.
+ */
+async function saveReview(
+  existing: Drug,
+  changes: {
+    tier?: "1" | "2" | "3";
+    maxUnitsPerOrder?: number | null;
+    isApproved?: boolean;
+    reviewStatus?: "approved" | "rejected";
+    rejectionReason?: string | null;
+    name?: string;
+    genericName?: string | null;
+    description?: string | null;
+    unit?: string;
+    commonStrengths?: string[];
+    commonForms?: string[];
+    variants?: Array<{ strength: string; form: string }>;
+    primaryCategory?: string;
+    subcategory?: string;
+  },
+  staff: Staff,
+): Promise<Drug> {
+  const id = existing.id;
+  // Enforce the Tier-1 cap on the RESULTING record, not just the patch payload.
+  const resultingTier = changes.tier ?? existing.tier;
+  const resultingCap =
+    changes.maxUnitsPerOrder !== undefined ? changes.maxUnitsPerOrder : existing.maxUnitsPerOrder;
+  const capError = validateTierCap(resultingTier, resultingCap);
+  if (capError) throw new ReviewError(400, capError);
+  const resultingPrimaryCategory = changes.primaryCategory ?? existing.primaryCategory;
+  const resultingSubcategory = changes.subcategory ?? existing.subcategory;
+  if (
+    resultingPrimaryCategory &&
+    resultingSubcategory &&
+    !isValidDrugCategoryPair(resultingPrimaryCategory, resultingSubcategory)
+  ) {
+    throw new ReviewError(400, "The selected subcategory does not belong to that category");
+  }
+
+  // The strengths, forms and combinations after this change.
+  const lists = changes.variants
+    ? listsFromVariants(changes.variants)
+    : changes.commonStrengths || changes.commonForms
+      ? withLists(existing, changes.commonStrengths ?? existing.commonStrengths, changes.commonForms ?? existing.commonForms)
+      : null;
+  const resultingLists = lists ?? existing;
+
+  const requestedReviewStatus =
+    changes.reviewStatus ??
+    (changes.isApproved === true && !existing.isApproved ? "approved" : undefined);
+  if (requestedReviewStatus === "approved") {
+    const missing = [
+      !resultingPrimaryCategory || !resultingSubcategory ? "a category and subcategory" : null,
+      resultingLists.commonStrengths.length === 0 ? "a strength" : null,
+      resultingLists.commonForms.length === 0 ? "a form" : null,
+    ].filter(Boolean);
+    if (missing.length) {
+      throw new ReviewError(400, `Needs ${missing.join(", ")} before it can be approved.`);
+    }
+  }
+  if (requestedReviewStatus === "rejected" && !(changes.rejectionReason ?? "").trim()) {
+    throw new ReviewError(400, "A rejection reason is required");
+  }
+
+  const { variants: _variants, commonStrengths: _strengths, commonForms: _forms, ...rest } = changes;
+  const updateValues = {
+    ...rest,
+    ...(lists ?? {}),
+    isApproved: requestedReviewStatus ? requestedReviewStatus === "approved" : changes.isApproved,
+    reviewStatus: requestedReviewStatus,
+    rejectionReason: requestedReviewStatus === "approved" ? null : changes.rejectionReason,
+    reviewedAt: requestedReviewStatus ? new Date() : undefined,
+    reviewedByHqStaffId: requestedReviewStatus ? staff.sub : undefined,
+    updatedAt: new Date(),
+  };
+  const releasing = requestedReviewStatus === "approved" && !existing.isApproved;
+  const firstVariant = variantsOf(resultingLists)[0];
+
+  const updated = await db.transaction(async (tx) => {
+    // A proposal is a held catalogue request. Releasing it and making its
+    // requesting pharmacy able to price/stock it happen in one transaction.
+    if (releasing) {
+      const [duplicate] = await tx
+        .select({ id: drugCatalogueTable.id })
+        .from(drugCatalogueTable)
+        .where(
+          and(
+            ne(drugCatalogueTable.id, id),
+            eq(drugCatalogueTable.isApproved, true),
+            sql`lower(${drugCatalogueTable.name}) = lower(${changes.name ?? existing.name})`,
+            sql`lower(${firstVariant?.strength ?? ""}) = any(select lower(value) from unnest(${drugCatalogueTable.commonStrengths}) as value)`,
+            sql`lower(${firstVariant?.form ?? ""}) = any(select lower(value) from unnest(${drugCatalogueTable.commonForms}) as value)`,
+          ),
+        )
+        .limit(1);
+      if (duplicate) {
+        throw new ReviewError(409, "An approved drug with the same name, strength, and form already exists", { duplicateDrugId: duplicate.id });
+      }
+    }
+    const [releasedDrug] = await tx
+      .update(drugCatalogueTable)
+      .set(updateValues)
+      .where(and(eq(drugCatalogueTable.id, id), eq(drugCatalogueTable.reviewStatus, existing.reviewStatus)))
+      .returning();
+    if (!releasedDrug) throw new ReviewError(409, "Drug request changed while it was being reviewed");
+    // Listings sent in a bulk upload already exist, priced and stocked:
+    // they take the approved category instead of getting a placeholder.
+    const [uploadedListing] = releasing
+      ? await tx
+          .update(pharmacyInventoryTable)
+          .set({
+            primaryCategory: resultingPrimaryCategory,
+            subcategory: resultingSubcategory,
+            requiresHqReview: false,
+            updatedAt: new Date(),
+          })
+          .where(eq(pharmacyInventoryTable.drugId, id))
+          .returning({ id: pharmacyInventoryTable.id })
+      : [];
+    if (requestedReviewStatus === "rejected") {
+      await tx
+        .update(pharmacyInventoryTable)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(pharmacyInventoryTable.drugId, id));
+    }
+    if (releasing && existing.proposedByPharmacyId && !uploadedListing) {
+      await tx.insert(pharmacyInventoryTable).values({
+        pharmacyId: existing.proposedByPharmacyId,
+        drugId: releasedDrug.id,
+        strength: firstVariant?.strength ?? null,
+        form: firstVariant?.form ?? null,
+        unitOfSale: releasedDrug.unit,
+        primaryCategory: resultingPrimaryCategory,
+        subcategory: resultingSubcategory,
+        priceLeones: "0.00",
+        stockQuantity: 0,
+        completionStatus: "incomplete",
+        isActive: true,
+      }).onConflictDoNothing();
+    }
+    return releasedDrug;
+  });
+
+  await writeAudit({
+    actorType: "hq",
+    actorId: staff.sub,
+    actorName: staff.name,
+    action:
+      requestedReviewStatus === "rejected"
+        ? "drug.reject"
+        : releasing
+          ? "drug.release"
+          : "drug.update",
+    entityType: "drug",
+    entityId: id,
+    details: { changes: updateValues },
+  });
+  if (requestedReviewStatus && existing.proposedByPharmacyId) {
+    void createPharmacyNotification({
+      pharmacyId: existing.proposedByPharmacyId,
+      title: requestedReviewStatus === "approved" ? "Drug request approved" : "Drug request rejected",
+      body: requestedReviewStatus === "approved"
+        ? `${updated.name} is now available in your catalogue. Add a price and stock to make it searchable by patients.`
+        : `Your request for ${updated.name} was rejected: ${changes.rejectionReason}`,
+      type: "drug_request_review",
+      referenceId: updated.id,
+    });
+  }
+  return updated;
+}
+
+// ── POST /hq/drugs/approve — approve several held medicines at once ──────────
+// For a bulk catalogue upload: each one passes the same checks as approving
+// it from its own form. Ones that cannot be approved yet (no category, a
+// controlled medicine without a cap) are reported and stay held.
+router.post("/approve", requireManageCatalogue, async (req: AuthRequest, res) => {
+  const body = z.object({ ids: z.array(z.string().uuid()).min(1).max(1000) }).safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Choose the medicines to approve" });
+    return;
+  }
+  const held = await db
+    .select()
+    .from(drugCatalogueTable)
+    .where(and(inArray(drugCatalogueTable.id, [...new Set(body.data.ids)]), eq(drugCatalogueTable.isApproved, false), eq(drugCatalogueTable.reviewStatus, "pending")));
+  const approved: string[] = [];
+  const notApproved: Array<{ id: string; name: string; reason: string }> = [];
+  for (const drug of held.sort((a, b) => a.name.localeCompare(b.name))) {
+    try {
+      await saveReview(drug, { isApproved: true, reviewStatus: "approved" }, req.pharmacy!);
+      approved.push(drug.id);
+    } catch (error) {
+      if (!(error instanceof ReviewError)) throw error;
+      notApproved.push({ id: drug.id, name: drug.name, reason: error.message });
+    }
+  }
+  const missing = body.data.ids.length - held.length;
+  res.json({ approved: approved.length, notApproved, alreadyReviewed: Math.max(missing, 0) });
+});
+
 // ── PATCH /hq/drugs/:id — change tier / cap / release held drug ──────────────
 router.patch("/:id", requireManageCatalogue, async (req: AuthRequest, res) => {
   const id = req.params.id as string;
@@ -175,11 +402,9 @@ router.patch("/:id", requireManageCatalogue, async (req: AuthRequest, res) => {
       genericName: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
       unit: z.string().min(1).optional(),
-      commonStrengths: z
-        .array(z.string().trim().min(1).max(50))
-        .min(1)
-        .optional(),
-      commonForms: z.array(z.string().trim().min(1).max(50)).min(1).optional(),
+      commonStrengths: listSchema.min(1).optional(),
+      commonForms: listSchema.min(1).optional(),
+      variants: variantsSchema.optional(),
       primaryCategory: primaryCategorySchema.optional(),
       subcategory: subcategorySchema.optional(),
     })
@@ -200,183 +425,13 @@ router.patch("/:id", requireManageCatalogue, async (req: AuthRequest, res) => {
     return;
   }
 
-  // Enforce the Tier-1 cap on the RESULTING record, not just the patch payload.
-  const resultingTier = body.data.tier ?? existing.tier;
-  const resultingCap =
-    body.data.maxUnitsPerOrder !== undefined
-      ? body.data.maxUnitsPerOrder
-      : existing.maxUnitsPerOrder;
-  const capError = validateTierCap(resultingTier, resultingCap);
-  if (capError) {
-    res.status(400).json({ error: capError });
-    return;
-  }
-  const resultingPrimaryCategory =
-    body.data.primaryCategory ?? existing.primaryCategory;
-  const resultingSubcategory = body.data.subcategory ?? existing.subcategory;
-  if (
-    resultingPrimaryCategory &&
-    resultingSubcategory &&
-    !isValidDrugCategoryPair(resultingPrimaryCategory, resultingSubcategory)
-  ) {
-    res
-      .status(400)
-      .json({
-        error: "The selected subcategory does not belong to that category",
-      });
-    return;
-  }
-
-  const requestedReviewStatus =
-    body.data.reviewStatus ??
-    (body.data.isApproved === true && !existing.isApproved
-      ? "approved"
-      : undefined);
-  if (requestedReviewStatus === "approved") {
-    if (
-      !resultingPrimaryCategory ||
-      !resultingSubcategory ||
-      (body.data.commonStrengths ?? existing.commonStrengths).length === 0 ||
-      (body.data.commonForms ?? existing.commonForms).length === 0
-    ) {
-      res.status(400).json({
-        error:
-          "Approved catalogue drugs require category, subcategory, common strengths, and common forms",
-      });
-      return;
-    }
-  }
-  if (
-    requestedReviewStatus === "rejected" &&
-    !(body.data.rejectionReason ?? "").trim()
-  ) {
-    res.status(400).json({ error: "A rejection reason is required" });
-    return;
-  }
-
-  const updateValues = {
-    ...body.data,
-    commonStrengths: body.data.commonStrengths
-      ? [...new Set(body.data.commonStrengths)]
-      : undefined,
-    commonForms: body.data.commonForms
-      ? [...new Set(body.data.commonForms)]
-      : undefined,
-    isApproved: requestedReviewStatus
-      ? requestedReviewStatus === "approved"
-      : body.data.isApproved,
-    reviewStatus: requestedReviewStatus,
-    rejectionReason:
-      requestedReviewStatus === "approved" ? null : body.data.rejectionReason,
-    reviewedAt: requestedReviewStatus ? new Date() : undefined,
-    reviewedByHqStaffId: requestedReviewStatus ? req.pharmacy!.sub : undefined,
-    updatedAt: new Date(),
-  };
-
-  let updated: typeof drugCatalogueTable.$inferSelect | undefined;
   try {
-    updated = await db.transaction(async (tx) => {
-      // A proposal is a held catalogue request. Releasing it and making its
-      // requesting pharmacy able to price/stock it happen in one transaction.
-      if (requestedReviewStatus === "approved" && !existing.isApproved) {
-        const [duplicate] = await tx
-          .select({ id: drugCatalogueTable.id })
-          .from(drugCatalogueTable)
-          .where(
-            and(
-              ne(drugCatalogueTable.id, id),
-              eq(drugCatalogueTable.isApproved, true),
-              sql`lower(${drugCatalogueTable.name}) = lower(${body.data.name ?? existing.name})`,
-              sql`${body.data.commonStrengths?.[0] ?? existing.commonStrengths[0]} = any(${drugCatalogueTable.commonStrengths})`,
-              sql`${body.data.commonForms?.[0] ?? existing.commonForms[0]} = any(${drugCatalogueTable.commonForms})`,
-            ),
-          )
-          .limit(1);
-        if (duplicate) throw Object.assign(new Error("DUPLICATE_DRUG"), { code: "DUPLICATE_DRUG", duplicateId: duplicate.id });
-      }
-      const [releasedDrug] = await tx
-        .update(drugCatalogueTable)
-        .set(updateValues)
-        .where(and(eq(drugCatalogueTable.id, id), eq(drugCatalogueTable.reviewStatus, existing.reviewStatus)))
-        .returning();
-      if (!releasedDrug) throw Object.assign(new Error("REQUEST_CHANGED"), { code: "REQUEST_CHANGED" });
-      // Listings sent in a bulk upload already exist, priced and stocked:
-      // they take the approved category instead of getting a placeholder.
-      const [uploadedListing] = requestedReviewStatus === "approved" && !existing.isApproved
-        ? await tx
-            .update(pharmacyInventoryTable)
-            .set({
-              primaryCategory: resultingPrimaryCategory,
-              subcategory: resultingSubcategory,
-              requiresHqReview: false,
-              updatedAt: new Date(),
-            })
-            .where(eq(pharmacyInventoryTable.drugId, id))
-            .returning({ id: pharmacyInventoryTable.id })
-        : [];
-      if (requestedReviewStatus === "rejected") {
-        await tx
-          .update(pharmacyInventoryTable)
-          .set({ isActive: false, updatedAt: new Date() })
-          .where(eq(pharmacyInventoryTable.drugId, id));
-      }
-      if (requestedReviewStatus === "approved" && !existing.isApproved && existing.proposedByPharmacyId && !uploadedListing) {
-        await tx.insert(pharmacyInventoryTable).values({
-          pharmacyId: existing.proposedByPharmacyId,
-          drugId: releasedDrug.id,
-          strength: body.data.commonStrengths?.[0] ?? existing.commonStrengths[0] ?? null,
-          form: body.data.commonForms?.[0] ?? existing.commonForms[0] ?? null,
-          unitOfSale: releasedDrug.unit,
-          primaryCategory: resultingPrimaryCategory,
-          subcategory: resultingSubcategory,
-          priceLeones: "0.00",
-          stockQuantity: 0,
-          completionStatus: "incomplete",
-          isActive: true,
-        }).onConflictDoNothing();
-      }
-      return releasedDrug;
-    });
-  } catch (error: any) {
-    if (error?.code === "DUPLICATE_DRUG") {
-      res.status(409).json({ error: "An approved drug with the same name, strength, and form already exists", duplicateDrugId: error.duplicateId });
-      return;
-    }
-    if (error?.code === "REQUEST_CHANGED") {
-      res.status(409).json({ error: "Drug request changed while it was being reviewed" });
-      return;
-    }
-    throw error;
+    const updated = await saveReview(existing, body.data, req.pharmacy!);
+    res.json(withReviewDueAt(updated));
+  } catch (error) {
+    if (!(error instanceof ReviewError)) throw error;
+    res.status(error.status).json({ error: error.message, ...error.extra });
   }
-
-  const released = requestedReviewStatus === "approved" && !existing.isApproved;
-  await writeAudit({
-    actorType: "hq",
-    actorId: req.pharmacy!.sub,
-    actorName: req.pharmacy!.name,
-    action:
-      requestedReviewStatus === "rejected"
-        ? "drug.reject"
-        : released
-          ? "drug.release"
-          : "drug.update",
-    entityType: "drug",
-    entityId: id,
-    details: { changes: updateValues },
-  });
-  if (requestedReviewStatus && existing.proposedByPharmacyId) {
-    void createPharmacyNotification({
-      pharmacyId: existing.proposedByPharmacyId,
-      title: requestedReviewStatus === "approved" ? "Drug request approved" : "Drug request rejected",
-      body: requestedReviewStatus === "approved"
-        ? `${updated!.name} is now available in your catalogue. Add a price and stock to make it searchable by patients.`
-        : `Your request for ${updated!.name} was rejected: ${body.data.rejectionReason}`,
-      type: "drug_request_review",
-      referenceId: updated!.id,
-    });
-  }
-
-  res.json(withReviewDueAt(updated!));
 });
 
 // ── DELETE /hq/drugs/:id — remove from active catalogue safely ──────────────

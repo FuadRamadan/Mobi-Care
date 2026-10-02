@@ -39,6 +39,7 @@ function serializeInventoryItem(
       unit: drug.unit,
       commonStrengths: drug.commonStrengths,
       commonForms: drug.commonForms,
+      variants: drug.variants,
       primaryCategory: drug.primaryCategory,
       subcategory: drug.subcategory,
     },
@@ -127,9 +128,9 @@ router.post("/", async (req: AuthRequest, res) => {
       .json({ error: "Drug is pending HQ approval and cannot be listed yet" });
     return;
   }
-  const validationError = validateListing(body.data, drug);
-  if (validationError) {
-    res.status(400).json({ error: validationError });
+  const checked = validateListing(body.data, drug);
+  if ("error" in checked) {
+    res.status(400).json({ error: checked.error });
     return;
   }
 
@@ -158,6 +159,8 @@ router.post("/", async (req: AuthRequest, res) => {
     .insert(pharmacyInventoryTable)
     .values({
       ...body.data,
+      strength: checked.strength,
+      form: checked.form,
       brand: normalizeBrand(body.data.brand),
       manufacturer: body.data.manufacturer.trim(),
       countryOfOrigin: body.data.countryOfOrigin.trim(),
@@ -295,11 +298,14 @@ router.patch("/:id", async (req: AuthRequest, res) => {
   };
 
   if (body.data.isActive !== false) {
-    const validationError = validateListing(merged, existing.drug);
-    if (validationError) {
-      res.status(400).json({ error: validationError });
+    const checked = validateListing(merged, existing.drug);
+    if ("error" in checked) {
+      res.status(400).json({ error: checked.error });
       return;
     }
+    // Saved as the catalogue spells them, so "tablet" and "Tablet" stay one product.
+    merged.strength = checked.strength;
+    merged.form = checked.form;
   }
 
   const primaryCategory =
@@ -332,6 +338,8 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     .update(pharmacyInventoryTable)
     .set({
       ...body.data,
+      strength: merged.strength || existing.inventory.strength,
+      form: merged.form || existing.inventory.form,
       brand: normalizeBrand(merged.brand),
       manufacturer: normalizeOptional(merged.manufacturer),
       countryOfOrigin: normalizeOptional(merged.countryOfOrigin),

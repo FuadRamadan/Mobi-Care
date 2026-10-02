@@ -6,6 +6,7 @@ import {
   integer,
   timestamp,
   pgEnum,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -37,6 +38,7 @@ export const DRUG_CATEGORY_TAXONOMY = [
       { value: "anticoagulants", label: "Anticoagulants & antiplatelets" },
       { value: "lipid_lowering", label: "Lipid-lowering medicines" },
       { value: "diuretics", label: "Diuretics" },
+      { value: "heart_failure_arrhythmia_shock", label: "Heart failure, arrhythmia & shock" },
     ],
   },
   {
@@ -70,6 +72,7 @@ export const DRUG_CATEGORY_TAXONOMY = [
       { value: "laxatives", label: "Laxatives" },
       { value: "antidiarrheals_ors", label: "Antidiarrheals & oral rehydration" },
       { value: "vitamins_minerals", label: "Vitamins & minerals" },
+      { value: "antispasmodics", label: "Antispasmodics" },
     ],
   },
   {
@@ -81,6 +84,7 @@ export const DRUG_CATEGORY_TAXONOMY = [
       { value: "corticosteroids", label: "Corticosteroids" },
       { value: "contraceptives", label: "Contraceptives" },
       { value: "maternal_health", label: "Maternal health" },
+      { value: "hormones", label: "Hormones" },
     ],
   },
   {
@@ -113,9 +117,64 @@ export const DRUG_CATEGORY_TAXONOMY = [
       { value: "plasma_expanders", label: "Plasma expanders" },
       { value: "human_albumin", label: "Human albumin" },
       { value: "haematinics", label: "Haematinics" },
+      { value: "chelating_agents", label: "Chelating agents" },
+      { value: "diluents_iv_preparation", label: "Diluents & IV preparation" },
       // "Other" is intentionally a review-only escape hatch, never a new
       // taxonomy value. The caller must supply an explanation.
       { value: "other", label: "Other (HQ review required)" },
+    ],
+  },
+  // Added in migration 0030 for medicines on the national essential medicines
+  // list that fitted none of the groups above.
+  {
+    value: "antidotes_poisoning",
+    label: "Antidotes & poisoning",
+    subcategories: [
+      { value: "antidotes", label: "Antidotes" },
+      { value: "adsorbents", label: "Adsorbents" },
+    ],
+  },
+  {
+    value: "cancer_immunosuppressants",
+    label: "Cancer & immunosuppressants",
+    subcategories: [
+      { value: "antineoplastics", label: "Cancer medicines" },
+      { value: "immunosuppressants", label: "Immunosuppressants" },
+    ],
+  },
+  {
+    value: "vaccines_immunologicals",
+    label: "Vaccines & immunologicals",
+    subcategories: [
+      { value: "vaccines", label: "Vaccines" },
+      { value: "antisera", label: "Antisera & antivenoms" },
+      { value: "immunoglobulins", label: "Immunoglobulins" },
+    ],
+  },
+  {
+    value: "eye_preparations",
+    label: "Eye preparations",
+    subcategories: [
+      { value: "glaucoma_medicines", label: "Glaucoma medicines" },
+      { value: "mydriatics", label: "Mydriatics" },
+      { value: "eye_combinations", label: "Combination eye preparations" },
+    ],
+  },
+  {
+    value: "skin_preparations",
+    label: "Skin preparations",
+    subcategories: [
+      { value: "antiseptics", label: "Antiseptics & disinfectants" },
+      { value: "emollients", label: "Emollients & barrier preparations" },
+      { value: "keratolytics", label: "Keratolytics" },
+    ],
+  },
+  {
+    value: "ear_nose_throat",
+    label: "Ear, nose & throat",
+    subcategories: [
+      { value: "ear_preparations", label: "Ear preparations" },
+      { value: "mouth_throat", label: "Mouth & throat preparations" },
     ],
   },
 ] as const;
@@ -157,6 +216,11 @@ export function isValidDrugCategoryPair(
   );
 }
 
+export interface DrugVariant {
+  strength: string;
+  form: string;
+}
+
 export const drugCatalogueTable = pgTable("drug_catalogue", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -166,6 +230,12 @@ export const drugCatalogueTable = pgTable("drug_catalogue", {
   unit: text("unit").notNull().default("tablets"), // e.g. tablets, ml, capsules
   commonStrengths: text("common_strengths").array().notNull().default([]),
   commonForms: text("common_forms").array().notNull().default([]),
+  // The strength + form combinations the medicine actually comes in, e.g.
+  // 500mg Tablet and 125mg/5ml Syrup but not 125mg/5ml Tablet. Empty means
+  // every listed strength comes in every listed form (entries made before
+  // migration 0031). When set, commonStrengths and commonForms are kept as
+  // the strengths and forms these combinations use.
+  variants: jsonb("variants").$type<DrugVariant[]>().notNull().default([]),
   primaryCategory: drugPrimaryCategoryEnum("primary_category"),
   subcategory: drugSubcategoryEnum("subcategory"),
   // Whether HQ has approved this entry. Pharmacy-proposed drugs start as false

@@ -28,6 +28,7 @@
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",
     "exceljs": "^4.4.0",
+    "jszip": "^3.10.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "google-auth-library": "^11.0.2",

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { drugCatalogueTable, pharmaciesTable, pharmacyInventoryTable } from "@workspace/db/schema";
 import {
   editDistance,
@@ -10,8 +11,10 @@ import {
   parseWholeNumber,
   parseYesNo,
   readUpload,
+  removeNotes,
   SpreadsheetError,
 } from "./table";
+import { listsFromVariants, matchVariant, withLists } from "../catalogue/variants";
 import { normalizeBrand, productKey } from "../inventory/listing";
 import { analyseInventoryUpload } from "../inventory/bulk";
 import { analyseCatalogueUpload, nameVariants, parseCategory, parseTier } from "../catalogue/bulk";
@@ -47,6 +50,7 @@ function drug(overrides: Record<string, unknown>) {
     unit: "tablets",
     commonStrengths: ["500mg"],
     commonForms: ["tablet"],
+    variants: [],
     primaryCategory: "pain_inflammation",
     subcategory: "analgesics_antipyretics",
     isApproved: true,
@@ -256,4 +260,94 @@ test("catalogue rows catch synonyms, missing tier-1 caps and typos", async () =>
   assert.match(rows[0]!.message!, /Already in the catalogue/);
   assert.match(rows[1]!.message!, /Max units per order/);
   assert.deepEqual(rows[3]!.changes.map((change) => change.field), ["Tier"]);
+});
+
+// ── Files from other tools ───────────────────────────────────────────────────
+
+/** An .xlsx with a cell note stored the way openpyxl stores it. */
+async function workbookWithForeignNote(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Inventory");
+  sheet.addRow(["Medicine", "Strength"]);
+  sheet.addRow(["Paracetamol", "500mg"]);
+  const zip = await JSZip.loadAsync(await workbook.xlsx.writeBuffer());
+  zip.file("xl/comments/comment1.xml",
+    '<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><authors><author>HQ</author></authors>' +
+    '<commentList><comment ref="A1" authorId="0"><text><t>As named in the catalogue</t></text></comment></commentList></comments>');
+  zip.file("xl/worksheets/_rels/sheet1.xml.rels",
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="/xl/comments/comment1.xml" Id="comments"/>' +
+    "</Relationships>");
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
+test("Excel files with notes saved by other tools are still read", async () => {
+  const bytes = await workbookWithForeignNote();
+  const table = await readUpload(bytes, "Inventory");
+  assert.deepEqual(table.rows.map((row) => row.cells["medicine"]), ["Paracetamol"]);
+  assert.equal(await removeNotes(Buffer.from(await new ExcelJS.Workbook().xlsx.writeBuffer())), null);
+});
+
+// ── Held medicines, capitals and strength + form combinations ────────────────
+
+test("rows naming a medicine waiting for HQ approval attach to it instead of proposing it again", async () => {
+  const heldByHq = drug({ name: "Furosemide", genericName: "Furosemide", commonStrengths: ["40mg"], commonForms: ["Tablet"], isApproved: false, reviewStatus: "pending" });
+  const request = drug({ name: "Zinc sulphate", genericName: "Zinc sulphate", commonStrengths: ["20mg"], commonForms: ["Tablet"], isApproved: false, reviewStatus: "pending", proposedByPharmacyId: crypto.randomUUID() });
+  const reader = fakeReader(new Map<unknown, unknown[]>([
+    [drugCatalogueTable, [heldByHq, request]],
+    [pharmacyInventoryTable, []],
+    [pharmaciesTable, [{ controlled: false }]],
+  ]));
+  const table = await readUpload(csv([
+    HEADER,
+    ["", "Furosemide", "40mg", "tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+    ["", "Furosemide", "80mg", "Tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+    ["", "zinc sulphate", "10mg", "dispersible tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+    ["", "Furosemid", "40mg", "Tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+  ]), "Inventory");
+  const { rows } = await analyseInventoryUpload(pharmacyId, table, reader);
+  assert.deepEqual(rows.map((row) => row.status), ["review", "error", "review", "error"]);
+  assert.match(rows[0]!.message!, /Furosemide is waiting for MobiCare HQ approval/);
+  assert.match(rows[1]!.message!, /comes in: 40mg/);
+  assert.match(rows[2]!.message!, /added to the request/);
+  assert.match(rows[3]!.message!, /Did you mean Furosemide/);
+});
+
+test("strength and form are matched ignoring capitals and must be a real combination", async () => {
+  const paracetamol = drug({
+    commonStrengths: ["500mg", "125mg/5ml"],
+    commonForms: ["Tablet", "Syrup"],
+    variants: [{ strength: "500mg", form: "Tablet" }, { strength: "125mg/5ml", form: "Syrup" }],
+  });
+  const reader = fakeReader(new Map<unknown, unknown[]>([
+    [drugCatalogueTable, [paracetamol]],
+    [pharmacyInventoryTable, []],
+    [pharmaciesTable, [{ controlled: false }]],
+  ]));
+  const table = await readUpload(csv([
+    HEADER,
+    ["", "Paracetamol", "500MG", "tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+    ["", "Paracetamol", "125mg/5ml", "Tablet", "Pack of 10", "", "Emzor", "Nigeria", "10", "5", future, ""],
+  ]), "Inventory");
+  const { rows } = await analyseInventoryUpload(pharmacyId, table, reader);
+  assert.deepEqual(rows.map((row) => row.status), ["new", "error"]);
+  assert.match(rows[1]!.message!, /Paracetamol Tablet does not come in 125mg\/5ml. It comes in: 500mg/);
+});
+
+test("combinations: saved spelling, every-pair shorthand, and edits to the lists", () => {
+  const entry = { name: "Paracetamol", commonStrengths: ["500mg", "125mg/5ml"], commonForms: ["Tablet", "Syrup"], variants: [{ strength: "500mg", form: "Tablet" }, { strength: "125mg/5ml", form: "Syrup" }] };
+  assert.deepEqual(matchVariant(entry, "500mg", "TABLET"), { strength: "500mg", form: "Tablet" });
+  assert.ok("error" in matchVariant(entry, "500mg", "Syrup"));
+  // Every strength in every form is stored as "no restriction".
+  assert.deepEqual(listsFromVariants([{ strength: "5mg", form: "tablet" }, { strength: "10mg", form: "Tablet" }]), {
+    commonStrengths: ["5mg", "10mg"], commonForms: ["Tablet"], variants: [],
+  });
+  // A new form comes in every strength; a removed strength takes its pairs with it.
+  const edited = withLists(entry, ["500mg"], ["Tablet", "Suppository"]);
+  assert.deepEqual(edited, { commonStrengths: ["500mg"], commonForms: ["Tablet", "Suppository"], variants: [] });
+  const added = withLists(entry, ["500mg", "125mg/5ml", "1g"], ["Tablet", "Syrup"]);
+  assert.deepEqual(added.variants, [
+    { strength: "500mg", form: "Tablet" }, { strength: "125mg/5ml", form: "Syrup" },
+    { strength: "1g", form: "Tablet" }, { strength: "1g", form: "Syrup" },
+  ]);
 });
