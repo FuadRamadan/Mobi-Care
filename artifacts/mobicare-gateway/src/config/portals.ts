@@ -22,5 +22,28 @@ export const PORTALS = {
   },
 } as const;
 
-/** Contact path for pharmacies requesting to become a partner. */
-export const PARTNER_CONTACT_EMAIL = 'partners@mobicare.sl';
+/** MobiCare's one contact address: patients, pharmacies and legal questions. */
+export const CONTACT_EMAIL = 'mobicaresl00@gmail.com';
+
+/**
+ * "Request to become a partner" opens the pharmacy's email app with the
+ * details HQ needs to verify them already listed, so requests arrive complete.
+ */
+export const PARTNER_REQUEST_MAILTO = `mailto:${CONTACT_EMAIL}?${new URLSearchParams({
+  subject: 'Pharmacy partner request',
+  body: [
+    'Hello MobiCare,',
+    '',
+    'We would like to join MobiCare as a partner pharmacy.',
+    '',
+    'Pharmacy name:',
+    'Pharmacy Board licence number:',
+    'Address (street, town, district):',
+    'Contact person:',
+    'Phone number:',
+    'Opening hours:',
+    'Do you offer delivery? (yes/no):',
+    '',
+    'Please attach a photo of your Pharmacy Board licence.',
+  ].join('\n'),
+}).toString().replace(/\+/g, '%20')}`;

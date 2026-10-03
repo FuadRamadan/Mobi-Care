@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { CONTACT_EMAIL, PARTNER_REQUEST_MAILTO } from "@/config/portals";
 
 export default function Footer() {
   return (
@@ -40,12 +41,12 @@ export default function Footer() {
             <h4 className="font-display font-semibold text-white mb-4">Support</h4>
             <ul className="space-y-3">
               <li>
-                <a href="mailto:support@mobicare.sl" className="text-sm text-secondary/70 hover:text-white transition-colors">
-                  support@mobicare.sl
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm text-secondary/70 hover:text-white transition-colors break-all">
+                  {CONTACT_EMAIL}
                 </a>
               </li>
               <li>
-                <a href="mailto:partners@mobicare.sl" className="text-sm text-secondary/70 hover:text-white transition-colors">
+                <a href={PARTNER_REQUEST_MAILTO} className="text-sm text-secondary/70 hover:text-white transition-colors">
                   Partner with us
                 </a>
               </li>

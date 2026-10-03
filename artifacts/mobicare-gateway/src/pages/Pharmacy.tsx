@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Store, TrendingUp, Users, Mail, Lock } from "lucide-react";
 import PolicyHighlights from "@/components/PolicyHighlights";
-import { PORTALS, PARTNER_CONTACT_EMAIL } from "@/config/portals";
+import { PORTALS, PARTNER_REQUEST_MAILTO } from "@/config/portals";
 
 export default function Pharmacy() {
   return (
@@ -44,7 +44,7 @@ export default function Pharmacy() {
                 To ensure quality and trust, there is NO self-registration for pharmacies. MobiCare HQ issues credentials directly to verified, licensed partners.
               </p>
               <a 
-                href={`mailto:${PARTNER_CONTACT_EMAIL}`}
+                href={PARTNER_REQUEST_MAILTO}
                 className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
               >
                 <Mail className="w-4 h-4" />

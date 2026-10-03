@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Mail, Phone } from "lucide-react";
+import { CONTACT_EMAIL } from "@/config/portals";
 import PolicyHighlights from "@/components/PolicyHighlights";
 
 // ─── Floating medical element SVGs ───────────────────────────────────────────
@@ -340,8 +341,8 @@ export default function Home() {
             >
               <Mail className="w-7 h-7 text-primary" />
               <p className="text-xs text-white/60 uppercase tracking-widest font-semibold">Email</p>
-              <a href="mailto:mobicaresl00@gmail.com" className="text-sm font-medium text-white hover:text-primary transition-colors break-all">
-                mobicaresl00@gmail.com
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-medium text-white hover:text-primary transition-colors break-all">
+                {CONTACT_EMAIL}
               </a>
             </motion.div>
 
