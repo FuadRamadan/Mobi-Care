@@ -17,7 +17,8 @@ import jwt from "jsonwebtoken";
  * button). Set GOOGLE_CLIENT_ID to override; several IDs may be given,
  * separated by commas, for example when the phone app gets its own.
  */
-export const DEFAULT_GOOGLE_CLIENT_ID = "";
+export const DEFAULT_GOOGLE_CLIENT_ID =
+  "865493816982-qo5ijnh6avfijud9pdf1ib8lkfaao3uh.apps.googleusercontent.com";
 
 const GOOGLE_ISSUERS: [string, string] = ["accounts.google.com", "https://accounts.google.com"];
 const GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs";
