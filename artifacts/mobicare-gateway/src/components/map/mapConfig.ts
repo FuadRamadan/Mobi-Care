@@ -11,9 +11,11 @@ import 'leaflet/dist/leaflet.css';
  */
 export const TILE_URL =
   import.meta.env.VITE_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+// The credit link opens in a new tab: a mis-tap near the map's edge must not
+// navigate away and throw away a zone or pin someone is placing.
 export const TILE_ATTRIBUTION =
   import.meta.env.VITE_MAP_TILE_ATTRIBUTION ||
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
 
 /** Central Freetown: where every map opens until there is something to show. */
 export const FREETOWN: L.LatLngTuple = [8.465, -13.235];
@@ -81,12 +83,16 @@ export function createMap(element: HTMLElement, options: L.MapOptions = {}): L.M
   L.tileLayer(TILE_URL, {
     maxZoom: 19,
     attribution: TILE_ATTRIBUTION,
-    // The site sends no referrer anywhere (Referrer-Policy: no-referrer), but
-    // OpenStreetMap's tile servers refuse tiles requested without one, which
-    // left every map blank. Map tiles alone send the site's origin
-    // (https://mobicaresl.com/), never the page's path.
+    // OpenStreetMap's tile servers refuse tiles requested without a referrer,
+    // which once left every map blank. Tiles send only the site's origin
+    // (https://mobicaresl.com/), never the page's path, whatever the site's
+    // own Referrer-Policy says.
     referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
+  // Leaflet's own credit link, also in a new tab (see TILE_ATTRIBUTION).
+  map.attributionControl?.setPrefix(
+    '<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>',
+  );
   return map;
 }
 
