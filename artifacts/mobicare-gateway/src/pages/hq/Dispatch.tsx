@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, MapPin, Phone, Store } from 'lucide-react';
 import {
   useListDispatchOrders,
   useListCouriers,
@@ -8,6 +9,7 @@ import {
   useConfirmDeliveryByHq,
   getListDispatchOrdersQueryKey,
   getGetHqDashboardQueryKey,
+  type HqOrder,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import HqLayout from './HqLayout';
@@ -16,6 +18,73 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+
+/** Google Maps link to the patient's delivery pin, when they dropped one. */
+function mapLink(o: HqOrder): string | null {
+  const lat = Number(o.deliveryLatitude);
+  const lng = Number(o.deliveryLongitude);
+  if (o.deliveryLatitude == null || o.deliveryLongitude == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+/** Everything the courier needs, as one message HQ can paste into WhatsApp or SMS. */
+function courierBriefing(o: HqOrder): string {
+  const map = mapLink(o);
+  return [
+    `MobiCare delivery for ${o.patientName}`,
+    `Collect from: ${[o.pharmacyName, o.pharmacyAddress].filter(Boolean).join(', ') || '—'}${o.pharmacyPhone ? ` (${o.pharmacyPhone})` : ''}`,
+    `Deliver to: ${o.deliveryAddress?.trim() || 'no directions given'}${o.deliveryZoneName ? ` — ${o.deliveryZoneName}` : ''}`,
+    `Patient phone: ${o.patientPhone}`,
+    map ? `Map: ${map}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+function DeliveryDetails({ order: o, onCopy }: { order: HqOrder; onCopy: () => void }) {
+  const map = mapLink(o);
+  return (
+    <div className="grid gap-3 rounded-lg bg-muted/50 p-3 text-sm sm:grid-cols-2" data-testid={`delivery-details-${o.id}`}>
+      <div className="space-y-1 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deliver to</p>
+        <p className="flex items-start gap-1.5">
+          <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+          <span className="break-words">
+            {o.deliveryAddress?.trim() || <span className="text-muted-foreground">No directions given</span>}
+            {o.deliveryZoneName && <span className="text-muted-foreground"> · {o.deliveryZoneName}</span>}
+          </span>
+        </p>
+        <p className="flex items-center gap-1.5">
+          <Phone className="w-4 h-4 shrink-0 text-primary" />
+          <a href={`tel:${o.patientPhone}`} className="font-medium hover:underline" data-testid={`link-patient-phone-${o.id}`}>{o.patientPhone}</a>
+        </p>
+        {map && (
+          <a href={map} target="_blank" rel="noreferrer" className="inline-block text-primary font-medium hover:underline" data-testid={`link-map-${o.id}`}>
+            Open the patient's pin in Google Maps
+          </a>
+        )}
+      </div>
+      <div className="space-y-1 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Collect from</p>
+        <p className="flex items-start gap-1.5">
+          <Store className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+          <span className="break-words">
+            {o.pharmacyName ?? '—'}
+            {o.pharmacyAddress && <span className="text-muted-foreground"> · {o.pharmacyAddress}</span>}
+          </span>
+        </p>
+        {o.pharmacyPhone && (
+          <p className="flex items-center gap-1.5">
+            <Phone className="w-4 h-4 shrink-0 text-primary" />
+            <a href={`tel:${o.pharmacyPhone}`} className="hover:underline">{o.pharmacyPhone}</a>
+          </p>
+        )}
+        <Button size="sm" variant="outline" className="mt-1" onClick={onCopy} data-testid={`button-copy-briefing-${o.id}`}>
+          <Copy className="w-3.5 h-3.5 mr-1.5" />
+          Copy details for courier
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function HqDispatch() {
   const queryClient = useQueryClient();
@@ -51,6 +120,14 @@ export default function HqDispatch() {
     if (!window.confirm('Mark this order as delivered? Use this only when the patient has received the order but cannot confirm delivery.')) return;
     confirmDelivery.mutate({ id: orderId });
   };
+  const copyBriefing = async (o: HqOrder) => {
+    try {
+      await navigator.clipboard.writeText(courierBriefing(o));
+      toast({ title: 'Copied', description: 'Paste it into WhatsApp or SMS for the courier.' });
+    } catch {
+      toast({ title: 'Could not copy', description: 'Select the details and copy them by hand.', variant: 'destructive' });
+    }
+  };
   return (
     <HqLayout title="Dispatch">
       <p className="text-sm text-muted-foreground mb-4">
@@ -64,7 +141,8 @@ export default function HqDispatch() {
         <div className="grid gap-3">
           {orders.map((o) => (
             <Card key={o.id} data-testid={`card-dispatch-${o.id}`}>
-              <CardContent className="p-4 flex flex-wrap items-center gap-4 justify-between">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-4 justify-between">
                 <div className="min-w-0">
                   <div className="font-medium">
                     {o.patientName}
@@ -162,6 +240,8 @@ export default function HqDispatch() {
                     </Button>
                   )}
                 </div>
+                </div>
+                <DeliveryDetails order={o} onCopy={() => void copyBriefing(o)} />
               </CardContent>
             </Card>
           ))}

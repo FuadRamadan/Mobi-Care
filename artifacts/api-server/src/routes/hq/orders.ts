@@ -35,7 +35,12 @@ async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
       : Promise.resolve([]),
     pharmacyIds.length
       ? db
-          .select({ id: pharmaciesTable.id, name: pharmaciesTable.name })
+          .select({
+            id: pharmaciesTable.id,
+            name: pharmaciesTable.name,
+            address: pharmaciesTable.address,
+            phone: pharmaciesTable.phone,
+          })
           .from(pharmaciesTable)
           .where(inArray(pharmaciesTable.id, pharmacyIds))
       : Promise.resolve([]),
@@ -56,16 +61,19 @@ async function hydrateOrders(orders: (typeof ordersTable.$inferSelect)[]) {
   for (const item of items) {
     (itemsByOrder[item.orderId] ??= []).push(item);
   }
-  const pharmacyById: Record<string, string> = Object.fromEntries(
-    pharmacies.map((p) => [p.id, p.name]),
-  );
+  const pharmacyById: Record<string, (typeof pharmacies)[number]> =
+    Object.fromEntries(pharmacies.map((p) => [p.id, p]));
   const courierById: Record<string, (typeof couriers)[number]> =
     Object.fromEntries(couriers.map((c) => [c.id, c]));
 
   return orders.map((o) => ({
     ...o,
     items: itemsByOrder[o.id] ?? [],
-    pharmacyName: pharmacyById[o.pharmacyId] ?? null,
+    pharmacyName: pharmacyById[o.pharmacyId]?.name ?? null,
+    // Where the courier collects from, alongside the patient's delivery
+    // details already on the order row.
+    pharmacyAddress: pharmacyById[o.pharmacyId]?.address ?? null,
+    pharmacyPhone: pharmacyById[o.pharmacyId]?.phone ?? null,
     courier: o.courierId
       ? (() => {
           const courier = courierById[o.courierId];

@@ -1444,8 +1444,32 @@ export interface HqOrder {
   pharmacyId: string;
   /** @nullable */
   pharmacyName?: string | null;
+  /**
+     * Where the courier collects the order.
+     * @nullable
+     */
+  pharmacyAddress?: string | null;
+  /** @nullable */
+  pharmacyPhone?: string | null;
   patientName: string;
   patientPhone: string;
+  /**
+     * Landmark and directions the patient gave for the rider.
+     * @nullable
+     */
+  deliveryAddress?: string | null;
+  /**
+     * Latitude of the patient's delivery pin.
+     * @nullable
+     */
+  deliveryLatitude?: string | null;
+  /**
+     * Longitude of the patient's delivery pin.
+     * @nullable
+     */
+  deliveryLongitude?: string | null;
+  /** @nullable */
+  deliveryZoneName?: string | null;
   status: HqOrderStatus;
   fulfillmentType: HqOrderFulfillmentType;
   idChecked: boolean;

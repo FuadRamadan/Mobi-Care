@@ -5145,10 +5145,26 @@ components:
           type: string
         pharmacyName:
           type: ["string", "null"]
+        pharmacyAddress:
+          type: ["string", "null"]
+          description: Where the courier collects the order.
+        pharmacyPhone:
+          type: ["string", "null"]
         patientName:
           type: string
         patientPhone:
           type: string
+        deliveryAddress:
+          type: ["string", "null"]
+          description: Landmark and directions the patient gave for the rider.
+        deliveryLatitude:
+          type: ["string", "null"]
+          description: Latitude of the patient's delivery pin.
+        deliveryLongitude:
+          type: ["string", "null"]
+          description: Longitude of the patient's delivery pin.
+        deliveryZoneName:
+          type: ["string", "null"]
         status:
           type: string
           enum:

@@ -100,9 +100,11 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     if (
       newestNotificationId.current &&
       newestNotificationId.current !== newest.id &&
-      (newest.type === 'new_order' || newest.type === 'order_ready')
+      (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready')
     ) {
-      toast.info(newest.title, { description: newest.body });
+      toast.info(newest.title, {
+        description: <span className="whitespace-pre-line break-words">{newest.body}</span>,
+      });
     }
     newestNotificationId.current = newest.id;
   }, [notifications]);
@@ -268,8 +270,8 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                   ) : (
                     notifications.slice(0, 8).map((notification) => (
                       <Link
-                         key={notification.id}
-                        href="/hq/orders"
+                        key={notification.id}
+                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : '/hq/orders'}
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',
                           !notification.readAt && 'bg-primary/5',
@@ -285,7 +287,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                           )} />
                           <div className="min-w-0">
                             <p className="text-sm font-medium">{notification.title}</p>
-                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{notification.body}</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground whitespace-pre-line break-words">{notification.body}</p>
                             <p className="mt-1 text-[11px] text-muted-foreground">
                               {new Date(notification.createdAt).toLocaleString()}
                             </p>

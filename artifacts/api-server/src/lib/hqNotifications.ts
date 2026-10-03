@@ -6,7 +6,7 @@ import { logger } from "./logger.js";
 type HqNotificationPayload = {
   title: string;
   body: string;
-  type: "new_order" | "order_ready";
+  type: "new_order" | "order_ready" | "delivery_ready";
   referenceId: string;
 };
 
@@ -55,6 +55,47 @@ export async function notifyHqOfNewOrder(order: Order, pharmacyName: string): Pr
   );
 }
 
+/** Google Maps link to the pin the patient dropped, when the order has one. */
+export function deliveryMapLink(order: Pick<Order, "deliveryLatitude" | "deliveryLongitude">): string | null {
+  if (order.deliveryLatitude == null || order.deliveryLongitude == null) return null;
+  const lat = Number(order.deliveryLatitude);
+  const lng = Number(order.deliveryLongitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+/**
+ * The "order ready" alert text. A delivery order carries everything HQ needs
+ * to brief the courier — the patient's phone, the directions they gave, the
+ * zone and a map link to their pin — so nobody has to look the order up.
+ */
+export function orderReadyMessage(
+  order: Pick<
+    Order,
+    | "patientName"
+    | "patientPhone"
+    | "fulfillmentType"
+    | "deliveryAddress"
+    | "deliveryZoneName"
+    | "deliveryLatitude"
+    | "deliveryLongitude"
+  >,
+  pharmacyName: string,
+): string {
+  if (order.fulfillmentType !== "delivery") {
+    return `${order.patientName}'s collection order at ${pharmacyName} is ready.`;
+  }
+  const lines = [
+    `${order.patientName}'s delivery order at ${pharmacyName} is packed. Assign a courier.`,
+    `Patient phone: ${order.patientPhone}`,
+    `Deliver to: ${order.deliveryAddress?.trim() || "no directions given"}`,
+  ];
+  if (order.deliveryZoneName) lines.push(`Zone: ${order.deliveryZoneName}`);
+  const map = deliveryMapLink(order);
+  if (map) lines.push(`Map: ${map}`);
+  return lines.join("\n");
+}
+
 /**
  * Alert every active HQ staff member when a pharmacy finishes preparing an order.
  * This is fire-and-forget safe: an alert write cannot undo the ready transition.
@@ -65,9 +106,11 @@ export async function notifyHqOfOrderReady(
 ): Promise<void> {
   await notifyActiveHqStaff(
     {
-      title: "Order ready",
-      body: `${order.patientName}'s ${order.fulfillmentType} order at ${pharmacyName} is ready.`,
-      type: "order_ready",
+      title: order.fulfillmentType === "delivery" ? "Delivery ready for a courier" : "Order ready",
+      body: orderReadyMessage(order, pharmacyName),
+      // Delivery orders get their own type so HQ opens Dispatch, where the
+      // courier is assigned, instead of the order list.
+      type: order.fulfillmentType === "delivery" ? "delivery_ready" : "order_ready",
       referenceId: order.id,
     },
     order.id,
