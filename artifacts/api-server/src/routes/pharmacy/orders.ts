@@ -16,6 +16,7 @@ import {
   notificationForStatus,
 } from "../../lib/patientNotifications.js";
 import { notifyHqOfOrderReady } from "../../lib/hqNotifications.js";
+import { pharmacyOrderView } from "../../lib/pharmacyOrderView.js";
 
 const router = safeRouter();
 
@@ -120,7 +121,7 @@ router.get("/", async (req: AuthRequest, res) => {
 
   res.json(
     orders.map((o) => ({
-      ...o,
+      ...pharmacyOrderView(o),
       items: itemsByOrder[o.id] ?? [],
     })),
   );
@@ -222,7 +223,7 @@ router.patch("/:id/status", async (req: AuthRequest, res) => {
     }
   }
 
-  res.json(updated);
+  res.json(pharmacyOrderView(updated));
 });
 
 // ── Mark collected (collection path — Tier-1 ID check) ───────────────────────
@@ -320,7 +321,7 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
     }
   }
 
-  res.json(updated);
+  res.json(pharmacyOrderView(updated));
 });
 
 // ── Mark picked up (delivery path — courier handoff) ─────────────────────────
@@ -392,7 +393,7 @@ router.post("/:id/picked-up", async (req: AuthRequest, res) => {
     }
   }
 
-  res.json(updated);
+  res.json(pharmacyOrderView(updated));
 });
 
 export default router;

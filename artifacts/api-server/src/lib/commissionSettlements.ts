@@ -59,6 +59,10 @@ export async function generateDailyCommissionSettlements(
     .where(
       and(
         inArray(ordersTable.status, [...COMPLETED_ORDER_STATUSES]),
+        // Only orders the pharmacy was paid for directly: it holds the money
+        // and owes MobiCare the fee. With Monime the commission is kept
+        // before the pharmacy is paid, so nothing is owed (payouts: phase 2).
+        eq(ordersTable.paymentProvider, "direct"),
         sql`to_char(${ordersTable.completedAt} AT TIME ZONE ${businessTimezone}, 'YYYY-MM-DD') = ${settlementDate}`,
       ),
     )

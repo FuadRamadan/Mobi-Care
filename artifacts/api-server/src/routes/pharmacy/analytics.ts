@@ -139,7 +139,7 @@ router.get("/commission", async (req: AuthRequest, res) => {
       grossCollectedMinor: sql<number>`coalesce(sum(${orders.patientMedicineTotalMinor} + ${orders.deliveryFeeMinor}),0)::int`,
       drugAmountTotalMinor: sql<number>`coalesce(sum(${orders.pharmacyMedicineTotalMinor}),0)::int`,
       commissionDueMinor: sql<number>`coalesce(sum(${orders.medicineCommissionMinor}),0)::int`,
-    }).from(orders).where(and(eq(orders.pharmacyId, pharmacyId), inArray(orders.status, ["delivered", "collected"]), sql`to_char(${orders.completedAt} AT TIME ZONE ${BUSINESS_TIMEZONE}, 'YYYY-MM-DD') = ${businessDateNow()}`)),
+    }).from(orders).where(and(eq(orders.pharmacyId, pharmacyId), eq(orders.paymentProvider, "direct"), inArray(orders.status, ["delivered", "collected"]), sql`to_char(${orders.completedAt} AT TIME ZONE ${BUSINESS_TIMEZONE}, 'YYYY-MM-DD') = ${businessDateNow()}`)),
     db.select({ amount: sql<number>`coalesce(sum(${commissionSettlementsTable.balanceMinor}),0)::int` }).from(commissionSettlementsTable).where(and(eq(commissionSettlementsTable.pharmacyId, pharmacyId), inArray(commissionSettlementsTable.status, ["unpaid", "partially_paid"]))),
     db.select().from(commissionSettlementsTable).where(and(eq(commissionSettlementsTable.pharmacyId, pharmacyId), gte(commissionSettlementsTable.settlementDate, start), lte(commissionSettlementsTable.settlementDate, end))).orderBy(commissionSettlementsTable.settlementDate),
   ]);

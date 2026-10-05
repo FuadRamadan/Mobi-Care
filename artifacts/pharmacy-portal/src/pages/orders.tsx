@@ -350,20 +350,25 @@ function OrderDetailsSheet({
                       {formatLeones((order.pharmacyMedicineTotalMinor ?? 0) / 100)}
                     </TableCell>
                   </TableRow>
-                  <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={3} className="py-2 font-medium">
-                      MobiCare service fee, paid by the patient ({(order.medicineMarkupBasisPoints ?? 500) / 100}%)
-                    </TableCell>
-                    <TableCell className="py-2 text-right font-semibold">
-                      {formatLeones((order.patientServiceFeeMinor ?? order.medicineCommissionMinor ?? 0) / 100)}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={3} className="py-3 font-semibold">Total paid by patient</TableCell>
-                    <TableCell className="py-3 text-right font-bold text-primary">
-                      {formatLeones((order.patientMedicineTotalMinor ?? 0) / 100)}
-                    </TableCell>
-                  </TableRow>
+                  {/* Orders paid directly to the pharmacy: it collects the
+                      whole amount and owes MobiCare the fee, so it sees both.
+                      Online (Monime) orders: only its own commission. */}
+                  {order.pricingModel !== "split_v1" && (
+                    <>
+                      <TableRow className="bg-muted/10 hover:bg-muted/10">
+                        <TableCell colSpan={3} className="py-2 font-medium">MobiCare service fee (5%)</TableCell>
+                        <TableCell className="py-2 text-right font-semibold">
+                          {formatLeones((order.medicineCommissionMinor ?? 0) / 100)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="bg-muted/10 hover:bg-muted/10">
+                        <TableCell colSpan={3} className="py-3 font-semibold">Total paid by patient</TableCell>
+                        <TableCell className="py-3 text-right font-bold text-primary">
+                          {formatLeones((order.patientMedicineTotalMinor ?? 0) / 100)}
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  )}
                   {(order.pharmacyCommissionMinor ?? 0) > 0 && (
                     <TableRow className="bg-muted/10 hover:bg-muted/10" data-testid="row-pharmacy-commission">
                       <TableCell colSpan={3} className="py-2 font-medium">MobiCare commission (5% of your prices)</TableCell>
