@@ -267,6 +267,20 @@ export interface Order {
   deliveryFeeMinor?: number;
   courierPayoutMinor?: number;
   deliveryCommissionMinor?: number;
+  /** Service fee the patient paid on top of the medicine prices. */
+  patientServiceFeeMinor?: number;
+  /** Commission kept from the pharmacy's price (split pricing). */
+  pharmacyCommissionMinor?: number;
+  /** 'patient_fee_v1' (patient pays 5%) or 'split_v1' (patient 2%, pharmacy 5%) */
+  pricingModel?: string;
+  /** 'direct' (paid to the pharmacy) or 'monime' (payment link) */
+  paymentProvider?: string;
+  /** @nullable */
+  payableSince?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  latePaymentStatus?: string | null;
   /** @nullable */
   completedAt?: string | null;
   /** @nullable */
@@ -825,6 +839,63 @@ export interface OrderPrescriptionInfo {
   status: OrderPrescriptionInfoStatus;
   /** @nullable */
   rejectReason?: string | null;
+}
+
+export type PaymentsConfigProvider = typeof PaymentsConfigProvider[keyof typeof PaymentsConfigProvider];
+
+
+export const PaymentsConfigProvider = {
+  monime: 'monime',
+  direct: 'direct',
+} as const;
+
+export interface PaymentsConfig {
+  provider: PaymentsConfigProvider;
+  /** The patient service fee rate (200 = 2%). */
+  serviceFeeBasisPoints: number;
+  /** False while Monime can't be reached. */
+  available: boolean;
+}
+
+export type CheckoutLinkStatus = typeof CheckoutLinkStatus[keyof typeof CheckoutLinkStatus];
+
+
+export const CheckoutLinkStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export interface CheckoutLink {
+  status: CheckoutLinkStatus;
+  /** @nullable */
+  redirectUrl: string | null;
+  /** @nullable */
+  expireTime: string | null;
+}
+
+export interface OrderPaymentLink {
+  /** creating, pending, completed, expired, cancelled, deleted or failed */
+  status: string;
+  /** @nullable */
+  redirectUrl: string | null;
+  /** @nullable */
+  expireTime: string | null;
+}
+
+export interface OrderPayment {
+  orderStatus: string;
+  paymentProvider: string;
+  paid: boolean;
+  /** @nullable */
+  latePaymentStatus: string | null;
+  /** @nullable */
+  payableSince: string | null;
+  /**
+     * When the payment window closes.
+     * @nullable
+     */
+  payBy: string | null;
+  link: OrderPaymentLink | null;
 }
 
 export type PatientOrder = Order & ({

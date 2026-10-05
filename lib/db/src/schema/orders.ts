@@ -114,6 +114,32 @@ export const ordersTable = pgTable("orders", {
   deliveryCommissionMinor: integer("delivery_commission_minor")
     .notNull()
     .default(0),
+  // The two halves of medicineCommissionMinor (always their sum): the
+  // service fee the patient pays on top, and the commission kept from the
+  // pharmacy's price. See pricingModel.
+  patientServiceFeeMinor: integer("patient_service_fee_minor")
+    .notNull()
+    .default(0),
+  pharmacyCommissionMinor: integer("pharmacy_commission_minor")
+    .notNull()
+    .default(0),
+  /**
+   * 'patient_fee_v1': patient pays a 5% service fee, pharmacy keeps its price.
+   * 'split_v1': patient pays 2%, pharmacy pays a 5% commission (with Monime).
+   */
+  pricingModel: text("pricing_model").notNull().default("patient_fee_v1"),
+
+  // ── Payment ───────────────────────────────────────────────────────────────
+  /** 'direct' (patient pays the pharmacy) or 'monime' (payment link). */
+  paymentProvider: text("payment_provider").notNull().default("direct"),
+  /**
+   * When the patient may start paying: placed, or for a prescription order
+   * when the pharmacist approved it. The payment window counts from here.
+   */
+  payableSince: timestamp("payable_since", { withTimezone: true }),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  /** A payment after expiry or cancellation: 'revived' or 'refund_needed'. */
+  latePaymentStatus: text("late_payment_status"),
 
   // Optional: reference to a prescription that was reviewed for this order.
   prescriptionId: uuid("prescription_id"),

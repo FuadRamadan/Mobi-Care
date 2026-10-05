@@ -29,6 +29,9 @@ export async function expireStaleOrders(): Promise<number> {
     .where(
       and(
         eq(ordersTable.status, "awaiting_payment"),
+        // Monime orders have their own 2-hour window and must have their
+        // payment links closed first (lib/monime/service.ts).
+        eq(ordersTable.paymentProvider, "direct"),
         lt(ordersTable.createdAt, paymentCutoff()),
       ),
     )

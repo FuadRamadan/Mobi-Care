@@ -13,9 +13,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { formatLeones, formatDate, StatusBadge, EmptyState } from '@/pages/hq/shared';
+import { OrderPayment } from './OrderPayment';
 
 const DELIVERY_STEPS: { key: string; label: string; hint: string }[] = [
-  { key: 'paid', label: 'Payment recorded', hint: 'Orange Money payment received' },
+  { key: 'paid', label: 'Payment received', hint: 'Your payment is confirmed' },
   { key: 'confirmed', label: 'Pharmacy confirmed', hint: 'The pharmacist accepted your order' },
   { key: 'packaging', label: 'Being prepared', hint: 'Your medicines are being packed' },
   { key: 'ready', label: 'Ready for dispatch', hint: 'Waiting for a rider' },
@@ -26,7 +27,7 @@ const DELIVERY_STEPS: { key: string; label: string; hint: string }[] = [
 ];
 
 const COLLECTION_STEPS: { key: string; label: string; hint: string }[] = [
-  { key: 'paid', label: 'Payment recorded', hint: 'Orange Money payment received' },
+  { key: 'paid', label: 'Payment received', hint: 'Your payment is confirmed' },
   { key: 'confirmed', label: 'Pharmacy confirmed', hint: 'The pharmacist accepted your order' },
   { key: 'packaging', label: 'Being prepared', hint: 'Your medicines are being packed' },
   { key: 'ready', label: 'Ready for collection', hint: 'Bring your ID to the pharmacy' },
@@ -162,6 +163,8 @@ export default function OrderDetail() {
         </CardContent>
       </Card>
 
+      {o.paymentProvider === 'monime' && <OrderPayment order={o} />}
+
       {canCancel && (
         <Card className="border-destructive/30" data-testid="card-cancel-order">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -179,7 +182,11 @@ export default function OrderDetail() {
               className="shrink-0"
               disabled={cancelOrder.isPending}
               onClick={() => {
-                if (window.confirm('Cancel this order? This action cannot be undone.')) {
+                const paidOnline = o.paymentProvider === 'monime' && Boolean(o.paidAt);
+                const question = paidOnline
+                  ? 'Cancel this paid order? MobiCare will refund your payment; Monime\'s fees (about 2%) are not refunded. This cannot be undone.'
+                  : 'Cancel this order? This action cannot be undone.';
+                if (window.confirm(question)) {
                   cancelOrder.mutate({ id: o.id });
                 }
               }}
@@ -300,6 +307,14 @@ export default function OrderDetail() {
               </div>
             </div>
           ))}
+          {(o.patientServiceFeeMinor ?? 0) > 0 && (
+            <div className="flex items-center justify-between p-4 text-sm" data-testid="text-order-service-fee">
+              <span className="text-muted-foreground">
+                Service fee ({(o.medicineMarkupBasisPoints ?? 500) / 100}%)
+              </span>
+              <span>{formatLeones((o.patientServiceFeeMinor ?? 0) / 100)}</span>
+            </div>
+          )}
           {o.fulfillmentType === 'delivery' && (o.deliveryFeeMinor ?? 0) > 0 && (
             <div className="flex items-center justify-between p-4 text-sm">
               <span className="text-muted-foreground">
@@ -309,7 +324,7 @@ export default function OrderDetail() {
             </div>
           )}
           <div className="flex items-center justify-between p-4">
-            <span className="font-medium">Total paid</span>
+            <span className="font-medium">{o.status === 'awaiting_payment' && !o.paidAt ? 'Total to pay' : 'Total paid'}</span>
             <span className="font-display font-bold text-lg text-dark-green">{formatLeones(o.totalLeones)}</span>
           </div>
         </CardContent>

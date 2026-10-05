@@ -351,8 +351,12 @@ function OrderDetailsSheet({
                     </TableCell>
                   </TableRow>
                   <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={3} className="py-2 font-medium">MobiCare service fee (5%)</TableCell>
-                    <TableCell className="py-2 text-right font-semibold">{formatLeones((order.medicineCommissionMinor ?? 0) / 100)}</TableCell>
+                    <TableCell colSpan={3} className="py-2 font-medium">
+                      MobiCare service fee, paid by the patient ({(order.medicineMarkupBasisPoints ?? 500) / 100}%)
+                    </TableCell>
+                    <TableCell className="py-2 text-right font-semibold">
+                      {formatLeones((order.patientServiceFeeMinor ?? order.medicineCommissionMinor ?? 0) / 100)}
+                    </TableCell>
                   </TableRow>
                   <TableRow className="bg-muted/10 hover:bg-muted/10">
                     <TableCell colSpan={3} className="py-3 font-semibold">Total paid by patient</TableCell>
@@ -360,9 +364,21 @@ function OrderDetailsSheet({
                       {formatLeones((order.patientMedicineTotalMinor ?? 0) / 100)}
                     </TableCell>
                   </TableRow>
+                  {(order.pharmacyCommissionMinor ?? 0) > 0 && (
+                    <TableRow className="bg-muted/10 hover:bg-muted/10" data-testid="row-pharmacy-commission">
+                      <TableCell colSpan={3} className="py-2 font-medium">MobiCare commission (5% of your prices)</TableCell>
+                      <TableCell className="py-2 text-right font-semibold">
+                        −{formatLeones((order.pharmacyCommissionMinor ?? 0) / 100)}
+                      </TableCell>
+                    </TableRow>
+                  )}
                   <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={3} className="py-2 font-medium">Pharmacy settlement amount</TableCell>
-                    <TableCell className="py-2 text-right font-semibold">{formatLeones((order.pharmacyMedicineTotalMinor ?? 0) / 100)}</TableCell>
+                    <TableCell colSpan={3} className="py-2 font-medium">
+                      {order.paymentProvider === "monime" ? "You receive (after delivery or collection)" : "Pharmacy settlement amount"}
+                    </TableCell>
+                    <TableCell className="py-2 text-right font-semibold">
+                      {formatLeones(((order.pharmacyMedicineTotalMinor ?? 0) - (order.pharmacyCommissionMinor ?? 0)) / 100)}
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

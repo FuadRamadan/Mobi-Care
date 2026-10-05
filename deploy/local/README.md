@@ -57,6 +57,24 @@ Everything it creates lives in `.local/`, which is git-ignored. `--fresh`
 deletes it and starts over; `--no-build` skips the rebuild when restarting;
 `--port N` serves somewhere other than 8080.
 
+## Online payments (Monime) locally
+
+`--monime` switches on Monime payments against a **fake Monime**
+(`fake-monime.mjs`, port 9100). It answers the parts of Monime's API that
+MobiCare uses: payment links, payments, and a test payment page where you
+"pay" with a test Orange Money or AfriMoney wallet or cancel. It sends the
+webhooks back to the local site. No real money and no Monime account are
+involved, and it is never deployed.
+
+```bash
+bash deploy/local/run.sh --monime
+```
+
+Then add a medicine to the cart and tap **Place order and pay**. Test helpers:
+`POST http://localhost:9100/__admin/expire/<link id>` expires a payment link,
+`POST http://localhost:9100/__admin/fail-next?count=N` makes Monime answer 503
+N times, and `GET http://localhost:9100/__admin/state` shows everything it holds.
+
 ## Photos work
 
 Prescriptions, profile photos, courier and team photos and advertisements all

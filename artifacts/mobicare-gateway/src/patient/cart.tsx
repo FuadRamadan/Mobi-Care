@@ -6,7 +6,8 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { MobileMoneyLine } from "@workspace/api-client-react";
+import { usePatientPaymentsConfig, type MobileMoneyLine } from "@workspace/api-client-react";
+import { usePatientAuth } from "@/patient/auth";
 
 const CART_KEY = "mc_pt_cart";
 
@@ -54,6 +55,12 @@ interface CartValue {
   clear: () => void;
   subtotalLeones: number;
   serviceFeeLeones: number;
+  /** The patient service fee rate: 500 (5%) today, 200 (2%) with Monime. */
+  serviceFeeBasisPoints: number;
+  /** 'monime' (pay online through a payment link) or 'direct' (pay the pharmacy). */
+  paymentProvider: "monime" | "direct";
+  /** False while Monime can't be reached: orders can't be paid online. */
+  paymentsAvailable: boolean;
   totalLeones: number;
   itemCount: number;
   prescriptionRequired: boolean;
@@ -156,7 +163,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
     0,
   );
-  const serviceFeeMinor = Math.round((subtotalMinor * 5) / 100);
+  // The fee rate comes from the server, which also prices the order itself;
+  // this only shows the patient the same figure in advance.
+  const { user } = usePatientAuth();
+  const { data: payments } = usePatientPaymentsConfig({
+    query: { enabled: Boolean(user), staleTime: 5 * 60_000, retry: false } as never,
+  });
+  const serviceFeeBasisPoints = payments?.serviceFeeBasisPoints ?? 500;
+  const paymentProvider = payments?.provider === "monime" ? "monime" : "direct";
+  const paymentsAvailable = payments?.available ?? true;
+  const serviceFeeMinor = Math.round((subtotalMinor * serviceFeeBasisPoints) / 10_000);
   const subtotalLeones = subtotalMinor / 100;
   const serviceFeeLeones = serviceFeeMinor / 100;
   const totalLeones = (subtotalMinor + serviceFeeMinor) / 100;
@@ -174,6 +190,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clear,
         subtotalLeones,
         serviceFeeLeones,
+        serviceFeeBasisPoints,
+        paymentProvider,
+        paymentsAvailable,
         totalLeones,
         itemCount,
         prescriptionRequired,

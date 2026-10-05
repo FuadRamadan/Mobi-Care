@@ -3,6 +3,8 @@ import { logger } from "./lib/logger";
 import { assertSecretsAreSafe } from "./lib/secrets";
 import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
 import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
+import { monimeConfig } from "./lib/monime/config";
+import { startMonimeJobs, stopMonimeJobs } from "./lib/monime/service";
 import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -186,6 +188,13 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "Monime payments (migration 0033)",
+      query: sql`
+        SELECT to_regclass(current_schema() || '.monime_checkout_sessions')
+          IS NOT NULL AS exists
+      `,
+    },
+    {
       label: "Google sign-in for patients (migration 0032)",
       query: sql`
         SELECT EXISTS (
@@ -281,6 +290,13 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start(): Promise<void> {
   assertSecretsAreSafe();
+  // Monime settings are checked before anything else: a misconfigured payment
+  // setup must stop the server, not take payments the wrong way.
+  const payments = monimeConfig();
+  logger.info(
+    payments ? { provider: "monime", mode: payments.mode } : { provider: "direct" },
+    payments ? `Payments: Monime (${payments.mode} mode)` : "Payments: patients pay the pharmacy directly",
+  );
   // Said out loud before the first query: a driver that cannot reach the host
   // fails as a slow connection timeout, which does not point at the cause.
   logger.info(
@@ -297,12 +313,14 @@ async function start(): Promise<void> {
     );
     startOrderExpirySweep();
     startCommissionSettlementSweep();
+    startMonimeJobs();
   });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Graceful shutdown started");
     stopOrderExpirySweep();
     stopCommissionSettlementSweep();
+    stopMonimeJobs();
     server.close(async (error) => {
       if (error) logger.error({ err: error }, "HTTP server close failed");
       await pool.end().catch((err) =>

@@ -25,6 +25,7 @@ import {
 } from "../../lib/delivery/pricing.js";
 import { quoteForPharmacy } from "../../lib/delivery/zones.js";
 import { expireStaleOrders, paymentCutoff } from "../../lib/orderExpiry.js";
+import { deductOrderStock, PaymentClaimError } from "../../lib/orderPayment.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
 import {
@@ -41,10 +42,15 @@ import {
   decimalLeonesToMinor,
   minorToLeones,
 } from "../../lib/financialSettings.js";
+import { priceOrder } from "../../lib/financialAllocation.js";
+import { monimeEnabled } from "../../lib/monime/config.js";
 import {
-  calculateOrderPricing,
-  SERVICE_FEE_BASIS_POINTS,
-} from "../../lib/financialAllocation.js";
+  CheckoutRefused,
+  closeLinksBeforeCancel,
+  paymentStatus,
+  startCheckout,
+} from "../../lib/monime/service.js";
+import { notifyHqOfPaymentIssue } from "../../lib/hqNotifications.js";
 
 const router = safeRouter();
 
@@ -312,6 +318,27 @@ router.post("/:id/cancel", async (req: AuthRequest, res) => {
     "ready",
   ] as const;
 
+  // An unpaid Monime order: delete its payment links first. If payment has
+  // already started, wait for it rather than cancel an order being paid.
+  const [current] = await db
+    .select({ status: ordersTable.status, paymentProvider: ordersTable.paymentProvider })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.id, id), eq(ordersTable.patientId, patientId)))
+    .limit(1);
+  if (current?.paymentProvider === "monime" && current.status === "awaiting_payment") {
+    const links = await closeLinksBeforeCancel(id);
+    if (links !== "ok") {
+      res.status(409).json({
+        error:
+          links === "paid"
+            ? "Your payment has just come through, so the order is going ahead. Refresh to see it."
+            : "A payment for this order is in progress. Wait a minute, then try again.",
+        code: links === "paid" ? "ORDER_PAID" : "PAYMENT_IN_PROGRESS",
+      });
+      return;
+    }
+  }
+
   let cancelled: typeof ordersTable.$inferSelect;
   let previous: typeof ordersTable.$inferSelect;
   try {
@@ -402,6 +429,15 @@ router.post("/:id/cancel", async (req: AuthRequest, res) => {
     details: { from: previous.status, to: cancelled.status },
   });
   void notifyPharmacyOfPatientCancellation(cancelled);
+  // Paid through Monime and cancelled before the money was released: HQ
+  // refunds it by hand until refunds are automated (phase 3).
+  if (cancelled.paymentProvider === "monime" && previous.paidAt) {
+    void notifyHqOfPaymentIssue(
+      cancelled,
+      "Refund needed",
+      "The patient cancelled a paid order before it was delivered or collected. Refund the payer by hand.",
+    );
+  }
   res.json((await hydratePatientOrders([cancelled]))[0]);
 });
 
@@ -628,10 +664,15 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
-  const {
-    serviceFeeMinor: medicineCommissionMinor,
-    totalPaidMinor: patientMedicineTotalMinor,
-  } = calculateOrderPricing(pharmacyMedicineTotalMinor);
+  // With Monime on, the new fee split applies (decided 5 Oct 2026): the
+  // patient pays 2% on top and the pharmacy gives up 5% when the money is
+  // released. Otherwise today's 5% patient fee stays.
+  const viaMonime = monimeEnabled();
+  const pricing = priceOrder(
+    pharmacyMedicineTotalMinor,
+    viaMonime ? "split_v1" : "patient_fee_v1",
+  );
+  const { medicineCommissionMinor, patientMedicineTotalMinor } = pricing;
   // Delivery is priced by zone and fixed on the order now, so a later fee
   // change never alters what this patient was quoted. The whole fee is
   // MobiCare's: its own riders deliver, so there is no separate courier payout.
@@ -673,9 +714,16 @@ router.post("/", async (req: AuthRequest, res) => {
           deliveryZoneName: deliveryQuote?.zoneName ?? null,
           deliveryPricing: deliveryQuote?.pricing ?? null,
           status: "awaiting_payment",
-          paymentMethod: "orange_money",
+          paymentMethod: viaMonime ? "monime" : "orange_money",
+          paymentProvider: viaMonime ? "monime" : "direct",
+          // A prescription order can be paid only once the pharmacist has
+          // approved it; its payment window starts then.
+          payableSince: viaMonime && prescriptionRequired ? null : new Date(),
+          pricingModel: pricing.pricingModel,
+          patientServiceFeeMinor: pricing.patientServiceFeeMinor,
+          pharmacyCommissionMinor: pricing.pharmacyCommissionMinor,
           totalLeones: total,
-          medicineMarkupBasisPoints: SERVICE_FEE_BASIS_POINTS,
+          medicineMarkupBasisPoints: pricing.serviceFeeBasisPoints,
           pharmacyMedicineTotalMinor,
           medicineCommissionMinor,
           patientMedicineTotalMinor,
@@ -788,6 +836,53 @@ router.post("/", async (req: AuthRequest, res) => {
   res.status(201).json((await hydratePatientOrders([createdOrder]))[0]);
 });
 
+// ── POST /patient/orders/:id/checkout: the Monime payment link ──────────────
+// Returns the link to send the patient to (an existing live one, or a new
+// one). Built on the server from the saved order; the browser sends nothing
+// but the order ID.
+const isOrderId = (id: unknown) => z.string().uuid().safeParse(id).success;
+
+router.post("/:id/checkout", async (req: AuthRequest, res) => {
+  const patientId = req.pharmacy!.sub;
+  if (!isOrderId(req.params.id)) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  try {
+    const link = await startCheckout(req.params.id as string, patientId);
+    res.json(link);
+  } catch (err) {
+    if (err instanceof CheckoutRefused) {
+      res.status(err.status).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// ── Payment state for the patient's screen ──────────────────────────────────
+// GET reads our records; POST …/check also asks Monime about the latest link
+// (throttled), used while the patient waits on "Confirming your payment…".
+async function sendPaymentStatus(req: AuthRequest, res: Parameters<Parameters<typeof router.get>[1]>[1], sync: boolean) {
+  const patientId = req.pharmacy!.sub;
+  if (!isOrderId(req.params.id)) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.id, req.params.id as string), eq(ordersTable.patientId, patientId)))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  res.json(await paymentStatus(order, sync));
+}
+router.get("/:id/payment", (req: AuthRequest, res) => sendPaymentStatus(req, res, false));
+router.post("/:id/payment/check", (req: AuthRequest, res) => sendPaymentStatus(req, res, true));
+
 // ── POST /patient/orders/:id/pay — record mobile-money payment ────────────────
 // No live gateway yet: this records the payment intent and moves the order to
 // 'paid' so the pharmacy can start fulfilment.
@@ -802,6 +897,13 @@ router.post("/:id/pay", async (req: AuthRequest, res) => {
     .limit(1);
   if (!order) {
     res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.paymentProvider === "monime") {
+    res.status(409).json({
+      error: "This order is paid through the MobiCare payment link.",
+      code: "PAY_WITH_MONIME",
+    });
     return;
   }
   if (order.status !== "awaiting_payment") {
@@ -833,53 +935,11 @@ router.post("/:id/pay", async (req: AuthRequest, res) => {
         });
       }
 
-      const items = await tx
-        .select({
-          inventoryId: orderItemsTable.inventoryId,
-          quantity: orderItemsTable.quantity,
-        })
-        .from(orderItemsTable)
-        .where(eq(orderItemsTable.orderId, id));
-      if (items.length === 0 || items.some((item) => !item.inventoryId)) {
-        throw Object.assign(new Error("INCOMPLETE_ORDER_ITEMS"), {
-          code: "INCOMPLETE_ORDER_ITEMS",
-        });
-      }
-
-      for (const item of items) {
-        const deducted = await tx
-          .update(pharmacyInventoryTable)
-          .set({
-            stockQuantity: sql`${pharmacyInventoryTable.stockQuantity} - ${item.quantity}`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(pharmacyInventoryTable.id, item.inventoryId!),
-              eq(pharmacyInventoryTable.pharmacyId, claimed.pharmacyId),
-              eq(pharmacyInventoryTable.isActive, true),
-              eq(pharmacyInventoryTable.completionStatus, "complete"),
-              gt(
-                pharmacyInventoryTable.expiryDate,
-                new Date().toISOString().slice(0, 10),
-              ),
-              gte(pharmacyInventoryTable.stockQuantity, item.quantity),
-            ),
-          )
-          .returning({ id: pharmacyInventoryTable.id });
-        if (deducted.length === 0) {
-          throw Object.assign(new Error("OUT_OF_STOCK"), {
-            code: "OUT_OF_STOCK",
-          });
-        }
-      }
+      await deductOrderStock(tx, claimed);
       return claimed;
     });
   } catch (err: any) {
-    if (
-      err?.code === "OUT_OF_STOCK" ||
-      err?.code === "INCOMPLETE_ORDER_ITEMS"
-    ) {
+    if (err instanceof PaymentClaimError) {
       res.status(409).json({
         error:
           "Stock changed before payment — please review your cart and place the order again",

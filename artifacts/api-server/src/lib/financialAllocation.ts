@@ -27,6 +27,68 @@ export function calculateOrderPricing(drugSubtotalMinor: number) {
   };
 }
 
+/** With Monime: the patient pays 2% on top, the pharmacy gives up 5%. */
+export const SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS = 200;
+export const SPLIT_PHARMACY_COMMISSION_BASIS_POINTS = 500;
+
+export type PricingModel = "patient_fee_v1" | "split_v1";
+
+export interface OrderPricing {
+  pricingModel: PricingModel;
+  /** The pharmacy's own prices, added up. */
+  pharmacyMedicineTotalMinor: number;
+  /** Paid by the patient on top of the medicine prices. */
+  patientServiceFeeMinor: number;
+  /** Kept from the pharmacy's price when the money is released. */
+  pharmacyCommissionMinor: number;
+  /** MobiCare's medicine revenue: service fee + commission. */
+  medicineCommissionMinor: number;
+  /** What the patient pays for the medicines. */
+  patientMedicineTotalMinor: number;
+  /** What the pharmacy receives for the medicines. */
+  pharmacyPayoutMinor: number;
+  /** Shown on the order: the service fee rate, in basis points. */
+  serviceFeeBasisPoints: number;
+}
+
+const percentOf = (amountMinor: number, basisPoints: number) =>
+  Math.round((amountMinor * basisPoints) / 10_000);
+
+/**
+ * How an order's medicine money divides between patient, pharmacy and
+ * MobiCare. Each percentage is rounded once per order (half up), and the
+ * parts always add up exactly.
+ *
+ * - 'patient_fee_v1' (today): patient pays 5% on top; pharmacy keeps its price.
+ * - 'split_v1' (with Monime): patient pays 2% on top; pharmacy pays 5%.
+ */
+export function priceOrder(
+  pharmacyMedicineTotalMinor: number,
+  pricingModel: PricingModel,
+): OrderPricing {
+  if (!Number.isSafeInteger(pharmacyMedicineTotalMinor) || pharmacyMedicineTotalMinor < 0) {
+    throw new Error("pharmacyMedicineTotalMinor must be a non-negative safe integer");
+  }
+  const split = pricingModel === "split_v1";
+  const serviceFeeBasisPoints = split
+    ? SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS
+    : SERVICE_FEE_BASIS_POINTS;
+  const patientServiceFeeMinor = percentOf(pharmacyMedicineTotalMinor, serviceFeeBasisPoints);
+  const pharmacyCommissionMinor = split
+    ? percentOf(pharmacyMedicineTotalMinor, SPLIT_PHARMACY_COMMISSION_BASIS_POINTS)
+    : 0;
+  return {
+    pricingModel,
+    pharmacyMedicineTotalMinor,
+    patientServiceFeeMinor,
+    pharmacyCommissionMinor,
+    medicineCommissionMinor: patientServiceFeeMinor + pharmacyCommissionMinor,
+    patientMedicineTotalMinor: pharmacyMedicineTotalMinor + patientServiceFeeMinor,
+    pharmacyPayoutMinor: pharmacyMedicineTotalMinor - pharmacyCommissionMinor,
+    serviceFeeBasisPoints,
+  };
+}
+
 /**
  * Allocates the order-level basis-point commission in whole minor units.
  * Largest fractional remainders receive the extra units; the stable key makes

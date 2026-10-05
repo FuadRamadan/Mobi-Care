@@ -6,7 +6,7 @@ import {
   ordersTable,
   orderItemsTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
@@ -213,6 +213,33 @@ router.post("/:id/approve", async (req: AuthRequest, res) => {
     details: { approvedDrugIds },
   });
 
+  // A Monime order waits for this approval before it can be paid; the
+  // patient's 2-hour payment window starts now.
+  if (updated.orderId) {
+    const [opened] = await db
+      .update(ordersTable)
+      .set({ payableSince: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(ordersTable.id, updated.orderId),
+          eq(ordersTable.paymentProvider, "monime"),
+          eq(ordersTable.status, "awaiting_payment"),
+          isNull(ordersTable.payableSince),
+        ),
+      )
+      .returning();
+    if (opened?.patientId) {
+      void createPatientNotification({
+        patientId: opened.patientId,
+        patientPhone: opened.patientPhone,
+        title: "Prescription approved: you can pay now ✓",
+        body: "Open your order and tap Pay within 2 hours to confirm it.",
+        type: "prescription_approved",
+        referenceId: opened.id,
+      });
+    }
+  }
+
   const { imageKey: _k, ...safe } = updated;
   res.json(safe);
 });
@@ -279,6 +306,22 @@ router.post("/:id/reject", async (req: AuthRequest, res) => {
     entityId: id,
     details: { reason: body.data.reason },
   });
+
+  // An unpaid Monime order can't go ahead without the prescription; nothing
+  // was charged, so it is simply cancelled.
+  if (updated.orderId) {
+    await db
+      .update(ordersTable)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(ordersTable.id, updated.orderId),
+          eq(ordersTable.paymentProvider, "monime"),
+          eq(ordersTable.status, "awaiting_payment"),
+          isNull(ordersTable.paidAt),
+        ),
+      );
+  }
 
   // Notify the patient about the prescription rejection — this is the most
   // actionable notification: they need to know and may need to re-upload.

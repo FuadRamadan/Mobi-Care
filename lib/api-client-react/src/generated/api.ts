@@ -32,6 +32,7 @@ import type {
   CatalogueImportPreview,
   CatalogueImportResult,
   ChangePasswordInput,
+  CheckoutLink,
   CollectedConfirmation,
   CommissionSettlement,
   CommissionSettlementHistory,
@@ -112,6 +113,7 @@ import type {
   OrangeSmsTestInput,
   OrangeSmsTestResult,
   Order,
+  OrderPayment,
   OrderStatusUpdate,
   PasswordChangeResult,
   PasswordPolicy,
@@ -131,6 +133,7 @@ import type {
   PatientProfileUpdate,
   PatientRegisterInput,
   PatientSearchDrugsParams,
+  PaymentsConfig,
   PharmacyCommissionAnalytics,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
@@ -3528,6 +3531,302 @@ export const useCancelPatientOrder = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCancelPatientOrderMutationOptions(options));
+    }
+
+export const getPatientPaymentsConfigUrl = () => {
+
+
+
+
+  return `/api/patient/payments/config`
+}
+
+/**
+ * @summary How this site takes payment (Monime payment link or pay the pharmacy)
+ */
+export const patientPaymentsConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<PaymentsConfig> => {
+
+  return customFetch<PaymentsConfig>(getPatientPaymentsConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPatientPaymentsConfigQueryKey = () => {
+    return [
+    `/api/patient/payments/config`
+    ] as const;
+    }
+
+
+export const getPatientPaymentsConfigQueryOptions = <TData = Awaited<ReturnType<typeof patientPaymentsConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientPaymentsConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPatientPaymentsConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof patientPaymentsConfig>>> = ({ signal }) => patientPaymentsConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patientPaymentsConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PatientPaymentsConfigQueryResult = NonNullable<Awaited<ReturnType<typeof patientPaymentsConfig>>>
+export type PatientPaymentsConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary How this site takes payment (Monime payment link or pay the pharmacy)
+ */
+
+export function usePatientPaymentsConfig<TData = Awaited<ReturnType<typeof patientPaymentsConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientPaymentsConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPatientPaymentsConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPatientStartCheckoutUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/orders/${id}/checkout`
+}
+
+/**
+ * @summary The Monime payment link for an unpaid order (existing live link or a new one)
+ */
+export const patientStartCheckout = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<CheckoutLink> => {
+
+  return customFetch<CheckoutLink>(getPatientStartCheckoutUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPatientStartCheckoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patientStartCheckout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patientStartCheckout>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['patientStartCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patientStartCheckout>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  patientStartCheckout(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatientStartCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof patientStartCheckout>>>
+
+    export type PatientStartCheckoutMutationError = ErrorType<void>
+
+    /**
+ * @summary The Monime payment link for an unpaid order (existing live link or a new one)
+ */
+export const usePatientStartCheckout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patientStartCheckout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patientStartCheckout>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getPatientStartCheckoutMutationOptions(options));
+    }
+
+export const getPatientGetOrderPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/orders/${id}/payment`
+}
+
+/**
+ * @summary The order's payment state, from MobiCare's records
+ */
+export const patientGetOrderPayment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OrderPayment> => {
+
+  return customFetch<OrderPayment>(getPatientGetOrderPaymentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPatientGetOrderPaymentQueryKey = (id: string,) => {
+    return [
+    `/api/patient/orders/${id}/payment`
+    ] as const;
+    }
+
+
+export const getPatientGetOrderPaymentQueryOptions = <TData = Awaited<ReturnType<typeof patientGetOrderPayment>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientGetOrderPayment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPatientGetOrderPaymentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof patientGetOrderPayment>>> = ({ signal }) => patientGetOrderPayment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patientGetOrderPayment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PatientGetOrderPaymentQueryResult = NonNullable<Awaited<ReturnType<typeof patientGetOrderPayment>>>
+export type PatientGetOrderPaymentQueryError = ErrorType<void>
+
+
+/**
+ * @summary The order's payment state, from MobiCare's records
+ */
+
+export function usePatientGetOrderPayment<TData = Awaited<ReturnType<typeof patientGetOrderPayment>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientGetOrderPayment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPatientGetOrderPaymentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPatientCheckOrderPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/orders/${id}/payment/check`
+}
+
+/**
+ * @summary Checks the latest payment link with Monime now (throttled), then returns the payment state
+ */
+export const patientCheckOrderPayment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OrderPayment> => {
+
+  return customFetch<OrderPayment>(getPatientCheckOrderPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPatientCheckOrderPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patientCheckOrderPayment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patientCheckOrderPayment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['patientCheckOrderPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patientCheckOrderPayment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  patientCheckOrderPayment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatientCheckOrderPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof patientCheckOrderPayment>>>
+
+    export type PatientCheckOrderPaymentMutationError = ErrorType<void>
+
+    /**
+ * @summary Checks the latest payment link with Monime now (throttled), then returns the payment state
+ */
+export const usePatientCheckOrderPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patientCheckOrderPayment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patientCheckOrderPayment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getPatientCheckOrderPaymentMutationOptions(options));
     }
 
 export const getPatientPayOrderUrl = (id: string,) => {

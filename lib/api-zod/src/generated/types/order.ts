@@ -26,6 +26,20 @@ export interface Order {
   deliveryFeeMinor?: number;
   courierPayoutMinor?: number;
   deliveryCommissionMinor?: number;
+  /** Service fee the patient paid on top of the medicine prices. */
+  patientServiceFeeMinor?: number;
+  /** Commission kept from the pharmacy's price (split pricing). */
+  pharmacyCommissionMinor?: number;
+  /** 'patient_fee_v1' (patient pays 5%) or 'split_v1' (patient 2%, pharmacy 5%) */
+  pricingModel?: string;
+  /** 'direct' (paid to the pharmacy) or 'monime' (payment link) */
+  paymentProvider?: string;
+  /** @nullable */
+  payableSince?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  /** @nullable */
+  latePaymentStatus?: string | null;
   /** @nullable */
   completedAt?: string | null;
   /** @nullable */

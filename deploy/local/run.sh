@@ -34,11 +34,15 @@ STORAGE_PORT=9000
 DB_NAME=mobicare
 fresh=false
 build=true
+monime=false
+MONIME_FAKE_PORT=9100
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fresh) fresh=true; shift ;;
     --no-build) build=false; shift ;;
+    # Payments through a local fake Monime (deploy/local/fake-monime.mjs).
+    --monime) monime=true; shift ;;
     --port) PORT="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
@@ -238,8 +242,30 @@ DATABASE_URL="$DATABASE_URL" node "$STATE/seed.cjs"
 
 # ── API ──────────────────────────────────────────────────────────────────────
 
+MONIME_ENV=()
+if $monime; then
+  check_port "$MONIME_FAKE_PORT" "fake Monime"
+  echo "==> Starting the fake Monime on port $MONIME_FAKE_PORT (local tests only)"
+  WEBHOOK_TOKEN="local-fake-monime-webhook-token-not-secret-0001"
+  FAKE_MONIME_PORT="$MONIME_FAKE_PORT" \
+  FAKE_MONIME_WEBHOOK_URL="http://127.0.0.1:$PORT/api/webhooks/monime" \
+  FAKE_MONIME_WEBHOOK_TOKEN="$WEBHOOK_TOKEN" \
+    node deploy/local/fake-monime.mjs > "$LOGS/fake-monime.log" 2>&1 &
+  pids+=($!)
+  MONIME_ENV=(
+    PAYMENTS_PROVIDER=monime
+    MONIME_MODE=test
+    MONIME_ACCESS_TOKEN=mon_test_local_fake_token
+    MONIME_SPACE_ID=spc-localfake
+    MONIME_BASE_URL="http://127.0.0.1:$MONIME_FAKE_PORT"
+    MONIME_WEBHOOK_HEADER_TOKEN="$WEBHOOK_TOKEN"
+    PUBLIC_APP_URL="http://localhost:$PORT"
+  )
+fi
+
 check_port "$PORT" "MobiCare"
 echo "==> Starting MobiCare on port $PORT"
+env "${MONIME_ENV[@]}" \
 NODE_ENV=development \
 PORT="$PORT" \
 LOG_LEVEL=info \

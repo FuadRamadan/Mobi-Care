@@ -14,6 +14,7 @@ import {
   usePatientCreateOrder,
   usePatientUploadPrescription,
   usePatientPayOrder,
+  usePatientStartCheckout,
   usePatientDeliveryCoverage,
   usePatientDeliveryQuote,
   type DeliveryQuote,
@@ -44,6 +45,9 @@ export default function Checkout() {
     clear,
     subtotalLeones,
     serviceFeeLeones,
+    serviceFeeBasisPoints,
+    paymentProvider,
+    paymentsAvailable,
     totalLeones,
     prescriptionRequired,
     collectionOnly,
@@ -65,12 +69,15 @@ export default function Checkout() {
   const uploadMutation = usePatientUploadPrescription();
   const createMutation = usePatientCreateOrder();
   const payMutation = usePatientPayOrder();
+  const checkoutMutation = usePatientStartCheckout();
+  const payOnline = paymentProvider === "monime";
   const quoteMutation = usePatientDeliveryQuote();
   const { data: coverage } = usePatientDeliveryCoverage();
   const busy =
     uploadMutation.isPending ||
     createMutation.isPending ||
-    payMutation.isPending;
+    payMutation.isPending ||
+    checkoutMutation.isPending;
 
   if (!cart || cart.items.length === 0) {
     return (
@@ -206,6 +213,36 @@ export default function Checkout() {
           })),
         },
       });
+
+      if (payOnline) {
+        // Pay through Monime. The order is saved first; the payment link is
+        // made on the server from the saved order.
+        clear();
+        await queryClient.invalidateQueries();
+        if (prescriptionRequired) {
+          toast({
+            title: "Order placed",
+            description: "A pharmacist will check your prescription first. We'll let you know when you can pay.",
+          });
+          navigate(`/app/orders/${order.id}`);
+          return;
+        }
+        try {
+          const link = await checkoutMutation.mutateAsync({ id: order.id });
+          if (link.status === "pending" && link.redirectUrl) {
+            window.location.assign(link.redirectUrl);
+            return;
+          }
+        } catch (err) {
+          toast({
+            title: "Order saved: payment not started",
+            description: errorBody(err).error ?? "Open the order and tap Pay to try again.",
+            variant: "destructive",
+          });
+        }
+        navigate(`/app/orders/${order.id}`);
+        return;
+      }
 
       // Record the mobile-money payment (no live gateway yet).
       await payMutation.mutateAsync({ id: order.id });
@@ -491,7 +528,8 @@ export default function Checkout() {
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Payment method</span>
             <span className="inline-flex items-center gap-1.5 font-medium">
-              <Smartphone className="w-4 h-4 text-orange-money" /> Orange Money
+              <Smartphone className="w-4 h-4 text-orange-money" />{" "}
+              {payOnline ? "Mobile money, card or bank" : "Orange Money"}
             </span>
           </div>
           <div className="space-y-1.5 pt-2 border-t">
@@ -505,7 +543,7 @@ export default function Checkout() {
               </div>
             ))}
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Service fee (5%)</span>
+              <span className="text-muted-foreground">Service fee ({serviceFeeBasisPoints / 100}%)</span>
               <span>{formatLeones(serviceFeeLeones)}</span>
             </div>
             {isDelivery && (
@@ -528,6 +566,21 @@ export default function Checkout() {
               {formatLeones(payableLeones)}
             </span>
           </div>
+          {payOnline ? (
+          <div className="pt-2" data-testid="text-pay-online">
+            <p className="text-sm font-medium mb-1">Pay securely online</p>
+            <p className="text-xs text-muted-foreground">
+              {prescriptionRequired
+                ? "A pharmacist checks your prescription first. Then you pay online with Orange Money, AfriMoney, a card or a bank account."
+                : "Next you'll pay on Monime's secure page with Orange Money, AfriMoney, a card or a bank account. Someone else can pay the link for you too."}
+            </p>
+            {!paymentsAvailable && (
+              <p className="text-xs text-destructive mt-2">
+                Online payment is unavailable right now. Please try again in a few minutes.
+              </p>
+            )}
+          </div>
+          ) : (
           <div className="pt-2">
             <p className="text-sm font-medium mb-1">Pay directly to the pharmacy</p>
             <p className="text-xs text-muted-foreground mb-2">
@@ -541,20 +594,23 @@ export default function Checkout() {
               />
             </div>
           </div>
+          )}
           <Button
             className="w-full rounded-full h-12 text-base mt-2"
             onClick={placeOrder}
-            disabled={busy || deliveryBlocked || collectionBlocked || deliveryNotReady}
+            disabled={busy || deliveryBlocked || collectionBlocked || deliveryNotReady || (payOnline && !paymentsAvailable)}
             data-testid="button-place-order"
           >
             {busy
-              ? "Placing order…"
-              : `Place order`}
+              ? payOnline ? "Opening payment…" : "Placing order…"
+              : payOnline && !prescriptionRequired ? `Place order and pay ${formatLeones(payableLeones)}` : "Place order"}
           </Button>
-          <p className="text-[11px] text-muted-foreground text-center">
-            Mobile-money payment is recorded with your order — you'll confirm on
-            your phone when live payments launch.
-          </p>
+          {!payOnline && (
+            <p className="text-[11px] text-muted-foreground text-center">
+              Mobile-money payment is recorded with your order — you'll confirm on
+              your phone when live payments launch.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

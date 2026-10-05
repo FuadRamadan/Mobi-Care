@@ -652,6 +652,51 @@ CREATE TABLE "public"."hq_staff" (
 
 
 --
+-- Name: monime_checkout_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."monime_checkout_sessions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "order_id" "uuid" NOT NULL,
+    "attempt" integer NOT NULL,
+    "idempotency_key" "text" NOT NULL,
+    "request_body" "jsonb" NOT NULL,
+    "amount_minor" integer NOT NULL,
+    "status" "text" DEFAULT 'creating'::"text" NOT NULL,
+    "monime_session_id" "text",
+    "monime_order_number" "text",
+    "redirect_url" "text",
+    "expire_time" timestamp with time zone,
+    "monime_payment_id" "text",
+    "fees" "jsonb",
+    "payer_channel" "text",
+    "payer_provider" "text",
+    "monime_request_id" "text",
+    "last_synced_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
+-- Name: monime_webhook_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."monime_webhook_events" (
+    "event_id" "text" NOT NULL,
+    "name" "text" NOT NULL,
+    "object_type" "text",
+    "object_id" "text",
+    "event_timestamp" timestamp with time zone,
+    "payload" "jsonb" NOT NULL,
+    "outcome" "text" DEFAULT 'received'::"text" NOT NULL,
+    "detail" "text",
+    "received_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "processed_at" timestamp with time zone
+);
+
+
+--
 -- Name: notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -717,6 +762,13 @@ CREATE TABLE "public"."orders" (
     "delivery_fee_minor" integer DEFAULT 0 NOT NULL,
     "courier_payout_minor" integer DEFAULT 0 NOT NULL,
     "delivery_commission_minor" integer DEFAULT 0 NOT NULL,
+    "patient_service_fee_minor" integer DEFAULT 0 NOT NULL,
+    "pharmacy_commission_minor" integer DEFAULT 0 NOT NULL,
+    "pricing_model" "text" DEFAULT 'patient_fee_v1'::"text" NOT NULL,
+    "payment_provider" "text" DEFAULT 'direct'::"text" NOT NULL,
+    "payable_since" timestamp with time zone,
+    "paid_at" timestamp with time zone,
+    "late_payment_status" "text",
     "prescription_id" "uuid",
     "courier_id" "uuid",
     "cash_collected" boolean DEFAULT false NOT NULL,
@@ -1376,6 +1428,46 @@ ALTER TABLE ONLY "public"."hq_staff"
 
 
 --
+-- Name: monime_checkout_sessions monime_checkout_sessions_idempotency_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_checkout_sessions"
+    ADD CONSTRAINT "monime_checkout_sessions_idempotency_key_unique" UNIQUE ("idempotency_key");
+
+
+--
+-- Name: monime_checkout_sessions monime_checkout_sessions_order_attempt_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_checkout_sessions"
+    ADD CONSTRAINT "monime_checkout_sessions_order_attempt_unique" UNIQUE ("order_id", "attempt");
+
+
+--
+-- Name: monime_checkout_sessions monime_checkout_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_checkout_sessions"
+    ADD CONSTRAINT "monime_checkout_sessions_pkey" PRIMARY KEY ("id");
+
+
+--
+-- Name: monime_checkout_sessions monime_checkout_sessions_session_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_checkout_sessions"
+    ADD CONSTRAINT "monime_checkout_sessions_session_unique" UNIQUE ("monime_session_id");
+
+
+--
+-- Name: monime_webhook_events monime_webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_webhook_events"
+    ADD CONSTRAINT "monime_webhook_events_pkey" PRIMARY KEY ("event_id");
+
+
+--
 -- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1715,6 +1807,20 @@ CREATE UNIQUE INDEX "delivery_zone_fees_zone_effective_uq" ON "public"."delivery
 
 
 --
+-- Name: monime_checkout_sessions_order_number_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "monime_checkout_sessions_order_number_idx" ON "public"."monime_checkout_sessions" USING "btree" ("monime_order_number");
+
+
+--
+-- Name: monime_checkout_sessions_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "monime_checkout_sessions_status_idx" ON "public"."monime_checkout_sessions" USING "btree" ("status", "updated_at");
+
+
+--
 -- Name: patient_consents_patient_type_recorded_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1966,6 +2072,14 @@ ALTER TABLE ONLY "public"."hq_refresh_tokens"
 
 
 --
+-- Name: monime_checkout_sessions monime_checkout_sessions_order_id_orders_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_checkout_sessions"
+    ADD CONSTRAINT "monime_checkout_sessions_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE RESTRICT;
+
+
+--
 -- Name: notifications notifications_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2184,11 +2298,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-02 21:41:02.167692+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-05 13:22:28.685665+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-02 21:41:02.172397+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-05 13:22:28.688989+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-02 21:41:02.23764+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-05 13:22:28.740924+00')
 ON CONFLICT DO NOTHING;

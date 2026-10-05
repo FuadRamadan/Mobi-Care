@@ -6,7 +6,7 @@ import { logger } from "./logger.js";
 type HqNotificationPayload = {
   title: string;
   body: string;
-  type: "new_order" | "order_ready" | "delivery_ready";
+  type: "new_order" | "order_ready" | "delivery_ready" | "payment_issue";
   referenceId: string;
 };
 
@@ -111,6 +111,27 @@ export async function notifyHqOfOrderReady(
       // Delivery orders get their own type so HQ opens Dispatch, where the
       // courier is assigned, instead of the order list.
       type: order.fulfillmentType === "delivery" ? "delivery_ready" : "order_ready",
+      referenceId: order.id,
+    },
+    order.id,
+  );
+}
+
+/**
+ * A Monime payment that needs a person: a late payment that can't go ahead,
+ * a paid order cancelled before the money was released (refund to pay by hand
+ * until refunds are automated), or a payment that doesn't match its order.
+ */
+export async function notifyHqOfPaymentIssue(
+  order: Pick<Order, "id" | "patientName" | "totalLeones">,
+  title: string,
+  detail: string,
+): Promise<void> {
+  await notifyActiveHqStaff(
+    {
+      title,
+      body: `Order #${order.id.slice(0, 8).toUpperCase()} (${order.patientName}, Le ${Number(order.totalLeones).toFixed(2)}): ${detail}`,
+      type: "payment_issue",
       referenceId: order.id,
     },
     order.id,

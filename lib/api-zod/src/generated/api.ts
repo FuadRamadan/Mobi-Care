@@ -198,6 +198,13 @@ export const ListOrdersResponseItem = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -252,6 +259,13 @@ export const UpdateOrderStatusResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -305,6 +319,13 @@ export const MarkOrderCollectedResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -354,6 +375,13 @@ export const MarkOrderPickedUpResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1203,6 +1231,13 @@ export const PatientListOrdersResponseItem = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1297,6 +1332,13 @@ export const PatientCreateOrderResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1375,6 +1417,13 @@ export const PatientGetOrderResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1465,6 +1514,13 @@ export const ConfirmPatientOrderReceiptResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1543,6 +1599,13 @@ export const CancelPatientOrderResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
@@ -1599,6 +1662,74 @@ export const CancelPatientOrderResponse = zod.object({
 
 
 /**
+ * @summary How this site takes payment (Monime payment link or pay the pharmacy)
+ */
+export const PatientPaymentsConfigResponse = zod.object({
+  "provider": zod.enum(['monime', 'direct']),
+  "serviceFeeBasisPoints": zod.number().describe('The patient service fee rate (200 = 2%).'),
+  "available": zod.boolean().describe('False while Monime can\'t be reached.')
+})
+
+
+/**
+ * @summary The Monime payment link for an unpaid order (existing live link or a new one)
+ */
+export const PatientStartCheckoutParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PatientStartCheckoutResponse = zod.object({
+  "status": zod.enum(['pending', 'paid']),
+  "redirectUrl": zod.string().nullable(),
+  "expireTime": zod.string().nullable()
+})
+
+
+/**
+ * @summary The order's payment state, from MobiCare's records
+ */
+export const PatientGetOrderPaymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PatientGetOrderPaymentResponse = zod.object({
+  "orderStatus": zod.string(),
+  "paymentProvider": zod.string(),
+  "paid": zod.boolean(),
+  "latePaymentStatus": zod.string().nullable(),
+  "payableSince": zod.string().nullable(),
+  "payBy": zod.string().nullable().describe('When the payment window closes.'),
+  "link": zod.union([zod.object({
+  "status": zod.string().describe('creating, pending, completed, expired, cancelled, deleted or failed'),
+  "redirectUrl": zod.string().nullable(),
+  "expireTime": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Checks the latest payment link with Monime now (throttled), then returns the payment state
+ */
+export const PatientCheckOrderPaymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PatientCheckOrderPaymentResponse = zod.object({
+  "orderStatus": zod.string(),
+  "paymentProvider": zod.string(),
+  "paid": zod.boolean(),
+  "latePaymentStatus": zod.string().nullable(),
+  "payableSince": zod.string().nullable(),
+  "payBy": zod.string().nullable().describe('When the payment window closes.'),
+  "link": zod.union([zod.object({
+  "status": zod.string().describe('creating, pending, completed, expired, cancelled, deleted or failed'),
+  "redirectUrl": zod.string().nullable(),
+  "expireTime": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
  * @summary Record mobile-money payment (no live gateway yet)
  */
 export const PatientPayOrderParams = zod.object({
@@ -1621,6 +1752,13 @@ export const PatientPayOrderResponse = zod.object({
   "deliveryFeeMinor": zod.number().optional(),
   "courierPayoutMinor": zod.number().optional(),
   "deliveryCommissionMinor": zod.number().optional(),
+  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
+  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
+  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
+  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
+  "payableSince": zod.string().nullish(),
+  "paidAt": zod.string().nullish(),
+  "latePaymentStatus": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "deliveryConfirmedAt": zod.string().nullish(),
   "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),

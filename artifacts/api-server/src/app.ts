@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { mountStaticSites } from "./lib/staticSites";
+import { mountMonimeWebhook } from "./routes/monimeWebhook";
 import {
   AUTH_RATE_LIMITED_PATHS,
   authRateLimit,
@@ -55,6 +56,10 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+// Monime's webhook needs the raw body, so it is mounted before the JSON
+// parser. Server-to-server: no CORS or browser session involved.
+mountMonimeWebhook(app);
+
 // Patient prescription and profile-photo uploads carry a base64 image — allow
 // a larger body on those paths only (mounted before the default parser;
 // already-parsed bodies are skipped by the second parser). A 5 MB image is
