@@ -29,6 +29,8 @@ import type {
   AssignCourierInput,
   AuditEntry,
   AuthResponse,
+  CashoutRejection,
+  CashoutRequest,
   CatalogueImportPreview,
   CatalogueImportResult,
   ChangePasswordInput,
@@ -90,6 +92,7 @@ import type {
   HqNotification,
   HqOnlinePayments,
   HqOrder,
+  HqPayouts,
   HqPharmacy,
   HqPharmacyUpdate,
   ImageUrlRequest,
@@ -137,10 +140,12 @@ import type {
   PatientRegisterInput,
   PatientSearchDrugsParams,
   PaymentsConfig,
+  PharmacyCashout,
   PharmacyCommissionAnalytics,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
   PharmacyOnlineAnalytics,
+  PharmacyPayouts,
   PharmacyResetPasswordResponse,
   PilotResetPreview,
   PilotResetRequest,
@@ -169,6 +174,7 @@ import type {
   TeamPhotoUploadRequest,
   TeamPhotoUploadResponse,
   TokenPair,
+  TransferRetry,
   UnreadCount
 } from './api.schemas';
 
@@ -2441,6 +2447,516 @@ export function useGetHqOnlinePayments<TData = Awaited<ReturnType<typeof getHqOn
 
 
 
+
+export const getGetPharmacyPayoutsUrl = () => {
+
+
+
+
+  return `/api/pharmacy/payouts`
+}
+
+/**
+ * @summary The pharmacy's online-payment balance, where cash-outs go, and history
+ */
+export const getPharmacyPayouts = async ( options?: Parameters<typeof customFetch>[1]): Promise<PharmacyPayouts> => {
+
+  return customFetch<PharmacyPayouts>(getGetPharmacyPayoutsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPharmacyPayoutsQueryKey = () => {
+    return [
+    `/api/pharmacy/payouts`
+    ] as const;
+    }
+
+
+export const getGetPharmacyPayoutsQueryOptions = <TData = Awaited<ReturnType<typeof getPharmacyPayouts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyPayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPharmacyPayoutsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPharmacyPayouts>>> = ({ signal }) => getPharmacyPayouts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPharmacyPayouts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPharmacyPayoutsQueryResult = NonNullable<Awaited<ReturnType<typeof getPharmacyPayouts>>>
+export type GetPharmacyPayoutsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The pharmacy's online-payment balance, where cash-outs go, and history
+ */
+
+export function useGetPharmacyPayouts<TData = Awaited<ReturnType<typeof getPharmacyPayouts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyPayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPharmacyPayoutsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestPharmacyCashoutUrl = () => {
+
+
+
+
+  return `/api/pharmacy/payouts/cashouts`
+}
+
+/**
+ * @summary Cash out to the registered number of the chosen network
+ */
+export const requestPharmacyCashout = async (cashoutRequest: CashoutRequest, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyCashout> => {
+
+  return customFetch<PharmacyCashout>(getRequestPharmacyCashoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(cashoutRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestPharmacyCashoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPharmacyCashout>>, TError,{data: BodyType<CashoutRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestPharmacyCashout>>, TError,{data: BodyType<CashoutRequest>}, TContext> => {
+
+const mutationKey = ['requestPharmacyCashout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestPharmacyCashout>>, {data: BodyType<CashoutRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestPharmacyCashout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestPharmacyCashoutMutationResult = NonNullable<Awaited<ReturnType<typeof requestPharmacyCashout>>>
+    export type RequestPharmacyCashoutMutationBody = BodyType<CashoutRequest>
+    export type RequestPharmacyCashoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Cash out to the registered number of the chosen network
+ */
+export const useRequestPharmacyCashout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPharmacyCashout>>, TError,{data: BodyType<CashoutRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestPharmacyCashout>>,
+        TError,
+        {data: BodyType<CashoutRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestPharmacyCashoutMutationOptions(options));
+    }
+
+export const getCancelPharmacyCashoutUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/payouts/cashouts/${id}/cancel`
+}
+
+/**
+ * @summary Withdraw a cash-out that is waiting for approval
+ */
+export const cancelPharmacyCashout = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyCashout> => {
+
+  return customFetch<PharmacyCashout>(getCancelPharmacyCashoutUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelPharmacyCashoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPharmacyCashout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelPharmacyCashout>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cancelPharmacyCashout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelPharmacyCashout>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelPharmacyCashout(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelPharmacyCashoutMutationResult = NonNullable<Awaited<ReturnType<typeof cancelPharmacyCashout>>>
+
+    export type CancelPharmacyCashoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Withdraw a cash-out that is waiting for approval
+ */
+export const useCancelPharmacyCashout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPharmacyCashout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelPharmacyCashout>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCancelPharmacyCashoutMutationOptions(options));
+    }
+
+export const getGetHqPayoutsUrl = () => {
+
+
+
+
+  return `/api/hq/payments/payouts`
+}
+
+/**
+ * @summary Pharmacy balances, cash-outs to approve, recent cash-outs, release problems
+ */
+export const getHqPayouts = async ( options?: Parameters<typeof customFetch>[1]): Promise<HqPayouts> => {
+
+  return customFetch<HqPayouts>(getGetHqPayoutsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqPayoutsQueryKey = () => {
+    return [
+    `/api/hq/payments/payouts`
+    ] as const;
+    }
+
+
+export const getGetHqPayoutsQueryOptions = <TData = Awaited<ReturnType<typeof getHqPayouts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqPayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqPayoutsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqPayouts>>> = ({ signal }) => getHqPayouts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqPayouts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqPayoutsQueryResult = NonNullable<Awaited<ReturnType<typeof getHqPayouts>>>
+export type GetHqPayoutsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Pharmacy balances, cash-outs to approve, recent cash-outs, release problems
+ */
+
+export function useGetHqPayouts<TData = Awaited<ReturnType<typeof getHqPayouts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqPayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqPayoutsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getApproveHqCashoutUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/payments/cashouts/${id}/approve`
+}
+
+/**
+ * @summary Approve a cash-out above the limit
+ */
+export const approveHqCashout = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyCashout> => {
+
+  return customFetch<PharmacyCashout>(getApproveHqCashoutUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApproveHqCashoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveHqCashout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveHqCashout>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['approveHqCashout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveHqCashout>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  approveHqCashout(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveHqCashoutMutationResult = NonNullable<Awaited<ReturnType<typeof approveHqCashout>>>
+
+    export type ApproveHqCashoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve a cash-out above the limit
+ */
+export const useApproveHqCashout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveHqCashout>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveHqCashout>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getApproveHqCashoutMutationOptions(options));
+    }
+
+export const getRejectHqCashoutUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/payments/cashouts/${id}/reject`
+}
+
+/**
+ * @summary Reject a cash-out waiting for approval
+ */
+export const rejectHqCashout = async (id: string,
+    cashoutRejection: CashoutRejection, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyCashout> => {
+
+  return customFetch<PharmacyCashout>(getRejectHqCashoutUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(cashoutRejection)
+  }
+);}
+
+
+
+
+
+export const getRejectHqCashoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectHqCashout>>, TError,{id: string;data: BodyType<CashoutRejection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectHqCashout>>, TError,{id: string;data: BodyType<CashoutRejection>}, TContext> => {
+
+const mutationKey = ['rejectHqCashout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectHqCashout>>, {id: string;data: BodyType<CashoutRejection>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rejectHqCashout(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectHqCashoutMutationResult = NonNullable<Awaited<ReturnType<typeof rejectHqCashout>>>
+    export type RejectHqCashoutMutationBody = BodyType<CashoutRejection>
+    export type RejectHqCashoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Reject a cash-out waiting for approval
+ */
+export const useRejectHqCashout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectHqCashout>>, TError,{id: string;data: BodyType<CashoutRejection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectHqCashout>>,
+        TError,
+        {id: string;data: BodyType<CashoutRejection>},
+        TContext
+      > => {
+      return useMutation(getRejectHqCashoutMutationOptions(options));
+    }
+
+export const getRetryHqTransferUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/payments/transfers/${id}/retry`
+}
+
+/**
+ * @summary Try a failed release again
+ */
+export const retryHqTransfer = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TransferRetry> => {
+
+  return customFetch<TransferRetry>(getRetryHqTransferUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetryHqTransferMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryHqTransfer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryHqTransfer>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['retryHqTransfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryHqTransfer>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  retryHqTransfer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryHqTransferMutationResult = NonNullable<Awaited<ReturnType<typeof retryHqTransfer>>>
+
+    export type RetryHqTransferMutationError = ErrorType<void>
+
+    /**
+ * @summary Try a failed release again
+ */
+export const useRetryHqTransfer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryHqTransfer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retryHqTransfer>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRetryHqTransferMutationOptions(options));
+    }
 
 export const getExportPharmacyCommissionHistoryUrl = (params?: ExportPharmacyCommissionHistoryParams,) => {
   const normalizedParams = new URLSearchParams();

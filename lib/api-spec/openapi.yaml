@@ -695,6 +695,177 @@ paths:
         "400":
           description: Bad date range
 
+  /pharmacy/payouts:
+    get:
+      operationId: getPharmacyPayouts
+      tags: [pharmacy]
+      summary: The pharmacy's online-payment balance, where cash-outs go, and history
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Balance, destinations, releases and cash-outs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPayouts"
+
+  /pharmacy/payouts/cashouts:
+    post:
+      operationId: requestPharmacyCashout
+      tags: [pharmacy]
+      summary: Cash out to the registered number of the chosen network
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashoutRequest"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyCashout"
+        "400":
+          description: Invalid request
+        "404":
+          description: Not found
+        "409":
+          description: Refused, with a plain reason (error) and a code
+
+  /pharmacy/payouts/cashouts/{id}/cancel:
+    post:
+      operationId: cancelPharmacyCashout
+      tags: [pharmacy]
+      summary: Withdraw a cash-out that is waiting for approval
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyCashout"
+        "400":
+          description: Invalid request
+        "404":
+          description: Not found
+        "409":
+          description: Refused, with a plain reason (error) and a code
+
+  /hq/payments/payouts:
+    get:
+      operationId: getHqPayouts
+      tags: [hq]
+      summary: Pharmacy balances, cash-outs to approve, recent cash-outs, release problems
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Everything HQ needs to run payouts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqPayouts"
+
+  /hq/payments/cashouts/{id}/approve:
+    post:
+      operationId: approveHqCashout
+      tags: [hq]
+      summary: Approve a cash-out above the limit
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyCashout"
+        "400":
+          description: Invalid request
+        "404":
+          description: Not found
+        "409":
+          description: Refused, with a plain reason (error) and a code
+
+  /hq/payments/cashouts/{id}/reject:
+    post:
+      operationId: rejectHqCashout
+      tags: [hq]
+      summary: Reject a cash-out waiting for approval
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashoutRejection"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyCashout"
+        "400":
+          description: Invalid request
+        "404":
+          description: Not found
+        "409":
+          description: Refused, with a plain reason (error) and a code
+
+  /hq/payments/transfers/{id}/retry:
+    post:
+      operationId: retryHqTransfer
+      tags: [hq]
+      summary: Try a failed release again
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferRetry"
+        "400":
+          description: Invalid request
+        "404":
+          description: Not found
+        "409":
+          description: Refused, with a plain reason (error) and a code
+
   /pharmacy/analytics/commission.csv:
     get:
       operationId: exportPharmacyCommissionHistory
@@ -4438,6 +4609,177 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HqOnlineRefund"
+
+    PharmacyBalance:
+      type: object
+      required: [availableMinor, releasingMinor, waitingMinor, cashingOutMinor, paidOutMinor, maxCashoutMinor]
+      properties:
+        availableMinor: { type: number, description: Released and not yet cashed out }
+        releasingMinor: { type: number, description: Completed orders whose money is on its way }
+        waitingMinor: { type: number, description: Paid orders not yet delivered or collected }
+        cashingOutMinor: { type: number, description: Open cash-outs, amount plus fee }
+        paidOutMinor: { type: number }
+        maxCashoutMinor: { type: number, description: Largest cash-out whose amount plus fee fits }
+
+    PayoutDestination:
+      type: object
+      required: [provider, network, maskedNumber, usable, problem, availableAt]
+      properties:
+        provider: { type: string, enum: [m17, m18] }
+        network: { type: string }
+        maskedNumber: { type: ["string", "null"] }
+        usable: { type: boolean }
+        problem: { type: ["string", "null"], enum: [no_number, invalid_number, on_hold, null] }
+        availableAt: { type: ["string", "null"] }
+
+    PharmacyRelease:
+      type: object
+      required: [orderId, amountMinor, status, releasedAt, createdAt]
+      properties:
+        orderId: { type: string }
+        amountMinor: { type: number }
+        status: { type: string, enum: [released, releasing, nothing_to_release] }
+        releasedAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    PharmacyCashout:
+      type: object
+      required: [id, amountMinor, feeMinor, feeIsEstimate, network, maskedNumber, status, needsApproval, failureReason, rejectionReason, createdAt, completedAt]
+      properties:
+        id: { type: string }
+        amountMinor: { type: number, description: What reaches the wallet }
+        feeMinor: { type: number, description: "Monime's fee, on top (an estimate until Monime reports it)" }
+        feeIsEstimate: { type: boolean }
+        network: { type: string }
+        maskedNumber: { type: string }
+        status: { type: string, enum: [awaiting_approval, sending, pending, processing, completed, failed, rejected, cancelled] }
+        needsApproval: { type: boolean }
+        failureReason: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        createdAt: { type: string }
+        completedAt: { type: ["string", "null"] }
+
+    PharmacyPayouts:
+      type: object
+      required: [enabled, canCashOut, balance, destinations, feeBasisPoints, minCashoutMinor, approvalThresholdMinor, releases, cashouts]
+      properties:
+        enabled: { type: boolean }
+        canCashOut: { type: boolean }
+        balance:
+          $ref: "#/components/schemas/PharmacyBalance"
+        destinations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayoutDestination"
+        feeBasisPoints: { type: number }
+        minCashoutMinor: { type: number }
+        approvalThresholdMinor: { type: number }
+        releases:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyRelease"
+        cashouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyCashout"
+
+    CashoutRequest:
+      type: object
+      required: [amountMinor, provider]
+      additionalProperties: false
+      properties:
+        amountMinor: { type: number, minimum: 1, description: "Whole cents (minor units)" }
+        provider: { type: string, enum: [m17, m18] }
+
+    CashoutRejection:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 300 }
+
+    TransferRetry:
+      type: object
+      required: [transferId, status, attempt]
+      properties:
+        transferId: { type: string }
+        status: { type: string }
+        attempt: { type: number }
+
+    HqPharmacyBalance:
+      type: object
+      required: [pharmacyId, pharmacyName, availableMinor, releasingMinor, waitingMinor, cashingOutMinor, paidOutMinor, maxCashoutMinor]
+      properties:
+        pharmacyId: { type: string }
+        pharmacyName: { type: string }
+        availableMinor: { type: number }
+        releasingMinor: { type: number }
+        waitingMinor: { type: number }
+        cashingOutMinor: { type: number }
+        paidOutMinor: { type: number }
+        maxCashoutMinor: { type: number }
+
+    HqCashout:
+      type: object
+      required: [id, pharmacyId, pharmacyName, amountMinor, feeMinor, feeIsEstimate, network, maskedNumber, status, needsApproval, failureReason, failureCode, rejectionReason, approvedByName, createdAt, completedAt]
+      properties:
+        id: { type: string }
+        pharmacyId: { type: string }
+        pharmacyName: { type: string }
+        amountMinor: { type: number }
+        feeMinor: { type: number }
+        feeIsEstimate: { type: boolean }
+        network: { type: string }
+        maskedNumber: { type: string }
+        status: { type: string }
+        needsApproval: { type: boolean }
+        failureReason: { type: ["string", "null"] }
+        failureCode: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        approvedByName: { type: ["string", "null"] }
+        createdAt: { type: string }
+        completedAt: { type: ["string", "null"] }
+
+    HqReleaseProblem:
+      type: object
+      required: [transferId, orderId, kind, amountMinor, pharmacyName, failureCode, failureMessage, failedAt]
+      properties:
+        transferId: { type: string }
+        orderId: { type: string }
+        kind: { type: string, enum: [pharmacy_share, mobicare_share] }
+        amountMinor: { type: number }
+        pharmacyName: { type: string }
+        failureCode: { type: ["string", "null"] }
+        failureMessage: { type: ["string", "null"] }
+        failedAt: { type: string }
+
+    HqPayouts:
+      type: object
+      required: [enabled, pharmacies, awaitingApproval, recentCashouts, releaseProblems, monimeBalances, approvalThresholdMinor]
+      properties:
+        enabled: { type: boolean }
+        pharmacies:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqPharmacyBalance"
+        awaitingApproval:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqCashout"
+        recentCashouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqCashout"
+        releaseProblems:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqReleaseProblem"
+        monimeBalances:
+          type: object
+          required: [holdingMinor, revenueMinor]
+          properties:
+            holdingMinor: { type: ["number", "null"] }
+            revenueMinor: { type: ["number", "null"] }
+        approvalThresholdMinor: { type: number }
 
     PaymentsConfig:
       type: object

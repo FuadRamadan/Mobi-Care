@@ -79,6 +79,16 @@ Paid orders show up on the pharmacy portal's Overview (**Paid online through
 MobiCare**, at the pharmacy's own prices) and on HQ's **Online Payments** page
 (fees, commission, delivery, Monime fees, money held and refunds to pay).
 
+When an online-paid order is delivered or collected, its money moves from
+Holding to the pharmacy's own account and to MobiCare Revenue. The pharmacy
+cashes out from **Payouts** in the portal; HQ approves cash-outs above
+Le 2,000 under **Online Payments → Payouts**. The fake keeps real balances
+(saved in `.local/fake-monime-state.json`, so they survive a restart), and a
+transfer or payout the source can't cover fails just as Monime's would.
+More helpers: `POST /__admin/fail-payout?code=provider_account_missing` and
+`POST /__admin/fail-transfer?code=fund_insufficient` make the next one fail;
+`POST /__admin/credit?account=fac-holding-local&value=5000` tops up an account.
+
 ## Photos work
 
 Prescriptions, profile photos, courier and team photos and advertisements all

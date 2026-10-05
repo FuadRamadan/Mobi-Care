@@ -128,6 +128,10 @@ function DetailFields({
             Record both lines where the pharmacy has both — a patient with only
             an AfriMoney wallet cannot pay an Orange Money number.
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            With online payments, these are also the only numbers the pharmacy can cash out to.
+            Changing one pauses cash-outs to it for 48 hours and alerts the pharmacy.
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">

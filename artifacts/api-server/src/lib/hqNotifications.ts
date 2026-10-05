@@ -6,7 +6,7 @@ import { logger } from "./logger.js";
 type HqNotificationPayload = {
   title: string;
   body: string;
-  type: "new_order" | "order_ready" | "delivery_ready" | "payment_issue";
+  type: "new_order" | "order_ready" | "delivery_ready" | "payment_issue" | "payout_issue";
   referenceId: string;
 };
 
@@ -136,4 +136,17 @@ export async function notifyHqOfPaymentIssue(
     },
     order.id,
   );
+}
+
+/**
+ * Online-payment money that needs a person (Monime phase 2): a cash-out
+ * waiting for approval, a failed cash-out, or order money that could not be
+ * released to the pharmacy.
+ */
+export async function notifyHqOfPayoutIssue(
+  referenceId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  await notifyActiveHqStaff({ title, body, type: "payout_issue", referenceId }, referenceId);
 }

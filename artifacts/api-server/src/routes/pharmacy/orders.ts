@@ -10,6 +10,7 @@ import {
 import { eq, and, inArray, desc } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { releaseAfterCompletion } from "../../lib/monime/payouts.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import {
   createPatientNotification,
@@ -305,6 +306,7 @@ router.post("/:id/collected", async (req: AuthRequest, res) => {
     entityId: id,
     details: { idChecked: true },
   });
+  releaseAfterCompletion(updated);
 
   // Notify patient that order was collected
   if (order.patientId) {

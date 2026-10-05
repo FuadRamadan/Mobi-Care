@@ -25,15 +25,15 @@ import {
 import { createPatientNotification } from "../patientNotifications.js";
 import { buildCheckoutSessionBody, CheckoutTotalMismatch } from "./checkout.js";
 import {
-  createMonimeClient,
   MonimeError,
   type CreateCheckoutSessionBody,
   type MonimeCheckoutSession,
-  type MonimeClient,
   type MonimePayment,
 } from "./client.js";
-import { MONIME_WEBHOOK_HEADER, monimeConfig, type MonimeConfig } from "./config.js";
+import { MONIME_WEBHOOK_HEADER, type MonimeConfig } from "./config.js";
+import { monime } from "./connection.js";
 import { checkoutKey } from "./keys.js";
+import { runPayoutChecks, syncMovementForEvent } from "./payouts.js";
 
 /**
  * Monime payments, phase 1: patients pay through a Monime payment link, and
@@ -56,21 +56,7 @@ const LINK_REUSE_MARGIN_MS = 2 * 60 * 1000;
 
 // ── Wiring ─────────────────────────────────────────────────────────────────
 
-let clientOverride: MonimeClient | null = null;
-let client: MonimeClient | null = null;
-
-export function monime(): { config: MonimeConfig; client: MonimeClient } | null {
-  const config = monimeConfig();
-  if (!config) return null;
-  client ??= clientOverride ?? createMonimeClient(config);
-  return { config, client };
-}
-
-/** Tests only. */
-export function setMonimeClientForTests(next: MonimeClient | null): void {
-  clientOverride = next;
-  client = next;
-}
+export { monime, setMonimeClientForTests } from "./connection.js";
 
 // ── Health: is Monime reachable, with the right token? ──────────────────────
 
@@ -472,7 +458,7 @@ async function confirmPayment(row: SessionRow, session: MonimeCheckoutSession): 
   if (session.metadata?.mc_order_id && session.metadata.mc_order_id !== order.id) {
     problems.push("the link's order label is different");
   }
-  if (m.config.holdingAccountId && session.financialAccountId && session.financialAccountId !== m.config.holdingAccountId) {
+  if (session.financialAccountId !== m.config.holdingAccountId) {
     problems.push("the money went to a different Monime account");
   }
 
@@ -764,8 +750,12 @@ export async function handleWebhook(rawBody: Buffer, headers: Record<string, str
   let outcome: "processed" | "ignored" | "failed" = "ignored";
   let detail: string | null = null;
   try {
-    const row = await sessionForEvent(objectType, objectId);
-    if (row) {
+    const movement = await syncMovementForEvent(objectType, objectId);
+    const row = movement ? undefined : await sessionForEvent(objectType, objectId);
+    if (movement) {
+      outcome = "processed";
+      detail = movement;
+    } else if (row) {
       const synced = await syncSession(row);
       outcome = "processed";
       detail = `link ${synced.status}`;
@@ -809,7 +799,7 @@ async function sessionForEvent(objectType: string | null, objectId: string | nul
       .limit(1);
     return row;
   }
-  // Payouts and transfers arrive in phases 2 and 3.
+  // Transfers and payouts are handled by syncMovementForEvent (phase 2).
   return undefined;
 }
 
@@ -896,6 +886,7 @@ export function startMonimeJobs(): void {
     }), 5 * 60_000).unref(),
     setInterval(guard("Monime safety check", runSafetyCheck), 10 * 60_000).unref(),
     setInterval(guard("Monime order expiry", expireUnpaidMonimeOrders), 60_000).unref(),
+    setInterval(guard("Monime payouts check", runPayoutChecks), 5 * 60_000).unref(),
   );
 }
 

@@ -16,6 +16,7 @@ import {
 import { and, eq, desc, inArray, sql, gte, gt, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { releaseAfterCompletion } from "../../lib/monime/payouts.js";
 import { isLatitude, isLongitude } from "../../lib/geo.js";
 import type { Position } from "../../lib/delivery/geometry.js";
 import {
@@ -284,6 +285,7 @@ router.post("/:id/confirm-receipt", async (req: AuthRequest, res) => {
     entityId: id,
     details: { from: order.status, to: updated.status },
   });
+  releaseAfterCompletion(updated);
   await checkOrderFlags(updated);
 
   const notif = notificationForStatus(

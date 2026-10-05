@@ -8,7 +8,7 @@ import {
   getGetAnalyticsOverviewQueryKey,
 } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut, Wallet } from "lucide-react";
 import { MobiCareLogo } from "@/components/MobiCareLogo";
 import clsx from "clsx";
 
@@ -24,6 +24,7 @@ const incomingItems = [
 ];
 
 const accountItems = [
+  { href: "/payouts", label: "Payouts", icon: Wallet },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

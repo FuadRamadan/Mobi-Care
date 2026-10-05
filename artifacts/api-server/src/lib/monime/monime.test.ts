@@ -18,6 +18,8 @@ const baseEnv = {
   MONIME_ACCESS_TOKEN: "mon_test_abc123",
   MONIME_SPACE_ID: "spc-abc123",
   PUBLIC_APP_URL: "https://mobicaresl.com",
+  MONIME_HOLDING_ACCOUNT_ID: "fac-holding",
+  MONIME_REVENUE_ACCOUNT_ID: "fac-revenue",
 };
 
 // ── Settings ─────────────────────────────────────────────────────────────
@@ -32,7 +34,7 @@ test("the token must match the mode, both ways", () => {
   assert.equal(tokenMode("mon_x"), "live");
   assert.equal(tokenMode("sk_x"), null);
   assert.throws(
-    () => loadMonimeConfig({ ...baseEnv, MONIME_MODE: "live", MONIME_HOLDING_ACCOUNT_ID: "fac-1" }),
+    () => loadMonimeConfig({ ...baseEnv, MONIME_MODE: "live" }),
     /test token but MONIME_MODE is live/,
   );
   assert.throws(
@@ -62,10 +64,18 @@ test("a fake Monime address is allowed outside production", () => {
   assert.equal(config?.apiVersion, "caph.2025-08-23");
 });
 
-test("live mode needs the Holding account", () => {
+test("both MobiCare accounts are required, and must differ", () => {
   assert.throws(
-    () => loadMonimeConfig({ ...baseEnv, MONIME_MODE: "live", MONIME_ACCESS_TOKEN: "mon_live" }),
-    /MONIME_HOLDING_ACCOUNT_ID is required in live mode/,
+    () => loadMonimeConfig({ ...baseEnv, MONIME_HOLDING_ACCOUNT_ID: "" }),
+    /MONIME_HOLDING_ACCOUNT_ID is missing/,
+  );
+  assert.throws(
+    () => loadMonimeConfig({ ...baseEnv, MONIME_REVENUE_ACCOUNT_ID: " " }),
+    /MONIME_REVENUE_ACCOUNT_ID is missing/,
+  );
+  assert.throws(
+    () => loadMonimeConfig({ ...baseEnv, MONIME_REVENUE_ACCOUNT_ID: "fac-holding" }),
+    /must be different accounts/,
   );
 });
 
@@ -187,7 +197,8 @@ const clientConfig = {
   spaceId: "spc-1",
   apiVersion: "caph.2025-08-23",
   baseUrl: "http://monime.test",
-  holdingAccountId: null,
+  holdingAccountId: "fac-holding",
+  revenueAccountId: "fac-revenue",
   webhookHeaderToken: null,
   publicAppUrl: "https://mobicaresl.com",
 };

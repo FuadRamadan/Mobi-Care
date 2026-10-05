@@ -12,6 +12,19 @@
  *   DELETE /v1/checkout-sessions/:id       delete it (only before payment starts)
  *   GET    /v1/payments?orderNumber=...    payments for a link
  *   GET    /v1/payments/:id                one payment
+ *   POST   /v1/financial-accounts          create an account (reference unique)
+ *   GET    /v1/financial-accounts?reference=...  find by reference
+ *   GET    /v1/financial-accounts/:id[?withBalance=true]
+ *   POST   /v1/internal-transfers          move money between accounts (no fee)
+ *   GET    /v1/internal-transfers/:id
+ *   POST   /v1/payouts                     send to a mobile money wallet (1% fee on top)
+ *   GET    /v1/payouts/:id
+ *
+ * Accounts hold real (fake) balances: a payment credits Holding with the
+ * amount less Monime's 1% fee, transfers and payouts move it, and a movement
+ * the source can't cover fails with fund_insufficient, as Monime's would.
+ * Transfers and payouts start 'pending' and finish shortly after, with a
+ * webhook (internal_transfer.completed / payout.completed / payout.failed).
  *
  * plus a hosted test payment page at /checkout/:id, where you "pay" with a
  * test Orange Money or AfriMoney wallet or cancel. Paying sends the webhooks
@@ -21,6 +34,9 @@
  *   POST /__admin/expire/:id        expire a link now
  *   POST /__admin/fail-next?count=N answer the next N API calls with 503
  *   GET  /__admin/state             everything it holds, as JSON
+ *   POST /__admin/fail-payout?code=X  the next payout fails with code X
+ *   POST /__admin/fail-transfer?code=X the next transfer fails with code X
+ *   POST /__admin/credit?account=ID&value=CENTS  add money to an account (a top-up)
  *
  * Settings (environment):
  *   FAKE_MONIME_PORT            default 9100
@@ -29,9 +45,12 @@
  *   FAKE_MONIME_WEBHOOK_TOKEN   sent in the x-mobicare-webhook-token header
  *   FAKE_MONIME_WEBHOOK_DELAY_MS  default 300
  *   FAKE_MONIME_SESSION_TTL_MIN   link lifetime, default 30
+ *   FAKE_MONIME_SETTLE_DELAY_MS   how long transfers and payouts take, default 600
+ *   FAKE_MONIME_STATE_FILE        keep everything in this JSON file across restarts
  */
 import http from "node:http";
 import crypto from "node:crypto";
+import fs from "node:fs";
 
 const PORT = Number(process.env.FAKE_MONIME_PORT ?? 9100);
 const PUBLIC_URL = (process.env.FAKE_MONIME_PUBLIC_URL ?? `http://localhost:${PORT}`).replace(/\/$/, "");
@@ -41,12 +60,48 @@ const WEBHOOK_DELAY_MS = Number(process.env.FAKE_MONIME_WEBHOOK_DELAY_MS ?? 300)
 const SESSION_TTL_MS = Number(process.env.FAKE_MONIME_SESSION_TTL_MIN ?? 30) * 60_000;
 const API_VERSION = "caph.2025-08-23";
 const HOLDING_DEFAULT = "fac-main-test";
+const SETTLE_DELAY_MS = Number(process.env.FAKE_MONIME_SETTLE_DELAY_MS ?? 600);
 
 const sessions = new Map();
 const payments = new Map();
 const idempotency = new Map();
 const webhooksSent = [];
 let failNext = 0;
+let failNextPayout = null;
+let failNextTransfer = null;
+
+// MobiCare's two accounts exist from the start (run.sh points the API at them).
+const accounts = new Map();
+for (const [id, name, reference] of [
+  ["fac-holding-local", "MobiCare Holding", "mobicare-holding"],
+  ["fac-revenue-local", "MobiCare Revenue", "mobicare-revenue"],
+  [HOLDING_DEFAULT, "Main account", null],
+]) {
+  accounts.set(id, { id, uvan: `uvan-${id}`, name, currency: "SLE", reference, balance: 0, createTime: new Date().toISOString(), metadata: null });
+}
+const transfers = new Map();
+const payouts = new Map();
+// Optional persistence, so balances survive a restart of the local stack.
+const STATE_FILE = process.env.FAKE_MONIME_STATE_FILE ?? "";
+const stores = { sessions, payments, accounts, transfers, payouts, idempotency };
+if (STATE_FILE && fs.existsSync(STATE_FILE)) {
+  const saved = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+  for (const [name, entries] of Object.entries(saved)) for (const [k, v] of entries) stores[name]?.set(k, v);
+}
+function saveState() {
+  if (!STATE_FILE) return;
+  const data = Object.fromEntries(Object.entries(stores).map(([name, map]) => [name, [...map.entries()]]));
+  fs.writeFileSync(`${STATE_FILE}.tmp`, JSON.stringify(data));
+  fs.renameSync(`${STATE_FILE}.tmp`, STATE_FILE);
+}
+setInterval(saveState, 1000).unref();
+process.on("SIGTERM", () => { saveState(); process.exit(0); });
+process.on("SIGINT", () => { saveState(); process.exit(0); });
+
+const accountView = (account, withBalance) => ({
+  ...account,
+  balance: withBalance ? { available: { currency: "SLE", value: account.balance } } : null,
+});
 
 const rid = (prefix) => `${prefix}-${crypto.randomBytes(12).toString("base64url").replace(/[-_]/g, "x")}`;
 const sha = (text) => crypto.createHash("sha256").update(text).digest("hex");
@@ -163,7 +218,31 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname;
   try {
     // ── Test helpers ────────────────────────────────────────────────────
-    if (path === "/__admin/state") return ok(res, { sessions: [...sessions.values()], payments: [...payments.values()], webhooksSent });
+    if (path === "/__admin/state") {
+      return ok(res, {
+        sessions: [...sessions.values()],
+        payments: [...payments.values()],
+        accounts: [...accounts.values()],
+        transfers: [...transfers.values()],
+        payouts: [...payouts.values()],
+        webhooksSent,
+      });
+    }
+    if (req.method === "POST" && path === "/__admin/fail-payout") {
+      failNextPayout = url.searchParams.get("code") ?? "provider_account_missing";
+      return ok(res, { failNextPayout });
+    }
+    if (req.method === "POST" && path === "/__admin/credit") {
+      const account = accounts.get(url.searchParams.get("account") ?? "");
+      const value = Number(url.searchParams.get("value"));
+      if (!account || !Number.isInteger(value)) return fail(res, 400, "validation_failed", "account and integer value required");
+      account.balance += value;
+      return ok(res, accountView(account, true));
+    }
+    if (req.method === "POST" && path === "/__admin/fail-transfer") {
+      failNextTransfer = url.searchParams.get("code") ?? "fund_insufficient";
+      return ok(res, { failNextTransfer });
+    }
     if (req.method === "POST" && path === "/__admin/fail-next") {
       failNext = Number(url.searchParams.get("count") ?? 1);
       return ok(res, { failNext });
@@ -227,6 +306,8 @@ const server = http.createServer(async (req, res) => {
         metadata: null,
       };
       payments.set(payment.id, payment);
+      const landing = accounts.get(payment.financialAccountId);
+      if (landing) landing.balance += total - payment.fees[0].amount.value;
       session.status = "completed";
       void sendWebhook("checkout_session.completed", session).then(() => sendWebhook("payment.completed", payment));
       res.writeHead(303, { location: session.successUrl ?? PUBLIC_URL });
@@ -305,6 +386,132 @@ const server = http.createServer(async (req, res) => {
         session.deleted = true;
         return ok(res, null);
       }
+    }
+
+    // ── Accounts, transfers, payouts (phase 2) ─────────────────────────────
+    if (req.method === "POST" && ["/v1/financial-accounts", "/v1/internal-transfers", "/v1/payouts"].includes(path)) {
+      const raw = await readBody(req);
+      const key = req.headers["idempotency-key"];
+      if (!key) return fail(res, 400, "idempotency_key_required", "Idempotency-Key is required");
+      const fingerprint = sha(`POST ${path} ${raw}`);
+      const seen = idempotency.get(key);
+      const store = path === "/v1/financial-accounts" ? accounts : path === "/v1/internal-transfers" ? transfers : payouts;
+      if (seen) {
+        if (seen.fingerprint !== fingerprint) return fail(res, 409, "idempotency_key_in_use", "Conflict: Idempotency key reused with a non-identical request.");
+        const found = store.get(seen.id);
+        return ok(res, path === "/v1/financial-accounts" ? accountView(found, false) : found, { "monime-cache": "irc" });
+      }
+      let body;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        return fail(res, 400, "invalid_json", "Body is not JSON");
+      }
+      const amountOk = (amount) => amount && amount.currency === "SLE" && Number.isInteger(amount.value) && amount.value > 0;
+
+      if (path === "/v1/financial-accounts") {
+        for (const k of Object.keys(body)) if (!["name", "currency", "reference", "metadata"].includes(k)) return fail(res, 400, "validation_failed", `Unknown field '${k}'`);
+        if (!body.name || body.currency !== "SLE") return fail(res, 400, "validation_failed", "name and currency SLE are required");
+        if (body.reference && [...accounts.values()].some((a) => a.reference === body.reference)) {
+          return fail(res, 409, "reference_in_use", "An account with this reference already exists");
+        }
+        const account = { id: rid("fac"), uvan: rid("uvan"), name: body.name, currency: "SLE", reference: body.reference ?? null, balance: 0, createTime: new Date().toISOString(), metadata: body.metadata ?? null };
+        accounts.set(account.id, account);
+        idempotency.set(key, { fingerprint, id: account.id });
+        return ok(res, accountView(account, false));
+      }
+
+      if (path === "/v1/internal-transfers") {
+        for (const k of Object.keys(body)) if (!["amount", "sourceFinancialAccount", "destinationFinancialAccount", "metadata"].includes(k)) return fail(res, 400, "validation_failed", `Unknown field '${k}'`);
+        const source = accounts.get(body.sourceFinancialAccount?.id);
+        const destination = accounts.get(body.destinationFinancialAccount?.id);
+        if (!amountOk(body.amount)) return fail(res, 400, "validation_failed", "amount must be positive SLE cents");
+        if (!source || !destination) return fail(res, 404, "not_found", "Financial account not found");
+        const transfer = {
+          id: rid("trn"), status: "pending", amount: body.amount,
+          sourceFinancialAccount: { id: source.id }, destinationFinancialAccount: { id: destination.id },
+          financialTransactionReference: null, failureDetail: null,
+          createTime: new Date().toISOString(), updateTime: null, metadata: body.metadata ?? null,
+        };
+        transfers.set(transfer.id, transfer);
+        idempotency.set(key, { fingerprint, id: transfer.id });
+        setTimeout(() => {
+          const forced = failNextTransfer;
+          failNextTransfer = null;
+          if (forced || source.balance < transfer.amount.value) {
+            transfer.status = "failed";
+            transfer.failureDetail = { code: forced ?? "fund_insufficient", message: forced ? "Failed (fake, forced)" : "Source account has insufficient funds" };
+          } else {
+            source.balance -= transfer.amount.value;
+            destination.balance += transfer.amount.value;
+            transfer.status = "completed";
+            transfer.financialTransactionReference = rid("ftx");
+          }
+          transfer.updateTime = new Date().toISOString();
+          void sendWebhook(`internal_transfer.${transfer.status}`, transfer);
+        }, SETTLE_DELAY_MS);
+        return ok(res, transfer);
+      }
+
+      // Payouts
+      for (const k of Object.keys(body)) if (!["amount", "source", "destination", "metadata"].includes(k)) return fail(res, 400, "validation_failed", `Unknown field '${k}'`);
+      const source = accounts.get(body.source?.financialAccountId ?? HOLDING_DEFAULT);
+      const dest = body.destination ?? {};
+      if (!amountOk(body.amount)) return fail(res, 400, "validation_failed", "amount must be positive SLE cents");
+      if (!source) return fail(res, 404, "not_found", "Financial account not found");
+      if (dest.type !== "momo" || !["m17", "m18"].includes(dest.providerId) || !/^\+232\d{8}$/.test(dest.phoneNumber ?? "")) {
+        return fail(res, 400, "validation_failed", "destination must be momo m17/m18 with a +232 phone number");
+      }
+      const payout = {
+        id: rid("pwt"), status: "pending", amount: body.amount,
+        source: { financialAccountId: source.id, transactionReference: null },
+        destination: { type: "momo", providerId: dest.providerId, phoneNumber: dest.phoneNumber, transactionReference: null },
+        fees: [], failureDetail: null,
+        createTime: new Date().toISOString(), updateTime: new Date().toISOString(), metadata: body.metadata ?? null,
+      };
+      payouts.set(payout.id, payout);
+      idempotency.set(key, { fingerprint, id: payout.id });
+      setTimeout(() => {
+        payout.status = "processing";
+        setTimeout(() => {
+          const fee = Math.ceil(payout.amount.value / 100);
+          const forced = failNextPayout;
+          failNextPayout = null;
+          if (forced || source.balance < payout.amount.value + fee) {
+            payout.status = "failed";
+            payout.failureDetail = { code: forced ?? "fund_insufficient", message: forced ? "Failed (fake, forced)" : "Source account has insufficient funds" };
+          } else {
+            source.balance -= payout.amount.value + fee;
+            payout.status = "completed";
+            payout.fees = [{ code: "payout", amount: { currency: "SLE", value: fee }, metadata: null }];
+            payout.destination.transactionReference = `MP${Date.now()}`;
+          }
+          payout.updateTime = new Date().toISOString();
+          void sendWebhook(`payout.${payout.status}`, payout);
+        }, SETTLE_DELAY_MS);
+      }, SETTLE_DELAY_MS);
+      return ok(res, payout);
+    }
+
+    if (path === "/v1/financial-accounts" && req.method === "GET") {
+      const reference = url.searchParams.get("reference");
+      const list = [...accounts.values()].filter((a) => !reference || a.reference === reference).map((a) => accountView(a, url.searchParams.get("withBalance") === "true"));
+      return send(res, 200, { success: true, messages: [], result: list, pagination: { count: list.length, next: null } });
+    }
+    const account = path.match(/^\/v1\/financial-accounts\/([^/]+)$/);
+    if (account && req.method === "GET") {
+      const found = accounts.get(account[1]);
+      return found ? ok(res, accountView(found, url.searchParams.get("withBalance") === "true")) : fail(res, 404, "not_found", "Financial account not found");
+    }
+    const transfer = path.match(/^\/v1\/internal-transfers\/([^/]+)$/);
+    if (transfer && req.method === "GET") {
+      const found = transfers.get(transfer[1]);
+      return found ? ok(res, found) : fail(res, 404, "not_found", "Internal transfer not found");
+    }
+    const payoutMatch = path.match(/^\/v1\/payouts\/([^/]+)$/);
+    if (payoutMatch && req.method === "GET") {
+      const found = payouts.get(payoutMatch[1]);
+      return found ? ok(res, found) : fail(res, 404, "not_found", "Payout not found");
     }
 
     if (path === "/v1/payments" && req.method === "GET") {

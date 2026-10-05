@@ -125,7 +125,7 @@ export function buildCheckoutSessionBody(
     reference: order.id,
     successUrl: `${orderPage}?payment=return`,
     cancelUrl: `${orderPage}?payment=cancelled`,
-    ...(config.holdingAccountId ? { financialAccountId: config.holdingAccountId } : {}),
+    financialAccountId: config.holdingAccountId,
     lineItems,
     brandingOptions: { primaryColor: MOBICARE_GREEN },
     // Our IDs only: no names, phone numbers or medicines (see the design notes).

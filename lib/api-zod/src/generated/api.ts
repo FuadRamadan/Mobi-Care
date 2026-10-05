@@ -1004,6 +1004,243 @@ export const GetHqOnlinePaymentsResponse = zod.object({
 
 
 /**
+ * @summary The pharmacy's online-payment balance, where cash-outs go, and history
+ */
+export const GetPharmacyPayoutsResponse = zod.object({
+  "enabled": zod.boolean(),
+  "canCashOut": zod.boolean(),
+  "balance": zod.object({
+  "availableMinor": zod.number().describe('Released and not yet cashed out'),
+  "releasingMinor": zod.number().describe('Completed orders whose money is on its way'),
+  "waitingMinor": zod.number().describe('Paid orders not yet delivered or collected'),
+  "cashingOutMinor": zod.number().describe('Open cash-outs'),
+  "paidOutMinor": zod.number(),
+  "maxCashoutMinor": zod.number().describe('Largest cash-out whose amount plus fee fits')
+}),
+  "destinations": zod.array(zod.object({
+  "provider": zod.enum(['m17', 'm18']),
+  "network": zod.string(),
+  "maskedNumber": zod.string().nullable(),
+  "usable": zod.boolean(),
+  "problem": zod.union([zod.literal('no_number'),zod.literal('invalid_number'),zod.literal('on_hold'),zod.literal(null)]).nullable(),
+  "availableAt": zod.string().nullable()
+})),
+  "feeBasisPoints": zod.number(),
+  "minCashoutMinor": zod.number(),
+  "approvalThresholdMinor": zod.number(),
+  "releases": zod.array(zod.object({
+  "orderId": zod.string(),
+  "amountMinor": zod.number(),
+  "status": zod.enum(['released', 'releasing', 'nothing_to_release']),
+  "releasedAt": zod.string().nullable(),
+  "createdAt": zod.string()
+})),
+  "cashouts": zod.array(zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.number().describe('What reaches the wallet'),
+  "feeMinor": zod.number().describe('Monime\'s fee, on top (an estimate until Monime reports it)'),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.enum(['awaiting_approval', 'sending', 'pending', 'processing', 'completed', 'failed', 'rejected', 'cancelled']),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+}))
+})
+
+
+/**
+ * @summary Cash out to the registered number of the chosen network
+ */
+
+
+
+export const RequestPharmacyCashoutBody = zod.object({
+  "amountMinor": zod.number().min(1).describe('Whole cents (minor units)'),
+  "provider": zod.enum(['m17', 'm18'])
+})
+
+export const RequestPharmacyCashoutResponse = zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.number().describe('What reaches the wallet'),
+  "feeMinor": zod.number().describe('Monime\'s fee, on top (an estimate until Monime reports it)'),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.enum(['awaiting_approval', 'sending', 'pending', 'processing', 'completed', 'failed', 'rejected', 'cancelled']),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Withdraw a cash-out that is waiting for approval
+ */
+export const CancelPharmacyCashoutParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelPharmacyCashoutResponse = zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.number().describe('What reaches the wallet'),
+  "feeMinor": zod.number().describe('Monime\'s fee, on top (an estimate until Monime reports it)'),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.enum(['awaiting_approval', 'sending', 'pending', 'processing', 'completed', 'failed', 'rejected', 'cancelled']),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Pharmacy balances, cash-outs to approve, recent cash-outs, release problems
+ */
+export const GetHqPayoutsResponse = zod.object({
+  "enabled": zod.boolean(),
+  "pharmacies": zod.array(zod.object({
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string(),
+  "availableMinor": zod.number(),
+  "releasingMinor": zod.number(),
+  "waitingMinor": zod.number(),
+  "cashingOutMinor": zod.number(),
+  "paidOutMinor": zod.number(),
+  "maxCashoutMinor": zod.number()
+})),
+  "awaitingApproval": zod.array(zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string(),
+  "amountMinor": zod.number(),
+  "feeMinor": zod.number(),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.string(),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "failureCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "approvedByName": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})),
+  "recentCashouts": zod.array(zod.object({
+  "id": zod.string(),
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string(),
+  "amountMinor": zod.number(),
+  "feeMinor": zod.number(),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.string(),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "failureCode": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "approvedByName": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})),
+  "releaseProblems": zod.array(zod.object({
+  "transferId": zod.string(),
+  "orderId": zod.string(),
+  "kind": zod.enum(['pharmacy_share', 'mobicare_share']),
+  "amountMinor": zod.number(),
+  "pharmacyName": zod.string(),
+  "failureCode": zod.string().nullable(),
+  "failureMessage": zod.string().nullable(),
+  "failedAt": zod.string()
+})),
+  "monimeBalances": zod.object({
+  "holdingMinor": zod.number().nullable(),
+  "revenueMinor": zod.number().nullable()
+}),
+  "approvalThresholdMinor": zod.number()
+})
+
+
+/**
+ * @summary Approve a cash-out above the limit
+ */
+export const ApproveHqCashoutParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ApproveHqCashoutResponse = zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.number().describe('What reaches the wallet'),
+  "feeMinor": zod.number().describe('Monime\'s fee, on top (an estimate until Monime reports it)'),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.enum(['awaiting_approval', 'sending', 'pending', 'processing', 'completed', 'failed', 'rejected', 'cancelled']),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Reject a cash-out waiting for approval
+ */
+export const RejectHqCashoutParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const rejectHqCashoutBodyReasonMin = 3;
+export const rejectHqCashoutBodyReasonMax = 300;
+
+
+
+export const RejectHqCashoutBody = zod.object({
+  "reason": zod.string().min(rejectHqCashoutBodyReasonMin).max(rejectHqCashoutBodyReasonMax)
+})
+
+export const RejectHqCashoutResponse = zod.object({
+  "id": zod.string(),
+  "amountMinor": zod.number().describe('What reaches the wallet'),
+  "feeMinor": zod.number().describe('Monime\'s fee, on top (an estimate until Monime reports it)'),
+  "feeIsEstimate": zod.boolean(),
+  "network": zod.string(),
+  "maskedNumber": zod.string(),
+  "status": zod.enum(['awaiting_approval', 'sending', 'pending', 'processing', 'completed', 'failed', 'rejected', 'cancelled']),
+  "needsApproval": zod.boolean(),
+  "failureReason": zod.string().nullable(),
+  "rejectionReason": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Try a failed release again
+ */
+export const RetryHqTransferParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RetryHqTransferResponse = zod.object({
+  "transferId": zod.string(),
+  "status": zod.string(),
+  "attempt": zod.number()
+})
+
+
+/**
  * @summary Download the authenticated pharmacy's commission history as CSV
  */
 export const ExportPharmacyCommissionHistoryQueryParams = zod.object({

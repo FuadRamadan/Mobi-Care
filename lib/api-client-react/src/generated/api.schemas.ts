@@ -900,6 +900,220 @@ export interface HqOnlinePayments {
   refunds: HqOnlineRefund[];
 }
 
+export interface PharmacyBalance {
+  /** Released and not yet cashed out */
+  availableMinor: number;
+  /** Completed orders whose money is on its way */
+  releasingMinor: number;
+  /** Paid orders not yet delivered or collected */
+  waitingMinor: number;
+  /** Open cash-outs */
+  cashingOutMinor: number;
+  paidOutMinor: number;
+  /** Largest cash-out whose amount plus fee fits */
+  maxCashoutMinor: number;
+}
+
+export type PayoutDestinationProvider = typeof PayoutDestinationProvider[keyof typeof PayoutDestinationProvider];
+
+
+export const PayoutDestinationProvider = {
+  m17: 'm17',
+  m18: 'm18',
+} as const;
+
+/**
+ * @nullable
+ */
+export type PayoutDestinationProblem = typeof PayoutDestinationProblem[keyof typeof PayoutDestinationProblem] | null;
+
+
+export const PayoutDestinationProblem = {
+  no_number: 'no_number',
+  invalid_number: 'invalid_number',
+  on_hold: 'on_hold',
+} as const;
+
+export interface PayoutDestination {
+  provider: PayoutDestinationProvider;
+  network: string;
+  /** @nullable */
+  maskedNumber: string | null;
+  usable: boolean;
+  /** @nullable */
+  problem: PayoutDestinationProblem;
+  /** @nullable */
+  availableAt: string | null;
+}
+
+export type PharmacyReleaseStatus = typeof PharmacyReleaseStatus[keyof typeof PharmacyReleaseStatus];
+
+
+export const PharmacyReleaseStatus = {
+  released: 'released',
+  releasing: 'releasing',
+  nothing_to_release: 'nothing_to_release',
+} as const;
+
+export interface PharmacyRelease {
+  orderId: string;
+  amountMinor: number;
+  status: PharmacyReleaseStatus;
+  /** @nullable */
+  releasedAt: string | null;
+  createdAt: string;
+}
+
+export type PharmacyCashoutStatus = typeof PharmacyCashoutStatus[keyof typeof PharmacyCashoutStatus];
+
+
+export const PharmacyCashoutStatus = {
+  awaiting_approval: 'awaiting_approval',
+  sending: 'sending',
+  pending: 'pending',
+  processing: 'processing',
+  completed: 'completed',
+  failed: 'failed',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+} as const;
+
+export interface PharmacyCashout {
+  id: string;
+  /** What reaches the wallet */
+  amountMinor: number;
+  /** Monime's fee, on top (an estimate until Monime reports it) */
+  feeMinor: number;
+  feeIsEstimate: boolean;
+  network: string;
+  maskedNumber: string;
+  status: PharmacyCashoutStatus;
+  needsApproval: boolean;
+  /** @nullable */
+  failureReason: string | null;
+  /** @nullable */
+  rejectionReason: string | null;
+  createdAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export interface PharmacyPayouts {
+  enabled: boolean;
+  canCashOut: boolean;
+  balance: PharmacyBalance;
+  destinations: PayoutDestination[];
+  feeBasisPoints: number;
+  minCashoutMinor: number;
+  approvalThresholdMinor: number;
+  releases: PharmacyRelease[];
+  cashouts: PharmacyCashout[];
+}
+
+export type CashoutRequestProvider = typeof CashoutRequestProvider[keyof typeof CashoutRequestProvider];
+
+
+export const CashoutRequestProvider = {
+  m17: 'm17',
+  m18: 'm18',
+} as const;
+
+export interface CashoutRequest {
+  /**
+     * Whole cents (minor units)
+     * @minimum 1
+     */
+  amountMinor: number;
+  provider: CashoutRequestProvider;
+}
+
+export interface CashoutRejection {
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  reason: string;
+}
+
+export interface TransferRetry {
+  transferId: string;
+  status: string;
+  attempt: number;
+}
+
+export interface HqPharmacyBalance {
+  pharmacyId: string;
+  pharmacyName: string;
+  availableMinor: number;
+  releasingMinor: number;
+  waitingMinor: number;
+  cashingOutMinor: number;
+  paidOutMinor: number;
+  maxCashoutMinor: number;
+}
+
+export interface HqCashout {
+  id: string;
+  pharmacyId: string;
+  pharmacyName: string;
+  amountMinor: number;
+  feeMinor: number;
+  feeIsEstimate: boolean;
+  network: string;
+  maskedNumber: string;
+  status: string;
+  needsApproval: boolean;
+  /** @nullable */
+  failureReason: string | null;
+  /** @nullable */
+  failureCode: string | null;
+  /** @nullable */
+  rejectionReason: string | null;
+  /** @nullable */
+  approvedByName: string | null;
+  createdAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export type HqReleaseProblemKind = typeof HqReleaseProblemKind[keyof typeof HqReleaseProblemKind];
+
+
+export const HqReleaseProblemKind = {
+  pharmacy_share: 'pharmacy_share',
+  mobicare_share: 'mobicare_share',
+} as const;
+
+export interface HqReleaseProblem {
+  transferId: string;
+  orderId: string;
+  kind: HqReleaseProblemKind;
+  amountMinor: number;
+  pharmacyName: string;
+  /** @nullable */
+  failureCode: string | null;
+  /** @nullable */
+  failureMessage: string | null;
+  failedAt: string;
+}
+
+export type HqPayoutsMonimeBalances = {
+  /** @nullable */
+  holdingMinor: number | null;
+  /** @nullable */
+  revenueMinor: number | null;
+};
+
+export interface HqPayouts {
+  enabled: boolean;
+  pharmacies: HqPharmacyBalance[];
+  awaitingApproval: HqCashout[];
+  recentCashouts: HqCashout[];
+  releaseProblems: HqReleaseProblem[];
+  monimeBalances: HqPayoutsMonimeBalances;
+  approvalThresholdMinor: number;
+}
+
 export type PaymentsConfigProvider = typeof PaymentsConfigProvider[keyof typeof PaymentsConfigProvider];
 
 

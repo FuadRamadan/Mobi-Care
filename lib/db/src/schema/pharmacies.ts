@@ -27,6 +27,11 @@ export const pharmaciesTable = pgTable("pharmacies", {
   afriMoneyNumber: text("afri_money_number"),
   /** Registered name on the mobile money account, shared by both lines. */
   mobileMoneyAccountName: text("mobile_money_account_name"),
+  // When each line last changed. These are also the numbers online-payment
+  // cash-outs go to, so a cash-out to a number changed in the last 48 hours
+  // waits (migration 0034).
+  orangeMoneyChangedAt: timestamp("orange_money_changed_at", { withTimezone: true }),
+  afriMoneyChangedAt: timestamp("afri_money_changed_at", { withTimezone: true }),
 
   // Superseded by the two named lines above and backfilled into them by
   // migration 0024. Kept, not dropped: they are the only record of what a

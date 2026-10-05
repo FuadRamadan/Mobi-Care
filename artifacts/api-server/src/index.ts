@@ -188,6 +188,13 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "Monime payouts (migration 0034)",
+      query: sql`
+        SELECT to_regclass(current_schema() || '.pharmacy_cashouts')
+          IS NOT NULL AS exists
+      `,
+    },
+    {
       label: "Monime payments (migration 0033)",
       query: sql`
         SELECT to_regclass(current_schema() || '.monime_checkout_sessions')

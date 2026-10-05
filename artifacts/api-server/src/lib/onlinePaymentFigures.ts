@@ -13,7 +13,7 @@ import { BUSINESS_TIMEZONE } from "./commissionSettlements.js";
  *   receive. The patient service fee is for HQ only.
  * - Money still in MobiCare's hands is split into "waiting on the order"
  *   (paid, not yet delivered or collected) and "owed to pharmacies"
- *   (completed; paid out once payouts exist, phase 2).
+ *   (completed, not yet cashed out).
  *
  * These come from MobiCare's own records. Monime's actual balances are
  * compared in the daily reconciliation (phase 4).
@@ -166,10 +166,15 @@ export async function hqOnlineFigures(start: string, end: string) {
      WHERE day BETWEEN ${start} AND ${end}
      GROUP BY 1`);
 
+  // Owed to pharmacies: their share of completed orders, less what they have
+  // cashed out or are cashing out (amount plus Monime's fee, which they pay).
   const [totals] = await rows(sql`
     SELECT coalesce(sum(${totalMinor}) FILTER (WHERE o.status NOT IN ('delivered', 'collected')), 0)::int AS waiting_minor,
-           coalesce(sum(o.pharmacy_medicine_total_minor - o.pharmacy_commission_minor)
-             FILTER (WHERE o.status IN ('delivered', 'collected')), 0)::int AS owed_to_pharmacies_minor
+           (coalesce(sum(o.pharmacy_medicine_total_minor - o.pharmacy_commission_minor)
+              FILTER (WHERE o.status IN ('delivered', 'collected')), 0)
+            - (SELECT coalesce(sum(c.amount_minor + coalesce(c.fee_minor, c.fee_reserved_minor)), 0)
+                 FROM pharmacy_cashouts c
+                WHERE c.status IN ('completed', 'awaiting_approval', 'sending', 'pending', 'processing')))::int AS owed_to_pharmacies_minor
       FROM orders o
      WHERE o.payment_provider = 'monime' AND o.paid_at IS NOT NULL AND NOT ${refunded}`);
 

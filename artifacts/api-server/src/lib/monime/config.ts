@@ -19,8 +19,10 @@ export interface MonimeConfig {
   spaceId: string;
   apiVersion: string;
   baseUrl: string;
-  /** Where patient payments land. Monime's main account when null (test only). */
-  holdingAccountId: string | null;
+  /** Where patient payments land and wait until the order is complete. */
+  holdingAccountId: string;
+  /** MobiCare's share of each completed order (fees, commission, delivery). */
+  revenueAccountId: string;
   /** Secret Monime sends in a custom header on every webhook. */
   webhookHeaderToken: string | null;
   /** The site's public address, for the links Monime sends patients back to. */
@@ -85,9 +87,14 @@ export function loadMonimeConfig(env: Env = process.env): MonimeConfig | null {
     }
   }
 
-  const holdingAccountId = (env.MONIME_HOLDING_ACCOUNT_ID ?? "").trim() || null;
-  if (mode === "live" && !holdingAccountId) {
-    problems.push("MONIME_HOLDING_ACCOUNT_ID is required in live mode");
+  // MobiCare's two accounts in its Monime space. "Final Deployment
+  // files/scripts/monime-setup-accounts.mjs" finds or creates them and prints the IDs.
+  const holdingAccountId = (env.MONIME_HOLDING_ACCOUNT_ID ?? "").trim();
+  const revenueAccountId = (env.MONIME_REVENUE_ACCOUNT_ID ?? "").trim();
+  if (!holdingAccountId) problems.push("MONIME_HOLDING_ACCOUNT_ID is missing");
+  if (!revenueAccountId) problems.push("MONIME_REVENUE_ACCOUNT_ID is missing");
+  if (holdingAccountId && holdingAccountId === revenueAccountId) {
+    problems.push("MONIME_HOLDING_ACCOUNT_ID and MONIME_REVENUE_ACCOUNT_ID must be different accounts");
   }
 
   const webhookHeaderToken = (env.MONIME_WEBHOOK_HEADER_TOKEN ?? "").trim() || null;
@@ -116,6 +123,7 @@ export function loadMonimeConfig(env: Env = process.env): MonimeConfig | null {
     apiVersion: (env.MONIME_API_VERSION ?? "").trim() || DEFAULT_MONIME_API_VERSION,
     baseUrl,
     holdingAccountId,
+    revenueAccountId,
     webhookHeaderToken,
     publicAppUrl,
   };

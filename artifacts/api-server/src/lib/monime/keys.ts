@@ -20,3 +20,8 @@ export function idempotencyKey(name: string): string {
 
 export const checkoutKey = (orderId: string, attempt: number) =>
   idempotencyKey(`checkout:${orderId}:${attempt}`);
+
+export const pharmacyAccountKey = (pharmacyId: string) => idempotencyKey(`account:${pharmacyId}`);
+export const transferKey = (orderId: string, kind: string, attempt: number) =>
+  idempotencyKey(`transfer:${orderId}:${kind}:${attempt}`);
+export const cashoutKey = (cashoutId: string) => idempotencyKey(`cashout:${cashoutId}`);

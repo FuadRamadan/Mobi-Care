@@ -6,7 +6,7 @@ interface PharmacyNotificationPayload {
   pharmacyId: string;
   title: string;
   body: string;
-  type: "new_order" | "order_paid" | "prescription_submitted" | "order_cancelled" | "drug_request_review";
+  type: "new_order" | "order_paid" | "prescription_submitted" | "order_cancelled" | "drug_request_review" | "payout";
   referenceId?: string | null;
 }
 

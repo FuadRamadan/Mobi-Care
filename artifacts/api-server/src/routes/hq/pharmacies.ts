@@ -6,6 +6,10 @@ import { pharmaciesTable, refreshTokensTable } from "@workspace/db/schema";
 import { eq, and, isNull, desc, sql, or } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
+import { sendSms } from "../../lib/configuredSms.js";
+import { logger } from "../../lib/logger.js";
+import { createPharmacyNotification } from "../../lib/pharmacyNotifications.js";
+import { monimeEnabled } from "../../lib/monime/config.js";
 import {
   getOrCreatePasswordPolicy,
   generateTemporaryPassword,
@@ -339,8 +343,18 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     return;
   }
 
+  // Payout numbers: a changed number can't receive cash-outs for 48 hours
+  // (decision 11), so a hijacked HQ session can't quietly redirect money.
+  const now = new Date();
+  const changed = (next: string | null | undefined, previous: string | null) =>
+    next !== undefined && (next ?? "").trim() !== (previous ?? "").trim();
+  const orangeChanged = changed(body.data.orangeMoneyNumber, existing.orangeMoneyNumber);
+  const afriChanged = changed(body.data.afriMoneyNumber, existing.afriMoneyNumber);
+
   const updateValues = {
     ...body.data,
+    ...(orangeChanged ? { orangeMoneyChangedAt: now } : {}),
+    ...(afriChanged ? { afriMoneyChangedAt: now } : {}),
     latitude:
       body.data.latitude === undefined
         ? undefined
@@ -370,6 +384,19 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     entityId: id,
     details: { changes: body.data },
   });
+
+  if ((orangeChanged || afriChanged) && monimeEnabled()) {
+    const lines = [orangeChanged && "Orange Money", afriChanged && "AfriMoney"].filter(Boolean).join(" and ");
+    const message = `Your ${lines} payout number on MobiCare was changed by HQ. Cash-outs to the new number start in 48 hours. If you did not ask for this, call MobiCare HQ now.`;
+    await createPharmacyNotification({ pharmacyId: id, title: "Payout number changed", body: message, type: "payout" });
+    // The SMS goes to the pharmacy's own phone, which this change didn't touch.
+    const phone = existing.phone;
+    if (phone) {
+      void sendSms(phone, `MobiCare: ${message}`).catch((err) =>
+        logger.warn({ err, pharmacyId: id }, "Payout number change SMS not sent"),
+      );
+    }
+  }
 
   res.json(publicPharmacy(updated!));
 });

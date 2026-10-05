@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useGetHqOnlinePayments, getGetHqOnlinePaymentsQueryKey } from '@workspace/api-client-react';
 import HqLayout from './HqLayout';
+import OnlinePayouts from './OnlinePayouts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState, formatLeones, formatDate } from './shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,8 +42,19 @@ export default function HqOnlinePayments() {
   const refundsToPay = data?.refunds ?? [];
   const refundsToPayMinor = refundsToPay.reduce((sum, r) => sum + r.amountMinor, 0);
 
+  const initialTab = new URLSearchParams(window.location.search).get('tab') === 'payouts' ? 'payouts' : 'figures';
+
   return (
     <HqLayout title="Online Payments">
+      <Tabs defaultValue={initialTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="figures">Figures</TabsTrigger>
+          <TabsTrigger value="payouts">Payouts</TabsTrigger>
+        </TabsList>
+        <TabsContent value="payouts">
+          <OnlinePayouts />
+        </TabsContent>
+        <TabsContent value="figures">
       <div className="flex flex-wrap items-end gap-3 mb-6">
         <div className="space-y-1.5">
           <Label htmlFor="online-start">From</Label>
@@ -170,6 +183,8 @@ export default function HqOnlinePayments() {
           </section>
         </div>
       )}
+        </TabsContent>
+      </Tabs>
     </HqLayout>
   );
 }

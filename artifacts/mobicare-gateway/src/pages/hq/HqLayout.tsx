@@ -273,7 +273,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                     notifications.slice(0, 8).map((notification) => (
                       <Link
                         key={notification.id}
-                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : '/hq/orders'}
+                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'payout_issue' ? '/hq/payments?tab=payouts' : '/hq/orders'}
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',
                           !notification.readAt && 'bg-primary/5',

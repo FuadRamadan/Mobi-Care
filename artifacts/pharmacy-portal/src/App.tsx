@@ -26,6 +26,7 @@ const Inventory = lazy(() => import('@/pages/inventory'));
 const Prescriptions = lazy(() => import('@/pages/prescriptions'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Notifications = lazy(() => import('@/pages/notifications'));
+const Payouts = lazy(() => import('@/pages/payouts'));
 
 // Every request gets a valid token: one about to expire is renewed first.
 setAuthTokenGetter(freshAccessToken);
@@ -94,6 +95,7 @@ function ProtectedRoutes() {
           <Route path="/prescriptions" component={Prescriptions} />
           <Route path="/profile" component={Profile} />
           <Route path="/notifications" component={Notifications} />
+          <Route path="/payouts" component={Payouts} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

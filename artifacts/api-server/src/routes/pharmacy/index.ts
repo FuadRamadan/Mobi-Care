@@ -7,6 +7,7 @@ import catalogueRouter from "./catalogue.js";
 import prescriptionsRouter from "./prescriptions.js";
 import notificationsRouter from "./notifications.js";
 import analyticsRouter from "./analytics.js";
+import payoutsRouter from "./payouts.js";
 
 const router = safeRouter();
 
@@ -22,5 +23,6 @@ router.use("/catalogue", catalogueRouter);
 router.use("/prescriptions", prescriptionsRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/analytics", analyticsRouter);
+router.use("/payouts", payoutsRouter);
 
 export default router;

@@ -250,8 +250,22 @@ if $monime; then
   FAKE_MONIME_PORT="$MONIME_FAKE_PORT" \
   FAKE_MONIME_WEBHOOK_URL="http://127.0.0.1:$PORT/api/webhooks/monime" \
   FAKE_MONIME_WEBHOOK_TOKEN="$WEBHOOK_TOKEN" \
+  FAKE_MONIME_STATE_FILE="$STATE/fake-monime-state.json" \
     node deploy/local/fake-monime.mjs > "$LOGS/fake-monime.log" 2>&1 &
   pids+=($!)
+  monime_ready=false
+  for _ in $(seq 1 30); do
+    if curl -fsS -m 2 "http://127.0.0.1:$MONIME_FAKE_PORT/__admin/state" >/dev/null 2>&1; then
+      monime_ready=true
+      break
+    fi
+    sleep 0.5
+  done
+  if ! $monime_ready; then
+    echo "The fake Monime did not start:" >&2
+    tail -20 "$LOGS/fake-monime.log" >&2
+    exit 1
+  fi
   MONIME_ENV=(
     PAYMENTS_PROVIDER=monime
     MONIME_MODE=test
@@ -259,6 +273,8 @@ if $monime; then
     MONIME_SPACE_ID=spc-localfake
     MONIME_BASE_URL="http://127.0.0.1:$MONIME_FAKE_PORT"
     MONIME_WEBHOOK_HEADER_TOKEN="$WEBHOOK_TOKEN"
+    MONIME_HOLDING_ACCOUNT_ID=fac-holding-local
+    MONIME_REVENUE_ACCOUNT_ID=fac-revenue-local
     PUBLIC_APP_URL="http://localhost:$PORT"
   )
 fi

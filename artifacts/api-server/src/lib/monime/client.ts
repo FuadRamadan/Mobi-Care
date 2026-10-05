@@ -63,6 +63,62 @@ export interface MonimePayment {
   metadata?: Record<string, string> | null;
 }
 
+export interface MonimeFinancialAccount {
+  id: string;
+  name?: string;
+  currency?: string;
+  reference?: string | null;
+  balance?: { available?: MonimeAmount | null } | null;
+  metadata?: Record<string, string> | null;
+}
+
+export interface CreateFinancialAccountBody {
+  name: string;
+  currency: "SLE";
+  reference: string;
+  metadata: Record<string, string>;
+}
+
+export interface MonimeFailure {
+  code?: string | null;
+  message?: string | null;
+}
+
+export interface MonimeInternalTransfer {
+  id: string;
+  status: "pending" | "processing" | "completed" | "failed" | string;
+  amount: MonimeAmount;
+  sourceFinancialAccount?: { id?: string } | null;
+  destinationFinancialAccount?: { id?: string } | null;
+  failureDetail?: MonimeFailure | null;
+  metadata?: Record<string, string> | null;
+}
+
+export interface CreateInternalTransferBody {
+  amount: MonimeAmount;
+  sourceFinancialAccount: { id: string };
+  destinationFinancialAccount: { id: string };
+  metadata: Record<string, string>;
+}
+
+export interface MonimePayout {
+  id: string;
+  status: "pending" | "processing" | "completed" | "failed" | string;
+  amount: MonimeAmount;
+  source?: { financialAccountId?: string } | null;
+  destination?: { type?: string; providerId?: string; phoneNumber?: string } | null;
+  fees?: { code?: string; amount?: MonimeAmount }[] | null;
+  failureDetail?: MonimeFailure | null;
+  metadata?: Record<string, string> | null;
+}
+
+export interface CreatePayoutBody {
+  amount: MonimeAmount;
+  source: { financialAccountId: string };
+  destination: { type: "momo"; providerId: "m17" | "m18"; phoneNumber: string };
+  metadata: Record<string, string>;
+}
+
 export interface MonimeRoot {
   status?: { environment?: string | null; isAuthenticated?: boolean };
   apiVersion?: { id?: string; deprecated?: boolean } | null;
@@ -206,6 +262,24 @@ export function createMonimeClient(config: MonimeConfig, deps: MonimeClientDeps 
       request<MonimePayment[]>("GET", "/v1/payments", { query: { orderNumber, limit: "10" } }),
     getPayment: (id: string) =>
       request<MonimePayment>("GET", `/v1/payments/${encodeURIComponent(id)}`),
+
+    // Phase 2: pharmacy accounts, releasing money, cash-outs.
+    createFinancialAccount: (body: CreateFinancialAccountBody, key: string) =>
+      request<MonimeFinancialAccount>("POST", "/v1/financial-accounts", { body, idempotencyKey: key }),
+    findFinancialAccountsByReference: (reference: string) =>
+      request<MonimeFinancialAccount[]>("GET", "/v1/financial-accounts", { query: { reference, limit: "5" } }),
+    getFinancialAccount: (id: string, withBalance = false) =>
+      request<MonimeFinancialAccount>("GET", `/v1/financial-accounts/${encodeURIComponent(id)}`, {
+        query: withBalance ? { withBalance: "true" } : {},
+      }),
+    createInternalTransfer: (body: CreateInternalTransferBody, key: string) =>
+      request<MonimeInternalTransfer>("POST", "/v1/internal-transfers", { body, idempotencyKey: key }),
+    getInternalTransfer: (id: string) =>
+      request<MonimeInternalTransfer>("GET", `/v1/internal-transfers/${encodeURIComponent(id)}`),
+    createPayout: (body: CreatePayoutBody, key: string) =>
+      request<MonimePayout>("POST", "/v1/payouts", { body, idempotencyKey: key }),
+    getPayout: (id: string) =>
+      request<MonimePayout>("GET", `/v1/payouts/${encodeURIComponent(id)}`),
   };
 }
 

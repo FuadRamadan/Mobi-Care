@@ -679,6 +679,31 @@ CREATE TABLE "public"."monime_checkout_sessions" (
 
 
 --
+-- Name: monime_transfers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."monime_transfers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "order_id" "uuid" NOT NULL,
+    "pharmacy_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "attempt" integer NOT NULL,
+    "amount_minor" integer NOT NULL,
+    "source_account_id" "text" NOT NULL,
+    "destination_account_id" "text",
+    "idempotency_key" "text" NOT NULL,
+    "request_body" "jsonb",
+    "status" "text" DEFAULT 'creating'::"text" NOT NULL,
+    "monime_transfer_id" "text",
+    "failure_code" "text",
+    "failure_message" "text",
+    "completed_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
 -- Name: monime_webhook_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -888,6 +913,8 @@ CREATE TABLE "public"."pharmacies" (
     "orange_money_number" "text",
     "afri_money_number" "text",
     "mobile_money_account_name" "text",
+    "orange_money_changed_at" timestamp with time zone,
+    "afri_money_changed_at" timestamp with time zone,
     "mobile_money_number" "text",
     "mobile_money_provider" "text",
     "latitude" "text",
@@ -901,6 +928,38 @@ CREATE TABLE "public"."pharmacies" (
     "password_last_changed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "temporary_password_expires_at" timestamp with time zone,
     "session_version" integer DEFAULT 1 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
+-- Name: pharmacy_cashouts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."pharmacy_cashouts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "pharmacy_id" "uuid" NOT NULL,
+    "amount_minor" integer NOT NULL,
+    "fee_reserved_minor" integer NOT NULL,
+    "fee_minor" integer,
+    "provider" "text" NOT NULL,
+    "phone_number" "text" NOT NULL,
+    "status" "text" NOT NULL,
+    "needs_approval" boolean DEFAULT false NOT NULL,
+    "approved_by_hq_user_id" "uuid",
+    "approved_by_name" "text",
+    "approved_at" timestamp with time zone,
+    "rejected_by_hq_user_id" "uuid",
+    "rejected_by_name" "text",
+    "rejected_at" timestamp with time zone,
+    "rejection_reason" "text",
+    "idempotency_key" "text" NOT NULL,
+    "request_body" "jsonb",
+    "monime_payout_id" "text",
+    "failure_code" "text",
+    "failure_message" "text",
+    "completed_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -932,6 +991,21 @@ CREATE TABLE "public"."pharmacy_inventory" (
     "available_for_delivery" boolean DEFAULT true NOT NULL,
     "available_for_collection" boolean DEFAULT true NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
+-- Name: pharmacy_monime_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."pharmacy_monime_accounts" (
+    "pharmacy_id" "uuid" NOT NULL,
+    "idempotency_key" "text" NOT NULL,
+    "request_body" "jsonb" NOT NULL,
+    "status" "text" DEFAULT 'creating'::"text" NOT NULL,
+    "monime_account_id" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -1460,6 +1534,38 @@ ALTER TABLE ONLY "public"."monime_checkout_sessions"
 
 
 --
+-- Name: monime_transfers monime_transfers_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_key_unique" UNIQUE ("idempotency_key");
+
+
+--
+-- Name: monime_transfers monime_transfers_monime_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_monime_id_unique" UNIQUE ("monime_transfer_id");
+
+
+--
+-- Name: monime_transfers monime_transfers_order_kind_attempt_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_order_kind_attempt_unique" UNIQUE ("order_id", "kind", "attempt");
+
+
+--
+-- Name: monime_transfers monime_transfers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: monime_webhook_events monime_webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1572,11 +1678,59 @@ ALTER TABLE ONLY "public"."pharmacies"
 
 
 --
+-- Name: pharmacy_cashouts pharmacy_cashouts_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_cashouts"
+    ADD CONSTRAINT "pharmacy_cashouts_key_unique" UNIQUE ("idempotency_key");
+
+
+--
+-- Name: pharmacy_cashouts pharmacy_cashouts_payout_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_cashouts"
+    ADD CONSTRAINT "pharmacy_cashouts_payout_unique" UNIQUE ("monime_payout_id");
+
+
+--
+-- Name: pharmacy_cashouts pharmacy_cashouts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_cashouts"
+    ADD CONSTRAINT "pharmacy_cashouts_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: pharmacy_inventory pharmacy_inventory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY "public"."pharmacy_inventory"
     ADD CONSTRAINT "pharmacy_inventory_pkey" PRIMARY KEY ("id");
+
+
+--
+-- Name: pharmacy_monime_accounts pharmacy_monime_accounts_account_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_monime_accounts"
+    ADD CONSTRAINT "pharmacy_monime_accounts_account_unique" UNIQUE ("monime_account_id");
+
+
+--
+-- Name: pharmacy_monime_accounts pharmacy_monime_accounts_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_monime_accounts"
+    ADD CONSTRAINT "pharmacy_monime_accounts_key_unique" UNIQUE ("idempotency_key");
+
+
+--
+-- Name: pharmacy_monime_accounts pharmacy_monime_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_monime_accounts"
+    ADD CONSTRAINT "pharmacy_monime_accounts_pkey" PRIMARY KEY ("pharmacy_id");
 
 
 --
@@ -1821,6 +1975,20 @@ CREATE INDEX "monime_checkout_sessions_status_idx" ON "public"."monime_checkout_
 
 
 --
+-- Name: monime_transfers_pharmacy_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "monime_transfers_pharmacy_idx" ON "public"."monime_transfers" USING "btree" ("pharmacy_id", "kind", "status");
+
+
+--
+-- Name: monime_transfers_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "monime_transfers_status_idx" ON "public"."monime_transfers" USING "btree" ("status", "updated_at");
+
+
+--
 -- Name: patient_consents_patient_type_recorded_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1846,6 +2014,27 @@ CREATE INDEX "patient_password_reset_requester_created_idx" ON "public"."patient
 --
 
 CREATE UNIQUE INDEX "patients_google_sub_unique" ON "public"."patients" USING "btree" ("google_sub");
+
+
+--
+-- Name: pharmacy_cashouts_one_open; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "pharmacy_cashouts_one_open" ON "public"."pharmacy_cashouts" USING "btree" ("pharmacy_id") WHERE ("status" = ANY (ARRAY['awaiting_approval'::"text", 'sending'::"text", 'pending'::"text", 'processing'::"text"]));
+
+
+--
+-- Name: pharmacy_cashouts_pharmacy_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "pharmacy_cashouts_pharmacy_idx" ON "public"."pharmacy_cashouts" USING "btree" ("pharmacy_id", "created_at");
+
+
+--
+-- Name: pharmacy_cashouts_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "pharmacy_cashouts_status_idx" ON "public"."pharmacy_cashouts" USING "btree" ("status", "updated_at");
 
 
 --
@@ -2080,6 +2269,22 @@ ALTER TABLE ONLY "public"."monime_checkout_sessions"
 
 
 --
+-- Name: monime_transfers monime_transfers_order_id_orders_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE RESTRICT;
+
+
+--
+-- Name: monime_transfers monime_transfers_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."monime_transfers"
+    ADD CONSTRAINT "monime_transfers_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE RESTRICT;
+
+
+--
 -- Name: notifications notifications_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2168,6 +2373,14 @@ ALTER TABLE ONLY "public"."patient_refresh_tokens"
 
 
 --
+-- Name: pharmacy_cashouts pharmacy_cashouts_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_cashouts"
+    ADD CONSTRAINT "pharmacy_cashouts_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE RESTRICT;
+
+
+--
 -- Name: pharmacy_inventory pharmacy_inventory_drug_id_drug_catalogue_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2181,6 +2394,14 @@ ALTER TABLE ONLY "public"."pharmacy_inventory"
 
 ALTER TABLE ONLY "public"."pharmacy_inventory"
     ADD CONSTRAINT "pharmacy_inventory_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE CASCADE;
+
+
+--
+-- Name: pharmacy_monime_accounts pharmacy_monime_accounts_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."pharmacy_monime_accounts"
+    ADD CONSTRAINT "pharmacy_monime_accounts_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE RESTRICT;
 
 
 --
@@ -2298,11 +2519,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-05 13:22:28.685665+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-05 16:48:52.7521+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-05 13:22:28.688989+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-05 16:48:52.755123+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-05 13:22:28.740924+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-05 16:48:52.799998+00')
 ON CONFLICT DO NOTHING;

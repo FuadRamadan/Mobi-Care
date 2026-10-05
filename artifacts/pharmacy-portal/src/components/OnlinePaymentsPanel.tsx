@@ -4,6 +4,7 @@ import {
 } from "@workspace/api-client-react";
 import { format, parseISO, isSameDay } from "date-fns";
 import { Smartphone } from "lucide-react";
+import { Link } from "wouter";
 import { formatLeones } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -53,7 +54,7 @@ export function OnlinePaymentsPanel({ start, end }: { start: string; end: string
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        Completed orders are paid out to you once MobiCare payouts start. Refunded orders are not counted.
+        Completed orders go to your balance; cash out from <Link href="/payouts" className="underline underline-offset-2 hover:text-primary">Payouts</Link>. Refunded orders are not counted.
       </p>
 
       <div className="overflow-x-auto">

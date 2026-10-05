@@ -2,7 +2,7 @@ import { useListNotifications, useMarkNotificationsRead, getListNotificationsQue
 import { formatDateTime } from "@/lib/format";
 import { markNotificationsReadAndRefresh } from "@/lib/notification-read";
 import { Button } from "@/components/ui/button";
-import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, Circle, Bell, Activity, Package, FileText, Trash2, Wallet } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import clsx from "clsx";
@@ -11,12 +11,14 @@ import { useLocation } from "wouter";
 function destinationForNotification(type: string | null | undefined) {
   if (type === "prescription_submitted") return "/prescriptions";
   if (type === "order_cancelled") return "/orders?tab=cancelled";
+  if (type === "payout") return "/payouts";
   return "/orders";
 }
 
 function iconForNotification(type: string | null | undefined) {
   if (type === "prescription_submitted") return FileText;
   if (type === "system") return Activity;
+  if (type === "payout") return Wallet;
   return Package;
 }
 
