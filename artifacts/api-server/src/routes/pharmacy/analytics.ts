@@ -9,6 +9,8 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, sql, count, inArray } from "drizzle-orm";
 import { BUSINESS_TIMEZONE, businessDateNow } from "../../lib/commissionSettlements.js";
+import { pharmacyOnlineFigures, validRange } from "../../lib/onlinePaymentFigures.js";
+import { monimeEnabled } from "../../lib/monime/config.js";
 
 const router = safeRouter();
 
@@ -151,6 +153,31 @@ router.get("/commission", async (req: AuthRequest, res) => {
     daily.push(row ?? { settlementDate: date, businessTimezone: BUSINESS_TIMEZONE, ordersCount: 0, grossCollectedMinor: 0, drugAmountTotalMinor: 0, commissionDueMinor: 0, amountPaidMinor: 0, balanceMinor: 0, status: "paid" });
   }
   res.json({ today: { ...(today[0] ?? { ordersCount: 0, grossCollectedMinor: 0, drugAmountTotalMinor: 0, commissionDueMinor: 0 }), pharmacyEarningsMinor: (today[0]?.drugAmountTotalMinor ?? 0) }, outstandingCommissionMinor: outstanding?.amount ?? 0, daily });
+});
+
+// ── GET /analytics/online: orders paid online through MobiCare (Monime) ─────
+// The pharmacy's own prices, MobiCare's 5% commission and what it receives,
+// by the day the payment was confirmed, minus refunds. Never the patient's
+// service fee.
+router.get("/online", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const today = businessDateNow();
+  const range = validRange(req.query.start ?? today, req.query.end ?? today);
+  if (!range) {
+    res.status(400).json({ error: "start and end must be YYYY-MM-DD, start first, at most 92 days apart" });
+    return;
+  }
+  const figures = await pharmacyOnlineFigures(pharmacyId, range.start, range.end);
+  const todayRow =
+    figures.daily.find((day) => day.date === today) ??
+    (await pharmacyOnlineFigures(pharmacyId, today, today)).daily[0]!;
+  res.json({
+    enabled: monimeEnabled() || figures.hasOnlineOrders,
+    today: todayRow,
+    daily: figures.daily,
+    waitingMinor: figures.waitingMinor,
+    completedMinor: figures.completedMinor,
+  });
 });
 
 router.get("/commission.csv", async (req: AuthRequest, res) => {

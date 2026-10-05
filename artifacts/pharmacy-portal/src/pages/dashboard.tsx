@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
 
 const STATUS_COLORS: Record<string, string> = {
   unpaid: "bg-destructive/10 text-destructive",
@@ -110,6 +111,10 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1 text-sm">Key metrics and recent activity for your pharmacy.</p>
       </div>
 
+      <OnlinePaymentsPanel start={queryParams.start} end={queryParams.end} />
+
+      <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Paid directly to you</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Commission Owed Today"
@@ -136,6 +141,7 @@ export default function Dashboard() {
           icon={Package}
         />
       </div>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard

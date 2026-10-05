@@ -841,6 +841,65 @@ export interface OrderPrescriptionInfo {
   rejectReason?: string | null;
 }
 
+export interface PharmacyOnlineDay {
+  date: string;
+  ordersCount: number;
+  /** At the pharmacy's own prices */
+  salesMinor: number;
+  /** MobiCare's 5% commission */
+  commissionMinor: number;
+  /** What the pharmacy receives */
+  receiveMinor: number;
+  refundedOrders: number;
+}
+
+export interface PharmacyOnlineAnalytics {
+  enabled: boolean;
+  today: PharmacyOnlineDay;
+  daily: PharmacyOnlineDay[];
+  /** To receive for paid orders not yet delivered or collected */
+  waitingMinor: number;
+  /** To receive for completed orders (paid out once payouts start) */
+  completedMinor: number;
+}
+
+export interface HqOnlineDay {
+  date: string;
+  ordersPaid: number;
+  collectedMinor: number;
+  refundsCount: number;
+  refundsMinor: number;
+  serviceFeesMinor: number;
+  commissionMinor: number;
+  deliveryFeesMinor: number;
+  monimeFeesMinor: number;
+  netMinor: number;
+}
+
+export interface HqOnlineRefund {
+  orderId: string;
+  patientName: string;
+  /** @nullable */
+  pharmacyName: string | null;
+  amountMinor: number;
+  /** @nullable */
+  paidAt: string | null;
+  reason: string;
+  /** @nullable */
+  payerChannel: string | null;
+  /** @nullable */
+  payerProvider: string | null;
+}
+
+export interface HqOnlinePayments {
+  enabled: boolean;
+  today: string;
+  daily: HqOnlineDay[];
+  waitingOnOrdersMinor: number;
+  owedToPharmaciesMinor: number;
+  refunds: HqOnlineRefund[];
+}
+
 export type PaymentsConfigProvider = typeof PaymentsConfigProvider[keyof typeof PaymentsConfigProvider];
 
 
@@ -2692,6 +2751,16 @@ status?: string;
 };
 
 export type GetPharmacyCommissionAnalyticsParams = {
+start?: string;
+end?: string;
+};
+
+export type GetPharmacyOnlineAnalyticsParams = {
+start?: string;
+end?: string;
+};
+
+export type GetHqOnlinePaymentsParams = {
 start?: string;
 end?: string;
 };

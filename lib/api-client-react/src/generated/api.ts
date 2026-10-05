@@ -68,7 +68,9 @@ import type {
   GenerateSettlementsInput,
   GetHqDashboardTrendsParams,
   GetHqInsightsParams,
+  GetHqOnlinePaymentsParams,
   GetPharmacyCommissionAnalyticsParams,
+  GetPharmacyOnlineAnalyticsParams,
   GoogleConnection,
   GoogleCredentialInput,
   GoogleSignInConfig,
@@ -86,6 +88,7 @@ import type {
   HqFlag,
   HqInsights,
   HqNotification,
+  HqOnlinePayments,
   HqOrder,
   HqPharmacy,
   HqPharmacyUpdate,
@@ -137,6 +140,7 @@ import type {
   PharmacyCommissionAnalytics,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
+  PharmacyOnlineAnalytics,
   PharmacyResetPasswordResponse,
   PilotResetPreview,
   PilotResetRequest,
@@ -2258,6 +2262,174 @@ export function useGetPharmacyCommissionAnalytics<TData = Awaited<ReturnType<typ
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPharmacyCommissionAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPharmacyOnlineAnalyticsUrl = (params?: GetPharmacyOnlineAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/pharmacy/analytics/online?${stringifiedParams}` : `/api/pharmacy/analytics/online`
+}
+
+/**
+ * @summary Orders paid online through MobiCare, at the pharmacy's own prices
+ */
+export const getPharmacyOnlineAnalytics = async (params?: GetPharmacyOnlineAnalyticsParams, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyOnlineAnalytics> => {
+
+  return customFetch<PharmacyOnlineAnalytics>(getGetPharmacyOnlineAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPharmacyOnlineAnalyticsQueryKey = (params?: GetPharmacyOnlineAnalyticsParams,) => {
+    return [
+    `/api/pharmacy/analytics/online`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPharmacyOnlineAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>, TError = ErrorType<void>>(params?: GetPharmacyOnlineAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPharmacyOnlineAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>> = ({ signal }) => getPharmacyOnlineAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPharmacyOnlineAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>>
+export type GetPharmacyOnlineAnalyticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Orders paid online through MobiCare, at the pharmacy's own prices
+ */
+
+export function useGetPharmacyOnlineAnalytics<TData = Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>, TError = ErrorType<void>>(
+ params?: GetPharmacyOnlineAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyOnlineAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPharmacyOnlineAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqOnlinePaymentsUrl = (params?: GetHqOnlinePaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/payments/online?${stringifiedParams}` : `/api/hq/payments/online`
+}
+
+/**
+ * @summary MobiCare's online-payment figures (needs the settlements permission)
+ */
+export const getHqOnlinePayments = async (params?: GetHqOnlinePaymentsParams, options?: Parameters<typeof customFetch>[1]): Promise<HqOnlinePayments> => {
+
+  return customFetch<HqOnlinePayments>(getGetHqOnlinePaymentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqOnlinePaymentsQueryKey = (params?: GetHqOnlinePaymentsParams,) => {
+    return [
+    `/api/hq/payments/online`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqOnlinePaymentsQueryOptions = <TData = Awaited<ReturnType<typeof getHqOnlinePayments>>, TError = ErrorType<void>>(params?: GetHqOnlinePaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqOnlinePayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqOnlinePaymentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqOnlinePayments>>> = ({ signal }) => getHqOnlinePayments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqOnlinePayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqOnlinePaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof getHqOnlinePayments>>>
+export type GetHqOnlinePaymentsQueryError = ErrorType<void>
+
+
+/**
+ * @summary MobiCare's online-payment figures (needs the settlements permission)
+ */
+
+export function useGetHqOnlinePayments<TData = Awaited<ReturnType<typeof getHqOnlinePayments>>, TError = ErrorType<void>>(
+ params?: GetHqOnlinePaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqOnlinePayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqOnlinePaymentsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

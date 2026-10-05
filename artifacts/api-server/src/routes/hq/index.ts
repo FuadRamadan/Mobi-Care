@@ -14,6 +14,7 @@ import catalogueImportRouter from "./catalogueImport.js";
 import couriersRouter from "./couriers.js";
 import flagsRouter from "./flags.js";
 import settlementsRouter from "./settlements.js";
+import paymentsRouter from "./payments.js";
 import auditRouter from "./audit.js";
 import notificationsRouter from "./notifications.js";
 import passwordPolicyRouter from "./passwordPolicy.js";
@@ -45,6 +46,7 @@ router.use("/couriers", couriersRouter);
 router.use("/delivery-zones", deliveryZonesRouter);
 router.use("/flags", flagsRouter);
 router.use("/settlements", requireManageSettlements, settlementsRouter);
+router.use("/payments", requireManageSettlements, paymentsRouter);
 // Registered before /insights, which would otherwise match first and 404.
 // Clearing the pilot data destroys the commission ledger as well as the
 // reporting data, so it takes both permissions: seeing the numbers is not the

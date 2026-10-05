@@ -19,6 +19,7 @@ import {
   BarChart3,
   Megaphone,
   MapPinned,
+  Smartphone,
   type LucideIcon,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -56,6 +57,7 @@ const NAV: Array<{
   { href: '/hq/advertisements', label: 'Promotions', icon: Megaphone },
   { href: '/hq/flags', label: 'Flags', icon: Flag },
   { href: '/hq/settlements', label: 'Settlements', icon: Wallet, requiresSettlements: true, badge: 'pendingSettlements' },
+  { href: '/hq/payments', label: 'Online Payments', icon: Smartphone, requiresSettlements: true },
   { href: '/hq/insights', label: 'Data & Insights', icon: BarChart3, requiresInsights: true },
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
   { href: '/hq/team', label: 'Team Profiles', icon: Users },

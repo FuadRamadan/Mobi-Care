@@ -75,6 +75,10 @@ Then add a medicine to the cart and tap **Place order and pay**. Test helpers:
 `POST http://localhost:9100/__admin/fail-next?count=N` makes Monime answer 503
 N times, and `GET http://localhost:9100/__admin/state` shows everything it holds.
 
+Paid orders show up on the pharmacy portal's Overview (**Paid online through
+MobiCare**, at the pharmacy's own prices) and on HQ's **Online Payments** page
+(fees, commission, delivery, Monime fees, money held and refunds to pay).
+
 ## Photos work
 
 Prescriptions, profile photos, courier and team photos and advertisements all

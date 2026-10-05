@@ -935,6 +935,75 @@ export const GetPharmacyCommissionAnalyticsResponse = zod.object({
 
 
 /**
+ * @summary Orders paid online through MobiCare, at the pharmacy's own prices
+ */
+export const GetPharmacyOnlineAnalyticsQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional()
+})
+
+export const GetPharmacyOnlineAnalyticsResponse = zod.object({
+  "enabled": zod.boolean(),
+  "today": zod.object({
+  "date": zod.string(),
+  "ordersCount": zod.number(),
+  "salesMinor": zod.number().describe('At the pharmacy\'s own prices'),
+  "commissionMinor": zod.number().describe('MobiCare\'s 5% commission'),
+  "receiveMinor": zod.number().describe('What the pharmacy receives'),
+  "refundedOrders": zod.number()
+}),
+  "daily": zod.array(zod.object({
+  "date": zod.string(),
+  "ordersCount": zod.number(),
+  "salesMinor": zod.number().describe('At the pharmacy\'s own prices'),
+  "commissionMinor": zod.number().describe('MobiCare\'s 5% commission'),
+  "receiveMinor": zod.number().describe('What the pharmacy receives'),
+  "refundedOrders": zod.number()
+})),
+  "waitingMinor": zod.number().describe('To receive for paid orders not yet delivered or collected'),
+  "completedMinor": zod.number().describe('To receive for completed orders (paid out once payouts start)')
+})
+
+
+/**
+ * @summary MobiCare's online-payment figures (needs the settlements permission)
+ */
+export const GetHqOnlinePaymentsQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional()
+})
+
+export const GetHqOnlinePaymentsResponse = zod.object({
+  "enabled": zod.boolean(),
+  "today": zod.string(),
+  "daily": zod.array(zod.object({
+  "date": zod.string(),
+  "ordersPaid": zod.number(),
+  "collectedMinor": zod.number(),
+  "refundsCount": zod.number(),
+  "refundsMinor": zod.number(),
+  "serviceFeesMinor": zod.number(),
+  "commissionMinor": zod.number(),
+  "deliveryFeesMinor": zod.number(),
+  "monimeFeesMinor": zod.number(),
+  "netMinor": zod.number()
+})),
+  "waitingOnOrdersMinor": zod.number(),
+  "owedToPharmaciesMinor": zod.number(),
+  "refunds": zod.array(zod.object({
+  "orderId": zod.string(),
+  "patientName": zod.string(),
+  "pharmacyName": zod.string().nullable(),
+  "amountMinor": zod.number(),
+  "paidAt": zod.string().nullable(),
+  "reason": zod.string(),
+  "payerChannel": zod.string().nullable(),
+  "payerProvider": zod.string().nullable()
+}))
+})
+
+
+/**
  * @summary Download the authenticated pharmacy's commission history as CSV
  */
 export const ExportPharmacyCommissionHistoryQueryParams = zod.object({
