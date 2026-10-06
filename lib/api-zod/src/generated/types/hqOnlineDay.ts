@@ -9,6 +9,8 @@
 export interface HqOnlineDay {
   date: string;
   ordersPaid: number;
+  /** Medicines at the pharmacies' prices, refunded orders left out */
+  salesMinor: number;
   collectedMinor: number;
   refundsCount: number;
   refundsMinor: number;

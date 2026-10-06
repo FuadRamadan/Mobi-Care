@@ -11,7 +11,7 @@ import { Link } from "wouter";
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { TrendChart, type TrendStyle } from "@/components/TrendChart";
+import { TrendChart, TREND_GREEN } from "@/components/TrendChart";
 
 /**
  * The pharmacy's Overview. Every order is paid through MobiCare (Monime), so
@@ -44,11 +44,9 @@ export default function Dashboard() {
     },
   });
 
-  // Chart style preview (temporary, until one is chosen): ?chart=line or ?chart=area
-  const chartStyle: TrendStyle = new URLSearchParams(window.location.search).get("chart") === "line" ? "line" : "area";
-
-  const points = useMemo(
-    () => (sales?.daily ?? []).map((d) => ({ date: d.date, valueMinor: d.receiveMinor, orders: d.ordersCount })),
+  const days = useMemo(() => (sales?.daily ?? []).map((d) => ({ date: d.date, orders: d.ordersCount })), [sales]);
+  const series = useMemo(
+    () => [{ key: "earnings", label: "Your earnings", color: TREND_GREEN, values: (sales?.daily ?? []).map((d) => d.receiveMinor) }],
     [sales],
   );
 
@@ -162,7 +160,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className={salesLoading ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          <TrendChart points={points} style={chartStyle} label="Your daily earnings from paid orders" />
+          <TrendChart days={days} series={series} label="Your daily earnings from paid orders" />
         </div>
       </div>
     </div>

@@ -866,6 +866,8 @@ export interface PharmacyOnlineAnalytics {
 export interface HqOnlineDay {
   date: string;
   ordersPaid: number;
+  /** Medicines at the pharmacies' prices, refunded orders left out */
+  salesMinor: number;
   collectedMinor: number;
   refundsCount: number;
   refundsMinor: number;
@@ -874,6 +876,54 @@ export interface HqOnlineDay {
   deliveryFeesMinor: number;
   monimeFeesMinor: number;
   netMinor: number;
+}
+
+export type HqSaleState = typeof HqSaleState[keyof typeof HqSaleState];
+
+
+export const HqSaleState = {
+  waiting: 'waiting',
+  completed: 'completed',
+  paid_to_pharmacy: 'paid_to_pharmacy',
+  refunded: 'refunded',
+} as const;
+
+export interface HqSale {
+  orderId: string;
+  paidAt: string;
+  pharmacyId: string;
+  pharmacyName: string;
+  patientName: string;
+  fulfillmentType: string;
+  /** What the patient paid */
+  paidMinor: number;
+  /** Medicines at the pharmacy's prices */
+  salesMinor: number;
+  commissionMinor: number;
+  deliveryFeeMinor: number;
+  serviceFeeMinor: number;
+  monimeFeeMinor: number;
+  /** MobiCare's revenue: commission + delivery + service fee - Monime's fee (refunded: minus Monime's fee) */
+  revenueMinor: number;
+  pharmacyReceivesMinor: number;
+  state: HqSaleState;
+}
+
+export interface HqSalesTotals {
+  orders: number;
+  refundedOrders: number;
+  salesMinor: number;
+  commissionMinor: number;
+  deliveryFeesMinor: number;
+  serviceFeesMinor: number;
+  monimeFeesMinor: number;
+  revenueMinor: number;
+}
+
+export interface HqSalesHistory {
+  orders: HqSale[];
+  total: number;
+  totals: HqSalesTotals;
 }
 
 export interface HqOnlineRefund {
@@ -2975,6 +3025,18 @@ end?: string;
 export type GetHqOnlinePaymentsParams = {
 start?: string;
 end?: string;
+};
+
+export type GetHqSalesHistoryParams = {
+start?: string;
+end?: string;
+pharmacyId?: string;
+/**
+ * Order number, patient name or pharmacy name
+ */
+q?: string;
+limit?: number;
+offset?: number;
 };
 
 export type PatientSearchDrugsParams = {

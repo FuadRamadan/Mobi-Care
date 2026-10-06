@@ -742,6 +742,43 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
+  /hq/settlements/orders:
+    get:
+      operationId: getHqSalesHistory
+      tags: [hq]
+      summary: Sales history, one row per order paid through Monime, with MobiCare's revenue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+        - name: pharmacyId
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          description: Order number, patient name or pharmacy name
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: number }
+        - name: offset
+          in: query
+          schema: { type: number }
+      responses:
+        "200":
+          description: Orders in the range, newest payment first, and the range totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqSalesHistory"
+        "400":
+          description: Bad date range or filter
+
   /hq/settlements/payouts:
     get:
       operationId: getHqPayouts
@@ -4398,10 +4435,11 @@ components:
 
     HqOnlineDay:
       type: object
-      required: [date, ordersPaid, collectedMinor, refundsCount, refundsMinor, serviceFeesMinor, commissionMinor, deliveryFeesMinor, monimeFeesMinor, netMinor]
+      required: [date, ordersPaid, salesMinor, collectedMinor, refundsCount, refundsMinor, serviceFeesMinor, commissionMinor, deliveryFeesMinor, monimeFeesMinor, netMinor]
       properties:
         date: { type: string }
         ordersPaid: { type: number }
+        salesMinor: { type: number, description: "Medicines at the pharmacies' prices, refunded orders left out" }
         collectedMinor: { type: number }
         refundsCount: { type: number }
         refundsMinor: { type: number }
@@ -4410,6 +4448,51 @@ components:
         deliveryFeesMinor: { type: number }
         monimeFeesMinor: { type: number }
         netMinor: { type: number }
+
+    HqSale:
+      type: object
+      required: [orderId, paidAt, pharmacyId, pharmacyName, patientName, fulfillmentType, paidMinor, salesMinor, commissionMinor, deliveryFeeMinor, serviceFeeMinor, monimeFeeMinor, revenueMinor, pharmacyReceivesMinor, state]
+      properties:
+        orderId: { type: string }
+        paidAt: { type: string }
+        pharmacyId: { type: string }
+        pharmacyName: { type: string }
+        patientName: { type: string }
+        fulfillmentType: { type: string }
+        paidMinor: { type: number, description: What the patient paid }
+        salesMinor: { type: number, description: "Medicines at the pharmacy's prices" }
+        commissionMinor: { type: number }
+        deliveryFeeMinor: { type: number }
+        serviceFeeMinor: { type: number }
+        monimeFeeMinor: { type: number }
+        revenueMinor: { type: number, description: "MobiCare's revenue: commission + delivery + service fee - Monime's fee (refunded: minus Monime's fee)" }
+        pharmacyReceivesMinor: { type: number }
+        state: { type: string, enum: [waiting, completed, paid_to_pharmacy, refunded] }
+
+    HqSalesTotals:
+      type: object
+      required: [orders, refundedOrders, salesMinor, commissionMinor, deliveryFeesMinor, serviceFeesMinor, monimeFeesMinor, revenueMinor]
+      properties:
+        orders: { type: number }
+        refundedOrders: { type: number }
+        salesMinor: { type: number }
+        commissionMinor: { type: number }
+        deliveryFeesMinor: { type: number }
+        serviceFeesMinor: { type: number }
+        monimeFeesMinor: { type: number }
+        revenueMinor: { type: number }
+
+    HqSalesHistory:
+      type: object
+      required: [orders, total, totals]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqSale"
+        total: { type: number }
+        totals:
+          $ref: "#/components/schemas/HqSalesTotals"
 
     HqOnlineRefund:
       type: object

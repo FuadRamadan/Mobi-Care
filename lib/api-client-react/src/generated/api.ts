@@ -66,6 +66,7 @@ import type {
   GetHqDashboardTrendsParams,
   GetHqInsightsParams,
   GetHqOnlinePaymentsParams,
+  GetHqSalesHistoryParams,
   GetPharmacyOnlineAnalyticsParams,
   GoogleConnection,
   GoogleCredentialInput,
@@ -89,6 +90,7 @@ import type {
   HqPayouts,
   HqPharmacy,
   HqPharmacyUpdate,
+  HqSalesHistory,
   ImageUrlRequest,
   ImageUrlResponse,
   InventoryImportPreview,
@@ -2573,6 +2575,90 @@ export const useCancelPharmacyCashout = <TError = ErrorType<void>,
       > => {
       return useMutation(getCancelPharmacyCashoutMutationOptions(options));
     }
+
+export const getGetHqSalesHistoryUrl = (params?: GetHqSalesHistoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/settlements/orders?${stringifiedParams}` : `/api/hq/settlements/orders`
+}
+
+/**
+ * @summary Sales history, one row per order paid through Monime, with MobiCare's revenue
+ */
+export const getHqSalesHistory = async (params?: GetHqSalesHistoryParams, options?: Parameters<typeof customFetch>[1]): Promise<HqSalesHistory> => {
+
+  return customFetch<HqSalesHistory>(getGetHqSalesHistoryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqSalesHistoryQueryKey = (params?: GetHqSalesHistoryParams,) => {
+    return [
+    `/api/hq/settlements/orders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqSalesHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getHqSalesHistory>>, TError = ErrorType<void>>(params?: GetHqSalesHistoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSalesHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqSalesHistoryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqSalesHistory>>> = ({ signal }) => getHqSalesHistory(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqSalesHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqSalesHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getHqSalesHistory>>>
+export type GetHqSalesHistoryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Sales history, one row per order paid through Monime, with MobiCare's revenue
+ */
+
+export function useGetHqSalesHistory<TData = Awaited<ReturnType<typeof getHqSalesHistory>>, TError = ErrorType<void>>(
+ params?: GetHqSalesHistoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSalesHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqSalesHistoryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHqPayoutsUrl = () => {
 

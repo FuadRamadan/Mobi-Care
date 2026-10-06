@@ -948,6 +948,7 @@ export const GetHqOnlinePaymentsResponse = zod.object({
   "daily": zod.array(zod.object({
   "date": zod.string(),
   "ordersPaid": zod.number(),
+  "salesMinor": zod.number().describe('Medicines at the pharmacies\' prices, refunded orders left out'),
   "collectedMinor": zod.number(),
   "refundsCount": zod.number(),
   "refundsMinor": zod.number(),
@@ -1068,6 +1069,50 @@ export const CancelPharmacyCashoutResponse = zod.object({
   "rejectionReason": zod.string().nullable(),
   "createdAt": zod.string(),
   "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Sales history, one row per order paid through Monime, with MobiCare's revenue
+ */
+export const GetHqSalesHistoryQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional(),
+  "pharmacyId": zod.coerce.string().optional(),
+  "q": zod.coerce.string().optional().describe('Order number, patient name or pharmacy name'),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const GetHqSalesHistoryResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "orderId": zod.string(),
+  "paidAt": zod.string(),
+  "pharmacyId": zod.string(),
+  "pharmacyName": zod.string(),
+  "patientName": zod.string(),
+  "fulfillmentType": zod.string(),
+  "paidMinor": zod.number().describe('What the patient paid'),
+  "salesMinor": zod.number().describe('Medicines at the pharmacy\'s prices'),
+  "commissionMinor": zod.number(),
+  "deliveryFeeMinor": zod.number(),
+  "serviceFeeMinor": zod.number(),
+  "monimeFeeMinor": zod.number(),
+  "revenueMinor": zod.number().describe('MobiCare\'s revenue: commission + delivery + service fee - Monime\'s fee (refunded: minus Monime\'s fee)'),
+  "pharmacyReceivesMinor": zod.number(),
+  "state": zod.enum(['waiting', 'completed', 'paid_to_pharmacy', 'refunded'])
+})),
+  "total": zod.number(),
+  "totals": zod.object({
+  "orders": zod.number(),
+  "refundedOrders": zod.number(),
+  "salesMinor": zod.number(),
+  "commissionMinor": zod.number(),
+  "deliveryFeesMinor": zod.number(),
+  "serviceFeesMinor": zod.number(),
+  "monimeFeesMinor": zod.number(),
+  "revenueMinor": zod.number()
+})
 })
 
 

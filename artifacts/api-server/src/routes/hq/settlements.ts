@@ -1,6 +1,6 @@
 import { safeRouter } from "../../lib/safeRouter.js";
 import { businessDateNow } from "../../lib/businessTime.js";
-import { hqOnlineFigures, validRange } from "../../lib/onlinePaymentFigures.js";
+import { hqOnlineFigures, hqSalesHistory, validRange } from "../../lib/onlinePaymentFigures.js";
 import { z } from "zod";
 import { monimeEnabled } from "../../lib/monime/config.js";
 import {
@@ -29,6 +29,35 @@ router.get("/online", async (req, res) => {
   }
   const figures = await hqOnlineFigures(range.start, range.end);
   res.json({ enabled: monimeEnabled(), today, ...figures });
+});
+
+// ── GET /hq/settlements/orders: sales history, one row per paid order ──────
+// For tracking MobiCare's revenue order by order: pharmacy, patient, sales at
+// the pharmacy's prices, commission, delivery, Monime's fee and revenue.
+// Filter by dates (payment date), pharmacy and order number / name.
+router.get("/orders", async (req, res) => {
+  const today = businessDateNow();
+  const range = validRange(req.query.start ?? today, req.query.end ?? today);
+  const query = z
+    .object({
+      pharmacyId: z.string().uuid().optional(),
+      q: z.string().trim().max(80).optional(),
+      limit: z.coerce.number().int().min(1).max(5_000).default(50),
+      offset: z.coerce.number().int().min(0).default(0),
+    })
+    .safeParse(req.query);
+  if (!range || !query.success) {
+    res.status(400).json({ error: "start and end must be YYYY-MM-DD, start first, at most 92 days apart" });
+    return;
+  }
+  res.json(await hqSalesHistory({
+    start: range.start,
+    end: range.end,
+    pharmacyId: query.data.pharmacyId,
+    search: query.data.q,
+    limit: query.data.limit,
+    offset: query.data.offset,
+  }));
 });
 
 // ── Payouts (Monime phase 2) ───────────────────────────────────────────────

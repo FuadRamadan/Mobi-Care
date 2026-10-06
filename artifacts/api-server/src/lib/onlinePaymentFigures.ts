@@ -127,6 +127,8 @@ export async function pharmacyOnlineFigures(pharmacyId: string, start: string, e
 export interface HqOnlineDay {
   date: string;
   ordersPaid: number;
+  /** Medicines at the pharmacies' own prices, refunded orders left out. */
+  salesMinor: number;
   collectedMinor: number;
   refundsCount: number;
   refundsMinor: number;
@@ -155,6 +157,7 @@ export async function hqOnlineFigures(start: string, end: string) {
     )
     SELECT day AS date,
            count(*)::int AS orders_paid,
+           coalesce(sum(pharmacy_medicine_total_minor) FILTER (WHERE NOT (status = 'cancelled' OR late_payment_status IS NOT DISTINCT FROM 'refund_needed')), 0)::int AS sales_minor,
            coalesce(sum(${sql.raw("round(total_leones * 100)::int")}), 0)::int AS collected_minor,
            count(*) FILTER (WHERE status = 'cancelled' OR late_payment_status IS NOT DISTINCT FROM 'refund_needed')::int AS refunds_count,
            coalesce(sum(${sql.raw("round(total_leones * 100)::int")}) FILTER (WHERE status = 'cancelled' OR late_payment_status IS NOT DISTINCT FROM 'refund_needed'), 0)::int AS refunds_minor,
@@ -198,6 +201,7 @@ export async function hqOnlineFigures(start: string, end: string) {
       const day = {
         date: String(r.date),
         ordersPaid: n(r.orders_paid),
+        salesMinor: n(r.sales_minor),
         collectedMinor: n(r.collected_minor),
         refundsCount: n(r.refunds_count),
         refundsMinor: n(r.refunds_minor),
@@ -210,7 +214,7 @@ export async function hqOnlineFigures(start: string, end: string) {
       day.netMinor = netRevenueMinor(day);
       return day;
     }),
-    (date) => ({ date, ordersPaid: 0, collectedMinor: 0, refundsCount: 0, refundsMinor: 0, serviceFeesMinor: 0, commissionMinor: 0, deliveryFeesMinor: 0, monimeFeesMinor: 0, netMinor: 0 }),
+    (date) => ({ date, ordersPaid: 0, salesMinor: 0, collectedMinor: 0, refundsCount: 0, refundsMinor: 0, serviceFeesMinor: 0, commissionMinor: 0, deliveryFeesMinor: 0, monimeFeesMinor: 0, netMinor: 0 }),
   );
 
   return {
@@ -229,5 +233,112 @@ export async function hqOnlineFigures(start: string, end: string) {
       payerChannel: r.payer_channel ? String(r.payer_channel) : null,
       payerProvider: r.payer_provider ? String(r.payer_provider) : null,
     })),
+  };
+}
+
+// ── HQ: sales history, one row per paid order ─────────────────────────────
+
+export interface SalesHistoryFilter {
+  start: string;
+  end: string;
+  pharmacyId?: string;
+  /** Order number (first characters of the ID) or patient name. */
+  search?: string;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Every order paid through Monime in the date range (by payment date), with
+ * what it brought MobiCare: the 5% commission, the delivery fee and any
+ * service fee, less Monime's fee. A refunded order brings nothing but still
+ * cost Monime's fee, so its revenue is minus that fee; the totals therefore
+ * agree with the daily figures.
+ */
+export async function hqSalesHistory(filter: SalesHistoryFilter) {
+  const conditions: SQL[] = [
+    sql`o.payment_provider = 'monime'`,
+    sql`o.paid_at IS NOT NULL`,
+    sql`${paidDay} BETWEEN ${filter.start} AND ${filter.end}`,
+  ];
+  if (filter.pharmacyId) conditions.push(sql`o.pharmacy_id = ${filter.pharmacyId}`);
+  const search = filter.search?.trim();
+  if (search) {
+    const like = `%${search.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+    // An order number is the start of the order ID (hex), e.g. "7B68C06E".
+    const idPrefix = search.toLowerCase().replace(/^#/, "");
+    const byId = /^[0-9a-f-]{3,36}$/.test(idPrefix) ? sql`o.id::text LIKE ${`${idPrefix}%`} OR ` : sql``;
+    conditions.push(sql`(${byId}o.patient_name ILIKE ${like} OR p.name ILIKE ${like})`);
+  }
+  const where = sql.join(conditions, sql` AND `);
+  const base = sql`
+    SELECT o.id, o.paid_at, o.status, o.late_payment_status, o.fulfillment_type, o.patient_name,
+           o.pharmacy_id, p.name AS pharmacy_name,
+           o.pharmacy_medicine_total_minor AS sales_minor,
+           o.pharmacy_commission_minor AS commission_minor,
+           o.delivery_fee_minor, o.patient_service_fee_minor AS service_fee_minor,
+           ${totalMinor} AS paid_minor,
+           coalesce((SELECT sum((f->'amount'->>'value')::int) FROM monime_checkout_sessions s,
+                       jsonb_array_elements(coalesce(s.fees, '[]'::jsonb)) f
+                      WHERE s.order_id = o.id AND s.status = 'completed'), 0)::int AS monime_fee_minor,
+           ${refunded} AS refunded,
+           (SELECT t.status FROM monime_transfers t WHERE t.order_id = o.id AND t.kind = 'pharmacy_share'
+             ORDER BY t.attempt DESC LIMIT 1) AS release_status
+      FROM orders o JOIN pharmacies p ON p.id = o.pharmacy_id
+     WHERE ${where}`;
+
+  const list = await rows(sql`${base} ORDER BY o.paid_at DESC LIMIT ${filter.limit} OFFSET ${filter.offset}`);
+  const [totals] = await rows(sql`
+    SELECT count(*)::int AS orders,
+           coalesce(sum(sales_minor) FILTER (WHERE NOT refunded), 0)::bigint AS sales_minor,
+           coalesce(sum(commission_minor) FILTER (WHERE NOT refunded), 0)::bigint AS commission_minor,
+           coalesce(sum(delivery_fee_minor) FILTER (WHERE NOT refunded), 0)::bigint AS delivery_minor,
+           coalesce(sum(service_fee_minor) FILTER (WHERE NOT refunded), 0)::bigint AS service_fee_minor,
+           coalesce(sum(monime_fee_minor), 0)::bigint AS monime_fee_minor,
+           count(*) FILTER (WHERE refunded)::int AS refunded_orders
+      FROM (${base}) x`);
+
+  const view = (r: Record<string, unknown>) => {
+    const isRefunded = Boolean(r.refunded);
+    const commission = isRefunded ? 0 : n(r.commission_minor);
+    const delivery = isRefunded ? 0 : n(r.delivery_fee_minor);
+    const serviceFee = isRefunded ? 0 : n(r.service_fee_minor);
+    const monimeFee = n(r.monime_fee_minor);
+    const completed = r.status === "delivered" || r.status === "collected";
+    return {
+      orderId: String(r.id),
+      paidAt: new Date(r.paid_at as string).toISOString(),
+      pharmacyId: String(r.pharmacy_id),
+      pharmacyName: String(r.pharmacy_name),
+      patientName: String(r.patient_name ?? ""),
+      fulfillmentType: String(r.fulfillment_type),
+      paidMinor: n(r.paid_minor),
+      salesMinor: n(r.sales_minor),
+      commissionMinor: commission,
+      deliveryFeeMinor: delivery,
+      serviceFeeMinor: serviceFee,
+      monimeFeeMinor: monimeFee,
+      revenueMinor: commission + delivery + serviceFee - monimeFee,
+      pharmacyReceivesMinor: isRefunded ? 0 : n(r.sales_minor) - n(r.commission_minor),
+      // refunded | waiting (paid, not yet delivered/collected) | completed | paid_to_pharmacy
+      state: isRefunded ? "refunded" : !completed ? "waiting" : r.release_status === "completed" ? "paid_to_pharmacy" : "completed",
+    };
+  };
+
+  const t = totals ?? {};
+  const commission = n(t.commission_minor), delivery = n(t.delivery_minor), serviceFee = n(t.service_fee_minor), monime = n(t.monime_fee_minor);
+  return {
+    orders: list.map(view),
+    total: n(t.orders),
+    totals: {
+      orders: n(t.orders),
+      refundedOrders: n(t.refunded_orders),
+      salesMinor: n(t.sales_minor),
+      commissionMinor: commission,
+      deliveryFeesMinor: delivery,
+      serviceFeesMinor: serviceFee,
+      monimeFeesMinor: monime,
+      revenueMinor: commission + delivery + serviceFee - monime,
+    },
   };
 }
