@@ -625,28 +625,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ImageUrlResponse"
 
-  /pharmacy/analytics/commission:
-    get:
-      operationId: getPharmacyCommissionAnalytics
-      tags: [analytics]
-      summary: Pharmacy-scoped live and daily commission history
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: start
-          in: query
-          schema: { type: string, format: date }
-        - name: end
-          in: query
-          schema: { type: string, format: date }
-      responses:
-        "200":
-          description: Today, outstanding balance, and zero-filled daily commission rows
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PharmacyCommissionAnalytics"
-
   /pharmacy/analytics/online:
     get:
       operationId: getPharmacyOnlineAnalytics
@@ -671,7 +649,7 @@ paths:
         "400":
           description: Bad date range
 
-  /hq/payments/online:
+  /hq/settlements/online:
     get:
       operationId: getHqOnlinePayments
       tags: [hq]
@@ -764,7 +742,7 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
-  /hq/payments/payouts:
+  /hq/settlements/payouts:
     get:
       operationId: getHqPayouts
       tags: [hq]
@@ -779,7 +757,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HqPayouts"
 
-  /hq/payments/cashouts/{id}/approve:
+  /hq/settlements/cashouts/{id}/approve:
     post:
       operationId: approveHqCashout
       tags: [hq]
@@ -806,7 +784,7 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
-  /hq/payments/cashouts/{id}/reject:
+  /hq/settlements/cashouts/{id}/reject:
     post:
       operationId: rejectHqCashout
       tags: [hq]
@@ -839,7 +817,7 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
-  /hq/payments/transfers/{id}/retry:
+  /hq/settlements/transfers/{id}/retry:
     post:
       operationId: retryHqTransfer
       tags: [hq]
@@ -866,28 +844,6 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
-  /pharmacy/analytics/commission.csv:
-    get:
-      operationId: exportPharmacyCommissionHistory
-      tags: [analytics]
-      summary: Download the authenticated pharmacy's commission history as CSV
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: start
-          in: query
-          schema: { type: string, format: date }
-        - name: end
-          in: query
-          schema: { type: string, format: date }
-      responses:
-        "200":
-          description: Commission history CSV
-          content:
-            text/csv:
-              schema: { type: string }
-
-  # ── Patient experience ─────────────────────────────────────────────────────
   /auth/register:
     post:
       operationId: registerPatient
@@ -1331,29 +1287,6 @@ paths:
                 $ref: "#/components/schemas/OrderPayment"
         "404":
           description: Order not found
-
-  /patient/orders/{id}/pay:
-    post:
-      operationId: patientPayOrder
-      tags: [patient]
-      summary: Record mobile-money payment (no live gateway yet)
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Order moved to paid
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PatientOrder"
-        "409":
-          description: Order is expired, already paid, or current inventory is insufficient
 
   /patient/uploads/prescription:
     post:
@@ -3400,108 +3333,6 @@ paths:
         "409":
           description: Switching it on would overlap an active zone
 
-  /hq/settlements:
-    get:
-      operationId: listSettlements
-      tags: [hq]
-      summary: Daily pharmacy commission settlements
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: start
-          in: query
-          schema:
-            type: string
-          description: Inclusive ISO date or date-time for financial metrics
-        - name: end
-          in: query
-          schema:
-            type: string
-          description: Inclusive ISO date, or an exclusive ISO date-time
-        - name: pharmacyId
-          in: query
-          schema: { type: string }
-        - name: status
-          in: query
-          schema: { type: string, enum: [unpaid, partially_paid, paid] }
-      responses:
-        "200":
-          description: Settlements
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SettlementsResponse"
-
-  /hq/settlements/generate:
-    post:
-      operationId: generateSettlements
-      tags: [hq]
-      summary: Idempotently generate daily commission settlements in the business timezone
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GenerateSettlementsInput"
-      responses:
-        "201":
-          description: Settlements generated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-
-  /hq/settlements/{id}/payments:
-    post:
-      operationId: recordCommissionSettlementPayment
-      tags: [hq]
-      summary: Record an append-only commission payment against a daily settlement
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CommissionSettlementPaymentInput"
-      responses:
-        "201":
-          description: Updated commission settlement
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommissionSettlement"
-        "409":
-          description: Payment exceeds balance
-
-  /hq/settlements/{id}/history:
-    get:
-      operationId: getCommissionSettlementHistory
-      tags: [hq]
-      summary: Append-only payment and adjustment history for a settlement
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Settlement history
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommissionSettlementHistory"
-
   /hq/audit:
     get:
       operationId: listAuditLog
@@ -4775,10 +4606,10 @@ components:
             $ref: "#/components/schemas/HqReleaseProblem"
         monimeBalances:
           type: object
-          required: [holdingMinor, revenueMinor]
+          required: [holdingMinor, mobicareShareMinor]
           properties:
-            holdingMinor: { type: ["number", "null"] }
-            revenueMinor: { type: ["number", "null"] }
+            holdingMinor: { type: ["number", "null"], description: "Monime's own balance for the Holding account" }
+            mobicareShareMinor: { type: number, description: "MobiCare's share of completed orders (commission, delivery, service fee, less Monime's fee), kept in Holding" }
         approvalThresholdMinor: { type: number }
 
     PaymentsConfig:
@@ -6799,7 +6630,6 @@ components:
         grossCollectedMinor: { type: number }
         drugAmountTotalMinor: { type: number }
         commissionDueMinor: { type: number }
-        deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
         amountPaidMinor: { type: number }
         balanceMinor: { type: number }
         status: { type: string, enum: [unpaid, partially_paid, paid] }
@@ -6816,7 +6646,6 @@ components:
             grossCollectedMinor: { type: number }
             drugAmountTotalMinor: { type: number }
             commissionDueMinor: { type: number }
-            deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
             pharmacyEarningsMinor: { type: number }
         outstandingCommissionMinor: { type: number }
         daily:
@@ -6836,7 +6665,6 @@ components:
         grossCollectedMinor: { type: number }
         drugAmountTotalMinor: { type: number }
         commissionDueMinor: { type: number }
-        deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
         amountPaidMinor: { type: number }
         balanceMinor: { type: number }
         status: { type: string, enum: [unpaid, partially_paid, paid] }

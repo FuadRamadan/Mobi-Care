@@ -1,35 +1,24 @@
 import {
   getGetAnalyticsOverviewQueryKey,
-  getGetPharmacyCommissionAnalyticsQueryKey,
+  getGetPharmacyOnlineAnalyticsQueryKey,
   useGetAnalyticsOverview,
-  useGetPharmacyCommissionAnalytics,
-  exportPharmacyCommissionHistory
+  useGetPharmacyOnlineAnalytics,
 } from "@workspace/api-client-react";
 import { formatLeones } from "@/lib/format";
-import { format, parseISO, subDays, isSameDay } from "date-fns";
-import { Activity, Clock, Package, AlertTriangle, TrendingUp, ArrowRight, type LucideIcon, FileText, Download } from "lucide-react";
-import { useLocation, Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import { format, subDays } from "date-fns";
+import { Activity, Clock, Package, AlertTriangle, TrendingUp, ArrowRight, Wallet, type LucideIcon } from "lucide-react";
+import { Link } from "wouter";
 import { useState, useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { OnlinePaymentsPanel } from "@/components/OnlinePaymentsPanel";
+import { TrendChart, type TrendStyle } from "@/components/TrendChart";
 
-const STATUS_COLORS: Record<string, string> = {
-  unpaid: "bg-destructive/10 text-destructive",
-  partially_paid: "bg-amber-100 text-amber-800",
-  paid: "bg-green-100 text-green-800",
-};
-
-const formatStatus = (status: string) => {
-  if (status === 'partially_paid') return 'Partially Paid';
-  return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
+/**
+ * The pharmacy's Overview. Every order is paid through MobiCare (Monime), so
+ * the money figures are the pharmacy's own prices and what it earns after
+ * MobiCare's 5% commission, counted on the day the payment was confirmed.
+ */
 export default function Dashboard() {
-  const [, setLocation] = useLocation();
   const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsOverview({
     query: {
       queryKey: getGetAnalyticsOverviewQueryKey(),
@@ -37,55 +26,38 @@ export default function Dashboard() {
     },
   });
   const [dateRange, setDateRange] = useState("30");
-  const [customStart, setCustomStart] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [customEnd, setCustomEnd] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [customStart, setCustomStart] = useState(() => format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [customEnd, setCustomEnd] = useState(() => format(new Date(), "yyyy-MM-dd"));
 
   const queryParams = useMemo(() => {
-    if (dateRange === "custom") {
-      return { start: customStart, end: customEnd };
-    }
-    const end = format(new Date(), 'yyyy-MM-dd');
-    const start = format(subDays(new Date(), parseInt(dateRange, 10)), 'yyyy-MM-dd');
+    if (dateRange === "custom") return { start: customStart, end: customEnd };
+    const end = format(new Date(), "yyyy-MM-dd");
+    const start = format(subDays(new Date(), parseInt(dateRange, 10)), "yyyy-MM-dd");
     return { start, end };
   }, [dateRange, customStart, customEnd]);
 
-  const { data: commissionData, isLoading: commissionLoading } = useGetPharmacyCommissionAnalytics(queryParams, {
+  const { data: sales, isLoading: salesLoading } = useGetPharmacyOnlineAnalytics(queryParams, {
     query: {
-      queryKey: getGetPharmacyCommissionAnalyticsQueryKey(queryParams),
-      refetchInterval: 5_000,
+      queryKey: getGetPharmacyOnlineAnalyticsQueryKey(queryParams),
+      refetchInterval: 15_000,
+      placeholderData: (previous) => previous,
     },
   });
 
-  const chartData = commissionData?.daily || [];
-  const todayStat = commissionData?.today;
-  const outstandingCommission = commissionData?.outstandingCommissionMinor ?? 0;
+  // Chart style preview (temporary, until one is chosen): ?chart=line or ?chart=area
+  const chartStyle: TrendStyle = new URLSearchParams(window.location.search).get("chart") === "line" ? "line" : "area";
 
-  const handleExportCSV = async () => {
-    try {
-      // The generated API client method fetches the CSV string.
-      const csv = await exportPharmacyCommissionHistory(queryParams);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `commission_history_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (err) {
-      toast.error("Failed to export CSV");
-    }
-  };
+  const points = useMemo(
+    () => (sales?.daily ?? []).map((d) => ({ date: d.date, valueMinor: d.receiveMinor, orders: d.ordersCount })),
+    [sales],
+  );
 
-  if (analyticsLoading || commissionLoading) {
+  if (analyticsLoading || (salesLoading && !sales)) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-32 bg-card rounded-xl border border-card-border animate-pulse" />
           ))}
         </div>
@@ -94,16 +66,12 @@ export default function Dashboard() {
     );
   }
 
-  if (!analytics || !commissionData) return null;
+  if (!analytics) return null;
 
-  const maxDailyOrders = Math.max(1, ...chartData.map((day) => day.ordersCount));
-
-  // Calculate today's metrics from the commission backend directly
-  const ordersToday = todayStat?.ordersCount || 0;
-  // Owed to MobiCare: the 5% commission plus (pilot pricing) the delivery fees collected for it.
-  const commissionTodayMinor = (todayStat?.commissionDueMinor || 0) + (todayStat?.deliveryFeesDueMinor || 0);
-  const grossTodayMinor = todayStat?.grossCollectedMinor || 0;
-  const earningsTodayMinor = todayStat?.pharmacyEarningsMinor || 0;
+  const today = sales?.today;
+  const salesTodayMinor = today?.salesMinor ?? 0;
+  const earningsTodayMinor = today?.receiveMinor ?? 0;
+  const ordersToday = today?.ordersCount ?? 0;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -112,39 +80,21 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1 text-sm">Key metrics and recent activity for your pharmacy.</p>
       </div>
 
-      <OnlinePaymentsPanel start={queryParams.start} end={queryParams.end} />
-
-      <section className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Paid directly to you</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Owed to MobiCare Today"
-          value={formatLeones(commissionTodayMinor / 100)}
-          icon={FileText}
-          trend="5% commission + delivery fees"
-          urgent={commissionTodayMinor > 0}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           title="Gross Collected Today"
-          value={formatLeones(grossTodayMinor / 100)}
+          value={formatLeones(salesTodayMinor / 100)}
           icon={TrendingUp}
-          trend="Paid by patients"
+          trend="Paid by patients, at your prices"
         />
         <MetricCard
           title="Your Earnings Today"
           value={formatLeones(earningsTodayMinor / 100)}
-          icon={TrendingUp}
-          trend="Your prices less the 5% commission"
+          icon={Wallet}
+          trend="After MobiCare's 5% commission"
+          linkTo="/payouts"
         />
-        <MetricCard
-          title="Orders Today"
-          value={ordersToday}
-          icon={Package}
-        />
-      </div>
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard title="Orders Today" value={ordersToday} icon={Package} trend="Paid orders" />
         <MetricCard
           title="Pending Orders"
           value={analytics.pendingOrders}
@@ -169,16 +119,9 @@ export default function Dashboard() {
           urgent={analytics.lowStockItems > 0}
           linkTo="/inventory"
         />
-        <MetricCard
-          title="Outstanding Balance"
-          value={formatLeones(outstandingCommission / 100)}
-          icon={AlertTriangle}
-          trend="Across all unpaid days"
-          urgent={outstandingCommission > 0}
-        />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         {analytics.pendingOrders > 0 && (
           <Link href="/orders" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center justify-between sm:justify-start gap-2 hover:bg-primary/90 transition-colors shadow-sm">
             Review {analytics.pendingOrders} Pending Orders <ArrowRight className="w-4 h-4" />
@@ -192,27 +135,17 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold">Order Volume & Commission Trends</h3>
-            <p className="text-sm text-muted-foreground">Daily performance</p>
+            <h3 className="text-lg font-semibold">Sales Trend</h3>
+            <p className="text-sm text-muted-foreground">Your daily earnings from paid orders. Tap a day to see its orders.</p>
           </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {dateRange === "custom" && (
-              <div className="flex items-center gap-2 mr-2">
-                <Input
-                  type="date"
-                  className="w-36 h-9"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                />
+              <div className="flex items-center gap-2">
+                <Input type="date" className="w-36 h-9" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
                 <span className="text-muted-foreground">-</span>
-                <Input
-                  type="date"
-                  className="w-36 h-9"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                />
+                <Input type="date" className="w-36 h-9" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
               </div>
             )}
             <Select value={dateRange} onValueChange={setDateRange}>
@@ -228,107 +161,9 @@ export default function Dashboard() {
             </Select>
           </div>
         </div>
-        <div className="h-[350px] w-full">
-          {chartData.length > 0 ? (
-            <div
-              className="flex h-full min-w-[680px] items-end gap-1 overflow-x-auto border-b border-border px-2 pt-8"
-              role="img"
-              aria-label={`Daily order volume for the selected period`}
-            >
-              {chartData.map((day, index) => {
-                const dayComm = day.commissionDueMinor / 100;
-                return (
-                  <div
-                    key={day.settlementDate}
-                    className="group flex h-full min-w-5 flex-1 flex-col items-center justify-end gap-2"
-                    title={`${format(parseISO(day.settlementDate), 'MMM d, yyyy')}: ${day.ordersCount} orders, Comm: ${formatLeones(dayComm)}`}
-                  >
-                    <span className="pointer-events-none hidden rounded bg-popover px-2 py-1 text-xs shadow group-hover:block whitespace-nowrap z-10">
-                      {day.ordersCount} ord / {formatLeones(dayComm)}
-                    </span>
-                    <div
-                      className="w-full min-h-[4px] rounded-t bg-primary/80 transition-colors group-hover:bg-primary"
-                      style={{ height: `${Math.max(1, (day.ordersCount / maxDailyOrders) * 85)}%` }}
-                      aria-hidden="true"
-                    />
-                    <span className="h-5 text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-                      {index % Math.ceil(chartData.length / 10) === 0 || index === chartData.length - 1
-                        ? format(parseISO(day.settlementDate), 'MMM d')
-                        : ''}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              No data available for the selected period
-            </div>
-          )}
+        <div className={salesLoading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+          <TrendChart points={points} style={chartStyle} label="Your daily earnings from paid orders" />
         </div>
-      </div>
-
-      <div className="bg-card border border-card-border rounded-xl p-4 sm:p-6 shadow-sm overflow-x-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Commission History</h3>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
-              <FileText className="w-4 h-4" />
-              Print / PDF
-            </Button>
-          </div>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right">Orders</TableHead>
-              <TableHead className="text-right">Gross Collected</TableHead>
-              <TableHead className="text-right">Your Earnings</TableHead>
-              <TableHead className="text-right">Owed to MobiCare</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...chartData].reverse().filter(d => d.ordersCount > 0 || isSameDay(parseISO(d.settlementDate), new Date())).map(day => {
-              const owedMinor = day.commissionDueMinor + (day.deliveryFeesDueMinor ?? 0);
-              const comm = owedMinor / 100;
-              const gross = day.grossCollectedMinor / 100;
-              // What the pharmacy keeps: everything it collected less what it owes MobiCare.
-              const earnings = (day.grossCollectedMinor - owedMinor) / 100;
-              return (
-                <TableRow
-                  key={day.settlementDate}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setLocation(`/orders?date=${format(parseISO(day.settlementDate), 'yyyy-MM-dd')}`)}
-                  title="View orders for this day"
-                >
-                  <TableCell className="font-medium text-primary">{format(parseISO(day.settlementDate), 'MMM d, yyyy')}</TableCell>
-                  <TableCell className="text-right">{day.ordersCount}</TableCell>
-                  <TableCell className="text-right">{formatLeones(gross)}</TableCell>
-                  <TableCell className="text-right">{formatLeones(earnings)}</TableCell>
-                  <TableCell className="text-right">{formatLeones(comm)}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[day.status] || "bg-muted text-muted-foreground"}`}>
-                      {formatStatus(day.status)}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {chartData.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
-                  No commission records for this period.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
       </div>
     </div>
   );
@@ -340,7 +175,7 @@ function MetricCard({
   icon: Icon,
   trend,
   urgent,
-  linkTo
+  linkTo,
 }: {
   title: string;
   value: string | number;
@@ -350,17 +185,17 @@ function MetricCard({
   linkTo?: string;
 }) {
   const content = (
-    <div className={`bg-card rounded-xl p-6 border shadow-sm transition-all h-full ${urgent ? 'border-destructive/50 bg-destructive/5' : 'border-card-border'} ${linkTo ? 'hover:shadow-md hover:border-primary/50' : ''}`}>
+    <div className={`bg-card rounded-xl p-6 border shadow-sm transition-all h-full ${urgent ? "border-destructive/50 bg-destructive/5" : "border-card-border"} ${linkTo ? "hover:shadow-md hover:border-primary/50" : ""}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-        <div className={`p-2 rounded-md ${urgent ? 'bg-destructive/20 text-destructive' : 'bg-primary/10 text-primary'}`}>
+        <div className={`p-2 rounded-md ${urgent ? "bg-destructive/20 text-destructive" : "bg-primary/10 text-primary"}`}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className="mt-4">
         <div className="text-3xl font-bold text-foreground">{value}</div>
         {trend && (
-          <p className={`mt-1 text-xs ${urgent ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+          <p className={`mt-1 text-xs ${urgent ? "text-destructive font-medium" : "text-muted-foreground"}`}>
             {trend}
           </p>
         )}

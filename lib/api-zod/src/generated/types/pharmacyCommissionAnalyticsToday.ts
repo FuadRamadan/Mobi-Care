@@ -11,7 +11,5 @@ export type PharmacyCommissionAnalyticsToday = {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
-  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing) */
-  deliveryFeesDueMinor?: number;
   pharmacyEarningsMinor: number;
 };

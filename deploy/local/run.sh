@@ -274,7 +274,6 @@ if $monime; then
     MONIME_BASE_URL="http://127.0.0.1:$MONIME_FAKE_PORT"
     MONIME_WEBHOOK_HEADER_TOKEN="$WEBHOOK_TOKEN"
     MONIME_HOLDING_ACCOUNT_ID=fac-holding-local
-    MONIME_REVENUE_ACCOUNT_ID=fac-revenue-local
     PUBLIC_APP_URL="http://localhost:$PORT"
   )
 fi

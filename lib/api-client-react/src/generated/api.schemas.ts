@@ -1098,10 +1098,13 @@ export interface HqReleaseProblem {
 }
 
 export type HqPayoutsMonimeBalances = {
-  /** @nullable */
+  /**
+     * Monime's own balance for the Holding account
+     * @nullable
+     */
   holdingMinor: number | null;
-  /** @nullable */
-  revenueMinor: number | null;
+  /** MobiCare's share of completed orders (commission, delivery, service fee, less Monime's fee), kept in Holding */
+  mobicareShareMinor: number;
 };
 
 export interface HqPayouts {
@@ -2771,8 +2774,6 @@ export interface PharmacyCommissionDaily {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
-  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing) */
-  deliveryFeesDueMinor?: number;
   amountPaidMinor: number;
   balanceMinor: number;
   status: PharmacyCommissionDailyStatus;
@@ -2783,8 +2784,6 @@ export type PharmacyCommissionAnalyticsToday = {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
-  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing) */
-  deliveryFeesDueMinor?: number;
   pharmacyEarningsMinor: number;
 };
 
@@ -2814,8 +2813,6 @@ export interface CommissionSettlement {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
-  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing) */
-  deliveryFeesDueMinor?: number;
   amountPaidMinor: number;
   balanceMinor: number;
   status: CommissionSettlementStatus;
@@ -2970,22 +2967,12 @@ export type ListPrescriptionsParams = {
 status?: string;
 };
 
-export type GetPharmacyCommissionAnalyticsParams = {
-start?: string;
-end?: string;
-};
-
 export type GetPharmacyOnlineAnalyticsParams = {
 start?: string;
 end?: string;
 };
 
 export type GetHqOnlinePaymentsParams = {
-start?: string;
-end?: string;
-};
-
-export type ExportPharmacyCommissionHistoryParams = {
 start?: string;
 end?: string;
 };
@@ -3066,28 +3053,6 @@ export type LocateDeliveryZoneParams = {
 latitude: number;
 longitude: number;
 };
-
-export type ListSettlementsParams = {
-/**
- * Inclusive ISO date or date-time for financial metrics
- */
-start?: string;
-/**
- * Inclusive ISO date, or an exclusive ISO date-time
- */
-end?: string;
-pharmacyId?: string;
-status?: ListSettlementsStatus;
-};
-
-export type ListSettlementsStatus = typeof ListSettlementsStatus[keyof typeof ListSettlementsStatus];
-
-
-export const ListSettlementsStatus = {
-  unpaid: 'unpaid',
-  partially_paid: 'partially_paid',
-  paid: 'paid',
-} as const;
 
 export type ListAuditLogParams = {
 entityType?: string;

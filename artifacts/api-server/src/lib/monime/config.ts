@@ -19,10 +19,11 @@ export interface MonimeConfig {
   spaceId: string;
   apiVersion: string;
   baseUrl: string;
-  /** Where patient payments land and wait until the order is complete. */
+  /**
+   * Where every patient payment lands. The pharmacy's share leaves when the
+   * order is complete; MobiCare's share (commission, delivery) stays here.
+   */
   holdingAccountId: string;
-  /** MobiCare's share of each completed order (fees, commission, delivery). */
-  revenueAccountId: string;
   /** Secret Monime sends in a custom header on every webhook. */
   webhookHeaderToken: string | null;
   /** The site's public address, for the links Monime sends patients back to. */
@@ -87,15 +88,10 @@ export function loadMonimeConfig(env: Env = process.env): MonimeConfig | null {
     }
   }
 
-  // MobiCare's two accounts in its Monime space. "Final Deployment
-  // files/scripts/monime-setup-accounts.mjs" finds or creates them and prints the IDs.
+  // MobiCare's Holding account in its Monime space. "Final Deployment
+  // files/scripts/monime-setup-accounts.mjs" finds or creates it and prints the ID.
   const holdingAccountId = (env.MONIME_HOLDING_ACCOUNT_ID ?? "").trim();
-  const revenueAccountId = (env.MONIME_REVENUE_ACCOUNT_ID ?? "").trim();
   if (!holdingAccountId) problems.push("MONIME_HOLDING_ACCOUNT_ID is missing");
-  if (!revenueAccountId) problems.push("MONIME_REVENUE_ACCOUNT_ID is missing");
-  if (holdingAccountId && holdingAccountId === revenueAccountId) {
-    problems.push("MONIME_HOLDING_ACCOUNT_ID and MONIME_REVENUE_ACCOUNT_ID must be different accounts");
-  }
 
   const webhookHeaderToken = (env.MONIME_WEBHOOK_HEADER_TOKEN ?? "").trim() || null;
   if (webhookHeaderToken && webhookHeaderToken.length < 32) {
@@ -123,7 +119,6 @@ export function loadMonimeConfig(env: Env = process.env): MonimeConfig | null {
     apiVersion: (env.MONIME_API_VERSION ?? "").trim() || DEFAULT_MONIME_API_VERSION,
     baseUrl,
     holdingAccountId,
-    revenueAccountId,
     webhookHeaderToken,
     publicAppUrl,
   };

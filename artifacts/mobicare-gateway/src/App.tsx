@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
 import Layout from '@/components/layout/Layout';
@@ -38,7 +38,6 @@ const HqDeliveryZones = lazy(() => import('@/pages/hq/DeliveryZones'));
 const HqAdvertisements = lazy(() => import('@/pages/hq/Advertisements'));
 const HqFlags = lazy(() => import('@/pages/hq/Flags'));
 const HqSettlements = lazy(() => import('@/pages/hq/Settlements'));
-const HqOnlinePayments = lazy(() => import('@/pages/hq/OnlinePayments'));
 const HqAudit = lazy(() => import('@/pages/hq/Audit'));
 const HqSettings = lazy(() => import('@/pages/hq/Settings'));
 const HqTeam = lazy(() => import('@/pages/hq/Team'));
@@ -98,7 +97,7 @@ function Router() {
             <Route path="/hq/advertisements" component={HqAdvertisements} />
             <Route path="/hq/flags" component={HqFlags} />
             <Route path="/hq/settlements" component={HqSettlements} />
-            <Route path="/hq/payments" component={HqOnlinePayments} />
+            <Route path="/hq/payments">{() => <Redirect to="/hq/settlements" />}</Route>
             <Route path="/hq/audit" component={HqAudit} />
             <Route path="/hq/settings" component={HqSettings} />
             <Route path="/hq/team" component={HqTeam} />

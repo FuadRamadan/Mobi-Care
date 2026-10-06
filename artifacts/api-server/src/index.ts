@@ -1,8 +1,6 @@
 import app, { mountedStaticSites } from "./app";
 import { logger } from "./lib/logger";
 import { assertSecretsAreSafe } from "./lib/secrets";
-import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
-import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
 import { monimeConfig } from "./lib/monime/config";
 import { startMonimeJobs, stopMonimeJobs } from "./lib/monime/service";
 import { databaseDriver, db, pool } from "@workspace/db";
@@ -188,17 +186,6 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
-      label: "pilot pricing: delivery fees in settlements (migration 0035)",
-      query: sql`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = current_schema()
-            AND table_name = 'commission_settlements'
-            AND column_name = 'delivery_fees_due_minor'
-        ) AS exists
-      `,
-    },
-    {
       label: "Monime payouts (migration 0034)",
       query: sql`
         SELECT to_regclass(current_schema() || '.pharmacy_cashouts')
@@ -312,8 +299,8 @@ async function start(): Promise<void> {
   // setup must stop the server, not take payments the wrong way.
   const payments = monimeConfig();
   logger.info(
-    payments ? { provider: "monime", mode: payments.mode } : { provider: "direct" },
-    payments ? `Payments: Monime (${payments.mode} mode)` : "Payments: patients pay the pharmacy directly",
+    payments ? { provider: "monime", mode: payments.mode } : { provider: null },
+    payments ? `Payments: Monime (${payments.mode} mode)` : "Payments: off (set PAYMENTS_PROVIDER=monime); orders can't be placed",
   );
   // Said out loud before the first query: a driver that cannot reach the host
   // fails as a slow connection timeout, which does not point at the cause.
@@ -329,15 +316,11 @@ async function start(): Promise<void> {
         ? "Server listening, serving API and static sites"
         : "Server listening",
     );
-    startOrderExpirySweep();
-    startCommissionSettlementSweep();
     startMonimeJobs();
   });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Graceful shutdown started");
-    stopOrderExpirySweep();
-    stopCommissionSettlementSweep();
     stopMonimeJobs();
     server.close(async (error) => {
       if (error) logger.error({ err: error }, "HTTP server close failed");

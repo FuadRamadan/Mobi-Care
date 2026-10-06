@@ -43,11 +43,13 @@ import {
 /**
  * Monime payments, phase 2: releasing order money and pharmacy cash-outs.
  *
- * - When an online-paid order is delivered or collected, two internal
- *   transfers leave Holding: the pharmacy's share (medicine total less the 5%
- *   commission) to the pharmacy's own Monime account, and MobiCare's share
- *   (service fee, commission and delivery, less Monime's collection fee) to
- *   Revenue. Nothing is released for a cancelled or refunded order.
+ * - Every payment lands in MobiCare's Holding account. When the order is
+ *   delivered or collected, one internal transfer moves the pharmacy's share
+ *   (its medicine prices less the 5% commission) to the pharmacy's own Monime
+ *   account. MobiCare's share (the commission, the delivery fee and any
+ *   service fee, less Monime's collection fee) stays in Holding until an
+ *   admin decides what to do with it (decided 6 Oct 2026). Nothing is
+ *   released for a cancelled or refunded order.
  * - A pharmacy cashes out from its available balance, only to its registered
  *   Orange Money or AfriMoney number. Monime's payout fee comes on top, from
  *   the balance. Above Le 2,000 HQ approves first.
@@ -139,7 +141,8 @@ export async function ensurePharmacyAccount(pharmacyId: string): Promise<string>
 
 // ── Releasing order money ──────────────────────────────────────────────────
 
-const RELEASE_KINDS = ["pharmacy_share", "mobicare_share"] as const;
+// Only the pharmacy's share leaves Holding; MobiCare's share stays there.
+const RELEASE_KINDS = ["pharmacy_share"] as const;
 type ReleaseKind = (typeof RELEASE_KINDS)[number];
 
 /**
@@ -174,10 +177,9 @@ export async function releaseOrderFunds(orderId: string): Promise<void> {
       pharmacyCommissionMinor: order.pharmacyCommissionMinor,
       collectionFeesMinor: sumFeesMinor(session.fees),
     });
-    const pharmacyAccountId = missing.includes("pharmacy_share") ? await ensurePharmacyAccount(order.pharmacyId) : null;
+    const destination = await ensurePharmacyAccount(order.pharmacyId);
     for (const kind of missing) {
-      const amountMinor = kind === "pharmacy_share" ? amounts.pharmacyShareMinor : amounts.mobicareShareMinor;
-      const destination = kind === "pharmacy_share" ? pharmacyAccountId! : m.config.revenueAccountId;
+      const amountMinor = amounts.pharmacyShareMinor;
       await db
         .insert(monimeTransfersTable)
         .values({
@@ -190,17 +192,10 @@ export async function releaseOrderFunds(orderId: string): Promise<void> {
           destinationAccountId: destination,
           idempotencyKey: transferKey(orderId, kind, 1),
           requestBody: amountMinor > 0 ? transferBody(orderId, kind, 1, amountMinor, m.config.holdingAccountId, destination, m.config.mode) : null,
-          // A share of nothing (e.g. Monime's fee ate MobiCare's share) is recorded, not sent.
+          // A share of nothing (an order of free items) is recorded, not sent.
           status: amountMinor > 0 ? "creating" : "skipped",
         })
         .onConflictDoNothing();
-    }
-    if (amounts.mobicareShareMinor < 0) {
-      await notifyHqOfPayoutIssue(
-        orderId,
-        "Order money doesn't add up",
-        `Order #${shortId(orderId)}: Monime's fee was more than MobiCare's share (${le(amounts.mobicareShareMinor)}). The pharmacy was still paid in full. Check the order in Monime.`,
-      );
     }
   }
 
@@ -321,7 +316,7 @@ export async function retryTransfer(transferId: string, actor: { id: string; nam
 
   const attempt = failed.attempt + 1;
   const kind = failed.kind as ReleaseKind;
-  const destination = kind === "pharmacy_share" ? await ensurePharmacyAccount(failed.pharmacyId) : m.config.revenueAccountId;
+  const destination = await ensurePharmacyAccount(failed.pharmacyId);
   const [row] = await db
     .insert(monimeTransfersTable)
     .values({
@@ -886,19 +881,29 @@ export async function hqPayoutsOverview() {
                         WHERE later.order_id = t.order_id AND later.kind = t.kind AND later.attempt > t.attempt)
      ORDER BY t.updated_at DESC LIMIT 50`);
 
-  // Monime's own balances, for a quick look. The full check is phase 4's reconciliation.
-  let accounts: { holdingMinor: number | null; revenueMinor: number | null } = { holdingMinor: null, revenueMinor: null };
+  // MobiCare's share of completed orders, which stays in Holding: commission,
+  // delivery and any service fee, less Monime's collection fee.
+  const [share] = await rows(sql`
+    SELECT coalesce(sum(o.patient_service_fee_minor + o.pharmacy_commission_minor + o.delivery_fee_minor
+             - coalesce((SELECT sum((f->'amount'->>'value')::int) FROM monime_checkout_sessions s,
+                           jsonb_array_elements(coalesce(s.fees, '[]'::jsonb)) f
+                          WHERE s.order_id = o.id AND s.status = 'completed'), 0)), 0)::bigint AS share
+      FROM orders o
+     WHERE o.payment_provider = 'monime' AND o.paid_at IS NOT NULL
+       AND o.status IN ('delivered', 'collected')
+       AND o.late_payment_status IS DISTINCT FROM 'refund_needed'`);
+
+  // Monime's own Holding balance, for a quick look. The full check is phase 4's reconciliation.
+  let holdingMinor: number | null = null;
   if (m) {
-    const balanceOf = async (id: string) => {
-      try {
-        const { result } = await m.client.getFinancialAccount(id, true);
-        return result.balance?.available?.value ?? null;
-      } catch {
-        return null;
-      }
-    };
-    accounts = { holdingMinor: await balanceOf(m.config.holdingAccountId), revenueMinor: await balanceOf(m.config.revenueAccountId) };
+    try {
+      const { result } = await m.client.getFinancialAccount(m.config.holdingAccountId, true);
+      holdingMinor = result.balance?.available?.value ?? null;
+    } catch {
+      holdingMinor = null;
+    }
   }
+  const accounts = { holdingMinor, mobicareShareMinor: Number(share?.share ?? 0) };
 
   return {
     pharmacies,

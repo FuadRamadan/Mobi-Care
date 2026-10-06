@@ -13,7 +13,6 @@ import {
 import {
   usePatientCreateOrder,
   usePatientUploadPrescription,
-  usePatientPayOrder,
   usePatientStartCheckout,
   usePatientDeliveryCoverage,
   usePatientDeliveryQuote,
@@ -27,7 +26,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
-import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 import { LocationPicker } from "@/components/map/LocationPicker";
 import type { LatLng, ZoneOutline } from "@/components/map/mapConfig";
 
@@ -46,7 +44,6 @@ export default function Checkout() {
     subtotalLeones,
     serviceFeeLeones,
     serviceFeeBasisPoints,
-    paymentProvider,
     paymentsAvailable,
     totalLeones,
     prescriptionRequired,
@@ -68,15 +65,12 @@ export default function Checkout() {
 
   const uploadMutation = usePatientUploadPrescription();
   const createMutation = usePatientCreateOrder();
-  const payMutation = usePatientPayOrder();
   const checkoutMutation = usePatientStartCheckout();
-  const payOnline = paymentProvider === "monime";
   const quoteMutation = usePatientDeliveryQuote();
   const { data: coverage } = usePatientDeliveryCoverage();
   const busy =
     uploadMutation.isPending ||
     createMutation.isPending ||
-    payMutation.isPending ||
     checkoutMutation.isPending;
 
   if (!cart || cart.items.length === 0) {
@@ -214,46 +208,31 @@ export default function Checkout() {
         },
       });
 
-      if (payOnline) {
-        // Pay through Monime. The order is saved first; the payment link is
-        // made on the server from the saved order.
-        clear();
-        await queryClient.invalidateQueries();
-        if (prescriptionRequired) {
-          toast({
-            title: "Order placed",
-            description: "A pharmacist will check your prescription first. We'll let you know when you can pay.",
-          });
-          navigate(`/app/orders/${order.id}`);
-          return;
-        }
-        try {
-          const link = await checkoutMutation.mutateAsync({ id: order.id });
-          if (link.status === "pending" && link.redirectUrl) {
-            window.location.assign(link.redirectUrl);
-            return;
-          }
-        } catch (err) {
-          toast({
-            title: "Order saved: payment not started",
-            description: errorBody(err).error ?? "Open the order and tap Pay to try again.",
-            variant: "destructive",
-          });
-        }
+      // Pay through Monime. The order is saved first; the payment link is
+      // made on the server from the saved order.
+      clear();
+      await queryClient.invalidateQueries();
+      if (prescriptionRequired) {
+        toast({
+          title: "Order placed",
+          description: "A pharmacist will check your prescription first. We'll let you know when you can pay.",
+        });
         navigate(`/app/orders/${order.id}`);
         return;
       }
-
-      // Record the mobile-money payment (no live gateway yet).
-      await payMutation.mutateAsync({ id: order.id });
-
-      clear();
-      await queryClient.invalidateQueries();
-      toast({
-        title: "Order placed",
-        description:
-          "Payment recorded — the pharmacy will confirm your order shortly.",
-      });
+      try {
+        const link = await checkoutMutation.mutateAsync({ id: order.id });
+        if (link.status === "pending" && link.redirectUrl) {
+          window.location.assign(link.redirectUrl);
+          return;
+        }
+      } catch (err) {
+        toast({
+          title: "Order saved: payment not started",
+          description: errorBody(err).error ?? "Open the order and tap Pay to try again.",
+          variant: "destructive",
+        });
+      }
       navigate(`/app/orders/${order.id}`);
     } catch (err: any) {
       const body = errorBody(err);
@@ -529,7 +508,7 @@ export default function Checkout() {
             <span className="text-muted-foreground">Payment method</span>
             <span className="inline-flex items-center gap-1.5 font-medium">
               <Smartphone className="w-4 h-4 text-orange-money" />{" "}
-              {payOnline ? "Mobile money, card or bank" : "Orange Money"}
+              Mobile money, card or bank
             </span>
           </div>
           <div className="space-y-1.5 pt-2 border-t">
@@ -568,7 +547,6 @@ export default function Checkout() {
               {formatLeones(payableLeones)}
             </span>
           </div>
-          {payOnline ? (
           <div className="pt-2" data-testid="text-pay-online">
             <p className="text-sm font-medium mb-1">Pay securely online</p>
             <p className="text-xs text-muted-foreground">
@@ -582,37 +560,16 @@ export default function Checkout() {
               </p>
             )}
           </div>
-          ) : (
-          <div className="pt-2">
-            <p className="text-sm font-medium mb-1">Pay directly to the pharmacy</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              Please use mobile money to pay <strong>{formatLeones(payableLeones)}</strong> to the pharmacy. Your order will be confirmed once payment is received.
-            </p>
-            <div className="bg-secondary/30 p-2 rounded-lg border text-sm">
-              <MobileMoneyLines
-                lines={cart.mobileMoneyLines}
-                accountName={cart.mobileMoneyAccountName}
-                emptyText="This pharmacy has not published a mobile money number. Call them on the number in your order to arrange payment."
-              />
-            </div>
-          </div>
-          )}
           <Button
             className="w-full rounded-full h-12 text-base mt-2"
             onClick={placeOrder}
-            disabled={busy || deliveryBlocked || collectionBlocked || deliveryNotReady || (payOnline && !paymentsAvailable)}
+            disabled={busy || deliveryBlocked || collectionBlocked || deliveryNotReady || !paymentsAvailable}
             data-testid="button-place-order"
           >
             {busy
-              ? payOnline ? "Opening payment…" : "Placing order…"
-              : payOnline && !prescriptionRequired ? `Place order and pay ${formatLeones(payableLeones)}` : "Place order"}
+              ? "Opening payment…"
+              : !prescriptionRequired ? `Place order and pay ${formatLeones(payableLeones)}` : "Place order"}
           </Button>
-          {!payOnline && (
-            <p className="text-[11px] text-muted-foreground text-center">
-              Mobile-money payment is recorded with your order — you'll confirm on
-              your phone when live payments launch.
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>

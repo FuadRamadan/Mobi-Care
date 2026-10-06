@@ -429,17 +429,15 @@ function OrderDetailsSheet({
 }
 
 /**
- * The money lines under an order's medicines, by how the order was paid:
- * - Before the pilot ('patient_fee_v1'): the patient paid a 5% fee on top,
- *   which the pharmacy collected and passed to MobiCare.
- * - Paid directly to the pharmacy (pilot pricing): the pharmacy collects the
- *   medicines and delivery, and owes MobiCare its 5% and the delivery fee.
- * - Paid online (Monime): MobiCare keeps the 5% and pays the pharmacy the rest.
+ * The money lines under an order's medicines.
+ * - Orders before the pilot ('patient_fee_v1'): the patient paid a 5% fee on
+ *   top, which the pharmacy passed to MobiCare. Kept so old orders read right.
+ * - Every order now: the patient pays through MobiCare (Monime). When it is
+ *   delivered or collected, the pharmacy receives its prices less the 5%.
  */
 function OrderMoneyRows({ order }: { order: Order }) {
   const medicine = order.pharmacyMedicineTotalMinor ?? 0;
   const commission = order.pharmacyCommissionMinor ?? 0;
-  const delivery = order.deliveryFeeMinor ?? 0;
   const row = (label: string, minor: number, opts: { strong?: boolean; minus?: boolean; testId?: string } = {}) => (
     <TableRow className="bg-muted/10 hover:bg-muted/10" data-testid={opts.testId}>
       <TableCell colSpan={3} className={opts.strong ? "py-3 font-semibold" : "py-2 font-medium"}>{label}</TableCell>
@@ -458,21 +456,10 @@ function OrderMoneyRows({ order }: { order: Order }) {
       </>
     );
   }
-  if (order.paymentProvider === "monime") {
-    return (
-      <>
-        {commission > 0 && row("MobiCare commission (5% of your prices)", commission, { minus: true, testId: "row-pharmacy-commission" })}
-        {row("You receive (after delivery or collection)", medicine - commission)}
-      </>
-    );
-  }
   return (
     <>
-      {delivery > 0 && row("Delivery fee", delivery)}
-      {row("Collect from the patient", medicine + delivery, { strong: true, testId: "row-collect-from-patient" })}
-      {commission > 0 && row("Owed to MobiCare: commission (5% of your prices)", commission, { minus: true, testId: "row-pharmacy-commission" })}
-      {delivery > 0 && row("Owed to MobiCare: delivery fee", delivery, { minus: true, testId: "row-delivery-owed" })}
-      {row("You keep", medicine - commission)}
+      {commission > 0 && row("MobiCare commission (5% of your prices)", commission, { minus: true, testId: "row-pharmacy-commission" })}
+      {row("You receive (after delivery or collection)", medicine - commission, { strong: true })}
     </>
   );
 }

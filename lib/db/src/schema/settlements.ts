@@ -78,8 +78,6 @@ export const commissionSettlementsTable = pgTable(
     grossCollectedMinor: integer("gross_collected_minor").notNull(),
     drugAmountTotalMinor: integer("drug_amount_total_minor").notNull(),
     commissionDueMinor: integer("commission_due_minor").notNull(),
-    /** Delivery fees the pharmacy collected for MobiCare (pilot pricing, migration 0035). */
-    deliveryFeesDueMinor: integer("delivery_fees_due_minor").notNull().default(0),
     amountPaidMinor: integer("amount_paid_minor").notNull().default(0),
     balanceMinor: integer("balance_minor").notNull(),
     status: commissionSettlementStatusEnum("status").notNull().default("unpaid"),

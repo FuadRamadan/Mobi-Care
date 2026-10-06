@@ -25,7 +25,6 @@ import { useCart } from "@/patient/cart";
 import { formatLeones, EmptyState } from "@/pages/hq/shared";
 import { Promotions } from "./Promotions";
 import { categoryIcon, categoryLabel } from "@/patient/categories";
-import { MobileMoneyLines } from "@/patient/MobileMoneyLines";
 
 function useDebounced(value: string, ms = 350): string {
   const [debounced, setDebounced] = useState(value);
@@ -546,7 +545,8 @@ function MedicineCard({ medicine }: { medicine: Medicine }) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-background/50 rounded-lg p-2 border border-border/50">
+                {/* Payment always goes through MobiCare (Monime), so no pharmacy payment numbers here. */}
+                <div className="text-xs bg-background/50 rounded-lg p-2 border border-border/50">
                   <div>
                     <span className="text-muted-foreground block mb-0.5">Contact</span>
                     {first.pharmacyPhone ? (
@@ -554,13 +554,6 @@ function MedicineCard({ medicine }: { medicine: Medicine }) {
                     ) : (
                       <span className="text-muted-foreground italic">Not provided</span>
                     )}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block mb-0.5">Mobile Money</span>
-                    <MobileMoneyLines
-                      lines={first.mobileMoneyLines}
-                      accountName={first.mobileMoneyAccountName}
-                    />
                   </div>
                 </div>
               </div>

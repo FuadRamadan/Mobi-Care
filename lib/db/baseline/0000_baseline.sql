@@ -428,7 +428,6 @@ CREATE TABLE "public"."commission_settlements" (
     "gross_collected_minor" integer NOT NULL,
     "drug_amount_total_minor" integer NOT NULL,
     "commission_due_minor" integer NOT NULL,
-    "delivery_fees_due_minor" integer DEFAULT 0 NOT NULL,
     "amount_paid_minor" integer DEFAULT 0 NOT NULL,
     "balance_minor" integer NOT NULL,
     "status" "public"."commission_settlement_status" DEFAULT 'unpaid'::"public"."commission_settlement_status" NOT NULL,
@@ -2520,11 +2519,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-06 15:11:46.033371+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-05 16:48:52.7521+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-06 15:11:46.036129+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-05 16:48:52.755123+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-06 15:11:46.07666+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-05 16:48:52.799998+00')
 ON CONFLICT DO NOTHING;

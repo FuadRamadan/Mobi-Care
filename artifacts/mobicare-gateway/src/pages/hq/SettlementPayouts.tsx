@@ -40,7 +40,7 @@ function apiMessage(err: unknown): string {
  * order money that couldn't be released, every pharmacy's balance, and
  * recent cash-outs.
  */
-export default function OnlinePayouts() {
+export default function SettlementPayouts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data, isLoading, error } = useGetHqPayouts({
@@ -89,8 +89,8 @@ export default function OnlinePayouts() {
   return (
     <div className="space-y-8">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Summary label="Holding (in Monime)" value={data.monimeBalances.holdingMinor === null ? 'Unavailable' : le(data.monimeBalances.holdingMinor)} note="Patients' money waiting on orders" />
-        <Summary label="Revenue (in Monime)" value={data.monimeBalances.revenueMinor === null ? 'Unavailable' : le(data.monimeBalances.revenueMinor)} note="MobiCare's share of completed orders" />
+        <Summary label="Holding (in Monime)" value={data.monimeBalances.holdingMinor === null ? 'Unavailable' : le(data.monimeBalances.holdingMinor)} note="All money in MobiCare's Monime account" />
+        <Summary label="MobiCare's share in Holding" value={le(data.monimeBalances.mobicareShareMinor)} note="Commission + delivery from completed orders, less Monime's fees" />
         <Summary label="Owed to pharmacies" value={le(owed)} note="Their balances, not yet cashed out" />
         <Summary
           label="Needs you"

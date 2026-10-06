@@ -904,39 +904,6 @@ export const GetPrescriptionImageUrlResponse = zod.object({
 
 
 /**
- * @summary Pharmacy-scoped live and daily commission history
- */
-export const GetPharmacyCommissionAnalyticsQueryParams = zod.object({
-  "start": zod.date().optional(),
-  "end": zod.date().optional()
-})
-
-export const GetPharmacyCommissionAnalyticsResponse = zod.object({
-  "today": zod.object({
-  "ordersCount": zod.number(),
-  "grossCollectedMinor": zod.number(),
-  "drugAmountTotalMinor": zod.number(),
-  "commissionDueMinor": zod.number(),
-  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
-  "pharmacyEarningsMinor": zod.number()
-}),
-  "outstandingCommissionMinor": zod.number(),
-  "daily": zod.array(zod.object({
-  "settlementDate": zod.coerce.date(),
-  "businessTimezone": zod.string(),
-  "ordersCount": zod.number(),
-  "grossCollectedMinor": zod.number(),
-  "drugAmountTotalMinor": zod.number(),
-  "commissionDueMinor": zod.number(),
-  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
-  "amountPaidMinor": zod.number(),
-  "balanceMinor": zod.number(),
-  "status": zod.enum(['unpaid', 'partially_paid', 'paid'])
-}))
-})
-
-
-/**
  * @summary Orders paid online through MobiCare, at the pharmacy's own prices
  */
 export const GetPharmacyOnlineAnalyticsQueryParams = zod.object({
@@ -1166,8 +1133,8 @@ export const GetHqPayoutsResponse = zod.object({
   "failedAt": zod.string()
 })),
   "monimeBalances": zod.object({
-  "holdingMinor": zod.number().nullable(),
-  "revenueMinor": zod.number().nullable()
+  "holdingMinor": zod.number().nullable().describe('Monime\'s own balance for the Holding account'),
+  "mobicareShareMinor": zod.number().describe('MobiCare\'s share of completed orders (commission, delivery, service fee, less Monime\'s fee), kept in Holding')
 }),
   "approvalThresholdMinor": zod.number()
 })
@@ -1240,17 +1207,6 @@ export const RetryHqTransferResponse = zod.object({
   "status": zod.string(),
   "attempt": zod.number()
 })
-
-
-/**
- * @summary Download the authenticated pharmacy's commission history as CSV
- */
-export const ExportPharmacyCommissionHistoryQueryParams = zod.object({
-  "start": zod.date().optional(),
-  "end": zod.date().optional()
-})
-
-export const ExportPharmacyCommissionHistoryResponse = zod.unknown()
 
 
 /**
@@ -2035,91 +1991,6 @@ export const PatientCheckOrderPaymentResponse = zod.object({
   "expireTime": zod.string().nullable()
 }),zod.null()])
 })
-
-
-/**
- * @summary Record mobile-money payment (no live gateway yet)
- */
-export const PatientPayOrderParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const PatientPayOrderResponse = zod.object({
-  "id": zod.string(),
-  "pharmacyId": zod.string(),
-  "patientName": zod.string(),
-  "patientPhone": zod.string(),
-  "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
-  "fulfillmentType": zod.enum(['delivery', 'collection']),
-  "idChecked": zod.boolean(),
-  "totalLeones": zod.number(),
-  "medicineMarkupBasisPoints": zod.number().optional(),
-  "pharmacyMedicineTotalMinor": zod.number().optional(),
-  "medicineCommissionMinor": zod.number().optional(),
-  "patientMedicineTotalMinor": zod.number().optional(),
-  "deliveryFeeMinor": zod.number().optional(),
-  "courierPayoutMinor": zod.number().optional(),
-  "deliveryCommissionMinor": zod.number().optional(),
-  "patientServiceFeeMinor": zod.number().optional().describe('Service fee the patient paid on top of the medicine prices.'),
-  "pharmacyCommissionMinor": zod.number().optional().describe('Commission kept from the pharmacy\'s price (split pricing).'),
-  "pricingModel": zod.string().optional().describe('\'patient_fee_v1\' (patient pays 5%) or \'split_v1\' (patient 2%, pharmacy 5%)'),
-  "paymentProvider": zod.string().optional().describe('\'direct\' (paid to the pharmacy) or \'monime\' (payment link)'),
-  "payableSince": zod.string().nullish(),
-  "paidAt": zod.string().nullish(),
-  "latePaymentStatus": zod.string().nullish(),
-  "completedAt": zod.string().nullish(),
-  "deliveryConfirmedAt": zod.string().nullish(),
-  "deliveryConfirmationMethod": zod.union([zod.literal('patient'),zod.literal('hq'),zod.literal(null)]).nullish(),
-  "deliveryConfirmedByHqUserId": zod.string().nullish(),
-  "prescriptionId": zod.string().nullish(),
-  "createdAt": zod.string(),
-  "updatedAt": zod.string(),
-  "items": zod.array(zod.object({
-  "id": zod.string(),
-  "orderId": zod.string(),
-  "drugId": zod.string(),
-  "inventoryId": zod.string().nullish(),
-  "drugName": zod.string(),
-  "brand": zod.string().nullish().describe('The product bought, copied from the listing when the order was placed'),
-  "manufacturer": zod.string().nullish(),
-  "countryOfOrigin": zod.string().nullish(),
-  "quantity": zod.number(),
-  "unitPriceLeones": zod.number(),
-  "baseUnitPriceMinor": zod.number(),
-  "patientUnitPriceMinor": zod.number(),
-  "patientLineTotalMinor": zod.number(),
-  "prescriptionId": zod.string().nullish()
-}))
-}).and(zod.object({
-  "deliveryAddress": zod.string().nullish(),
-  "deliveryZoneName": zod.string().nullish(),
-  "paymentMethod": zod.string().optional(),
-  "pharmacy": zod.union([zod.object({
-  "id": zod.string(),
-  "name": zod.string(),
-  "address": zod.string().nullish(),
-  "phone": zod.string().nullish(),
-  "email": zod.string().nullish(),
-  "mobileMoneyLines": zod.array(zod.object({
-  "provider": zod.string(),
-  "number": zod.string()
-}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')).optional().describe('Empty when the pharmacy has published no way to be paid.'),
-  "mobileMoneyNumber": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
-  "mobileMoneyProvider": zod.string().nullish().describe('First entry of mobileMoneyLines. Kept for older clients.'),
-  "mobileMoneyAccountName": zod.string().nullish()
-}),zod.null()]).optional(),
-  "courier": zod.union([zod.object({
-  "id": zod.string(),
-  "name": zod.string(),
-  "phone": zod.string().nullish(),
-  "photoUrl": zod.string().nullish()
-}),zod.null()]).optional(),
-  "prescription": zod.union([zod.object({
-  "id": zod.string(),
-  "status": zod.enum(['pending', 'approved', 'rejected']),
-  "rejectReason": zod.string().nullish()
-}),zod.null()]).optional()
-}))
 
 
 /**
@@ -5043,134 +4914,6 @@ export const SetDeliveryZoneStatusResponse = zod.object({
   "effectiveFrom": zod.string()
 }),zod.null()]),
   "updatedAt": zod.string()
-})
-
-
-/**
- * @summary Daily pharmacy commission settlements
- */
-export const ListSettlementsQueryParams = zod.object({
-  "start": zod.coerce.string().optional().describe('Inclusive ISO date or date-time for financial metrics'),
-  "end": zod.coerce.string().optional().describe('Inclusive ISO date, or an exclusive ISO date-time'),
-  "pharmacyId": zod.coerce.string().optional(),
-  "status": zod.enum(['unpaid', 'partially_paid', 'paid']).optional()
-})
-
-export const ListSettlementsResponse = zod.object({
-  "pharmacy": zod.array(zod.object({
-  "id": zod.string(),
-  "pharmacyId": zod.string().nullish(),
-  "pharmacyName": zod.string().nullish(),
-  "courierId": zod.string().nullish(),
-  "courierName": zod.string().nullish(),
-  "amountLeones": zod.number(),
-  "amountMinor": zod.number().optional(),
-  "periodStart": zod.string(),
-  "periodEnd": zod.string(),
-  "orderCount": zod.number().nullish(),
-  "deliveryCount": zod.number().nullish(),
-  "status": zod.enum(['pending', 'paid']),
-  "paidAt": zod.string().nullish(),
-  "reference": zod.string().nullish(),
-  "createdAt": zod.string()
-})),
-  "courier": zod.array(zod.object({
-  "id": zod.string(),
-  "pharmacyId": zod.string().nullish(),
-  "pharmacyName": zod.string().nullish(),
-  "courierId": zod.string().nullish(),
-  "courierName": zod.string().nullish(),
-  "amountLeones": zod.number(),
-  "amountMinor": zod.number().optional(),
-  "periodStart": zod.string(),
-  "periodEnd": zod.string(),
-  "orderCount": zod.number().nullish(),
-  "deliveryCount": zod.number().nullish(),
-  "status": zod.enum(['pending', 'paid']),
-  "paidAt": zod.string().nullish(),
-  "reference": zod.string().nullish(),
-  "createdAt": zod.string()
-})),
-  "metrics": zod.object({
-  "rangeStart": zod.string(),
-  "rangeEndExclusive": zod.string(),
-  "medicineCommissionMinor": zod.number(),
-  "deliveryCommissionMinor": zod.number(),
-  "commissionIncomeMinor": zod.number(),
-  "owedPharmacyMinor": zod.number(),
-  "owedCourierMinor": zod.number(),
-  "completedOrders": zod.number(),
-  "completedDeliveries": zod.number()
-}),
-  "pharmacyBreakdown": zod.array(zod.object({
-  "pharmacyId": zod.string(),
-  "pharmacyName": zod.string().nullish(),
-  "orderCount": zod.number(),
-  "pharmacyEarningsMinor": zod.number(),
-  "medicineCommissionMinor": zod.number()
-}))
-})
-
-
-/**
- * @summary Idempotently generate daily commission settlements in the business timezone
- */
-export const GenerateSettlementsBody = zod.object({
-  "periodStart": zod.string().describe('ISO date-time (inclusive)'),
-  "periodEnd": zod.string().describe('Inclusive calendar date, or exclusive ISO date-time')
-})
-
-export const GenerateSettlementsResponse = zod.object({
-  "message": zod.string()
-})
-
-
-/**
- * @summary Record an append-only commission payment against a daily settlement
- */
-export const RecordCommissionSettlementPaymentParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-
-
-
-
-export const RecordCommissionSettlementPaymentBody = zod.object({
-  "amountMinor": zod.number().min(1),
-  "paidAt": zod.coerce.date().optional(),
-  "paymentReference": zod.string().min(1)
-})
-
-export const RecordCommissionSettlementPaymentResponse = zod.object({
-  "id": zod.string(),
-  "pharmacyId": zod.string(),
-  "pharmacyName": zod.string().nullish(),
-  "settlementDate": zod.coerce.date(),
-  "businessTimezone": zod.string(),
-  "ordersCount": zod.number(),
-  "grossCollectedMinor": zod.number(),
-  "drugAmountTotalMinor": zod.number(),
-  "commissionDueMinor": zod.number(),
-  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
-  "amountPaidMinor": zod.number(),
-  "balanceMinor": zod.number(),
-  "status": zod.enum(['unpaid', 'partially_paid', 'paid']),
-  "paidAt": zod.coerce.date().nullish(),
-  "paymentReference": zod.string().nullish()
-})
-
-
-/**
- * @summary Append-only payment and adjustment history for a settlement
- */
-export const GetCommissionSettlementHistoryParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const GetCommissionSettlementHistoryResponse = zod.object({
-  "payments": zod.array(zod.record(zod.string(), zod.unknown())),
-  "adjustments": zod.array(zod.record(zod.string(), zod.unknown()))
 })
 
 

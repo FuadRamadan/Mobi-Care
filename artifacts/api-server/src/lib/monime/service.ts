@@ -639,7 +639,7 @@ export async function paymentStatus(order: Order, sync: boolean) {
   return {
     orderStatus: current.status,
     paymentProvider: current.paymentProvider,
-    paid: Boolean(current.paidAt) || (current.paymentProvider === "direct" && current.status !== "awaiting_payment" && current.status !== "cancelled"),
+    paid: Boolean(current.paidAt),
     latePaymentStatus: current.latePaymentStatus,
     payableSince: current.payableSince?.toISOString() ?? null,
     payBy: current.payableSince

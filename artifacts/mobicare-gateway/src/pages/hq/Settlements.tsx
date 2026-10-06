@@ -1,216 +1,214 @@
 import { useState } from 'react';
-import {
-  useListSettlements,
-  useGenerateSettlements,
-  useRecordCommissionSettlementPayment,
-  getListSettlementsQueryKey,
-  getGetHqDashboardQueryKey,
-} from '@workspace/api-client-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useGetHqOnlinePayments, getGetHqOnlinePaymentsQueryKey } from '@workspace/api-client-react';
 import HqLayout from './HqLayout';
-import { EmptyState, StatusBadge, formatLeones, formatDate } from './shared';
-import { Button } from '@/components/ui/button';
+import SettlementPayouts from './SettlementPayouts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EmptyState, formatLeones, formatDate } from './shared';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
 
+const le = (minor: number) => formatLeones(minor / 100);
+const PROVIDERS: Record<string, string> = { m17: 'Orange Money', m18: 'AfriMoney' };
 
-type SettlementRecord = {
-  id: string;
-  pharmacyId: string;
-  pharmacyName: string | null;
-  settlementDate: string;
-  ordersCount: number;
-  grossCollectedMinor: number;
-  drugAmountTotalMinor: number;
-  commissionDueMinor: number;
-  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing). */
-  deliveryFeesDueMinor: number;
-  amountPaidMinor: number;
-  balanceMinor: number;
-  status: 'unpaid' | 'partially_paid' | 'paid';
-  paidAt: string | null;
-  paymentReference: string | null;
-};
-type SettlementsResponseData = {
-  settlements: SettlementRecord[];
-  metrics: {
-    commissionEarnedMinor: number;
-    commissionCollectedMinor: number;
-    commissionOutstandingMinor: number;
-    deliveryFeesDueMinor: number;
-    allTimeCommissionEarnedMinor: number;
-  };
-  rankings: {
-    byOwed: { pharmacyId: string; pharmacyName: string | null; outstanding: number }[];
-    byGenerated: { pharmacyId: string; pharmacyName: string | null; amountMinor: number }[];
-  };
-};
-
-
+/**
+ * HQ Settlements. Every order is paid through Monime into MobiCare's Holding
+ * account. "Figures": per day, what patients paid and MobiCare's share
+ * (commission, delivery, any service fee, less Monime's fee), which stays in
+ * Holding; money waiting on orders; refunds to pay. "Payouts": pharmacy
+ * balances, cash-outs to approve, and money that couldn't be released.
+ * These are MobiCare's own records; checking them against Monime's balances
+ * comes with reconciliation.
+ */
 export default function HqSettlements() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const today = new Date().toISOString().slice(0, 10);
-  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
-  const [period, setPeriod] = useState({ start: weekAgo, end: today });
-  const { data, isLoading } = useListSettlements({
-    start: period.start,
-    end: period.end,
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const [period, setPeriod] = useState({ start: monthAgo, end: today });
+  const { data, isLoading, error } = useGetHqOnlinePayments(period, {
+    query: { queryKey: getGetHqOnlinePaymentsQueryKey(period), refetchInterval: 15_000 },
   });
-  const settlements = data as unknown as SettlementsResponseData;
 
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: getListSettlementsQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetHqDashboardQueryKey() });
-  };
-  const onError = (err: unknown) =>
-    toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
+  const days = (data?.daily ?? []).filter((d) => d.ordersPaid > 0 || d.date === data?.today).reverse();
+  const todayRow = data?.daily.find((d) => d.date === data.today);
+  const totals = (data?.daily ?? []).reduce(
+    (t, d) => ({
+      collected: t.collected + d.collectedMinor,
+      fees: t.fees + d.serviceFeesMinor,
+      commission: t.commission + d.commissionMinor,
+      delivery: t.delivery + d.deliveryFeesMinor,
+      monime: t.monime + d.monimeFeesMinor,
+      refunds: t.refunds + d.refundsMinor,
+      net: t.net + d.netMinor,
+    }),
+    { collected: 0, fees: 0, commission: 0, delivery: 0, monime: 0, refunds: 0, net: 0 },
+  );
+  const refundsToPay = data?.refunds ?? [];
+  const refundsToPayMinor = refundsToPay.reduce((sum, r) => sum + r.amountMinor, 0);
 
-  const generate = useGenerateSettlements({
-    mutation: {
-      onSuccess: (res) => {
-        toast({ title: 'Settlements generated', description: res.message });
-        refresh();
-      },
-      onError,
-    },
-  });
-  const recordPayment = useRecordCommissionSettlementPayment({ mutation: { onSuccess: refresh, onError } });
-
-
+  const initialTab = new URLSearchParams(window.location.search).get('tab') === 'payouts' ? 'payouts' : 'figures';
 
   return (
     <HqLayout title="Settlements">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">Generate settlements for a period</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <Label>Period start</Label>
-            <Input type="date" value={period.start} onChange={(e) => setPeriod({ ...period, start: e.target.value })} data-testid="input-period-start" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Period end (inclusive)</Label>
-            <Input type="date" value={period.end} onChange={(e) => setPeriod({ ...period, end: e.target.value })} data-testid="input-period-end" />
-          </div>
-          <Button
-            disabled={generate.isPending}
-            onClick={() =>
-              generate.mutate({
-                data: {
-                  periodStart: period.start,
-                  periodEnd: period.end,
-                },
-              })
-            }
-            data-testid="button-generate-settlements"
-          >
-            {generate.isPending ? 'Generating…' : 'Generate'}
-          </Button>
-          <p className="text-xs text-muted-foreground w-full">
-            Aggregates completed orders into immutable pharmacy earnings and courier payouts. The selected end day is included.
-          </p>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue={initialTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="figures">Figures</TabsTrigger>
+          <TabsTrigger value="payouts">Payouts</TabsTrigger>
+        </TabsList>
+        <TabsContent value="payouts">
+          <SettlementPayouts />
+        </TabsContent>
+        <TabsContent value="figures">
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        <div className="space-y-1.5">
+          <Label htmlFor="online-start">From</Label>
+          <Input id="online-start" type="date" value={period.start} max={period.end}
+            onChange={(e) => e.target.value && setPeriod({ ...period, start: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="online-end">To (inclusive)</Label>
+          <Input id="online-end" type="date" value={period.end} min={period.start}
+            onChange={(e) => e.target.value && setPeriod({ ...period, end: e.target.value })} />
+        </div>
+        <p className="text-xs text-muted-foreground basis-full">
+          Counted on the day the payment was confirmed (Freetown time). Up to 92 days at a time.
+        </p>
+      </div>
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
-      ) : settlements ? (
+      ) : error || !data ? (
+        <EmptyState>Couldn't load these figures. Check the dates (up to 92 days) and try again.</EmptyState>
+      ) : !data.enabled ? (
+        <EmptyState>Online payments are not switched on yet. Figures appear here once patients pay through Monime.</EmptyState>
+      ) : (
         <div className="space-y-8">
-          <section>
-            <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Financial overview (Range vs All-Time)</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission Earned</p>
-                <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionEarnedMinor ?? 0) / 100)} range</p><p className="text-sm text-muted-foreground">{formatLeones((settlements.metrics.allTimeCommissionEarnedMinor ?? 0) / 100)} all-time</p></div>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Collected from pharmacies</p>
-                <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionCollectedMinor ?? 0) / 100)} range</p></div>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Delivery fees owed</p>
-                <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.deliveryFeesDueMinor ?? 0) / 100)} range</p></div>
-              </CardContent></Card>
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Outstanding (commission + delivery fees)</p>
-                <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionOutstandingMinor ?? 0) / 100)} range</p></div>
-              </CardContent></Card>
-            </div>
-          </section>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <section>
-              <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Top pharmacies (Owed to MobiCare)</h2>
-              <div className="border rounded-xl bg-card overflow-x-auto">
-                <Table><TableHeader><TableRow><TableHead>Pharmacy</TableHead><TableHead className="text-right">Outstanding</TableHead></TableRow></TableHeader>
-                  <TableBody>{settlements.rankings.byOwed.map(row => <TableRow key={row.pharmacyId}><TableCell>{row.pharmacyName ?? '—'}</TableCell><TableCell className="text-right font-medium">{formatLeones(row.outstanding / 100)}</TableCell></TableRow>)}</TableBody>
-                </Table>
-              </div>
-            </section>
-            <section>
-              <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Top pharmacies (Commission Generated)</h2>
-              <div className="border rounded-xl bg-card overflow-x-auto">
-                <Table><TableHeader><TableRow><TableHead>Pharmacy</TableHead><TableHead className="text-right">Generated</TableHead></TableRow></TableHeader>
-                  <TableBody>{settlements.rankings.byGenerated.map(row => <TableRow key={row.pharmacyId}><TableCell>{row.pharmacyName ?? '—'}</TableCell><TableCell className="text-right font-medium">{formatLeones(row.amountMinor / 100)}</TableCell></TableRow>)}</TableBody>
-                </Table>
-              </div>
-            </section>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Summary label="MobiCare's share today" value={le(todayRow?.netMinor ?? 0)}
+              note="Fees, commission and delivery, less Monime fees" />
+            <Summary label="Waiting on orders" value={le(data.waitingOnOrdersMinor)}
+              note="Paid, not yet delivered or collected" />
+            <Summary label="Owed to pharmacies" value={le(data.owedToPharmaciesMinor)}
+              note="Completed orders, after the 5% commission" />
+            <Summary label="Refunds to pay" value={le(refundsToPayMinor)}
+              note={`${refundsToPay.length} order${refundsToPay.length === 1 ? '' : 's'}`} alert={refundsToPay.length > 0} />
           </div>
 
           <section>
-            <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Settlement Records</h2>
+            <h2 className="font-display font-semibold text-lg text-dark-green mb-3">By day</h2>
             <div className="border rounded-xl bg-card overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Pharmacy</TableHead>
-                    <TableHead>Orders</TableHead>
-                    <TableHead>Gross (Patient)</TableHead>
-                    <TableHead>Pharmacy Keeps</TableHead>
-                    <TableHead>Commission (5%)</TableHead>
-                    <TableHead>Delivery Fees</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Date paid</TableHead>
+                    <TableHead className="text-right">Orders</TableHead>
+                    <TableHead className="text-right">Collected</TableHead>
+                    <TableHead className="text-right">Service fee</TableHead>
+                    <TableHead className="text-right">Commission 5%</TableHead>
+                    <TableHead className="text-right">Delivery</TableHead>
+                    <TableHead className="text-right">Monime fees</TableHead>
+                    <TableHead className="text-right">Refunds</TableHead>
+                    <TableHead className="text-right">MobiCare's share</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {settlements.settlements.map((s) => (
-                    <TableRow key={s.id} data-testid={`row-settlement-${s.id}`}>
-                      <TableCell className="font-medium whitespace-nowrap">{formatDate(s.settlementDate)}</TableCell>
-                      <TableCell>{s.pharmacyName ?? '—'}</TableCell>
-                      <TableCell>{s.ordersCount ?? 0}</TableCell>
-                      <TableCell>{formatLeones((s.grossCollectedMinor ?? 0) / 100)}</TableCell>
-                      <TableCell>{formatLeones(((s.grossCollectedMinor ?? 0) - (s.commissionDueMinor ?? 0) - (s.deliveryFeesDueMinor ?? 0)) / 100)}</TableCell>
-                      <TableCell className="font-medium">{formatLeones((s.commissionDueMinor ?? 0) / 100)}</TableCell>
-                      <TableCell className="font-medium">{formatLeones((s.deliveryFeesDueMinor ?? 0) / 100)}</TableCell>
-                      <TableCell className={`font-medium ${s.balanceMinor > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatLeones((s.balanceMinor ?? 0) / 100)}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={s.status} />
-                        {s.paidAt && <div className="text-[11px] text-muted-foreground mt-0.5">{formatDate(s.paidAt)}</div>}
+                <TableBody className="tabular-nums">
+                  {days.map((d) => (
+                    <TableRow key={d.date}>
+                      <TableCell className="font-medium whitespace-nowrap">{d.date}</TableCell>
+                      <TableCell className="text-right">{d.ordersPaid}</TableCell>
+                      <TableCell className="text-right">{le(d.collectedMinor)}</TableCell>
+                      <TableCell className="text-right">{le(d.serviceFeesMinor)}</TableCell>
+                      <TableCell className="text-right">{le(d.commissionMinor)}</TableCell>
+                      <TableCell className="text-right">{le(d.deliveryFeesMinor)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">−{le(d.monimeFeesMinor)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {d.refundsCount ? `${d.refundsCount} · ${le(d.refundsMinor)}` : '—'}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {s.status !== 'paid' && (
-                          <Button
-                            size="sm"
-                            disabled={recordPayment.isPending}
-                            onClick={() => recordPayment.mutate({ id: s.id, data: { amountMinor: s.balanceMinor, paymentReference: 'MANUAL', paidAt: new Date().toISOString() } })}
-                            data-testid={`button-mark-paid-${s.id}`}
-                          >
-                            Record payment
-                          </Button>
-                        )}
-                      </TableCell>
+                      <TableCell className="text-right font-semibold">{le(d.netMinor)}</TableCell>
                     </TableRow>
                   ))}
+                  <TableRow className="bg-muted/40 font-semibold">
+                    <TableCell>Period total</TableCell>
+                    <TableCell className="text-right">{data.daily.reduce((n, d) => n + d.ordersPaid, 0)}</TableCell>
+                    <TableCell className="text-right">{le(totals.collected)}</TableCell>
+                    <TableCell className="text-right">{le(totals.fees)}</TableCell>
+                    <TableCell className="text-right">{le(totals.commission)}</TableCell>
+                    <TableCell className="text-right">{le(totals.delivery)}</TableCell>
+                    <TableCell className="text-right">−{le(totals.monime)}</TableCell>
+                    <TableCell className="text-right">{le(totals.refunds)}</TableCell>
+                    <TableCell className="text-right">{le(totals.net)}</TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              MobiCare's share (commission + delivery + any service fee, less Monime's fees) stays in the Holding account until an admin decides what to do with it. It leaves out refunded orders; Collected includes them, since the money came in before it goes back.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-display font-semibold text-lg text-dark-green mb-1">Refunds to pay by hand</h2>
+            <p className="text-sm text-muted-foreground mb-3">
+              Paid orders that were cancelled, or payments that arrived after the order could no longer go ahead.
+              Automatic mobile money refunds come with a later update; until then, pay these from HQ.
+            </p>
+            {refundsToPay.length === 0 ? (
+              <EmptyState>No refunds waiting.</EmptyState>
+            ) : (
+              <div className="border rounded-xl bg-card overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order</TableHead>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Pharmacy</TableHead>
+                      <TableHead>Paid</TableHead>
+                      <TableHead>Paid with</TableHead>
+                      <TableHead>Why</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {refundsToPay.map((r) => (
+                      <TableRow key={r.orderId}>
+                        <TableCell className="font-mono text-xs">{r.orderId.slice(0, 8)}</TableCell>
+                        <TableCell>{r.patientName || '—'}</TableCell>
+                        <TableCell>{r.pharmacyName ?? '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDate(r.paidAt)}</TableCell>
+                        <TableCell>{paidWith(r.payerChannel, r.payerProvider)}</TableCell>
+                        <TableCell className="text-sm">{r.reason}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">{le(r.amountMinor)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </section>
         </div>
-      ) : null}
+      )}
+        </TabsContent>
+      </Tabs>
     </HqLayout>
+  );
+}
+
+function paidWith(channel: string | null, provider: string | null): string {
+  if (provider && PROVIDERS[provider]) return PROVIDERS[provider];
+  if (channel === 'momo') return 'Mobile money';
+  if (channel === 'card') return 'Card';
+  if (channel === 'bank') return 'Bank';
+  return channel ?? '—';
+}
+
+function Summary({ label, value, note, alert }: { label: string; value: string; note: string; alert?: boolean }) {
+  return (
+    <Card className={alert ? 'border-destructive/50 bg-destructive/5' : undefined}>
+      <CardContent className="pt-6">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xl font-semibold mt-2 tabular-nums">{value}</p>
+        <p className={`text-xs mt-1 ${alert ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>{note}</p>
+      </CardContent>
+    </Card>
   );
 }

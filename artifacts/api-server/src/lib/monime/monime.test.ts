@@ -19,7 +19,6 @@ const baseEnv = {
   MONIME_SPACE_ID: "spc-abc123",
   PUBLIC_APP_URL: "https://mobicaresl.com",
   MONIME_HOLDING_ACCOUNT_ID: "fac-holding",
-  MONIME_REVENUE_ACCOUNT_ID: "fac-revenue",
 };
 
 // ── Settings ─────────────────────────────────────────────────────────────
@@ -64,18 +63,10 @@ test("a fake Monime address is allowed outside production", () => {
   assert.equal(config?.apiVersion, "caph.2025-08-23");
 });
 
-test("both MobiCare accounts are required, and must differ", () => {
+test("the Holding account is required", () => {
   assert.throws(
     () => loadMonimeConfig({ ...baseEnv, MONIME_HOLDING_ACCOUNT_ID: "" }),
     /MONIME_HOLDING_ACCOUNT_ID is missing/,
-  );
-  assert.throws(
-    () => loadMonimeConfig({ ...baseEnv, MONIME_REVENUE_ACCOUNT_ID: " " }),
-    /MONIME_REVENUE_ACCOUNT_ID is missing/,
-  );
-  assert.throws(
-    () => loadMonimeConfig({ ...baseEnv, MONIME_REVENUE_ACCOUNT_ID: "fac-holding" }),
-    /must be different accounts/,
   );
 });
 
@@ -205,7 +196,6 @@ const clientConfig = {
   apiVersion: "caph.2025-08-23",
   baseUrl: "http://monime.test",
   holdingAccountId: "fac-holding",
-  revenueAccountId: "fac-revenue",
   webhookHeaderToken: null,
   publicAppUrl: "https://mobicaresl.com",
 };

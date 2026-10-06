@@ -14,13 +14,14 @@ import {
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getPatientListOrdersQueryKey,
   usePatientCreateOrder,
-  usePatientPayOrder,
+  usePatientStartCheckout,
   usePatientUploadPrescription,
 } from "@workspace/api-client-react";
 import { useCart } from "@/context/CartContext";
@@ -59,7 +60,7 @@ export default function CartScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createOrder = usePatientCreateOrder();
-  const payOrder = usePatientPayOrder();
+  const startCheckout = usePatientStartCheckout();
   const uploadPrescription = usePatientUploadPrescription();
 
   const activeFulfillment = requiresCollection ? "collection" : fulfillment;
@@ -182,8 +183,6 @@ export default function CartScreen() {
         },
       });
 
-      const paidOrder = await payOrder.mutateAsync({ id: order.id });
-
       clearCart();
       setPrescriptionUri(null);
       setPrescriptionBase64(null);
@@ -194,9 +193,23 @@ export default function CartScreen() {
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Every order is paid through MobiCare's secure Monime page. A
+      // prescription order waits for the pharmacist before it can be paid.
+      if (!prescriptionImageKey) {
+        try {
+          const link = await startCheckout.mutateAsync({ id: order.id });
+          if (link.status === "pending" && link.redirectUrl) {
+            await WebBrowser.openBrowserAsync(link.redirectUrl);
+          }
+        } catch {
+          // The order is saved; the patient can pay from the Orders tab.
+        }
+      }
       Alert.alert(
         "Order Placed!",
-        `Your direct payment of ${formatLeones(paidOrder.totalLeones)} to ${cart.pharmacyName} has been recorded. Track your order in the Orders tab.`,
+        prescriptionImageKey
+          ? "A pharmacist will check your prescription first. We'll let you know when you can pay."
+          : `Your order of ${formatLeones(order.totalLeones)} from ${cart.pharmacyName} is saved. If you haven't paid yet, you can pay from the Orders tab.`,
         [
           {
             text: "View Orders",

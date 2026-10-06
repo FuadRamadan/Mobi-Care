@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Finds or creates MobiCare's two accounts in its Monime space and prints the
- * lines to put in the server's environment:
+ * Finds or creates MobiCare's Holding account in its Monime space and prints
+ * the line to put in the server's environment:
  *
- *   MONIME_HOLDING_ACCOUNT_ID   patient payments land here and wait until the order is complete
- *   MONIME_REVENUE_ACCOUNT_ID   MobiCare's share of each completed order
+ *   MONIME_HOLDING_ACCOUNT_ID   every patient payment lands here. The pharmacy's
+ *                               share leaves when the order is complete; MobiCare's
+ *                               share (commission, delivery) stays until an admin
+ *                               decides what to do with it.
  *
- * Run once per space (test, then live). Safe to run again: accounts are found
- * by their reference first, and creation uses fixed idempotency keys.
+ * Run once per space (test, then live). Safe to run again: the account is found
+ * by its reference first, and creation uses a fixed idempotency key.
  *
  *   MONIME_ACCESS_TOKEN=mon_test_... MONIME_SPACE_ID=spc-... \
  *     node "Final Deployment files/scripts/monime-setup-accounts.mjs"
@@ -30,7 +32,6 @@ const mode = token.startsWith("mon_test_") ? "test" : "live";
 
 const ACCOUNTS = [
   { env: "MONIME_HOLDING_ACCOUNT_ID", name: "MobiCare Holding", reference: "mobicare-holding" },
-  { env: "MONIME_REVENUE_ACCOUNT_ID", name: "MobiCare Revenue", reference: "mobicare-revenue" },
 ];
 
 async function call(method, path, body, key) {

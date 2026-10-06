@@ -7,8 +7,11 @@
  */
 
 export type HqPayoutsMonimeBalances = {
-  /** @nullable */
+  /**
+     * Monime's own balance for the Holding account
+     * @nullable
+     */
   holdingMinor: number | null;
-  /** @nullable */
-  revenueMinor: number | null;
+  /** MobiCare's share of completed orders (commission, delivery, service fee, less Monime's fee), kept in Holding */
+  mobicareShareMinor: number;
 };

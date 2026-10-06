@@ -9,12 +9,12 @@ const router = safeRouter();
 // The cart shows the matching service fee and payment wording before an order
 // is placed. The order itself is always priced on the server.
 router.get("/config", (_req, res) => {
-  const viaMonime = monimeEnabled();
+  // Monime is the only way to pay; while it is switched off, ordering is closed.
   res.json({
-    provider: viaMonime ? "monime" : "direct",
+    provider: "monime",
     // Every new order is priced 'split_v1', however it is paid.
     serviceFeeBasisPoints: SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS,
-    available: viaMonime ? monimeHealth().ok : true,
+    available: monimeEnabled() && monimeHealth().ok,
   });
 });
 

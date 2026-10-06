@@ -19,7 +19,6 @@ import {
   BarChart3,
   Megaphone,
   MapPinned,
-  Smartphone,
   type LucideIcon,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -57,7 +56,6 @@ const NAV: Array<{
   { href: '/hq/advertisements', label: 'Promotions', icon: Megaphone },
   { href: '/hq/flags', label: 'Flags', icon: Flag },
   { href: '/hq/settlements', label: 'Settlements', icon: Wallet, requiresSettlements: true, badge: 'pendingSettlements' },
-  { href: '/hq/payments', label: 'Online Payments', icon: Smartphone, requiresSettlements: true },
   { href: '/hq/insights', label: 'Data & Insights', icon: BarChart3, requiresInsights: true },
   { href: '/hq/audit', label: 'Audit Log', icon: ScrollText },
   { href: '/hq/team', label: 'Team Profiles', icon: Users },
@@ -273,7 +271,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                     notifications.slice(0, 8).map((notification) => (
                       <Link
                         key={notification.id}
-                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'payout_issue' ? '/hq/payments?tab=payouts' : '/hq/orders'}
+                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'payout_issue' ? '/hq/settlements?tab=payouts' : '/hq/orders'}
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',
                           !notification.readAt && 'bg-primary/5',

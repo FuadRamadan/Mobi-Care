@@ -25,7 +25,6 @@ import {
   type DeliveryQuote,
 } from "../../lib/delivery/pricing.js";
 import { quoteForPharmacy } from "../../lib/delivery/zones.js";
-import { expireStaleOrders, paymentCutoff } from "../../lib/orderExpiry.js";
 import { deductOrderStock, PaymentClaimError } from "../../lib/orderPayment.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
@@ -446,6 +445,15 @@ router.post("/:id/cancel", async (req: AuthRequest, res) => {
 // ── POST /patient/orders — place an order ─────────────────────────────────────
 router.post("/", async (req: AuthRequest, res) => {
   const patientId = req.pharmacy!.sub;
+  // Every order is paid through MobiCare (Monime); there is no other way to
+  // pay. Until Monime is switched on, orders can't be placed.
+  if (!monimeEnabled()) {
+    res.status(503).json({
+      error: "Ordering opens once online payments are switched on. Please try again later.",
+      code: "PAYMENTS_UNAVAILABLE",
+    });
+    return;
+  }
   const body = z
     .object({
       pharmacyId: z.string().uuid(),
@@ -666,11 +674,10 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
-  // Pilot pricing (decided 6 Oct 2026), whichever way the patient pays: no
-  // service fee for the patient, a 5% commission from the pharmacy. With
-  // Monime the commission is kept before the money is released; paid
-  // directly, the pharmacy owes it (and the delivery fee) in its settlement.
-  const viaMonime = monimeEnabled();
+  // Pilot pricing (decided 6 Oct 2026): no service fee for the patient, a 5%
+  // commission from the pharmacy. The patient pays through Monime; the money
+  // waits in MobiCare's Holding account until the order is complete, when the
+  // pharmacy's share (its prices less 5%) is released to it.
   const pricing = priceOrder(pharmacyMedicineTotalMinor, "split_v1");
   const { medicineCommissionMinor, patientMedicineTotalMinor } = pricing;
   // Delivery is priced by zone and fixed on the order now, so a later fee
@@ -691,8 +698,6 @@ router.post("/", async (req: AuthRequest, res) => {
     return;
   }
 
-  // Cancel abandoned checkouts. Unpaid orders do not reserve inventory.
-  await expireStaleOrders();
 
   // Create the checkout atomically without changing inventory. Stock is
   // verified again and deducted only after confirmed payment.
@@ -714,11 +719,11 @@ router.post("/", async (req: AuthRequest, res) => {
           deliveryZoneName: deliveryQuote?.zoneName ?? null,
           deliveryPricing: deliveryQuote?.pricing ?? null,
           status: "awaiting_payment",
-          paymentMethod: viaMonime ? "monime" : "orange_money",
-          paymentProvider: viaMonime ? "monime" : "direct",
+          paymentMethod: "monime",
+          paymentProvider: "monime",
           // A prescription order can be paid only once the pharmacist has
           // approved it; its payment window starts then.
-          payableSince: viaMonime && prescriptionRequired ? null : new Date(),
+          payableSince: prescriptionRequired ? null : new Date(),
           pricingModel: pricing.pricingModel,
           patientServiceFeeMinor: pricing.patientServiceFeeMinor,
           pharmacyCommissionMinor: pricing.pharmacyCommissionMinor,
@@ -882,99 +887,5 @@ async function sendPaymentStatus(req: AuthRequest, res: Parameters<Parameters<ty
 }
 router.get("/:id/payment", (req: AuthRequest, res) => sendPaymentStatus(req, res, false));
 router.post("/:id/payment/check", (req: AuthRequest, res) => sendPaymentStatus(req, res, true));
-
-// ── POST /patient/orders/:id/pay — record mobile-money payment ────────────────
-// No live gateway yet: this records the payment intent and moves the order to
-// 'paid' so the pharmacy can start fulfilment.
-router.post("/:id/pay", async (req: AuthRequest, res) => {
-  const patientId = req.pharmacy!.sub;
-  const id = req.params.id as string;
-
-  const [order] = await db
-    .select()
-    .from(ordersTable)
-    .where(and(eq(ordersTable.id, id), eq(ordersTable.patientId, patientId)))
-    .limit(1);
-  if (!order) {
-    res.status(404).json({ error: "Order not found" });
-    return;
-  }
-  if (order.paymentProvider === "monime") {
-    res.status(409).json({
-      error: "This order is paid through the MobiCare payment link.",
-      code: "PAY_WITH_MONIME",
-    });
-    return;
-  }
-  if (order.status !== "awaiting_payment") {
-    res.status(409).json({ error: "Order is not awaiting payment" });
-    return;
-  }
-
-  // Atomically claim payment and deduct the exact selected listing. Any stock
-  // conflict rolls the status update back, so payment can be retried after the
-  // patient reviews their cart and no duplicate request can deduct twice.
-  let updated: typeof ordersTable.$inferSelect;
-  try {
-    updated = await db.transaction(async (tx) => {
-      const [claimed] = await tx
-        .update(ordersTable)
-        .set({ status: "paid", updatedAt: new Date() })
-        .where(
-          and(
-            eq(ordersTable.id, id),
-            eq(ordersTable.patientId, patientId),
-            eq(ordersTable.status, "awaiting_payment"),
-            gte(ordersTable.createdAt, paymentCutoff()),
-          ),
-        )
-        .returning();
-      if (!claimed) {
-        throw Object.assign(new Error("PAYMENT_CONFLICT"), {
-          code: "PAYMENT_CONFLICT",
-        });
-      }
-
-      await deductOrderStock(tx, claimed);
-      return claimed;
-    });
-  } catch (err: any) {
-    if (err instanceof PaymentClaimError) {
-      res.status(409).json({
-        error:
-          "Stock changed before payment — please review your cart and place the order again",
-        code: "STOCK_CHANGED",
-      });
-      return;
-    }
-    if (err?.code !== "PAYMENT_CONFLICT") throw err;
-    await expireStaleOrders();
-    res.status(409).json({
-      error:
-        order.createdAt < paymentCutoff()
-          ? "This order's payment window has expired — please place it again"
-          : "Order is not awaiting payment",
-      code:
-        order.createdAt < paymentCutoff()
-          ? "PAYMENT_WINDOW_EXPIRED"
-          : "PAYMENT_CONFLICT",
-    });
-    return;
-  }
-
-  await writeAudit({
-    actorType: "patient",
-    actorId: patientId,
-    actorName: req.pharmacy!.name,
-    action: "order.payment_recorded",
-    entityType: "order",
-    entityId: id,
-    details: { method: order.paymentMethod, totalLeones: order.totalLeones },
-  });
-  await checkOrderFlags(updated);
-  void notifyPharmacyOfPaidOrder(updated);
-
-  res.json((await hydratePatientOrders([updated]))[0]);
-});
 
 export default router;
