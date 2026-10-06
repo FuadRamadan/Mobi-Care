@@ -188,6 +188,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "pilot pricing: delivery fees in settlements (migration 0035)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'commission_settlements'
+            AND column_name = 'delivery_fees_due_minor'
+        ) AS exists
+      `,
+    },
+    {
       label: "Monime payouts (migration 0034)",
       query: sql`
         SELECT to_regclass(current_schema() || '.pharmacy_cashouts')

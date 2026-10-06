@@ -666,14 +666,12 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
-  // With Monime on, the new fee split applies (decided 5 Oct 2026): the
-  // patient pays 2% on top and the pharmacy gives up 5% when the money is
-  // released. Otherwise today's 5% patient fee stays.
+  // Pilot pricing (decided 6 Oct 2026), whichever way the patient pays: no
+  // service fee for the patient, a 5% commission from the pharmacy. With
+  // Monime the commission is kept before the money is released; paid
+  // directly, the pharmacy owes it (and the delivery fee) in its settlement.
   const viaMonime = monimeEnabled();
-  const pricing = priceOrder(
-    pharmacyMedicineTotalMinor,
-    viaMonime ? "split_v1" : "patient_fee_v1",
-  );
+  const pricing = priceOrder(pharmacyMedicineTotalMinor, "split_v1");
   const { medicineCommissionMinor, patientMedicineTotalMinor } = pricing;
   // Delivery is priced by zone and fixed on the order now, so a later fee
   // change never alters what this patient was quoted. The whole fee is

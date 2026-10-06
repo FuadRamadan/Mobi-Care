@@ -41,7 +41,7 @@ router.get("/", async (req, res) => {
       pharmacyName: pharmaciesTable.name, settlementDate: commissionSettlementsTable.settlementDate,
       businessTimezone: commissionSettlementsTable.businessTimezone, ordersCount: commissionSettlementsTable.ordersCount,
       grossCollectedMinor: commissionSettlementsTable.grossCollectedMinor, drugAmountTotalMinor: commissionSettlementsTable.drugAmountTotalMinor,
-      commissionDueMinor: commissionSettlementsTable.commissionDueMinor, amountPaidMinor: commissionSettlementsTable.amountPaidMinor,
+      commissionDueMinor: commissionSettlementsTable.commissionDueMinor, deliveryFeesDueMinor: commissionSettlementsTable.deliveryFeesDueMinor, amountPaidMinor: commissionSettlementsTable.amountPaidMinor,
       balanceMinor: commissionSettlementsTable.balanceMinor, status: commissionSettlementsTable.status,
       paidAt: commissionSettlementsTable.paidAt, paymentReference: commissionSettlementsTable.paymentReference,
     }).from(commissionSettlementsTable).leftJoin(pharmaciesTable, eq(pharmaciesTable.id, commissionSettlementsTable.pharmacyId))
@@ -50,6 +50,7 @@ router.get("/", async (req, res) => {
       earned: sql<number>`coalesce(sum(${commissionSettlementsTable.commissionDueMinor}), 0)::int`,
       collected: sql<number>`coalesce(sum(${commissionSettlementsTable.amountPaidMinor}), 0)::int`,
       outstanding: sql<number>`coalesce(sum(${commissionSettlementsTable.balanceMinor}), 0)::int`,
+      deliveryFees: sql<number>`coalesce(sum(${commissionSettlementsTable.deliveryFeesDueMinor}), 0)::int`,
     }).from(commissionSettlementsTable).where(filters.length ? and(...filters) : undefined),
     db.select({ earned: sql<number>`coalesce(sum(${commissionSettlementsTable.commissionDueMinor}), 0)::int` }).from(commissionSettlementsTable),
     db.select({ pharmacyId: commissionSettlementsTable.pharmacyId, pharmacyName: pharmaciesTable.name, amountMinor: sql<number>`coalesce(sum(${commissionSettlementsTable.balanceMinor}),0)::int` })
@@ -59,7 +60,7 @@ router.get("/", async (req, res) => {
       .from(commissionSettlementsTable).leftJoin(pharmaciesTable, eq(pharmaciesTable.id, commissionSettlementsTable.pharmacyId))
       .where(filters.length ? and(...filters) : undefined).groupBy(commissionSettlementsTable.pharmacyId, pharmaciesTable.name).orderBy(desc(sql`coalesce(sum(${commissionSettlementsTable.commissionDueMinor}),0)`)),
   ]);
-  res.json({ settlements, metrics: { commissionEarnedMinor: range?.earned ?? 0, commissionCollectedMinor: range?.collected ?? 0, commissionOutstandingMinor: range?.outstanding ?? 0, allTimeCommissionEarnedMinor: allTime?.earned ?? 0 }, rankings: { byOwed: owedRanking, byGenerated: generatedRanking } });
+  res.json({ settlements, metrics: { commissionEarnedMinor: range?.earned ?? 0, commissionCollectedMinor: range?.collected ?? 0, commissionOutstandingMinor: range?.outstanding ?? 0, deliveryFeesDueMinor: range?.deliveryFees ?? 0, allTimeCommissionEarnedMinor: allTime?.earned ?? 0 }, rankings: { byOwed: owedRanking, byGenerated: generatedRanking } });
 });
 
 router.post("/generate", async (req: AuthRequest, res) => {
@@ -90,8 +91,10 @@ router.post("/:id/payments", async (req: AuthRequest, res) => {
     if (!settlement) return null;
     if (body.data.amountMinor > settlement.balanceMinor) throw new Error("PAYMENT_EXCEEDS_BALANCE");
     const amountPaidMinor = settlement.amountPaidMinor + body.data.amountMinor;
-    const balanceMinor = settlement.commissionDueMinor - amountPaidMinor;
-    const status = commissionStatus(settlement.commissionDueMinor, amountPaidMinor);
+    // Owed to MobiCare: the commission plus any delivery fees collected for it.
+    const dueMinor = settlement.commissionDueMinor + settlement.deliveryFeesDueMinor;
+    const balanceMinor = dueMinor - amountPaidMinor;
+    const status = commissionStatus(dueMinor, amountPaidMinor);
     await tx.insert(commissionSettlementPaymentsTable).values({ settlementId: id, amountMinor: body.data.amountMinor, paidAt: body.data.paidAt ?? new Date(), paymentReference: body.data.paymentReference, recordedByHqStaffId: req.pharmacy!.sub });
     const [updated] = await tx.update(commissionSettlementsTable).set({ amountPaidMinor, balanceMinor, status, paidAt: status === "paid" ? (body.data.paidAt ?? new Date()) : null, paymentReference: body.data.paymentReference, updatedAt: new Date() }).where(eq(commissionSettlementsTable.id, id)).returning();
     return updated!;

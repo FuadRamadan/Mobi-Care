@@ -27,8 +27,13 @@ export function calculateOrderPricing(drugSubtotalMinor: number) {
   };
 }
 
-/** With Monime: the patient pays 2% on top, the pharmacy gives up 5%. */
-export const SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS = 200;
+/**
+ * The patient's service fee under 'split_v1'. 0 during the pilot and launch
+ * (decided 6 Oct 2026): MobiCare is free for patients, who pay only the
+ * pharmacy's prices and delivery. The plan after the pilot is 2% (200).
+ */
+export const SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS = 0;
+/** The pharmacy's commission on each sale. */
 export const SPLIT_PHARMACY_COMMISSION_BASIS_POINTS = 500;
 
 export type PricingModel = "patient_fee_v1" | "split_v1";
@@ -59,8 +64,10 @@ const percentOf = (amountMinor: number, basisPoints: number) =>
  * MobiCare. Each percentage is rounded once per order (half up), and the
  * parts always add up exactly.
  *
- * - 'patient_fee_v1' (today): patient pays 5% on top; pharmacy keeps its price.
- * - 'split_v1' (with Monime): patient pays 2% on top; pharmacy pays 5%.
+ * - 'patient_fee_v1' (orders before the pilot): patient pays 5% on top;
+ *   the pharmacy keeps its price.
+ * - 'split_v1' (all new orders, paid directly or through Monime): patient
+ *   pays the service fee (0% during the pilot); the pharmacy pays 5%.
  */
 export function priceOrder(
   pharmacyMedicineTotalMinor: number,

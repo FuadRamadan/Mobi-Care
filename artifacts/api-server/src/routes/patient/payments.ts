@@ -1,8 +1,5 @@
 import { safeRouter } from "../../lib/safeRouter.js";
-import {
-  SERVICE_FEE_BASIS_POINTS,
-  SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS,
-} from "../../lib/financialAllocation.js";
+import { SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS } from "../../lib/financialAllocation.js";
 import { monimeEnabled } from "../../lib/monime/config.js";
 import { monimeHealth } from "../../lib/monime/service.js";
 
@@ -15,9 +12,8 @@ router.get("/config", (_req, res) => {
   const viaMonime = monimeEnabled();
   res.json({
     provider: viaMonime ? "monime" : "direct",
-    serviceFeeBasisPoints: viaMonime
-      ? SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS
-      : SERVICE_FEE_BASIS_POINTS,
+    // Every new order is priced 'split_v1', however it is paid.
+    serviceFeeBasisPoints: SPLIT_PATIENT_SERVICE_FEE_BASIS_POINTS,
     available: viaMonime ? monimeHealth().ok : true,
   });
 });

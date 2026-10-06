@@ -14,6 +14,8 @@ export interface PharmacyCommissionDaily {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
+  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing) */
+  deliveryFeesDueMinor?: number;
   amountPaidMinor: number;
   balanceMinor: number;
   status: PharmacyCommissionDailyStatus;

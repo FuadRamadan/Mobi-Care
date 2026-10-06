@@ -1,4 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+
+/** The patient service fee: 0% during the pilot and launch. */
+const PATIENT_SERVICE_FEE_BASIS_POINTS = 0;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** Cart key is scoped per user so switching accounts never leaks a previous patient's cart. */
@@ -138,7 +141,9 @@ export function CartProvider({ userId, children }: { userId?: string | null; chi
     (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
     0,
   );
-  const serviceFeeMinor = Math.round((subtotalMinor * 5) / 100);
+  // Pilot pricing (6 Oct 2026): patients pay no service fee. The server prices
+  // every order; this only keeps the cart's estimate in step with it.
+  const serviceFeeMinor = Math.round((subtotalMinor * PATIENT_SERVICE_FEE_BASIS_POINTS) / 10_000);
   const totalLeones = subtotalMinor / 100;
   const serviceFeeLeones = serviceFeeMinor / 100;
   const amountPayableLeones = (subtotalMinor + serviceFeeMinor) / 100;

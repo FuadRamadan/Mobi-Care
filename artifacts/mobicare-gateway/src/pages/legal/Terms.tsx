@@ -39,7 +39,9 @@ export default function Terms() {
       <LegalSection title="Prices, fees and payment">
         <ul>
           <li>Each pharmacy sets its own prices.</li>
-          <li>MobiCare adds a service fee of 5% of the medicines' price. Delivery has a fee for your area. You see every amount before you pay.</li>
+          <li>During our pilot and launch, MobiCare charges you no service fee: you pay the pharmacy's prices. Delivery has a fee for your area. You see every amount before you pay.</li>
+          <li>Pharmacies pay MobiCare a commission on each sale. This never changes the price you see.</li>
+          <li>If MobiCare introduces a service fee later, we will update these terms first and show the fee before you pay.</li>
           <li>You pay by mobile money.</li>
         </ul>
       </LegalSection>

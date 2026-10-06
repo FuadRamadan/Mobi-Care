@@ -6799,6 +6799,7 @@ components:
         grossCollectedMinor: { type: number }
         drugAmountTotalMinor: { type: number }
         commissionDueMinor: { type: number }
+        deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
         amountPaidMinor: { type: number }
         balanceMinor: { type: number }
         status: { type: string, enum: [unpaid, partially_paid, paid] }
@@ -6815,6 +6816,7 @@ components:
             grossCollectedMinor: { type: number }
             drugAmountTotalMinor: { type: number }
             commissionDueMinor: { type: number }
+            deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
             pharmacyEarningsMinor: { type: number }
         outstandingCommissionMinor: { type: number }
         daily:
@@ -6834,6 +6836,7 @@ components:
         grossCollectedMinor: { type: number }
         drugAmountTotalMinor: { type: number }
         commissionDueMinor: { type: number }
+        deliveryFeesDueMinor: { type: number, description: "Delivery fees the pharmacy collected for MobiCare (pilot pricing)" }
         amountPaidMinor: { type: number }
         balanceMinor: { type: number }
         status: { type: string, enum: [unpaid, partially_paid, paid] }

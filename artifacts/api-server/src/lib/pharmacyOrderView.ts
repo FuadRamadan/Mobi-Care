@@ -10,11 +10,11 @@ import type { Order } from "@workspace/db/schema";
  * the response, not just hidden on screen, and `totalLeones` becomes the
  * pharmacy's own medicine total.
  *
- * Orders paid directly to the pharmacy ('patient_fee_v1') are unchanged: the
- * pharmacy collects the whole amount itself and owes MobiCare the fee.
+ * Orders paid directly to the pharmacy are unchanged: the pharmacy collects
+ * the whole amount itself (so it must see it) and owes MobiCare its share.
  */
 export function pharmacyOrderView<T extends Order>(order: T) {
-  if (order.pricingModel !== "split_v1") return order;
+  if (order.pricingModel !== "split_v1" || order.paymentProvider !== "monime") return order;
   const {
     patientServiceFeeMinor: _fee,
     patientMedicineTotalMinor: _patientTotal,

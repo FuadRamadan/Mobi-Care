@@ -100,7 +100,8 @@ export default function Dashboard() {
 
   // Calculate today's metrics from the commission backend directly
   const ordersToday = todayStat?.ordersCount || 0;
-  const commissionTodayMinor = todayStat?.commissionDueMinor || 0;
+  // Owed to MobiCare: the 5% commission plus (pilot pricing) the delivery fees collected for it.
+  const commissionTodayMinor = (todayStat?.commissionDueMinor || 0) + (todayStat?.deliveryFeesDueMinor || 0);
   const grossTodayMinor = todayStat?.grossCollectedMinor || 0;
   const earningsTodayMinor = todayStat?.pharmacyEarningsMinor || 0;
 
@@ -117,10 +118,10 @@ export default function Dashboard() {
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Paid directly to you</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Commission Owed Today"
+          title="Owed to MobiCare Today"
           value={formatLeones(commissionTodayMinor / 100)}
           icon={FileText}
-          trend="Owed to MobiCare"
+          trend="5% commission + delivery fees"
           urgent={commissionTodayMinor > 0}
         />
         <MetricCard
@@ -133,7 +134,7 @@ export default function Dashboard() {
           title="Your Earnings Today"
           value={formatLeones(earningsTodayMinor / 100)}
           icon={TrendingUp}
-          trend="Gross minus commission"
+          trend="Your prices less the 5% commission"
         />
         <MetricCard
           title="Orders Today"
@@ -288,15 +289,17 @@ export default function Dashboard() {
               <TableHead className="text-right">Orders</TableHead>
               <TableHead className="text-right">Gross Collected</TableHead>
               <TableHead className="text-right">Your Earnings</TableHead>
-              <TableHead className="text-right">Commission Due</TableHead>
+              <TableHead className="text-right">Owed to MobiCare</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...chartData].reverse().filter(d => d.ordersCount > 0 || isSameDay(parseISO(d.settlementDate), new Date())).map(day => {
-              const comm = day.commissionDueMinor / 100;
+              const owedMinor = day.commissionDueMinor + (day.deliveryFeesDueMinor ?? 0);
+              const comm = owedMinor / 100;
               const gross = day.grossCollectedMinor / 100;
-              const earnings = day.drugAmountTotalMinor / 100;
+              // What the pharmacy keeps: everything it collected less what it owes MobiCare.
+              const earnings = (day.grossCollectedMinor - owedMinor) / 100;
               return (
                 <TableRow
                   key={day.settlementDate}

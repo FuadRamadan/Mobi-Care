@@ -459,10 +459,12 @@ export default function CartScreen() {
           </Text>
           <Text style={s.summaryValue}>{formatLeones(totalLeones)}</Text>
         </View>
-        <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Service fee (5%)</Text>
-          <Text style={s.summaryValue}>{formatLeones(serviceFeeLeones)}</Text>
-        </View>
+        {serviceFeeLeones > 0 && (
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>Service fee</Text>
+            <Text style={s.summaryValue}>{formatLeones(serviceFeeLeones)}</Text>
+          </View>
+        )}
         <View style={[s.summaryRow, s.summaryTotal]}>
           <Text style={s.totalLabel}>Total amount payable</Text>
           <Text style={s.totalValue}>{formatLeones(amountPayableLeones)}</Text>

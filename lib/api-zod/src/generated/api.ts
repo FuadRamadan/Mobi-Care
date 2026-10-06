@@ -917,6 +917,7 @@ export const GetPharmacyCommissionAnalyticsResponse = zod.object({
   "grossCollectedMinor": zod.number(),
   "drugAmountTotalMinor": zod.number(),
   "commissionDueMinor": zod.number(),
+  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
   "pharmacyEarningsMinor": zod.number()
 }),
   "outstandingCommissionMinor": zod.number(),
@@ -927,6 +928,7 @@ export const GetPharmacyCommissionAnalyticsResponse = zod.object({
   "grossCollectedMinor": zod.number(),
   "drugAmountTotalMinor": zod.number(),
   "commissionDueMinor": zod.number(),
+  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
   "amountPaidMinor": zod.number(),
   "balanceMinor": zod.number(),
   "status": zod.enum(['unpaid', 'partially_paid', 'paid'])
@@ -5150,6 +5152,7 @@ export const RecordCommissionSettlementPaymentResponse = zod.object({
   "grossCollectedMinor": zod.number(),
   "drugAmountTotalMinor": zod.number(),
   "commissionDueMinor": zod.number(),
+  "deliveryFeesDueMinor": zod.number().optional().describe('Delivery fees the pharmacy collected for MobiCare (pilot pricing)'),
   "amountPaidMinor": zod.number(),
   "balanceMinor": zod.number(),
   "status": zod.enum(['unpaid', 'partially_paid', 'paid']),

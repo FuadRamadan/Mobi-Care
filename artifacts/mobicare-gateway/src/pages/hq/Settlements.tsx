@@ -26,6 +26,8 @@ type SettlementRecord = {
   grossCollectedMinor: number;
   drugAmountTotalMinor: number;
   commissionDueMinor: number;
+  /** Delivery fees the pharmacy collected for MobiCare (pilot pricing). */
+  deliveryFeesDueMinor: number;
   amountPaidMinor: number;
   balanceMinor: number;
   status: 'unpaid' | 'partially_paid' | 'paid';
@@ -38,6 +40,7 @@ type SettlementsResponseData = {
     commissionEarnedMinor: number;
     commissionCollectedMinor: number;
     commissionOutstandingMinor: number;
+    deliveryFeesDueMinor: number;
     allTimeCommissionEarnedMinor: number;
   };
   rankings: {
@@ -120,14 +123,17 @@ export default function HqSettlements() {
         <div className="space-y-8">
           <section>
             <h2 className="font-display font-semibold text-lg text-dark-green mb-3">Financial overview (Range vs All-Time)</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission Earned</p>
                 <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionEarnedMinor ?? 0) / 100)} range</p><p className="text-sm text-muted-foreground">{formatLeones((settlements.metrics.allTimeCommissionEarnedMinor ?? 0) / 100)} all-time</p></div>
               </CardContent></Card>
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission Collected</p>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Collected from pharmacies</p>
                 <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionCollectedMinor ?? 0) / 100)} range</p></div>
               </CardContent></Card>
-              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Commission Outstanding</p>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Delivery fees owed</p>
+                <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.deliveryFeesDueMinor ?? 0) / 100)} range</p></div>
+              </CardContent></Card>
+              <Card><CardContent className="pt-6"><p className="text-xs text-muted-foreground">Outstanding (commission + delivery fees)</p>
                 <div className="flex justify-between items-end mt-2"><p className="text-xl font-semibold">{formatLeones((settlements.metrics.commissionOutstandingMinor ?? 0) / 100)} range</p></div>
               </CardContent></Card>
             </div>
@@ -162,8 +168,9 @@ export default function HqSettlements() {
                     <TableHead>Pharmacy</TableHead>
                     <TableHead>Orders</TableHead>
                     <TableHead>Gross (Patient)</TableHead>
-                    <TableHead>Pharmacy Earned</TableHead>
-                    <TableHead>Commission Due</TableHead>
+                    <TableHead>Pharmacy Keeps</TableHead>
+                    <TableHead>Commission (5%)</TableHead>
+                    <TableHead>Delivery Fees</TableHead>
                     <TableHead>Balance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
@@ -176,8 +183,9 @@ export default function HqSettlements() {
                       <TableCell>{s.pharmacyName ?? '—'}</TableCell>
                       <TableCell>{s.ordersCount ?? 0}</TableCell>
                       <TableCell>{formatLeones((s.grossCollectedMinor ?? 0) / 100)}</TableCell>
-                      <TableCell>{formatLeones((s.drugAmountTotalMinor ?? 0) / 100)}</TableCell>
+                      <TableCell>{formatLeones(((s.grossCollectedMinor ?? 0) - (s.commissionDueMinor ?? 0) - (s.deliveryFeesDueMinor ?? 0)) / 100)}</TableCell>
                       <TableCell className="font-medium">{formatLeones((s.commissionDueMinor ?? 0) / 100)}</TableCell>
+                      <TableCell className="font-medium">{formatLeones((s.deliveryFeesDueMinor ?? 0) / 100)}</TableCell>
                       <TableCell className={`font-medium ${s.balanceMinor > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatLeones((s.balanceMinor ?? 0) / 100)}</TableCell>
                       <TableCell>
                         <StatusBadge status={s.status} />

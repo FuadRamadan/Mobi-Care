@@ -3,10 +3,11 @@ import { test } from "node:test";
 import type { Order } from "@workspace/db/schema";
 import { pharmacyOrderView } from "./pharmacyOrderView.js";
 
-const order = (pricingModel: string) =>
+const order = (pricingModel: string, paymentProvider = "monime") =>
   ({
     id: "o1",
     pricingModel,
+    paymentProvider,
     totalLeones: "96.20",
     pharmacyMedicineTotalMinor: 6000,
     pharmacyCommissionMinor: 300,
@@ -25,7 +26,9 @@ test("an online-paid order never carries the patient's service fee or total to t
   assert.equal(view.pharmacyCommissionMinor, 300);
 });
 
-test("an order paid directly to the pharmacy is unchanged", () => {
-  const direct = order("patient_fee_v1");
-  assert.equal(pharmacyOrderView(direct), direct);
+test("an order paid directly to the pharmacy is unchanged: it collects the whole amount", () => {
+  const before = order("patient_fee_v1", "direct");
+  assert.equal(pharmacyOrderView(before), before);
+  const pilot = order("split_v1", "direct");
+  assert.equal(pharmacyOrderView(pilot), pilot);
 });

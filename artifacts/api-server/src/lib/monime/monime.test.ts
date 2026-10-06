@@ -92,12 +92,13 @@ test("keys are fixed per movement, 36 characters, and differ between movements",
 
 // ── Pricing ───────────────────────────────────────────────────────────────
 
-test("the split: patient pays 2% on top, pharmacy gives up 5%, parts add up", () => {
+test("pilot pricing: the patient pays the pharmacy's price, the pharmacy gives up 5%", () => {
   const p = priceOrder(100_000, "split_v1"); // Le 1,000
-  assert.equal(p.patientServiceFeeMinor, 2_000);
+  assert.equal(p.serviceFeeBasisPoints, 0);
+  assert.equal(p.patientServiceFeeMinor, 0);
+  assert.equal(p.patientMedicineTotalMinor, 100_000);
   assert.equal(p.pharmacyCommissionMinor, 5_000);
-  assert.equal(p.medicineCommissionMinor, 7_000);
-  assert.equal(p.patientMedicineTotalMinor, 102_000);
+  assert.equal(p.medicineCommissionMinor, 5_000);
   assert.equal(p.pharmacyPayoutMinor, 95_000);
   assert.equal(p.pharmacyPayoutMinor + p.medicineCommissionMinor, p.patientMedicineTotalMinor);
 });
@@ -120,7 +121,7 @@ test("split rounding stays exact on awkward amounts", () => {
 
 // ── Payment link lines ────────────────────────────────────────────────────
 
-const order = (count: number): CheckoutOrder => {
+const order = (count: number, feeBasisPoints = 200): CheckoutOrder => {
   const items = Array.from({ length: count }, (_, i) => ({
     id: `item-${i}`,
     drugName: `Medicine ${i}`,
@@ -129,14 +130,15 @@ const order = (count: number): CheckoutOrder => {
     quantity: 2,
   }));
   const medicines = items.reduce((sum, item) => sum + item.unitPriceMinor * item.quantity, 0);
-  const fee = priceOrder(medicines, "split_v1").patientServiceFeeMinor;
+  // A fee is passed in so the fee line is still tested for after the pilot.
+  const fee = Math.round((medicines * feeBasisPoints) / 10_000);
   return {
     id: "6f1c2a4e-0000-4000-8000-000000000001",
     pharmacyId: "ph-1",
     pharmacyName: "City Pharmacy, Lumley",
     totalMinor: medicines + fee + 3_500,
     patientServiceFeeMinor: fee,
-    serviceFeeBasisPoints: 200,
+    serviceFeeBasisPoints: feeBasisPoints,
     deliveryFeeMinor: 3_500,
     deliveryZoneName: "Central Freetown",
     items,
@@ -150,6 +152,11 @@ test("up to 14 medicines are listed one by one, plus fee and delivery", () => {
   assert.equal(lines[1]!.name, "Medicine 1 (Emzor)");
   assert.equal(lines[14]!.name, "MobiCare service fee (2%)");
   assert.equal(lines[15]!.name, "Delivery (Central Freetown)");
+});
+
+test("with no service fee (the pilot) there is no fee line", () => {
+  const lines = buildLineItems(order(3, 0));
+  assert.deepEqual(lines.map((l) => l.reference), ["item-0", "item-1", "item-2", "delivery"]);
 });
 
 test("15 or more medicines become one combined line (option b)", () => {

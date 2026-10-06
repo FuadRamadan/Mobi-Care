@@ -4,7 +4,7 @@ import { CONTACT_EMAIL } from '@/config/portals';
 /** Shared layout for the privacy notice and terms of service. */
 
 export const LEGAL_CONTACT_EMAIL = CONTACT_EMAIL;
-export const LEGAL_UPDATED = '3 October 2026';
+export const LEGAL_UPDATED = '6 October 2026';
 
 export function LegalPage({ title, intro, children }: { title: string; intro: ReactNode; children: ReactNode }) {
   return (

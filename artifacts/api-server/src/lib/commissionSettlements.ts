@@ -54,6 +54,9 @@ export async function generateDailyCommissionSettlements(
       grossCollectedMinor: sql<number>`coalesce(sum(${ordersTable.patientMedicineTotalMinor} + ${ordersTable.deliveryFeeMinor}), 0)::int`,
       drugAmountTotalMinor: sql<number>`coalesce(sum(${ordersTable.pharmacyMedicineTotalMinor}), 0)::int`,
       commissionDueMinor: sql<number>`coalesce(sum(${ordersTable.medicineCommissionMinor}), 0)::int`,
+      // Pilot pricing: the delivery fee the pharmacy collected is MobiCare's
+      // (it pays the couriers). Older orders ('patient_fee_v1') didn't owe it.
+      deliveryFeesDueMinor: sql<number>`coalesce(sum(${ordersTable.deliveryFeeMinor}) FILTER (WHERE ${ordersTable.pricingModel} = 'split_v1'), 0)::int`,
     })
     .from(ordersTable)
     .where(
@@ -80,7 +83,8 @@ export async function generateDailyCommissionSettlements(
         grossCollectedMinor: Number(row.grossCollectedMinor),
         drugAmountTotalMinor: Number(row.drugAmountTotalMinor),
         commissionDueMinor: Number(row.commissionDueMinor),
-        balanceMinor: Number(row.commissionDueMinor),
+        deliveryFeesDueMinor: Number(row.deliveryFeesDueMinor),
+        balanceMinor: Number(row.commissionDueMinor) + Number(row.deliveryFeesDueMinor),
       })
       .onConflictDoNothing()
       .returning({ id: commissionSettlementsTable.id });
