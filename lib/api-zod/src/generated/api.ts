@@ -1073,6 +1073,29 @@ export const CancelPharmacyCashoutResponse = zod.object({
 
 
 /**
+ * @summary Daily sales and MobiCare revenue for the Command Centre trend chart
+ */
+export const GetHqSalesTrendQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional(),
+  "pharmacyId": zod.coerce.string().optional()
+})
+
+export const GetHqSalesTrendResponse = zod.object({
+  "daily": zod.array(zod.object({
+  "date": zod.string(),
+  "orders": zod.number(),
+  "salesMinor": zod.number(),
+  "revenueMinor": zod.number(),
+  "commissionMinor": zod.number(),
+  "deliveryFeesMinor": zod.number(),
+  "serviceFeesMinor": zod.number(),
+  "monimeFeesMinor": zod.number()
+}))
+})
+
+
+/**
  * @summary Sales history, one row per order paid through Monime, with MobiCare's revenue
  */
 export const GetHqSalesHistoryQueryParams = zod.object({

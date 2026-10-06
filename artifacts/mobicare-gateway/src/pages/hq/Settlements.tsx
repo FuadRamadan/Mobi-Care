@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useGetHqOnlinePayments, getGetHqOnlinePaymentsQueryKey } from '@workspace/api-client-react';
 import HqLayout from './HqLayout';
 import SettlementPayouts from './SettlementPayouts';
 import { SalesHistory } from './SalesHistory';
-import { TrendChart, TREND_GREEN, TREND_VIOLET } from '@/components/TrendChart';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState, formatLeones, formatDate } from './shared';
@@ -47,7 +46,7 @@ const PRESETS = [
 export default function HqSettlements() {
   const [preset, setPreset] = useState<string>('30');
   const [period, setPeriod] = useState(PRESETS[2].range());
-  const { data, isLoading, isFetching, error } = useGetHqOnlinePayments(period, {
+  const { data, isLoading, error } = useGetHqOnlinePayments(period, {
     query: { queryKey: getGetHqOnlinePaymentsQueryKey(period), refetchInterval: 15_000, placeholderData: (previous) => previous },
   });
 
@@ -65,26 +64,6 @@ export default function HqSettlements() {
       net: t.net + d.netMinor,
     }),
     { collected: 0, sales: 0, orders: 0, fees: 0, commission: 0, delivery: 0, monime: 0, refunds: 0, net: 0 },
-  );
-  const chartDays = useMemo(
-    () => (data?.daily ?? []).map((d) => ({
-      date: d.date,
-      orders: d.ordersPaid,
-      details: [
-        { label: 'Commission', minor: d.commissionMinor },
-        { label: 'Delivery', minor: d.deliveryFeesMinor },
-        ...(d.serviceFeesMinor ? [{ label: 'Service fee', minor: d.serviceFeesMinor }] : []),
-        { label: 'Monime fees', minor: -d.monimeFeesMinor },
-      ],
-    })),
-    [data],
-  );
-  const chartSeries = useMemo(
-    () => [
-      { key: 'sales', label: 'Sales (pharmacy prices)', color: TREND_GREEN, values: (data?.daily ?? []).map((d) => d.salesMinor) },
-      { key: 'revenue', label: 'MobiCare revenue', color: TREND_VIOLET, values: (data?.daily ?? []).map((d) => d.netMinor) },
-    ],
-    [data],
   );
   const refundsToPay = data?.refunds ?? [];
   const refundsToPayMinor = refundsToPay.reduce((sum, r) => sum + r.amountMinor, 0);
@@ -149,15 +128,6 @@ export default function HqSettlements() {
               note={`${refundsToPay.length} order${refundsToPay.length === 1 ? '' : 's'}`} alert={refundsToPay.length > 0} />
           </div>
 
-          <section className="border rounded-xl bg-card p-4 sm:p-6">
-            <h2 className="font-display font-semibold text-lg text-dark-green">Sales and revenue</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Per day: sales at the pharmacies' prices, and MobiCare's revenue from them. Tap a day for the orders and the breakdown.
-            </p>
-            <div className={isFetching ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-              <TrendChart days={chartDays} series={chartSeries} label="Daily sales and MobiCare revenue" />
-            </div>
-          </section>
 
           <section>
             <h2 className="font-display font-semibold text-lg text-dark-green mb-3">By day</h2>

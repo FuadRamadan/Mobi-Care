@@ -67,6 +67,7 @@ import type {
   GetHqInsightsParams,
   GetHqOnlinePaymentsParams,
   GetHqSalesHistoryParams,
+  GetHqSalesTrendParams,
   GetPharmacyOnlineAnalyticsParams,
   GoogleConnection,
   GoogleCredentialInput,
@@ -91,6 +92,7 @@ import type {
   HqPharmacy,
   HqPharmacyUpdate,
   HqSalesHistory,
+  HqSalesTrend,
   ImageUrlRequest,
   ImageUrlResponse,
   InventoryImportPreview,
@@ -2575,6 +2577,90 @@ export const useCancelPharmacyCashout = <TError = ErrorType<void>,
       > => {
       return useMutation(getCancelPharmacyCashoutMutationOptions(options));
     }
+
+export const getGetHqSalesTrendUrl = (params?: GetHqSalesTrendParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/insights/sales-trend?${stringifiedParams}` : `/api/hq/insights/sales-trend`
+}
+
+/**
+ * @summary Daily sales and MobiCare revenue for the Command Centre trend chart
+ */
+export const getHqSalesTrend = async (params?: GetHqSalesTrendParams, options?: Parameters<typeof customFetch>[1]): Promise<HqSalesTrend> => {
+
+  return customFetch<HqSalesTrend>(getGetHqSalesTrendUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqSalesTrendQueryKey = (params?: GetHqSalesTrendParams,) => {
+    return [
+    `/api/hq/insights/sales-trend`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqSalesTrendQueryOptions = <TData = Awaited<ReturnType<typeof getHqSalesTrend>>, TError = ErrorType<void>>(params?: GetHqSalesTrendParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSalesTrend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqSalesTrendQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqSalesTrend>>> = ({ signal }) => getHqSalesTrend(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqSalesTrend>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqSalesTrendQueryResult = NonNullable<Awaited<ReturnType<typeof getHqSalesTrend>>>
+export type GetHqSalesTrendQueryError = ErrorType<void>
+
+
+/**
+ * @summary Daily sales and MobiCare revenue for the Command Centre trend chart
+ */
+
+export function useGetHqSalesTrend<TData = Awaited<ReturnType<typeof getHqSalesTrend>>, TError = ErrorType<void>>(
+ params?: GetHqSalesTrendParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSalesTrend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqSalesTrendQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHqSalesHistoryUrl = (params?: GetHqSalesHistoryParams,) => {
   const normalizedParams = new URLSearchParams();

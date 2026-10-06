@@ -5,6 +5,7 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import type { AuthRequest } from "../../middlewares/auth.js";
 import { BUSINESS_TIMEZONE, businessDateNow } from "../../lib/businessTime.js";
+import { hqDailyFigures, validRange } from "../../lib/onlinePaymentFigures.js";
 
 const router = safeRouter();
 // Reporting deliberately has no minimum cohort threshold. Small partners and
@@ -177,6 +178,33 @@ router.get("/export.csv", async (req: AuthRequest, res): Promise<void> => {
   }
   await logAccess(req.pharmacy!.sub, req.pharmacy!.name, "data_insights.exported_csv", { start: start.toISOString(), end: end.toISOString(), interval: bucket });
   res.type("text/csv").attachment("mobicare-data-insights.csv").send(`${rows.join("\r\n")}\r\n`);
+});
+
+// ── GET /hq/insights/sales-trend: the Command Centre's trend chart ─────────
+// Per day (by payment date): sales at the pharmacies' prices and MobiCare's
+// revenue (commission + delivery + any service fee, less Monime's fees), with
+// the order count and the breakdown. All pharmacies, or one.
+router.get("/sales-trend", async (req, res): Promise<void> => {
+  const today = businessDateNow();
+  const range = validRange(req.query.start ?? today, req.query.end ?? today);
+  const pharmacy = z.string().uuid().optional().safeParse(req.query.pharmacyId || undefined);
+  if (!range || !pharmacy.success) {
+    res.status(400).json({ error: "start and end must be YYYY-MM-DD, start first, at most 92 days apart" });
+    return;
+  }
+  const daily = await hqDailyFigures(range.start, range.end, pharmacy.data);
+  res.json({
+    daily: daily.map((d) => ({
+      date: d.date,
+      orders: d.ordersPaid,
+      salesMinor: d.salesMinor,
+      revenueMinor: d.netMinor,
+      commissionMinor: d.commissionMinor,
+      deliveryFeesMinor: d.deliveryFeesMinor,
+      serviceFeesMinor: d.serviceFeesMinor,
+      monimeFeesMinor: d.monimeFeesMinor,
+    })),
+  });
 });
 
 export default router;

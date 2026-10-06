@@ -909,6 +909,21 @@ export interface HqSale {
   state: HqSaleState;
 }
 
+export interface HqSalesTrendDay {
+  date: string;
+  orders: number;
+  salesMinor: number;
+  revenueMinor: number;
+  commissionMinor: number;
+  deliveryFeesMinor: number;
+  serviceFeesMinor: number;
+  monimeFeesMinor: number;
+}
+
+export interface HqSalesTrend {
+  daily: HqSalesTrendDay[];
+}
+
 export interface HqSalesTotals {
   orders: number;
   refundedOrders: number;
@@ -3025,6 +3040,12 @@ end?: string;
 export type GetHqOnlinePaymentsParams = {
 start?: string;
 end?: string;
+};
+
+export type GetHqSalesTrendParams = {
+start?: string;
+end?: string;
+pharmacyId?: string;
 };
 
 export type GetHqSalesHistoryParams = {

@@ -144,7 +144,9 @@ export function netRevenueMinor(day: Pick<HqOnlineDay, "serviceFeesMinor" | "com
   return day.serviceFeesMinor + day.commissionMinor + day.deliveryFeesMinor - day.monimeFeesMinor;
 }
 
-export async function hqOnlineFigures(start: string, end: string) {
+/** Daily figures for all pharmacies, or one. */
+export async function hqDailyFigures(start: string, end: string, pharmacyId?: string): Promise<HqOnlineDay[]> {
+  const onePharmacy = pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``;
   const daily = await rows(sql`
     WITH paid AS (
       SELECT o.*, ${paidDay} AS day,
@@ -153,7 +155,7 @@ export async function hqOnlineFigures(start: string, end: string) {
                      jsonb_array_elements(coalesce(s.fees, '[]'::jsonb)) f
                WHERE s.order_id = o.id AND s.status = 'completed') AS monime_fees
         FROM orders o
-       WHERE o.payment_provider = 'monime' AND o.paid_at IS NOT NULL
+       WHERE o.payment_provider = 'monime' AND o.paid_at IS NOT NULL${onePharmacy}
     )
     SELECT day AS date,
            count(*)::int AS orders_paid,
@@ -169,6 +171,32 @@ export async function hqOnlineFigures(start: string, end: string) {
      WHERE day BETWEEN ${start} AND ${end}
      GROUP BY 1`);
 
+  return fillDays<HqOnlineDay>(
+    start,
+    end,
+    daily.map((r) => {
+      const day = {
+        date: String(r.date),
+        ordersPaid: n(r.orders_paid),
+        salesMinor: n(r.sales_minor),
+        collectedMinor: n(r.collected_minor),
+        refundsCount: n(r.refunds_count),
+        refundsMinor: n(r.refunds_minor),
+        serviceFeesMinor: n(r.service_fees_minor),
+        commissionMinor: n(r.commission_minor),
+        deliveryFeesMinor: n(r.delivery_fees_minor),
+        monimeFeesMinor: n(r.monime_fees_minor),
+        netMinor: 0,
+      };
+      day.netMinor = netRevenueMinor(day);
+      return day;
+    }),
+    (date) => ({ date, ordersPaid: 0, salesMinor: 0, collectedMinor: 0, refundsCount: 0, refundsMinor: 0, serviceFeesMinor: 0, commissionMinor: 0, deliveryFeesMinor: 0, monimeFeesMinor: 0, netMinor: 0 }),
+  );
+}
+
+export async function hqOnlineFigures(start: string, end: string) {
+  const days = await hqDailyFigures(start, end);
   // Owed to pharmacies: their share of completed orders, less what they have
   // cashed out or are cashing out (amount plus Monime's fee, which they pay).
   const [totals] = await rows(sql`
@@ -194,28 +222,6 @@ export async function hqOnlineFigures(start: string, end: string) {
      ORDER BY o.paid_at DESC
      LIMIT 50`);
 
-  const days = fillDays<HqOnlineDay>(
-    start,
-    end,
-    daily.map((r) => {
-      const day = {
-        date: String(r.date),
-        ordersPaid: n(r.orders_paid),
-        salesMinor: n(r.sales_minor),
-        collectedMinor: n(r.collected_minor),
-        refundsCount: n(r.refunds_count),
-        refundsMinor: n(r.refunds_minor),
-        serviceFeesMinor: n(r.service_fees_minor),
-        commissionMinor: n(r.commission_minor),
-        deliveryFeesMinor: n(r.delivery_fees_minor),
-        monimeFeesMinor: n(r.monime_fees_minor),
-        netMinor: 0,
-      };
-      day.netMinor = netRevenueMinor(day);
-      return day;
-    }),
-    (date) => ({ date, ordersPaid: 0, salesMinor: 0, collectedMinor: 0, refundsCount: 0, refundsMinor: 0, serviceFeesMinor: 0, commissionMinor: 0, deliveryFeesMinor: 0, monimeFeesMinor: 0, netMinor: 0 }),
-  );
 
   return {
     daily: days,

@@ -1,5 +1,6 @@
-import { getGetHqDashboardQueryKey, useGetHqDashboard, useConfirmDeliveryByHq, useGetHqInsights, getGetHqInsightsQueryKey, useListHqPharmacies } from '@workspace/api-client-react';
-import { useState } from 'react';
+import { getGetHqDashboardQueryKey, useGetHqDashboard, useConfirmDeliveryByHq, useGetHqInsights, getGetHqInsightsQueryKey, useListHqPharmacies, useGetHqSalesTrend, getGetHqSalesTrendQueryKey } from '@workspace/api-client-react';
+import { useMemo, useState } from 'react';
+import { TrendChart, TREND_GREEN, TREND_VIOLET } from '@/components/TrendChart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,19 +31,30 @@ export default function HqDashboard() {
   const params = { start, end, interval: 'day' as const, ...(pharmacyId !== 'all' ? { pharmacyId } : {}) };
   const { data: insights } = useGetHqInsights(params, { query: { enabled: true, queryKey: getGetHqInsightsQueryKey(params) } });
 
-  const zeroFill = (data: Array<{period: string; count?: number; revenue?: number}> | undefined, startStr: string, endStr: string) => {
-    if (!data) return [];
-    const map = new Map(data.map(d => [d.period, d]));
-    const result = [];
-    let curr = new Date(startStr);
-    const endDt = new Date(endStr);
-    while (curr <= endDt) {
-      const p = curr.toISOString().slice(0, 10);
-      result.push(map.get(p) || { period: p, count: 0, revenue: 0 });
-      curr.setDate(curr.getDate() + 1);
-    }
-    return result;
-  };
+  const trendParams = { start, end, ...(pharmacyId !== 'all' ? { pharmacyId } : {}) };
+  const { data: trend, isFetching: trendLoading } = useGetHqSalesTrend(trendParams, {
+    query: { queryKey: getGetHqSalesTrendQueryKey(trendParams), placeholderData: (previous) => previous },
+  });
+  const trendDays = useMemo(
+    () => (trend?.daily ?? []).map((d) => ({
+      date: d.date,
+      orders: d.orders,
+      details: [
+        { label: 'Commission', minor: d.commissionMinor },
+        { label: 'Delivery', minor: d.deliveryFeesMinor },
+        ...(d.serviceFeesMinor ? [{ label: 'Service fee', minor: d.serviceFeesMinor }] : []),
+        ...(d.monimeFeesMinor ? [{ label: 'Monime fees', minor: -d.monimeFeesMinor }] : []),
+      ],
+    })),
+    [trend],
+  );
+  const trendSeries = useMemo(
+    () => [
+      { key: 'sales', label: 'Sales (pharmacy prices)', color: TREND_GREEN, values: (trend?.daily ?? []).map((d) => d.salesMinor) },
+      { key: 'revenue', label: 'MobiCare revenue', color: TREND_VIOLET, values: (trend?.daily ?? []).map((d) => d.revenueMinor) },
+    ],
+    [trend],
+  );
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -129,32 +141,17 @@ export default function HqDashboard() {
               </Select>
             </div>
           </div>
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Searches</CardTitle></CardHeader>
-              <CardContent className="h-48 flex items-end gap-1 px-4">
-                {zeroFill(insights?.trends?.searches as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((t, i) => (
-                  <div key={i} className="flex-1 bg-primary/20 hover:bg-primary transition-colors rounded-t" style={{ height: `${Math.max(4, ((t.count || 0) / Math.max(1, ...zeroFill(insights?.trends?.searches as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((x) => x.count || 0))) * 100)}%` }} title={`${t.period}: ${t.count}`} />
-                ))}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Orders</CardTitle></CardHeader>
-              <CardContent className="h-48 flex items-end gap-1 px-4">
-                {zeroFill(insights?.trends?.orders as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((t, i) => (
-                  <div key={i} className="flex-1 bg-primary/40 hover:bg-primary transition-colors rounded-t" style={{ height: `${Math.max(4, ((t.count || 0) / Math.max(1, ...zeroFill(insights?.trends?.orders as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((x) => x.count || 0))) * 100)}%` }} title={`${t.period}: ${t.count}`} />
-                ))}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Commission</CardTitle></CardHeader>
-              <CardContent className="h-48 flex items-end gap-1 px-4">
-                {zeroFill(insights?.trends?.commission as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((t, i) => (
-                  <div key={i} className="flex-1 bg-green-500/40 hover:bg-green-500 transition-colors rounded-t" style={{ height: `${Math.max(4, (Number(t.revenue ?? 0) / Math.max(1, ...zeroFill(insights?.trends?.commission as unknown as {period: string; count?: number; revenue?: number}[], start, end).map((x) => Number(x.revenue ?? 0)))) * 100)}%` }} title={`${t.period}: ${formatLeones(Number(t.revenue ?? 0))}`} />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Sales and revenue</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Per day: sales at the pharmacies' prices, and MobiCare's revenue from them. Tap a day for the orders and the breakdown.
+              </p>
+            </CardHeader>
+            <CardContent className={trendLoading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              <TrendChart days={trendDays} series={trendSeries} label="Daily sales and MobiCare revenue" />
+            </CardContent>
+          </Card>
           <div className="grid md:grid-cols-3 gap-4">
             <Card className="md:col-span-2">
               <CardHeader>

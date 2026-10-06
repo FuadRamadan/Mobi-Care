@@ -742,6 +742,33 @@ paths:
         "409":
           description: Refused, with a plain reason (error) and a code
 
+  /hq/insights/sales-trend:
+    get:
+      operationId: getHqSalesTrend
+      tags: [hq]
+      summary: Daily sales and MobiCare revenue for the Command Centre trend chart
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          schema: { type: string, format: date }
+        - name: pharmacyId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: One row per day, zero-filled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqSalesTrend"
+        "400":
+          description: Bad date range
+
   /hq/settlements/orders:
     get:
       operationId: getHqSalesHistory
@@ -4468,6 +4495,28 @@ components:
         revenueMinor: { type: number, description: "MobiCare's revenue: commission + delivery + service fee - Monime's fee (refunded: minus Monime's fee)" }
         pharmacyReceivesMinor: { type: number }
         state: { type: string, enum: [waiting, completed, paid_to_pharmacy, refunded] }
+
+    HqSalesTrendDay:
+      type: object
+      required: [date, orders, salesMinor, revenueMinor, commissionMinor, deliveryFeesMinor, serviceFeesMinor, monimeFeesMinor]
+      properties:
+        date: { type: string }
+        orders: { type: number }
+        salesMinor: { type: number }
+        revenueMinor: { type: number }
+        commissionMinor: { type: number }
+        deliveryFeesMinor: { type: number }
+        serviceFeesMinor: { type: number }
+        monimeFeesMinor: { type: number }
+
+    HqSalesTrend:
+      type: object
+      required: [daily]
+      properties:
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqSalesTrendDay"
 
     HqSalesTotals:
       type: object
