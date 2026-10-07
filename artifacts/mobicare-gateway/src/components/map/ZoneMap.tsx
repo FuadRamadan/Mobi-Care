@@ -237,13 +237,19 @@ export function ZoneMap({
     }
   }, [draft]);
 
+  // Leaflet adds its own classes to the element it draws in. React must never
+  // re-render that element's className: doing so when drawing began stripped
+  // them, the tiles shrank to nothing and the map went blank under "New zone".
+  // So the changing classes live on a wrapper, and the map element's never change.
   return (
     <div
-      ref={container}
       style={{ height }}
-      className={`w-full rounded-xl border overflow-hidden bg-secondary/40 z-0 ${draft ? 'cursor-crosshair' : ''}`}
-      data-testid="map-delivery-zones"
-    />
+      className={`w-full rounded-xl border overflow-hidden bg-secondary/40 z-0 ${
+        draft ? '[&_.leaflet-container]:cursor-crosshair!' : ''
+      }`}
+    >
+      <div ref={container} className="h-full w-full" data-testid="map-delivery-zones" />
+    </div>
   );
 }
 

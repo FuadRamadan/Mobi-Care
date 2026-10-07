@@ -97,6 +97,12 @@ export default function OrderDetail() {
     prescription?: { status: string; rejectReason?: string | null } | null;
     deliveryAddress?: string | null;
   };
+  // What the patient paid on top of the pharmacy's prices, so the lines add
+  // up to the total. Orders saved before the split was recorded show none.
+  const serviceFeeMinor =
+    o.patientMedicineTotalMinor != null && o.pharmacyMedicineTotalMinor != null
+      ? o.patientMedicineTotalMinor - o.pharmacyMedicineTotalMinor
+      : 0;
 
   const steps = o.fulfillmentType === 'delivery' ? DELIVERY_STEPS : COLLECTION_STEPS;
   const statusIdx = STATUS_ORDER.indexOf(o.status);
@@ -300,6 +306,14 @@ export default function OrderDetail() {
               </div>
             </div>
           ))}
+          {serviceFeeMinor > 0 && (
+            <div className="flex items-center justify-between p-4 text-sm" data-testid="text-order-service-fee">
+              <span className="text-muted-foreground">
+                Service fee{o.medicineMarkupBasisPoints ? ` (${o.medicineMarkupBasisPoints / 100}%)` : ''}
+              </span>
+              <span>{formatLeones(serviceFeeMinor / 100)}</span>
+            </div>
+          )}
           {o.fulfillmentType === 'delivery' && (o.deliveryFeeMinor ?? 0) > 0 && (
             <div className="flex items-center justify-between p-4 text-sm">
               <span className="text-muted-foreground">
