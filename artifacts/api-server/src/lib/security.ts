@@ -10,6 +10,7 @@
 import type { Express, RequestHandler } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import helmet from "helmet";
+import { recordSecurityEvent } from "./securityEvents.js";
 
 /**
  * Response headers.
@@ -121,9 +122,16 @@ export function authRateLimit(): RequestHandler {
     legacyHeaders: false,
     skipSuccessfulRequests: true,
     keyGenerator: byIp,
-    handler: jsonError(
-      "Too many attempts. Please wait a few minutes before trying again.",
-    ),
+    handler: ((req, res) => {
+      void recordSecurityEvent({
+        kind: "sign_in_blocked",
+        ipAddress: req.ip,
+        path: req.originalUrl.split("?")[0],
+      });
+      res.status(429).json({
+        error: "Too many attempts. Please wait a few minutes before trying again.",
+      });
+    }) as RequestHandler,
   });
 }
 

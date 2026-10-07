@@ -13,8 +13,11 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ShieldAlert, ShieldCheck, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useHqAuth } from '@/hq/auth';
+import { SecurityActivity } from './SecurityActivity';
 
 export default function HqSettings() {
+  const { user } = useHqAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: policy, isLoading } = useGetPasswordPolicy({
@@ -265,6 +268,11 @@ export default function HqSettings() {
               </div>
             </div>
           </form>
+        )}
+        {user?.canManageIntegrations && (
+          <div className="mt-10">
+            <SecurityActivity />
+          </div>
         )}
       </div>
     </HqLayout>

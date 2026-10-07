@@ -2,7 +2,10 @@ import crypto from "node:crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("JWT_SECRET env var is required");
-const SECRET: string = JWT_SECRET;
+// Image links get their own key, derived from JWT_SECRET under a fixed label,
+// so a signature made for one purpose can never be accepted for the other.
+// Rotating JWT_SECRET still rotates this key.
+const SECRET: Buffer = crypto.createHmac("sha256", JWT_SECRET).update("mobicare/image-links/v1").digest();
 
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -43,7 +46,9 @@ export function verifyImageToken(
     .createHmac("sha256", SECRET)
     .update(message)
     .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+  const actual = Buffer.from(token);
+  const wanted = Buffer.from(expected);
+  return actual.length === wanted.length && crypto.timingSafeEqual(actual, wanted);
 }
 
 export function mintProfileImageToken(patientId: string): { token: string; expiresAt: number } {

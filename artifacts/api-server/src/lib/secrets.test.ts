@@ -126,3 +126,11 @@ test("a registered compromised secret is refused under either name", () => {
     internals.KNOWN_COMPROMISED_DIGESTS.delete(digest);
   }
 });
+
+test("SESSION_SECRET_PREVIOUS equal to SESSION_SECRET is refused", () => {
+  const env = goodEnv();
+  assert.throws(
+    () => assertSecretsAreSafe({ ...env, SESSION_SECRET_PREVIOUS: env.SESSION_SECRET }),
+    /SESSION_SECRET_PREVIOUS is the same/,
+  );
+});

@@ -1070,6 +1070,23 @@ CREATE TABLE "public"."search_events" (
 
 
 --
+-- Name: security_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."security_events" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "kind" "text" NOT NULL,
+    "role" "text",
+    "account_id" "uuid",
+    "identifier" "text",
+    "ip_address" "text",
+    "path" "text",
+    "details" "jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
 -- Name: settlement_duplicate_archive; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1584,6 +1601,14 @@ ALTER TABLE ONLY "public"."search_events"
 
 
 --
+-- Name: security_events security_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."security_events"
+    ADD CONSTRAINT "security_events_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: settlements settlements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1782,6 +1807,13 @@ CREATE INDEX "search_events_patient_created_at_idx" ON "public"."search_events" 
 --
 
 CREATE INDEX "search_events_query_created_at_idx" ON "public"."search_events" USING "btree" ("normalized_query", "created_at");
+
+
+--
+-- Name: security_events_kind_created_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "security_events_kind_created_idx" ON "public"."security_events" USING "btree" ("kind", "created_at");
 
 
 --
@@ -2184,11 +2216,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-02 21:41:02.167692+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-07 17:32:41.671268+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-02 21:41:02.172397+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-07 17:32:41.677785+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-02 21:41:02.23764+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-07 17:32:41.80049+00')
 ON CONFLICT DO NOTHING;

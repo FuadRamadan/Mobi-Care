@@ -36,39 +36,57 @@ Treat it as compromised regardless of whether misuse is suspected.
 
 ## Rotate JWT_SECRET — do this
 
+Generate fresh values (both secrets at once, printed and stored nowhere):
+
 ```bash
-openssl rand -hex 32
+bash "Final Deployment files/scripts/generate-secrets.sh"
 ```
 
-Set the result as `JWT_SECRET` in the host's secret manager and restart the API.
+Set the `JWT_SECRET` line in the host's secret manager and restart the API.
+If the live server still runs a release from before September 2026 it may be
+using the leaked value: the new release **refuses to start** with it and says
+so ("matches the JWT_SECRET that was committed to .replit"). That message means
+"rotate now", not "the deploy is broken".
 
 What it costs:
 
 - Everyone signed in is logged out and signs in again. Access tokens live 15
   minutes and refresh tokens are random values stored hashed in the database, so
   nothing is lost.
-- Outstanding signed image URLs stop working. They are short-lived and minted on
-  demand, so pages regenerate them on next load.
+- Outstanding prescription and photo links stop working. They last 15 minutes
+  and pages make new ones on the next load.
 
 Nothing needs re-entering. This is a cheap rotation — do it now.
 
-## Do NOT rotate SESSION_SECRET casually
+Prescription and photo links are signed with their own key, derived from
+`JWT_SECRET` under a fixed label, so a signature made for one purpose is never
+accepted for the other. Sign-in tokens accept only HS256.
 
-`SESSION_SECRET` was **never committed** — it is not affected by this incident,
-and there is no reason to change it.
+## Rotating SESSION_SECRET
 
-That matters, because rotating it is expensive and partly irreversible:
+`SESSION_SECRET` was **never committed** — it is not affected by the incident.
+Rotate it only if it leaks, or as a scheduled precaution (once a year is ample).
 
-- It derives the AES-256-GCM key that encrypts stored provider credentials
-  (`lib/credentialEncryption.ts`) — the Orange SMS credentials held in the HQ API
-  Connections feature. Change the secret and those values **cannot be
-  decrypted**. They must be re-entered in HQ.
-- It is the HMAC key for patient password-reset codes (`routes/auth.ts`). Change
-  it and every reset code already sent stops verifying.
+It protects two things:
 
-If it ever does need rotating — because it leaks — plan it: re-enter provider
-credentials immediately afterwards, and expect in-flight password resets to
-fail.
+- The AES-256-GCM key for stored provider credentials
+  (`lib/credentialEncryption.ts`) — the Orange SMS and API Connections settings
+  in HQ.
+- The HMAC key for patient password-reset codes (`routes/auth.ts`). Reset codes
+  already sent stop verifying; the patient asks for a new one.
+
+Rotating without losing the stored credentials:
+
+1. Run `generate-secrets.sh` and take the `SESSION_SECRET` line.
+2. In the secret manager, set **`SESSION_SECRET_PREVIOUS`** to the *current*
+   value, and **`SESSION_SECRET`** to the new one.
+3. Restart the API. At startup it moves every stored credential to the new key
+   and logs: "SESSION_SECRET rotation: N stored credentials moved to the new key.
+   Remove SESSION_SECRET_PREVIOUS now."
+4. **Delete `SESSION_SECRET_PREVIOUS`** and restart once more.
+
+If the log says some credentials "could not be read with either key", re-enter
+those in HQ → API Connections.
 
 The two secrets must be different values. The API refuses to start if they
 match, so that the cheap rotation never forces the expensive one.
@@ -82,6 +100,7 @@ In production only, `lib/secrets.ts` refuses to start when any secret is:
 - a known-compromised value (currently the retired `JWT_SECRET`)
 - a placeholder like `replace-with-...`
 - identical to the other secret
+- `SESSION_SECRET_PREVIOUS` set to the same value as `SESSION_SECRET`
 
 All problems are reported at once, so a misconfiguration is fixed in one pass.
 Development and test runs are unaffected — they use short fixture values on
@@ -104,8 +123,12 @@ Introduced alongside this, since the platform edge that previously absorbed
 abuse is no longer in front of the API.
 
 - **Security headers** (`helmet`) — HSTS, `nosniff`, `SAMEORIGIN`,
-  `no-referrer`, and no `X-Powered-By`. No Content-Security-Policy: this process
-  serves JSON and image bytes, never HTML.
+  `strict-origin-when-cross-origin` referrer, and no `X-Powered-By`.
+- **Content security policy** on every page of the website, patient app, HQ and
+  pharmacy portal (`lib/contentSecurityPolicy.ts`): pages load code only from
+  MobiCare and Google sign-in, can't be shown inside other sites, and can't send
+  data to unknown addresses. Blocked attempts are reported to HQ — see
+  [6-MONITORING.md](6-MONITORING.md).
 - **Global limit** — 300 requests per minute per client, well above normal use.
   Configure with `RATE_LIMIT_GLOBAL_PER_MINUTE`.
 - **Credential limit** — 10 attempts per 15 minutes on login, registration,

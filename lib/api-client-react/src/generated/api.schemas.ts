@@ -5,6 +5,66 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+export type HqSecurityActivityTotals = {
+  failedSignIns: number;
+  signInsBlocked: number;
+  contentBlocked: number;
+  serverErrors: number;
+  alerts: number;
+};
+
+export type HqSecurityActivityAlertsItem = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+};
+
+export type HqSecurityActivityTopAccountsItem = {
+  identifier: string;
+  role?: string | null;
+  count: number;
+  lastAt: string;
+};
+
+export type HqSecurityActivityTopNetworksItem = {
+  ipAddress: string;
+  count: number;
+  lastAt: string;
+};
+
+export type HqSecurityEventKind = typeof HqSecurityEventKind[keyof typeof HqSecurityEventKind];
+
+
+export const HqSecurityEventKind = {
+  failed_sign_in: 'failed_sign_in',
+  sign_in_blocked: 'sign_in_blocked',
+  csp_violation: 'csp_violation',
+  server_error: 'server_error',
+} as const;
+
+export type HqSecurityEventDetails = { [key: string]: unknown } | null;
+
+export interface HqSecurityEvent {
+  id: string;
+  kind: HqSecurityEventKind;
+  role?: string | null;
+  identifier?: string | null;
+  ipAddress?: string | null;
+  path?: string | null;
+  details?: HqSecurityEventDetails;
+  createdAt: string;
+}
+
+export interface HqSecurityActivity {
+  days: number;
+  totals: HqSecurityActivityTotals;
+  alerts: HqSecurityActivityAlertsItem[];
+  topAccounts: HqSecurityActivityTopAccountsItem[];
+  topNetworks: HqSecurityActivityTopNetworksItem[];
+  events: HqSecurityEvent[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -2676,6 +2736,10 @@ end?: string;
 
 export type ListHqOrdersParams = {
 status?: string;
+};
+
+export type GetHqSecurityActivityParams = {
+days?: number;
 };
 
 export type ListHqDrugsParams = {

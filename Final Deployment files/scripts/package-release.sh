@@ -57,6 +57,11 @@ if ! $skip_checks; then
   echo "==> Typecheck"
   pnpm run typecheck >/dev/null
 
+  # A release never ships a server or website package with a known high or
+  # critical vulnerability. Needs network access to the npm registry.
+  echo "==> Vulnerability check"
+  node "$(dirname "${BASH_SOURCE[0]}")/check-vulnerabilities.mjs" >/dev/null
+
   # The unit suite needs nothing but Node, so it always runs — a release
   # should never be built without it. Only the integration suite needs a
   # database, and it writes rows, so point it at staging and never production.

@@ -34,6 +34,7 @@ import {
   serializePasswordPolicy,
 } from "../lib/passwordPolicy.js";
 import { sendSms } from "../lib/configuredSms.js";
+import { recordSecurityEvent } from "../lib/securityEvents.js";
 import { calculatePatientAge } from "../lib/patientAge.js";
 import { recordConsent } from "../lib/patientConsent.js";
 
@@ -272,6 +273,24 @@ router.post("/login", async (req, res) => {
     }
   }
 
+  // Which account the wrong password was for, if any, so guessing at one
+  // account stands out from typos spread across many.
+  const matched = pharmacy?.isActive
+    ? { role: "pharmacy" as const, id: pharmacy.id }
+    : staff?.isActive
+      ? { role: "hq" as const, id: staff.id }
+      : patientAcc?.isActive
+        ? { role: "patient" as const, id: patientAcc.id }
+        : null;
+  await recordSecurityEvent({
+    kind: "failed_sign_in",
+    role: matched?.role ?? null,
+    accountId: matched?.id ?? null,
+    identifier,
+    ipAddress: req.ip,
+    path: "/auth/login",
+    details: matched ? null : { reason: "no such account" },
+  });
   res.status(401).json({ error: "Invalid credentials" });
 });
 
@@ -567,6 +586,13 @@ router.post("/patient-password-reset/confirm", async (req, res) => {
       res.status(429).json({ error: "Too many incorrect codes. Request a new code." });
       return;
     }
+    await recordSecurityEvent({
+      kind: "failed_sign_in",
+      role: "patient",
+      ipAddress: req.ip,
+      path: "/auth/patient-password-reset/confirm",
+      details: { reason: "wrong reset code" },
+    });
     res.status(400).json({ error: "The verification code is incorrect." });
     return;
   }
@@ -892,6 +918,14 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       record.passwordHash,
     );
     if (!valid) {
+      await recordSecurityEvent({
+        kind: "failed_sign_in",
+        role: req.pharmacy!.role,
+        accountId: req.pharmacy!.sub,
+        ipAddress: req.ip,
+        path: "/auth/change-password",
+        details: { reason: "wrong current password" },
+      });
       res.status(401).json({ error: "Current password is incorrect" });
       return;
     }
@@ -958,6 +992,14 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
     if (changed === "invalid") {
+      await recordSecurityEvent({
+        kind: "failed_sign_in",
+        role: req.pharmacy!.role,
+        accountId: req.pharmacy!.sub,
+        ipAddress: req.ip,
+        path: "/auth/change-password",
+        details: { reason: "wrong current password" },
+      });
       res.status(401).json({ error: "Current password is incorrect" });
       return;
     }
@@ -1002,7 +1044,15 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     record.passwordHash,
   );
   if (!valid) {
-    res.status(401).json({ error: "Current password is incorrect" });
+    await recordSecurityEvent({
+        kind: "failed_sign_in",
+        role: req.pharmacy!.role,
+        accountId: req.pharmacy!.sub,
+        ipAddress: req.ip,
+        path: "/auth/change-password",
+        details: { reason: "wrong current password" },
+      });
+      res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
 

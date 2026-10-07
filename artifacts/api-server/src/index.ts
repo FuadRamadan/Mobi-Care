@@ -1,6 +1,8 @@
 import app, { mountedStaticSites } from "./app";
 import { logger } from "./lib/logger";
 import { assertSecretsAreSafe } from "./lib/secrets";
+import { reencryptStoredCredentials } from "./lib/secretRotation";
+import { startSecurityEventPruning } from "./lib/securityEvents";
 import { startOrderExpirySweep, stopOrderExpirySweep } from "./lib/orderExpiry";
 import { startCommissionSettlementSweep, stopCommissionSettlementSweep } from "./lib/commissionSettlements";
 import { databaseDriver, db, pool } from "@workspace/db";
@@ -186,6 +188,16 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "security monitoring (migration 0033)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = current_schema()
+            AND table_name = 'security_events'
+        ) AS exists
+      `,
+    },
+    {
       label: "Google sign-in for patients (migration 0032)",
       query: sql`
         SELECT EXISTS (
@@ -288,6 +300,7 @@ async function start(): Promise<void> {
     `Database driver: ${databaseDriver.driver} (${databaseDriver.reason})`,
   );
   await assertSchemaUpToDate();
+  await reencryptStoredCredentials();
   const server = app.listen(port, "0.0.0.0", () => {
     logger.info(
       { port, staticSites: mountedStaticSites },
@@ -297,6 +310,7 @@ async function start(): Promise<void> {
     );
     startOrderExpirySweep();
     startCommissionSettlementSweep();
+    startSecurityEventPruning();
   });
 
   const shutdown = async (signal: string) => {

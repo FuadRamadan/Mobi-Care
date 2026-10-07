@@ -24,6 +24,7 @@ import pilotResetRouter from "./pilotReset.js";
 import exportsRouter from "./exports.js";
 import advertisementsRouter from "./advertisements.js";
 import deliveryZonesRouter from "./deliveryZones.js";
+import securityRouter from "./security.js";
 
 const router = safeRouter();
 
@@ -67,5 +68,6 @@ router.use(
   requireManageIntegrations,
   apiConnectionsRouter,
 );
+router.use("/security", requireManageIntegrations, securityRouter);
 
 export default router;

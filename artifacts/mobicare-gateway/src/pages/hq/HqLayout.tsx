@@ -100,7 +100,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     if (
       newestNotificationId.current &&
       newestNotificationId.current !== newest.id &&
-      (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready')
+      (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready' || newest.type === 'security_alert')
     ) {
       toast.info(newest.title, {
         description: <span className="whitespace-pre-line break-words">{newest.body}</span>,
@@ -265,13 +265,13 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                 <div className="max-h-80 overflow-y-auto divide-y">
                   {notifications.length === 0 ? (
                     <p className="px-4 py-6 text-sm text-center text-muted-foreground">
-                      No incoming order alerts yet.
+                      No alerts yet.
                     </p>
                   ) : (
                     notifications.slice(0, 8).map((notification) => (
                       <Link
                         key={notification.id}
-                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : '/hq/orders'}
+                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'security_alert' ? '/hq/settings#security' : '/hq/orders'}
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',
                           !notification.readAt && 'bg-primary/5',
