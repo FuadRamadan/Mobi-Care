@@ -628,6 +628,25 @@ router.post("/", async (req: AuthRequest, res) => {
     pharmacyMedicineTotalMinor +=
       decimalLeonesToMinor(l.priceLeones) * item.quantity;
   }
+
+  // A controlled medicine's cap is per medicine, not per listing: two brands
+  // of the same medicine in one order count together.
+  const controlledTotals = new Map<string, { name: string; cap: number; quantity: number }>();
+  for (const item of input.items) {
+    const l = byInventory.get(item.inventoryId)!;
+    if (l.tier !== "1" || l.maxUnitsPerOrder == null) continue;
+    const total = controlledTotals.get(l.drugId) ?? { name: l.drugName, cap: l.maxUnitsPerOrder, quantity: 0 };
+    total.quantity += item.quantity;
+    controlledTotals.set(l.drugId, total);
+  }
+  for (const total of controlledTotals.values()) {
+    if (total.quantity > total.cap) {
+      res.status(409).json({
+        error: `${total.name} is capped at ${total.cap} units per order, across all its brands`,
+      });
+      return;
+    }
+  }
   const {
     serviceFeeMinor: medicineCommissionMinor,
     totalPaidMinor: patientMedicineTotalMinor,
