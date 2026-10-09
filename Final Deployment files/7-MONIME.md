@@ -112,6 +112,20 @@ Monime dashboard → Developer → Webhooks → **Create webhook**:
 
 - 9 Oct 2026: Stage 1 done (token `MobiCare - Test`, created 9 Oct, active).
   Waiting on Stage 2.
+- 9 Oct 2026: Stage 2 done. Stage 3 **blocked by Monime**:
+  - Connection OK: `GET /` says authenticated, environment `test` (matches
+    `MONIME_MODE=test`), token `MobiCare - Test` active until 9 Dec 2026,
+    `apiVersion: null` (not deprecated). The server's self-check passes.
+  - Every endpoint MobiCare uses answers **403 "Test mode is not supported for
+    this endpoint"**: `/v1/financial-accounts`, `/v1/checkout-sessions`,
+    `/v1/payments`, `/v1/internal-transfers`, `/v1/payouts` (read-only list
+    calls; same with or without `Monime-Version`). So the setup script cannot
+    create Holding and there is no `MONIME_HOLDING_ACCOUNT_ID` yet.
+  - Monime's docs say test mode is "a full simulation of our API", so this is
+    most likely a space/account setting. Ask Monime support: is test mode
+    enabled for space `spc-k6VasL8zN2DVb4JCm4RMaqLA6Cn` (does the space need
+    verification/KYC or a dashboard toggle first), and which endpoints test
+    mode supports.
 - Confirm the token starts with an underscore form `mon_test_` (the server
   rejects other forms).
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
