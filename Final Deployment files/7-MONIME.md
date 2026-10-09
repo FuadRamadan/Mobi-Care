@@ -76,35 +76,87 @@ production server.
    (finds or creates "MobiCare Holding", prints `MONIME_HOLDING_ACCOUNT_ID=fac-…`).
 3. Add `MONIME_HOLDING_ACCOUNT_ID` to the environment settings.
 
-## Stage 4 — Test payment
+## Stages 4–6 — replaced: Monime has no test mode
 
-Run MobiCare locally with the real Monime test API, place an order, pay on
-Monime's test payment page, confirm the order turns **paid** (the server checks
-with Monime on return and every 10 minutes — webhooks are not needed for this).
+Monime support confirmed by phone on 9 Oct 2026 that test mode is not
+available yet, which matches Stage 3 (every payment endpoint answers 403 to a
+test token). MobiCare's money logic is instead proven against the local fake
+Monime (`bash deploy/local/run.sh --fresh --monime`: payment, release to the
+pharmacy, cash-out, HQ Settlements — all passed 9 Oct 2026), and the real
+Monime is checked once, with small real amounts, in Stage 7.
 
-## Stage 5 — Test the pharmacy's money
+## Stage 7 — Live
 
-Deliver / collect the order → the pharmacy's share moves to its account →
-cash out to a test number → confirm balances in the Monime dashboard match the
-pharmacy portal and HQ → Settlements.
+### 7A. Live check from the development workspace (small real money)
 
-## Stage 6 — Webhooks (needs a public test server)
+Safety rules for the whole check:
+- A **separate, short-lived** token, revoked when the check ends.
+- No **Payout Admin** role until step 6.
+- Money only ever leaves to a phone **Martha owns**. `run.sh --monime-live`
+  renames the demo pharmacies to "Live check - …" and removes their made-up
+  payout numbers, so Monime accounts can't be mistaken for a real pharmacy and
+  no cash-out can reach a stranger.
+- Smallest amounts that work. The money goes Martha's phone → Holding →
+  pharmacy account → Martha's phone; only Monime's fees are spent.
 
-Monime dashboard → Developer → Webhooks → **Create webhook**:
-- URL: `https://<server>/api/webhooks/monime`
-- Events: checkout sessions, payouts, internal transfers.
-- If the form allows a custom header, add `x-mobicare-webhook-token` with a
-  random value and set the same value as `MONIME_WEBHOOK_HEADER_TOKEN` on the
-  server. Either way the server re-checks every event with Monime before acting.
+Steps:
+1. **Martha — token.** Monime dashboard (Live) → Access Tokens → Create:
+   name `MobiCare - Live dev check`, shortest expiry, **Test Mode OFF**, roles:
+   Checkout Session Admin, Payment Viewer, Financial Account Admin, Financial
+   Account Balance Viewer, Internal Transfer Admin (five; **no** Payout Admin).
+   Revoke `MobiCare - Test`.
+2. **Martha — environment.** Default environment → Environment variables:
+   `MONIME_MODE=live`, `MONIME_SPACE_ID=spc-k6VasL8zN2DVb4JCm4RMaqLA6Cn`,
+   `MONIME_ACCESS_TOKEN=mon_…` (the new token). Network: `api.monime.io`
+   allowed (done). Start a **new session** (variables load at session start).
+3. **Developer — connect.** Confirm `GET https://api.monime.io/` reports a live
+   token (never print the token). Create Holding:
+   `node "Final Deployment files/scripts/monime-setup-accounts.mjs"`. The
+   Holding ID is not a secret: record it below and pass it on the command line;
+   Martha adds `MONIME_HOLDING_ACCOUNT_ID` to the environment for later sessions.
+4. **Developer — run.** `MONIME_HOLDING_ACCOUNT_ID=fac-… bash deploy/local/run.sh --fresh --monime-live`
+   (refuses unless every setting is live and the database is fresh).
+5. **Payment.** Developer sets one medicine's price at the pharmacy to the
+   smallest amount Monime accepts and places a **collection** order (no
+   delivery fee) as the demo patient. The site sends the browser to Monime's
+   payment page: the developer sends that link to Martha, who opens it on her
+   phone and pays with her own Orange Money / AfriMoney. Monime's "return"
+   link points at the development machine and will not open on her phone —
+   expected; the server confirms the payment by asking Monime (open the order
+   page, or wait for the 10-minute safety check). Confirm: order **paid**,
+   Holding balance in the Monime dashboard = amount less Monime's fee, HQ
+   Settlements agrees.
+6. **Pharmacy share + cash-out.** Mark the order collected → the pharmacy's
+   95% moves Holding → "Live check - …" pharmacy account (check the dashboard).
+   Martha creates a second short token with all six roles (adds Payout Admin)
+   and swaps it into the environment (new session). Developer sets the test
+   pharmacy's payout number to **Martha's own number** (directly in the local
+   database, with no change date, so the 48-hour new-number hold does not apply
+   to this check) and cashes out from the pharmacy portal. Confirm it arrives
+   and note Monime's real payout fee.
+7. **Close.** Revoke both dev-check tokens; remove `MONIME_ACCESS_TOKEN` from
+   the development environment. Record results and real fees below.
 
-## Stage 7 — Go live
+What stays in Monime afterwards: the Holding account (reused by production),
+a "Pharmacy: Live check - City Pharmacy, Lumley" account (empty after the
+cash-out), and MobiCare's few Leones of commission in Holding.
 
-1. New token, **Test Mode OFF**, same six roles, name `MobiCare - Live`, 1 year
-   (calendar reminder to renew).
-2. On the production server only: `MONIME_MODE=live`, the live token, the space ID.
-3. Run the setup script again (creates the live Holding account).
-4. Live webhook to the production URL.
-5. One small real payment end to end (e.g. Le 5) before opening to pharmacies.
+### 7B. Production (GoDaddy)
+
+1. Token `MobiCare - Live`, Test Mode OFF, all six roles, **1 year** (calendar
+   reminder to renew).
+2. On the production server only: `PAYMENTS_PROVIDER=monime`,
+   `MONIME_MODE=live`, the live token, `MONIME_SPACE_ID`,
+   `MONIME_HOLDING_ACCOUNT_ID` (the same Holding as 7A),
+   `PUBLIC_APP_URL=https://…` (https required in production), and
+   `MONIME_WEBHOOK_HEADER_TOKEN` (32+ random characters; the server refuses to
+   start in production without it).
+3. Monime dashboard → Developer → Webhooks → Create: URL
+   `https://<site>/api/webhooks/monime`; events: checkout sessions, payouts,
+   internal transfers; custom header `x-mobicare-webhook-token` = the same
+   value. The server re-checks every event with Monime before acting.
+4. One small real payment end to end on the live site before opening to
+   pharmacies.
 
 ---
 
@@ -126,14 +178,15 @@ Monime dashboard → Developer → Webhooks → **Create webhook**:
     enabled for space `spc-k6VasL8zN2DVb4JCm4RMaqLA6Cn` (does the space need
     verification/KYC or a dashboard toggle first), and which endpoints test
     mode supports.
-- Confirm the token starts with an underscore form `mon_test_` (the server
-  rejects other forms).
+- 9 Oct 2026: Monime support (phone): test mode not available yet. Decision:
+  go live with small real amounts (Stage 7A). Local fake-Monime run of the full
+  flow passed the same day (payment, release, cash-out, Settlements).
+- Stage 7A results: _(to fill in: Holding ID, amounts, real Monime fees)_
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
   separation of pharmacy money). Questions for Monime: can money move between
   spaces by API and at what fee; can sub-spaces be created by API; does one
   token cover several spaces; whose money sits in a sub-space.
-- Before testing, merge `update-2026-10-02` and `update-2026-10-07-security`
-  into this branch (controlled-medicine cap fix, fonts, security update), and
-  renumber this branch's migrations 0033/0034 → 0034/0035 (0033 is
-  security_events; nothing here has been deployed).
+- Done 9 Oct 2026: `update-2026-10-07-security` (which contains
+  `update-2026-10-02`) merged into this branch; Monime migrations renumbered
+  0033/0034 → 0034/0035 (0033 is security_events).

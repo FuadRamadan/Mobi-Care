@@ -135,6 +135,16 @@ anyone else can reach.
   automatically; they usually name the problem outright.
 - **Anything stale** — `bash deploy/local/run.sh --fresh` starts clean.
 
+### Real Monime (real money)
+
+`--monime-live` talks to the real Monime instead of the fake one. It reads
+`MONIME_MODE=live`, a live `MONIME_ACCESS_TOKEN`, `MONIME_SPACE_ID` and
+`MONIME_HOLDING_ACCOUNT_ID` from the environment and refuses to start
+otherwise, or when the database was used with the fake Monime (add `--fresh`).
+It renames the demo pharmacies to "Live check - …" and removes their made-up
+payout numbers first. Use it only for the Stage 7 check in
+`Final Deployment files/7-MONIME.md`.
+
 ## Running on the production database driver
 
 MobiCare deploys onto a host that allows outbound traffic on ports 80 and 443

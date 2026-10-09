@@ -15,6 +15,11 @@
 #   --fresh       Delete the local database and stored files and start over
 #   --no-build    Skip rebuilding (faster when only restarting)
 #   --port N      Serve on N instead of 8080
+#   --monime      Online payments through a local fake Monime (no real money)
+#   --monime-live Online payments through the REAL Monime, with REAL money.
+#                 Reads MONIME_MODE=live, MONIME_ACCESS_TOKEN, MONIME_SPACE_ID
+#                 and MONIME_HOLDING_ACCOUNT_ID from the environment. See
+#                 "Final Deployment files/7-MONIME.md", Stage 7.
 #
 # Everything it creates lives in .local/ and is git-ignored. Development only:
 # the demo passwords are known, and the object storage does not verify
@@ -35,6 +40,7 @@ DB_NAME=mobicare
 fresh=false
 build=true
 monime=false
+monime_live=false
 MONIME_FAKE_PORT=9100
 
 while [[ $# -gt 0 ]]; do
@@ -43,12 +49,39 @@ while [[ $# -gt 0 ]]; do
     --no-build) build=false; shift ;;
     # Payments through a local fake Monime (deploy/local/fake-monime.mjs).
     --monime) monime=true; shift ;;
+    # Payments through the real Monime: real money. Deliberately a separate flag.
+    --monime-live) monime_live=true; shift ;;
     --port) PORT="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
 
 cd "$REPO"
+
+if $monime && $monime_live; then
+  echo "Choose --monime (fake, no money) or --monime-live (real money), not both." >&2
+  exit 1
+fi
+if $monime_live; then
+  live_problems=()
+  [[ "${MONIME_MODE:-}" == "live" ]] || live_problems+=("MONIME_MODE must be live")
+  [[ "${MONIME_ACCESS_TOKEN:-}" == mon_* && "${MONIME_ACCESS_TOKEN:-}" != mon_test_* ]] \
+    || live_problems+=("MONIME_ACCESS_TOKEN must be a live token (mon_..., not mon_test_...)")
+  [[ "${MONIME_SPACE_ID:-}" =~ ^spc-[A-Za-z0-9]+$ ]] || live_problems+=("MONIME_SPACE_ID must look like spc-...")
+  [[ -n "${MONIME_HOLDING_ACCOUNT_ID:-}" ]] \
+    || live_problems+=("MONIME_HOLDING_ACCOUNT_ID is missing (run Final Deployment files/scripts/monime-setup-accounts.mjs)")
+  [[ -z "${MONIME_BASE_URL:-}" ]] || live_problems+=("unset MONIME_BASE_URL: live always talks to api.monime.io")
+  # Orders made against the fake Monime carry its payment links; the safety
+  # check would then ask the real Monime about links it never issued.
+  if [[ -f "$STATE/fake-monime-state.json" ]] && ! $fresh; then
+    live_problems+=("this local database was used with the fake Monime: add --fresh")
+  fi
+  if (( ${#live_problems[@]} > 0 )); then
+    printf 'Refusing to start with real Monime payments:\n' >&2
+    printf '  - %s\n' "${live_problems[@]}" >&2
+    exit 1
+  fi
+fi
 
 # ── Ports ────────────────────────────────────────────────────────────────────
 
@@ -275,6 +308,30 @@ if $monime; then
     MONIME_WEBHOOK_HEADER_TOKEN="$WEBHOOK_TOKEN"
     MONIME_HOLDING_ACCOUNT_ID=fac-holding-local
     PUBLIC_APP_URL="http://localhost:$PORT"
+  )
+fi
+
+if $monime_live; then
+  # Real money from here on. The demo pharmacies are renamed so the accounts
+  # Monime creates for them can never be mistaken for a real pharmacy's, and
+  # their made-up payout numbers are removed so no cash-out can reach a
+  # stranger's phone (the seed's numbers are made up). Payout numbers for a
+  # check are set on purpose, to a phone the tester owns (7-MONIME.md, Stage 7).
+  "$PG_BIN/psql" -q -h 127.0.0.1 -p "$PGPORT" -U postgres -d "$DB_NAME" -v ON_ERROR_STOP=1 <<'SQL'
+UPDATE pharmacies
+   SET name = 'Live check - ' || name
+ WHERE name NOT LIKE 'Live check - %';
+UPDATE pharmacies SET orange_money_number = NULL, orange_money_changed_at = NULL
+ WHERE orange_money_number IN ('+23276111222', '+23288444555');
+UPDATE pharmacies SET afri_money_number = NULL, afri_money_changed_at = NULL
+ WHERE afri_money_number IN ('+23276111222', '+23288444555');
+UPDATE pharmacies SET mobile_money_number = NULL, mobile_money_provider = NULL
+ WHERE mobile_money_number IN ('+23276111222', '+23288444555');
+SQL
+  echo "==> REAL MONIME, REAL MONEY: payments go to space $MONIME_SPACE_ID"
+  MONIME_ENV=(
+    PAYMENTS_PROVIDER=monime
+    PUBLIC_APP_URL="${PUBLIC_APP_URL:-http://localhost:$PORT}"
   )
 fi
 
