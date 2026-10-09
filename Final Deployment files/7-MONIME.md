@@ -209,8 +209,9 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     "Live check - City Pharmacy, Lumley", with no payout numbers.
   - Found: on a fresh clone `run.sh` fails at "Creating the schema" (`Cannot
     find package 'pg'`) because migrations run before its `pnpm install` step.
-    Worked around with `pnpm install --frozen-lockfile` first. Follow-up: move
-    the install above the schema step.
+    Worked around with `pnpm install --frozen-lockfile` first. Fixed the same
+    day: `run.sh` now installs before the schema step (verified from a
+    checkout with no `node_modules`).
   - Amount: Le 11.00, the smallest that still allows the step 6 cash-out
     (pharmacy share Le 10.45 ≥ Le 10 minimum + 1% fee). Paracetamol (Generic)
     set to Le 11.00 in the local database; patient accepted the terms

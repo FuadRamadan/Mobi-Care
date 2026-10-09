@@ -231,6 +231,15 @@ export S3_ACCESS_KEY_ID=localdev
 export S3_SECRET_ACCESS_KEY=localdevsecretlocaldevsecret1234
 export S3_FORCE_PATH_STYLE=true
 
+# ── Dependencies ─────────────────────────────────────────────────────────────
+
+# Before the schema: the migration script needs them (pg). Also when
+# --no-build is given on a checkout that has never been installed.
+if $build || [[ ! -d node_modules ]]; then
+  echo "==> Installing dependencies"
+  pnpm install --frozen-lockfile >/dev/null
+fi
+
 # ── Schema and demo data ─────────────────────────────────────────────────────
 
 if ! "$PG_BIN/psql" "$DATABASE_URL" -tAc \
@@ -252,9 +261,6 @@ if grep -rq 'from "\.\./lib/objectStorage\.js"' artifacts/api-server/src/routes;
 fi
 
 if $build; then
-  echo "==> Installing dependencies"
-  pnpm install --frozen-lockfile >/dev/null
-
   echo "==> Building (this takes a minute the first time)"
   pnpm --filter @workspace/api-server run build >/dev/null 2>&1
   PORT=$PORT BASE_PATH=/ pnpm --filter @workspace/mobicare-gateway run build >/dev/null 2>&1
