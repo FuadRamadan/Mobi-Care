@@ -181,7 +181,29 @@ cash-out), and MobiCare's few Leones of commission in Holding.
 - 9 Oct 2026: Monime support (phone): test mode not available yet. Decision:
   go live with small real amounts (Stage 7A). Local fake-Monime run of the full
   flow passed the same day (payment, release, cash-out, Settlements).
-- Stage 7A results: _(to fill in: Holding ID, amounts, real Monime fees)_
+- 9 Oct 2026: Stage 7A steps 1–3 done.
+  - Live token: `GET /` says authenticated, environment `live`, token
+    `MobiCare - real ` (`pat-k6ViVoKtseNzWaBazJdKWQ9GWVp`), active until
+    9 Dec 2026. Roles checked with read-only list calls: financial accounts,
+    checkout sessions, payments, internal transfers answer 200; payouts answers
+    403, so there is no Payout Admin (as required until step 6).
+    Differs from step 1 as written: name is not `MobiCare - Live dev check`
+    and expiry is 2 months, not the shortest. Revoke it in step 7 all the same.
+  - **Holding: `MONIME_HOLDING_ACCOUNT_ID=fac-k6ViVwMBF1tYfS1aUk2fgbumgw5`**
+    (reference `mobicare-holding`, SLE). The space now has two accounts: `Main`
+    (Monime's default) and MobiCare Holding.
+  - Environment still has `MONIME_MODE=test`; it must be `live` before step 4
+    (`run.sh --monime-live` refuses otherwise). Martha: set `MONIME_MODE=live`
+    and add `MONIME_HOLDING_ACCOUNT_ID` above to the environment settings.
+  - Found: Monime ignores `GET /v1/financial-accounts?reference=…` (returns an
+    empty list even for an existing reference). Running the setup script again
+    still gives the same Holding, because the create call's idempotency key
+    returns the existing account, but the "find first" never matches. The
+    server uses the same lookup for pharmacy accounts (`payouts.ts`) only as a
+    backup: it stores each account ID once created, so this does not cause
+    duplicates in normal use. Follow-up: match the reference by listing the
+    accounts instead of relying on the filter.
+- Stage 7A results: _(to fill in: amounts, real Monime fees)_
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
   separation of pharmacy money). Questions for Monime: can money move between
