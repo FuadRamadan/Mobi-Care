@@ -254,6 +254,13 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     cash-out cannot run yet (expected, see the Le 5 note above).
 - Stage 7A results so far: collection fee 1% (Le 0.05 on Le 5), internal
   transfer free. Payout fee still to measure (step 6, second half).
+- 9 Oct 2026: Stage 7A **paused** after step 6's first half (Martha's
+  decision): payment and release proven; the cash-out and the real payout fee
+  are left for later. Le 4.75 stays in "Pharmacy: Live check - City Pharmacy,
+  Lumley" until then (needs ≥ Le 10.10 for one cash-out). Local server
+  stopped. Next: step 7 (revoke the live token, remove `MONIME_ACCESS_TOKEN`
+  from the development environment); the cash-out check needs a new
+  short-lived token with Payout Admin when it is resumed.
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
   separation of pharmacy money). Questions for Monime: can money move between
