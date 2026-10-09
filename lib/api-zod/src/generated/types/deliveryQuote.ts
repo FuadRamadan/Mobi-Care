@@ -10,8 +10,16 @@ export interface DeliveryQuote {
   available: boolean;
   /** @nullable */
   deliveryFeeMinor: number | null;
-  /** @nullable */
+  /**
+     * The zone the patient is in, where the order is delivered
+     * @nullable
+     */
   zoneName: string | null;
+  /**
+     * The pharmacy's zone when it differs from the patient's; the fee is then the higher of the two zones' fees
+     * @nullable
+     */
+  fromZoneName: string | null;
   /**
      * Why delivery is unavailable, in words for the patient
      * @nullable

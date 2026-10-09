@@ -1539,7 +1539,8 @@ export const PatientDeliveryQuoteBody = zod.object({
 export const PatientDeliveryQuoteResponse = zod.object({
   "available": zod.boolean(),
   "deliveryFeeMinor": zod.number().nullable(),
-  "zoneName": zod.string().nullable(),
+  "zoneName": zod.string().nullable().describe('The zone the patient is in, where the order is delivered'),
+  "fromZoneName": zod.string().nullable().describe('The pharmacy\'s zone when it differs from the patient\'s; the fee is then the higher of the two zones\' fees'),
   "message": zod.string().nullable().describe('Why delivery is unavailable, in words for the patient')
 })
 

@@ -179,6 +179,7 @@ test("same zone: that zone's fee", () => {
     feeMinor: 15_000,
     zoneId: "West",
     zoneName: "West",
+    pharmacyZoneName: "West",
     pricing: "same_zone",
   });
 });
@@ -190,9 +191,17 @@ test("different zones: the higher of the two fees, whichever end it is", () => {
     assert.equal(quote.available, true);
     if (!quote.available) continue;
     assert.equal(quote.feeMinor, 25_000);
-    assert.equal(quote.zoneName, "East");
     assert.equal(quote.pricing, "cross_zone");
   }
+});
+
+test("different zones: the order is named after the patient's zone, not the fee's", () => {
+  // West pharmacy (Le 150) to a patient in East (Le 250), and the other way round.
+  const out = quoteDelivery({ pharmacy: [-13.28, 8.47], patient: [-13.2, 8.47], zones });
+  const back = quoteDelivery({ pharmacy: [-13.2, 8.47], patient: [-13.28, 8.47], zones });
+  assert.ok(out.available && back.available);
+  assert.deepEqual([out.zoneId, out.zoneName, out.pharmacyZoneName], ["East", "East", "West"]);
+  assert.deepEqual([back.zoneId, back.zoneName, back.pharmacyZoneName], ["West", "West", "East"]);
 });
 
 test("a patient on the shared border pays the cheaper zone", () => {

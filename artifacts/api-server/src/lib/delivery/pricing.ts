@@ -18,9 +18,15 @@ export type DeliveryQuote =
   | {
       available: true;
       feeMinor: number;
-      /** The zone whose fee was charged. */
+      /**
+       * The zone the patient is in: where the rider goes. The fee may be the
+       * pharmacy's zone's (cross_zone, when that one is higher), but the order
+       * is always described by its destination.
+       */
       zoneId: string;
       zoneName: string;
+      /** The zone the pharmacy is in; the same as zoneName for same_zone. */
+      pharmacyZoneName: string;
       /** same_zone: pharmacy and patient share a zone. cross_zone: they do not. */
       pricing: "same_zone" | "cross_zone";
     }
@@ -83,18 +89,19 @@ export function quoteDelivery(input: {
       feeMinor: shared.feeMinor,
       zoneId: shared.id,
       zoneName: shared.name,
+      pharmacyZoneName: shared.name,
       pricing: "same_zone",
     };
   }
 
   const patientZone = patientZones[0]!;
   const pharmacyZone = pharmacyZones[0]!;
-  const charged = pharmacyZone.feeMinor > patientZone.feeMinor ? pharmacyZone : patientZone;
   return {
     available: true,
-    feeMinor: charged.feeMinor,
-    zoneId: charged.id,
-    zoneName: charged.name,
+    feeMinor: Math.max(pharmacyZone.feeMinor, patientZone.feeMinor),
+    zoneId: patientZone.id,
+    zoneName: patientZone.name,
+    pharmacyZoneName: pharmacyZone.name,
     pricing: "cross_zone",
   };
 }

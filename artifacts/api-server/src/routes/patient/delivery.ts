@@ -51,12 +51,14 @@ router.post("/quote", async (req: AuthRequest, res) => {
           available: true,
           deliveryFeeMinor: quote.feeMinor,
           zoneName: quote.zoneName,
+          fromZoneName: quote.pricing === "cross_zone" ? quote.pharmacyZoneName : null,
           message: null,
         }
       : {
           available: false,
           deliveryFeeMinor: null,
           zoneName: null,
+          fromZoneName: null,
           message: UNAVAILABLE_MESSAGES[quote.reason],
         },
   );

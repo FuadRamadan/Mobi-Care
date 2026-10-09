@@ -129,6 +129,7 @@ export default function Checkout() {
         available: false,
         deliveryFeeMinor: null,
         zoneName: null,
+        fromZoneName: null,
         message: "The delivery fee could not be worked out. Check your connection and move the pin to try again.",
       });
     }
@@ -240,6 +241,7 @@ export default function Checkout() {
         setQuote((current) => ({
           available: true,
           zoneName: current?.zoneName ?? null,
+          fromZoneName: current?.fromZoneName ?? null,
           message: null,
           deliveryFeeMinor: body.deliveryFeeMinor!,
         }));
@@ -251,7 +253,7 @@ export default function Checkout() {
         return;
       }
       if (body.code === "DELIVERY_UNAVAILABLE") {
-        setQuote({ available: false, deliveryFeeMinor: null, zoneName: null, message: body.error ?? null });
+        setQuote({ available: false, deliveryFeeMinor: null, zoneName: null, fromZoneName: null, message: body.error ?? null });
       }
       toast({
         title: "Could not place order",
@@ -434,8 +436,14 @@ export default function Checkout() {
                   <span className="text-muted-foreground">Working out the delivery fee…</span>
                 ) : quote.available ? (
                   <span>
-                    Delivery to <span className="font-medium">{quote.zoneName}</span>:{" "}
+                    Delivery to <span className="font-medium">{quote.zoneName}</span>
+                    {quote.fromZoneName && <> from {quote.fromZoneName}</>}:{" "}
                     <span className="font-medium">{formatLeones(deliveryFeeLeones)}</span>
+                    {quote.fromZoneName && (
+                      <span className="block text-xs text-muted-foreground mt-0.5">
+                        The pharmacy is in another zone, so the higher of the two zones' fees applies.
+                      </span>
+                    )}
                   </span>
                 ) : (
                   <span>

@@ -4390,11 +4390,18 @@ components:
 
     DeliveryQuote:
       type: object
-      required: [available, deliveryFeeMinor, zoneName, message]
+      required: [available, deliveryFeeMinor, zoneName, fromZoneName, message]
       properties:
         available: { type: boolean }
         deliveryFeeMinor: { type: ["number", "null"] }
-        zoneName: { type: ["string", "null"] }
+        zoneName:
+          type: ["string", "null"]
+          description: The zone the patient is in, where the order is delivered
+        fromZoneName:
+          type: ["string", "null"]
+          description: >-
+            The pharmacy's zone when it differs from the patient's; the fee is
+            then the higher of the two zones' fees
         message:
           type: ["string", "null"]
           description: Why delivery is unavailable, in words for the patient

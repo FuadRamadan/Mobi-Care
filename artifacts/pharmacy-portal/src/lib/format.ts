@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 
 export function formatLeones(amount: number): string {
-  return `SLL ${amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  return `Le ${amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
 export function formatDate(dateStr: string): string {
