@@ -203,6 +203,24 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     backup: it stores each account ID once created, so this does not cause
     duplicates in normal use. Follow-up: match the reference by listing the
     accounts instead of relying on the filter.
+- 9 Oct 2026: Stage 7A step 4 done, step 5 started.
+  - `run.sh --fresh --monime-live` started; the API logged "Payments: Monime
+    (live mode)" and "Monime payments ready" (mode live). Pharmacy renamed to
+    "Live check - City Pharmacy, Lumley", with no payout numbers.
+  - Found: on a fresh clone `run.sh` fails at "Creating the schema" (`Cannot
+    find package 'pg'`) because migrations run before its `pnpm install` step.
+    Worked around with `pnpm install --frozen-lockfile` first. Follow-up: move
+    the install above the schema step.
+  - Amount: Le 11.00, the smallest that still allows the step 6 cash-out
+    (pharmacy share Le 10.45 ≥ Le 10 minimum + 1% fee). Paracetamol (Generic)
+    set to Le 11.00 in the local database; patient accepted the terms
+    (`POST /api/patient/privacy/consent`, needed before ordering).
+  - Order `91f77f74-bff2-4868-987e-e55930d1924d`, collection: total Le 11.00,
+    commission Le 0.55, patient service fee 0, delivery 0.
+  - Checkout session `scs-k6ViWuhEyP2sLc68wyBCVsH8hK6`: Monime reports one line
+    "Paracetamol (Generic)", SLE 1100, into Holding
+    `fac-k6ViVwMBF1tYfS1aUk2fgbumgw5`; link expires 18:19 UTC.
+    Waiting on Martha's payment.
 - Stage 7A results: _(to fill in: amounts, real Monime fees)_
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
