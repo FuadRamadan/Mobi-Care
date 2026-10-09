@@ -233,7 +233,27 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   - Le 4.75 is below the Le 10 minimum cash-out, so step 6 can move the share
     to the pharmacy account but cannot cash it out as things stand. Decide at
     step 6 (top up with a second order later, or a dev-only lower minimum).
-- Stage 7A results: _(to fill in: amounts, real Monime fees)_
+- 9 Oct 2026: Stage 7A step 5 done, step 6 first half done.
+  - Martha paid Le 5.00 with Orange Money (17:32 UTC). Monime payment
+    `spm-k6ViXu5i4eGdGKEZmwfjQNZMtX9`, completed, fee `Base` **Le 0.05 (1%)**.
+    Holding balance Le 4.95. The watcher saw the order go **paid** by asking
+    Monime (no webhook reaches the development machine), as designed.
+  - HQ Settlements agreed to the cent: paid 500, sales 500, commission 25,
+    Monime fee 5 (taken from Monime's real figure), revenue 20, pharmacy
+    receives 475, state "waiting". So Monime's collection fee does come out of
+    Holding (`COLLECTION_FEE_TAKEN_FROM_HOLDING = true` confirmed).
+  - Pharmacy confirmed → ready → collected (ID checked). Internal transfer
+    `trn-k6ViXyAhFgeYVnrUoMfuxBPy2BC`, Le 4.75 Holding → new account
+    "Pharmacy: Live check - City Pharmacy, Lumley"
+    (`fac-k6ViXy8cSMyMntxbkZmcuMdqwYo`, reference = pharmacy ID). Completed
+    at Monime at once, **no fee** on internal transfers. MobiCare's record
+    moved to completed at the next 5-minute payouts check (17:37 UTC).
+  - Balances afterwards: Holding Le 0.20 (= MobiCare revenue), pharmacy
+    account Le 4.75. HQ: owed to pharmacies 475, order "paid_to_pharmacy".
+    Pharmacy portal: available 475, max cash-out 470, minimum 1000, so the
+    cash-out cannot run yet (expected, see the Le 5 note above).
+- Stage 7A results so far: collection fee 1% (Le 0.05 on Le 5), internal
+  transfer free. Payout fee still to measure (step 6, second half).
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
   separation of pharmacy money). Questions for Monime: can money move between
