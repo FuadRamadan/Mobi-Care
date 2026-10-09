@@ -220,7 +220,19 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   - Checkout session `scs-k6ViWuhEyP2sLc68wyBCVsH8hK6`: Monime reports one line
     "Paracetamol (Generic)", SLE 1100, into Holding
     `fac-k6ViVwMBF1tYfS1aUk2fgbumgw5`; link expires 18:19 UTC.
-    Waiting on Martha's payment.
+  - Changed to Le 5.00 (Martha's decision: not enough on the wallet for
+    Le 11). The Le 11 order was cancelled from the patient side. The first
+    cancel was refused ("payment in progress"): Monime would not delete a link
+    already opened on a phone. Once Monime showed the link `cancelled`, the
+    cancel went through. Monime lists no payments, so no money moved. This is
+    the intended safe behaviour, now seen against the real API.
+  - Order `e76f175b-f310-4da0-a57a-b3d953edf5e2`, collection, Le 5.00
+    (commission Le 0.25, pharmacy share Le 4.75). Checkout session
+    `scs-k6ViXgB3wZsngxzujWHRZrnmySo`: Monime reports SLE 500 into Holding;
+    link expires 18:29 UTC. Waiting on Martha's payment.
+  - Le 4.75 is below the Le 10 minimum cash-out, so step 6 can move the share
+    to the pharmacy account but cannot cash it out as things stand. Decide at
+    step 6 (top up with a second order later, or a dev-only lower minimum).
 - Stage 7A results: _(to fill in: amounts, real Monime fees)_
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
