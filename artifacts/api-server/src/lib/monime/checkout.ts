@@ -102,29 +102,41 @@ export function buildLineItems(order: CheckoutOrder): MonimeLineItem[] {
  * The full create-session request. Refuses to build one whose lines don't add
  * up to the order total, so a patient is never charged a different amount
  * from the one the app showed.
+ *
+ * A shared link ("Ask someone else to pay") is opened by someone other than
+ * the patient, so it shows one line, "MobiCare order <number>", and never the
+ * medicines. It returns the payer to a public page, since the order page
+ * needs the patient's sign-in.
  */
 export function buildCheckoutSessionBody(
   order: CheckoutOrder,
   attempt: number,
   config: Pick<MonimeConfig, "mode" | "holdingAccountId" | "publicAppUrl">,
+  shared = false,
 ): CreateCheckoutSessionBody {
-  const lineItems = buildLineItems(order);
-  if (lineItems.length > MONIME_MAX_LINE_ITEMS) {
+  const itemised = buildLineItems(order);
+  if (itemised.length > MONIME_MAX_LINE_ITEMS) {
     throw new Error(`A payment link can have at most ${MONIME_MAX_LINE_ITEMS} lines`);
   }
-  const linesMinor = lineItems.reduce(
+  const linesMinor = itemised.reduce(
     (sum, line) => sum + line.price.value * line.quantity,
     0,
   );
   if (linesMinor !== order.totalMinor) {
     throw new CheckoutTotalMismatch(linesMinor, order.totalMinor);
   }
-  const orderPage = `${config.publicAppUrl}/app/orders/${order.id}`;
+  const name = `MobiCare order ${shortOrderNumber(order.id)}`;
+  const lineItems: MonimeLineItem[] = shared
+    ? [{ type: "custom", name, price: sle(order.totalMinor), quantity: 1, reference: "order" }]
+    : itemised;
+  const returnPage = shared
+    ? `${config.publicAppUrl}/pay/done?order=${shortOrderNumber(order.id)}&result=`
+    : `${config.publicAppUrl}/app/orders/${order.id}?payment=`;
   return {
-    name: `MobiCare order ${shortOrderNumber(order.id)}`,
+    name,
     reference: order.id,
-    successUrl: `${orderPage}?payment=return`,
-    cancelUrl: `${orderPage}?payment=cancelled`,
+    successUrl: `${returnPage}return`,
+    cancelUrl: `${returnPage}cancelled`,
     financialAccountId: config.holdingAccountId,
     lineItems,
     brandingOptions: { primaryColor: MOBICARE_GREEN },

@@ -1,20 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { Clock, CreditCard, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { Clock, CreditCard, Loader2, ShieldCheck, Users, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  getPatientGetOrderPaymentQueryKey,
   getPatientGetOrderQueryKey,
   getPatientListOrdersQueryKey,
   usePatientCheckOrderPayment,
+  usePatientGetOrderPayment,
   usePatientStartCheckout,
+  usePatientStartSharedCheckout,
   type PatientOrder,
 } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatLeones } from '@/pages/hq/shared';
+import { SharedLinkPanel } from './SharePayment';
 
 /** How long "Confirming your payment…" waits before saying we'll notify. */
 const CONFIRM_TIMEOUT_MS = 2 * 60_000;
 const CONFIRM_POLL_MS = 3_000;
+/** While a shared link is out, how often to ask Monime whether it was paid. */
+const SHARED_POLL_MS = 15_000;
 
 type Phase = 'idle' | 'confirming' | 'slow' | 'cancelled';
 
@@ -29,6 +35,7 @@ const errorText = (err: unknown) =>
 export function OrderPayment({ order }: { order: PatientOrder }) {
   const queryClient = useQueryClient();
   const startCheckout = usePatientStartCheckout();
+  const startShared = usePatientStartSharedCheckout();
   const checkPayment = usePatientCheckOrderPayment();
   const [phase, setPhase] = useState<Phase>(() => {
     const flag = new URLSearchParams(window.location.search).get('payment');
@@ -42,7 +49,34 @@ export function OrderPayment({ order }: { order: PatientOrder }) {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: getPatientGetOrderQueryKey(order.id) }),
       queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getPatientGetOrderPaymentQueryKey(order.id) }),
     ]);
+
+  // A link already sent to someone else, so it shows again after a reload.
+  const { data: payment } = usePatientGetOrderPayment(order.id, {
+    query: { enabled: awaiting, queryKey: getPatientGetOrderPaymentQueryKey(order.id) },
+  });
+  const sharedLink =
+    payment?.link?.shared && payment.link.redirectUrl && (payment.link.status === 'pending' || payment.link.status === 'creating')
+      ? payment.link
+      : null;
+
+  // While someone else may be paying, ask Monime now and then, so the order
+  // turns paid without waiting for Monime's notification.
+  useEffect(() => {
+    if (!awaiting || !sharedLink) return;
+    const timer = window.setInterval(async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const state = await checkPayment.mutateAsync({ id: order.id });
+        if (state.paid || state.orderStatus !== 'awaiting_payment') await refresh();
+      } catch {
+        // try again next time
+      }
+    }, SHARED_POLL_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaiting, sharedLink?.redirectUrl, order.id]);
 
   // Coming back from Monime: ask our server to check with Monime until the
   // payment is confirmed, then stop. Never trust the return address itself.
@@ -93,6 +127,20 @@ export function OrderPayment({ order }: { order: PatientOrder }) {
         return;
       }
       if (link.redirectUrl) window.location.assign(link.redirectUrl);
+    } catch (err) {
+      setProblem(errorText(err));
+      await refresh();
+    }
+  }
+
+  async function askSomeoneElse() {
+    setProblem(null);
+    try {
+      const link = await startShared.mutateAsync({ id: order.id });
+      queryClient.setQueryData(getPatientGetOrderPaymentQueryKey(order.id), (old: typeof payment) =>
+        old && link.status === 'pending' ? { ...old, link: { ...link, status: 'pending' } } : old,
+      );
+      await refresh();
     } catch (err) {
       setProblem(errorText(err));
       await refresh();
@@ -185,11 +233,31 @@ export function OrderPayment({ order }: { order: PatientOrder }) {
         <Button
           className="w-full rounded-full h-11"
           onClick={() => void pay()}
-          disabled={startCheckout.isPending}
+          disabled={startCheckout.isPending || startShared.isPending}
           data-testid="button-pay-now"
         >
           {startCheckout.isPending ? 'Opening payment…' : `Pay ${formatLeones(order.totalLeones)}`}
         </Button>
+        {sharedLink ? (
+          <SharedLinkPanel
+            order={order}
+            url={sharedLink.redirectUrl!}
+            expireTime={sharedLink.expireTime}
+            onRenew={() => void askSomeoneElse()}
+            renewing={startShared.isPending}
+          />
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full rounded-full h-11"
+            onClick={() => void askSomeoneElse()}
+            disabled={startCheckout.isPending || startShared.isPending}
+            data-testid="button-ask-someone-else"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            {startShared.isPending ? 'Making the link…' : 'Ask someone else to pay'}
+          </Button>
+        )}
         <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
           <ShieldCheck className="w-3.5 h-3.5" /> Your payment goes to MobiCare and is released to the pharmacy after delivery.
         </p>

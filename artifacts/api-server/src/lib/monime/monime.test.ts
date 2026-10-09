@@ -181,6 +181,36 @@ test("a link whose lines don't add up to the order total is never built", () => 
   assert.throws(() => buildCheckoutSessionBody(wrong, 1, config), CheckoutTotalMismatch);
 });
 
+test("a shared link lists no medicines, pharmacy or delivery area: one line for the total", () => {
+  const body = buildCheckoutSessionBody(order(3), 1, config, true);
+  assert.deepEqual(body.lineItems, [
+    {
+      type: "custom",
+      name: "MobiCare order 6F1C2A4E",
+      price: { currency: "SLE", value: order(3).totalMinor },
+      quantity: 1,
+      reference: "order",
+    },
+  ]);
+  const text = JSON.stringify(body);
+  for (const hidden of ["Medicine 0", "Emzor", "City Pharmacy", "Central Freetown", "service fee", "Delivery"]) {
+    assert.ok(!text.includes(hidden), `${hidden} must not be on a shared link`);
+  }
+  assert.equal(body.financialAccountId, "fac-holding");
+  assert.equal(body.reference, "6f1c2a4e-0000-4000-8000-000000000001");
+});
+
+test("a shared link returns the payer to the public page, not the patient's order", () => {
+  const body = buildCheckoutSessionBody(order(2), 1, config, true);
+  assert.equal(body.successUrl, "https://mobicaresl.com/pay/done?order=6F1C2A4E&result=return");
+  assert.equal(body.cancelUrl, "https://mobicaresl.com/pay/done?order=6F1C2A4E&result=cancelled");
+});
+
+test("a shared link is still refused when the order's lines don't add up", () => {
+  const wrong = { ...order(2), totalMinor: order(2).totalMinor + 1 };
+  assert.throws(() => buildCheckoutSessionBody(wrong, 1, config, true), CheckoutTotalMismatch);
+});
+
 test("long medicine names are cut to Monime's 100 characters", () => {
   const long = order(1);
   long.items[0]!.drugName = "X".repeat(150);

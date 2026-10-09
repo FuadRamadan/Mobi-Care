@@ -70,8 +70,13 @@ involved, and it is never deployed.
 bash deploy/local/run.sh --monime
 ```
 
-Then add a medicine to the cart and tap **Place order and pay**. Test helpers:
+Then add a medicine to the cart and tap **Place order and pay**. On an unpaid
+order, **Ask someone else to pay** makes a link to send on (WhatsApp, copy or
+share): it shows only "MobiCare order <number>" and the total, never the
+medicines, and returns the payer to the public page `/pay/done`. Test helpers:
 `POST http://localhost:9100/__admin/expire/<link id>` expires a payment link,
+`POST http://localhost:9100/__admin/initiate/<link id>` marks payment as started
+on it (so it can no longer be deleted),
 `POST http://localhost:9100/__admin/fail-next?count=N` makes Monime answer 503
 N times, and `GET http://localhost:9100/__admin/state` shows everything it holds.
 

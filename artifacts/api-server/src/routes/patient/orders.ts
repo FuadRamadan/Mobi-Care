@@ -867,14 +867,14 @@ router.post("/", async (req: AuthRequest, res) => {
 // but the order ID.
 const isOrderId = (id: unknown) => z.string().uuid().safeParse(id).success;
 
-router.post("/:id/checkout", async (req: AuthRequest, res) => {
+async function sendCheckout(req: AuthRequest, res: Parameters<Parameters<typeof router.post>[1]>[1], shared: boolean) {
   const patientId = req.pharmacy!.sub;
   if (!isOrderId(req.params.id)) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
   try {
-    const link = await startCheckout(req.params.id as string, patientId);
+    const link = await startCheckout(req.params.id as string, patientId, { shared });
     res.json(link);
   } catch (err) {
     if (err instanceof CheckoutRefused) {
@@ -883,7 +883,11 @@ router.post("/:id/checkout", async (req: AuthRequest, res) => {
     }
     throw err;
   }
-});
+}
+
+router.post("/:id/checkout", (req: AuthRequest, res) => sendCheckout(req, res, false));
+// "Ask someone else to pay": a link the patient sends on, listing no medicines.
+router.post("/:id/checkout/shared", (req: AuthRequest, res) => sendCheckout(req, res, true));
 
 // ── Payment state for the patient's screen ──────────────────────────────────
 // GET reads our records; POST …/check also asks Monime about the latest link

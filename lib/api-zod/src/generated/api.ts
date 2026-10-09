@@ -2014,7 +2014,23 @@ export const PatientStartCheckoutParams = zod.object({
 export const PatientStartCheckoutResponse = zod.object({
   "status": zod.enum(['pending', 'paid']),
   "redirectUrl": zod.string().nullable(),
-  "expireTime": zod.string().nullable()
+  "expireTime": zod.string().nullable(),
+  "shared": zod.boolean().describe('A link made to send to someone else (no medicines on it).')
+})
+
+
+/**
+ * @summary A payment link to send to someone else ("Ask someone else to pay"): one line, no medicines, and the payer returns to a public page
+ */
+export const PatientStartSharedCheckoutParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PatientStartSharedCheckoutResponse = zod.object({
+  "status": zod.enum(['pending', 'paid']),
+  "redirectUrl": zod.string().nullable(),
+  "expireTime": zod.string().nullable(),
+  "shared": zod.boolean().describe('A link made to send to someone else (no medicines on it).')
 })
 
 
@@ -2035,7 +2051,8 @@ export const PatientGetOrderPaymentResponse = zod.object({
   "link": zod.union([zod.object({
   "status": zod.string().describe('creating, pending, completed, expired, cancelled, deleted or failed'),
   "redirectUrl": zod.string().nullable(),
-  "expireTime": zod.string().nullable()
+  "expireTime": zod.string().nullable(),
+  "shared": zod.boolean()
 }),zod.null()])
 })
 
@@ -2057,7 +2074,8 @@ export const PatientCheckOrderPaymentResponse = zod.object({
   "link": zod.union([zod.object({
   "status": zod.string().describe('creating, pending, completed, expired, cancelled, deleted or failed'),
   "redirectUrl": zod.string().nullable(),
-  "expireTime": zod.string().nullable()
+  "expireTime": zod.string().nullable(),
+  "shared": zod.boolean()
 }),zod.null()])
 })
 

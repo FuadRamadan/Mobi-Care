@@ -13,4 +13,5 @@ export interface OrderPaymentLink {
   redirectUrl: string | null;
   /** @nullable */
   expireTime: string | null;
+  shared: boolean;
 }

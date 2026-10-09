@@ -34,6 +34,8 @@ export const monimeCheckoutSessionsTable = pgTable(
     amountMinor: integer("amount_minor").notNull(),
     /** creating | pending | completed | expired | cancelled | deleted */
     status: text("status").notNull().default("creating"),
+    /** "Ask someone else to pay": one neutral line, no medicines listed. */
+    shared: boolean("shared").notNull().default(false),
     monimeSessionId: text("monime_session_id"),
     monimeOrderNumber: text("monime_order_number"),
     redirectUrl: text("redirect_url"),

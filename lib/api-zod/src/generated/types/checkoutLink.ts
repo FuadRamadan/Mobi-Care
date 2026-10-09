@@ -13,4 +13,6 @@ export interface CheckoutLink {
   redirectUrl: string | null;
   /** @nullable */
   expireTime: string | null;
+  /** A link made to send to someone else (no medicines on it). */
+  shared: boolean;
 }

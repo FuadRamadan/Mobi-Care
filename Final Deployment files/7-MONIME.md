@@ -262,6 +262,16 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   stopped. Next: step 7 (revoke the live token, remove `MONIME_ACCESS_TOKEN`
   from the development environment); the cash-out check needs a new
   short-lived token with Payout Admin when it is resumed.
+- 9 Oct 2026: added **"Ask someone else to pay"** (Martha's request). On an
+  unpaid order the patient can make a link to send to someone else by
+  WhatsApp, copy or the phone's share menu. That link shows Monime one line,
+  "MobiCare order <number>" and the total (no medicines, pharmacy or delivery
+  area), and returns the payer to the public page `/pay/done` instead of the
+  patient's order page. Still one live link per order: sharing retires the
+  patient's own link first, and is refused (`PAYMENT_IN_PROGRESS`) if
+  payment has already started on it; the patient's own Pay reuses a live
+  shared link. Migration `0036_monime_shared_payment_links.sql`. Tested with
+  the fake Monime (18 checks) and unit tests; not yet tried on real Monime.
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
   separation of pharmacy money). Questions for Monime: can money move between

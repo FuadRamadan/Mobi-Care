@@ -32,6 +32,7 @@
  *
  * Test helpers (not part of Monime):
  *   POST /__admin/expire/:id        expire a link now
+ *   POST /__admin/initiate/:id      payment started on a link (it can't be deleted)
  *   POST /__admin/fail-next?count=N answer the next N API calls with 503
  *   GET  /__admin/state             everything it holds, as JSON
  *   POST /__admin/fail-payout?code=X  the next payout fails with code X
@@ -246,6 +247,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && path === "/__admin/fail-next") {
       failNext = Number(url.searchParams.get("count") ?? 1);
       return ok(res, { failNext });
+    }
+    if (req.method === "POST" && path.startsWith("/__admin/initiate/")) {
+      // Someone has started paying but not finished: the link can't be deleted.
+      const session = sessions.get(path.split("/").pop());
+      if (!session) return fail(res, 404, "not_found", "No such session");
+      session.initiated = true;
+      return ok(res, session);
     }
     if (req.method === "POST" && path.startsWith("/__admin/expire/")) {
       const session = sessions.get(path.split("/").pop());

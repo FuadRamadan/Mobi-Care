@@ -1306,6 +1306,39 @@ paths:
         "503":
           description: Online payment temporarily unavailable
 
+  /patient/orders/{id}/checkout/shared:
+    post:
+      operationId: patientStartSharedCheckout
+      tags: [patient]
+      summary: >-
+        A payment link to send to someone else ("Ask someone else to pay"):
+        one line, no medicines, and the payer returns to a public page
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The link to send on, or status 'paid' if already paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutLink"
+        "404":
+          description: Order not found
+        "409":
+          description: >-
+            The order can't be paid now, or a payment has already started on
+            the patient's own link
+        "502":
+          description: Monime did not create the link
+        "503":
+          description: Online payment temporarily unavailable
+
   /patient/orders/{id}/payment:
     get:
       operationId: patientGetOrderPayment
@@ -4882,7 +4915,7 @@ components:
 
     CheckoutLink:
       type: object
-      required: [status, redirectUrl, expireTime]
+      required: [status, redirectUrl, expireTime, shared]
       properties:
         status:
           type: string
@@ -4891,6 +4924,9 @@ components:
           type: ["string", "null"]
         expireTime:
           type: ["string", "null"]
+        shared:
+          type: boolean
+          description: A link made to send to someone else (no medicines on it).
 
     OrderPayment:
       type: object
@@ -4916,7 +4952,7 @@ components:
 
     OrderPaymentLink:
       type: object
-      required: [status, redirectUrl, expireTime]
+      required: [status, redirectUrl, expireTime, shared]
       properties:
         status:
           type: string
@@ -4925,6 +4961,8 @@ components:
           type: ["string", "null"]
         expireTime:
           type: ["string", "null"]
+        shared:
+          type: boolean
 
     PatientOrder:
       allOf:

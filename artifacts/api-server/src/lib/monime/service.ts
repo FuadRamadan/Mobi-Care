@@ -161,7 +161,11 @@ export interface CheckoutLink {
   status: "pending" | "paid";
   redirectUrl: string | null;
   expireTime: string | null;
+  /** A link made to send to someone else (no medicines on it). */
+  shared: boolean;
 }
+
+const PAID_LINK: CheckoutLink = { status: "paid", redirectUrl: null, expireTime: null, shared: false };
 
 async function loadCheckoutOrder(order: Order) {
   const [pharmacy] = await db
@@ -197,6 +201,7 @@ const sessionLink = (row: SessionRow): CheckoutLink => ({
   status: "pending",
   redirectUrl: row.redirectUrl,
   expireTime: row.expireTime?.toISOString() ?? null,
+  shared: row.shared,
 });
 
 const usable = (row: SessionRow | undefined) =>
@@ -219,8 +224,26 @@ async function latestSession(orderId: string): Promise<SessionRow | undefined> {
  * one, otherwise a new one. A double tap gets the same link: the new attempt
  * is saved under a row lock before Monime is called, and a second request
  * re-sends the identical request with the same idempotency key.
+ *
+ * `shared` asks for a link to send to someone else, which lists no
+ * medicines. The patient's own link (which does) is retired first, so one
+ * link per order stays the rule. The patient's own "Pay" reuses a live shared
+ * link rather than retiring it: someone may be paying on it.
  */
-export async function startCheckout(orderId: string, patientId: string): Promise<CheckoutLink> {
+export async function startCheckout(
+  orderId: string,
+  patientId: string,
+  options: { shared?: boolean } = {},
+): Promise<CheckoutLink> {
+  const shared = options.shared ?? false;
+  // Whether an existing link can be handed out for this request.
+  const fits = (row: SessionRow) => row.shared || !shared;
+  const busy = () =>
+    new CheckoutRefused(
+      409,
+      "PAYMENT_IN_PROGRESS",
+      "A payment for this order has already started. Wait a minute, then try again.",
+    );
   const m = monime();
   if (!m) throw new CheckoutRefused(409, "MONIME_DISABLED", "Online payment is not switched on.");
 
@@ -234,7 +257,7 @@ export async function startCheckout(orderId: string, patientId: string): Promise
     throw new CheckoutRefused(409, "PAY_DIRECT", "This order is paid directly to the pharmacy.");
   }
   if (order.paidAt || order.status !== "awaiting_payment") {
-    if (order.paidAt) return { status: "paid", redirectUrl: null, expireTime: null };
+    if (order.paidAt) return PAID_LINK;
     throw new CheckoutRefused(409, "ORDER_NOT_AWAITING_PAYMENT", "This order can no longer be paid.");
   }
   const blocked = await prescriptionBlock(order);
@@ -251,16 +274,19 @@ export async function startCheckout(orderId: string, patientId: string): Promise
   const previous = await latestSession(order.id);
   if (previous?.status === "pending") {
     const synced = await syncSession(previous);
-    if (synced.status === "completed") {
-      return { status: "paid", redirectUrl: null, expireTime: null };
-    }
-    if (usable(synced)) return sessionLink(synced);
+    if (synced.status === "completed") return PAID_LINK;
+    if (usable(synced) && fits(synced)) return sessionLink(synced);
     if (synced.status === "pending" && synced.monimeSessionId) {
-      // About to expire: retire it so only one link is ever live.
+      // About to expire, or the patient's own link when one to share is
+      // wanted: retire it so only one link is ever live. Monime refuses once
+      // payment has started on it; then that payment is left to finish.
       await retireSession(synced);
       const after = await latestSession(order.id);
-      if (after?.status === "completed") return { status: "paid", redirectUrl: null, expireTime: null };
-      if (after?.status === "pending") return sessionLink(after);
+      if (after?.status === "completed") return PAID_LINK;
+      if (after?.status === "pending") {
+        if (!fits(after)) throw busy();
+        return sessionLink(after);
+      }
     }
   }
 
@@ -281,11 +307,15 @@ export async function startCheckout(orderId: string, patientId: string): Promise
       .where(eq(monimeCheckoutSessionsTable.orderId, order.id))
       .orderBy(desc(monimeCheckoutSessionsTable.attempt))
       .limit(1);
-    if (latest && (latest.status === "creating" || usable(latest))) return latest;
+    if (latest && (latest.status === "creating" || usable(latest))) {
+      // Never send the patient's own link (with the medicines) to someone else.
+      if (!fits(latest)) throw busy();
+      return latest;
+    }
     const attempt = (latest?.attempt ?? 0) + 1;
     let body: CreateCheckoutSessionBody;
     try {
-      body = buildCheckoutSessionBody(checkoutOrder, attempt, m.config);
+      body = buildCheckoutSessionBody(checkoutOrder, attempt, m.config, shared);
     } catch (err) {
       if (err instanceof CheckoutTotalMismatch) {
         logger.error({ orderId: order.id, err }, "Payment link total does not match the order");
@@ -306,6 +336,7 @@ export async function startCheckout(orderId: string, patientId: string): Promise
         requestBody: body,
         amountMinor: checkoutOrder.totalMinor,
         status: "creating",
+        shared,
       })
       .returning();
     return created!;
@@ -650,6 +681,7 @@ export async function paymentStatus(order: Order, sync: boolean) {
           status: row.status,
           redirectUrl: row.status === "pending" ? row.redirectUrl : null,
           expireTime: row.expireTime?.toISOString() ?? null,
+          shared: row.shared,
         }
       : null,
   };

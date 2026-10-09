@@ -663,6 +663,7 @@ CREATE TABLE "public"."monime_checkout_sessions" (
     "request_body" "jsonb" NOT NULL,
     "amount_minor" integer NOT NULL,
     "status" "text" DEFAULT 'creating'::"text" NOT NULL,
+    "shared" boolean DEFAULT false NOT NULL,
     "monime_session_id" "text",
     "monime_order_number" "text",
     "redirect_url" "text",
