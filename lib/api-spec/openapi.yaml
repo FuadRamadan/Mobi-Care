@@ -2367,6 +2367,29 @@ paths:
         "409":
           description: Pharmacy is inactive
 
+  /hq/security/activity:
+    get:
+      operationId: getHqSecurityActivity
+      tags: [hq]
+      summary: Security monitor - failed sign-ins, blocked attempts, blocked content, server errors and alerts
+      description: For HQ staff who can manage integrations.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Security activity for the chosen number of days
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HqSecurityActivity"
+        "403":
+          description: Needs the manage integrations permission
   /hq/password-policy:
     get:
       operationId: getPasswordPolicy
@@ -3438,6 +3461,98 @@ components:
       bearerFormat: JWT
 
   schemas:
+    HqSecurityActivity:
+      type: object
+      required: [days, totals, alerts, topAccounts, topNetworks, events]
+      properties:
+        days:
+          type: number
+        totals:
+          type: object
+          required: [failedSignIns, signInsBlocked, contentBlocked, serverErrors, alerts]
+          properties:
+            failedSignIns:
+              type: number
+            signInsBlocked:
+              type: number
+            contentBlocked:
+              type: number
+            serverErrors:
+              type: number
+            alerts:
+              type: number
+        alerts:
+          type: array
+          items:
+            type: object
+            required: [id, title, body, createdAt]
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              body:
+                type: string
+              createdAt:
+                type: string
+        topAccounts:
+          type: array
+          items:
+            type: object
+            required: [identifier, count, lastAt]
+            properties:
+              identifier:
+                type: string
+              role:
+                type: string
+                nullable: true
+              count:
+                type: number
+              lastAt:
+                type: string
+        topNetworks:
+          type: array
+          items:
+            type: object
+            required: [ipAddress, count, lastAt]
+            properties:
+              ipAddress:
+                type: string
+              count:
+                type: number
+              lastAt:
+                type: string
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/HqSecurityEvent"
+    HqSecurityEvent:
+      type: object
+      required: [id, kind, createdAt]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [failed_sign_in, sign_in_blocked, csp_violation, server_error]
+        role:
+          type: string
+          nullable: true
+        identifier:
+          type: string
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        path:
+          type: string
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdAt:
+          type: string
     HealthStatus:
       type: object
       required: [status]

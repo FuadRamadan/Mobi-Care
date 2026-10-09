@@ -1,7 +1,10 @@
 import express, { type ErrorRequestHandler, type Express } from "express";
 import cors from "cors";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import { recordSecurityEvent } from "./lib/securityEvents";
 import { logger } from "./lib/logger";
 import { mountStaticSites } from "./lib/staticSites";
 import { mountMonimeWebhook } from "./routes/monimeWebhook";
@@ -70,11 +73,30 @@ app.use("/api/patient/profile/photo", express.json({ limit: "8mb" }));
 app.use("/api/pharmacy/inventory/import", express.json({ limit: "8mb" }));
 app.use("/api/hq/pharmacies/:pharmacyId/inventory/import", express.json({ limit: "8mb" }));
 app.use("/api/hq/drugs/import", express.json({ limit: "8mb" }));
+// Browsers send policy-violation reports with their own content types.
+app.use(
+  "/api/security/csp-report",
+  express.json({ type: ["application/csp-report", "application/reports+json", "application/json"], limit: "16kb" }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// For uptime monitors: answers 200 only when the database answers too, so an
+// outage that leaves the process running but unable to serve is still caught.
+app.get("/api/health/ready", async (_req, res) => {
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5_000)),
+    ]);
+    res.json({ status: "ok", database: "ok" });
+  } catch {
+    res.status(503).json({ status: "unavailable", database: "unreachable" });
+  }
 });
 
 app.use("/api", globalRateLimit());
@@ -116,6 +138,12 @@ const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     return;
   }
 
+  void recordSecurityEvent({
+    kind: "server_error",
+    ipAddress: req.ip,
+    path: req.originalUrl.split("?")[0],
+    details: { method: req.method },
+  });
   res.status(500).json({ error: "Internal server error" });
 };
 

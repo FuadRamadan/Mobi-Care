@@ -3,6 +3,8 @@ import { logger } from "./lib/logger";
 import { assertSecretsAreSafe } from "./lib/secrets";
 import { monimeConfig } from "./lib/monime/config";
 import { startMonimeJobs, stopMonimeJobs } from "./lib/monime/service";
+import { reencryptStoredCredentials } from "./lib/secretRotation";
+import { startSecurityEventPruning } from "./lib/securityEvents";
 import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -186,17 +188,27 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
-      label: "Monime payouts (migration 0034)",
+      label: "Monime payouts (migration 0035)",
       query: sql`
         SELECT to_regclass(current_schema() || '.pharmacy_cashouts')
           IS NOT NULL AS exists
       `,
     },
     {
-      label: "Monime payments (migration 0033)",
+      label: "Monime payments (migration 0034)",
       query: sql`
         SELECT to_regclass(current_schema() || '.monime_checkout_sessions')
           IS NOT NULL AS exists
+      `,
+    },
+    {
+      label: "security monitoring (migration 0033)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = current_schema()
+            AND table_name = 'security_events'
+        ) AS exists
       `,
     },
     {
@@ -309,6 +321,7 @@ async function start(): Promise<void> {
     `Database driver: ${databaseDriver.driver} (${databaseDriver.reason})`,
   );
   await assertSchemaUpToDate();
+  await reencryptStoredCredentials();
   const server = app.listen(port, "0.0.0.0", () => {
     logger.info(
       { port, staticSites: mountedStaticSites },
@@ -317,6 +330,7 @@ async function start(): Promise<void> {
         : "Server listening",
     );
     startMonimeJobs();
+    startSecurityEventPruning();
   });
 
   const shutdown = async (signal: string) => {

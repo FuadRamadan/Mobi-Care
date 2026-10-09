@@ -17,10 +17,11 @@
  *   SESSION_SECRET  Derives the AES key that encrypts stored provider
  *                   credentials (lib/credentialEncryption.ts) and the HMAC key
  *                   for password-reset codes (routes/auth.ts). Rotating it
- *                   makes stored provider credentials permanently
- *                   undecryptable and voids in-flight reset codes. Rotate it
- *                   only deliberately, and re-enter provider credentials in HQ
- *                   afterwards.
+ *                   voids in-flight reset codes. Rotate it
+ *                   only deliberately: set the old value as
+ *                   SESSION_SECRET_PREVIOUS for one restart, and the server
+ *                   moves stored credentials to the new key
+ *                   (lib/secretRotation.ts).
  */
 
 import { createHash } from "node:crypto";
@@ -109,6 +110,13 @@ export function assertSecretsAreSafe(
       "JWT_SECRET and SESSION_SECRET are identical. They protect different " +
         "things and must be independent values, so that rotating one does not " +
         "force rotating the other.",
+    );
+  }
+
+  if (env["SESSION_SECRET_PREVIOUS"] && env["SESSION_SECRET_PREVIOUS"] === env["SESSION_SECRET"]) {
+    problems.push(
+      "SESSION_SECRET_PREVIOUS is the same as SESSION_SECRET. Set it to the old " +
+        "value only while rotating, and remove it once the server has started.",
     );
   }
 

@@ -98,6 +98,7 @@ Final Deployment files/
 ├── 3-OBJECT-STORAGE.md        the private bucket, and moving existing media into it
 ├── 4-SECRETS.md               what to generate, and the one that must be rotated
 ├── 5-BUILD-AND-DEPLOY.md      the release runbook and the verification checklist
+├── 6-MONITORING.md            uptime checks, security alerts, and what to do about them
 ├── PLATFORM-NOTES.md          what the GoDaddy plan can and cannot do, and why
 │                              the architecture is shaped this way
 ├── KNOWN-GAPS.md              what is unfinished, and what it means

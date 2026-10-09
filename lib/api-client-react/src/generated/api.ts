@@ -68,6 +68,7 @@ import type {
   GetHqOnlinePaymentsParams,
   GetHqSalesHistoryParams,
   GetHqSalesTrendParams,
+  GetHqSecurityActivityParams,
   GetPharmacyOnlineAnalyticsParams,
   GoogleConnection,
   GoogleCredentialInput,
@@ -93,6 +94,7 @@ import type {
   HqPharmacyUpdate,
   HqSalesHistory,
   HqSalesTrend,
+  HqSecurityActivity,
   ImageUrlRequest,
   ImageUrlResponse,
   InventoryImportPreview,
@@ -8189,6 +8191,91 @@ export const useResetPharmacyPassword = <TError = ErrorType<void>,
       > => {
       return useMutation(getResetPharmacyPasswordMutationOptions(options));
     }
+
+export const getGetHqSecurityActivityUrl = (params?: GetHqSecurityActivityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/security/activity?${stringifiedParams}` : `/api/hq/security/activity`
+}
+
+/**
+ * For HQ staff who can manage integrations.
+ * @summary Security monitor - failed sign-ins, blocked attempts, blocked content, server errors and alerts
+ */
+export const getHqSecurityActivity = async (params?: GetHqSecurityActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<HqSecurityActivity> => {
+
+  return customFetch<HqSecurityActivity>(getGetHqSecurityActivityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqSecurityActivityQueryKey = (params?: GetHqSecurityActivityParams,) => {
+    return [
+    `/api/hq/security/activity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqSecurityActivityQueryOptions = <TData = Awaited<ReturnType<typeof getHqSecurityActivity>>, TError = ErrorType<void>>(params?: GetHqSecurityActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSecurityActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqSecurityActivityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqSecurityActivity>>> = ({ signal }) => getHqSecurityActivity(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqSecurityActivity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqSecurityActivityQueryResult = NonNullable<Awaited<ReturnType<typeof getHqSecurityActivity>>>
+export type GetHqSecurityActivityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Security monitor - failed sign-ins, blocked attempts, blocked content, server errors and alerts
+ */
+
+export function useGetHqSecurityActivity<TData = Awaited<ReturnType<typeof getHqSecurityActivity>>, TError = ErrorType<void>>(
+ params?: GetHqSecurityActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqSecurityActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqSecurityActivityQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetPasswordPolicyUrl = () => {
 

@@ -22,6 +22,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import express, { type Express, type Request, type Response } from "express";
+import { pageSecurityHeaders } from "./contentSecurityPolicy";
 
 /**
  * Everything Vite emits into assets/ carries a content hash in its filename, so
@@ -52,6 +53,9 @@ function staticOptions(): Parameters<typeof express.static>[1] {
     index: false,
     redirect: false,
     setHeaders(res, filePath) {
+      if (filePath.endsWith(".html")) {
+        for (const [name, value] of Object.entries(pageSecurityHeaders())) res.setHeader(name, value);
+      }
       if (filePath.includes(ASSETS_DIR)) {
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       } else {
@@ -87,6 +91,8 @@ function spaFallback(indexFile: string) {
     // The entry point must never be cached, or a released build keeps loading
     // asset URLs that no longer exist.
     res.setHeader("Cache-Control", "no-store");
+    // Every page carries the content security policy (lib/contentSecurityPolicy.ts).
+    for (const [name, value] of Object.entries(pageSecurityHeaders())) res.setHeader(name, value);
 
     // dotfiles must be allowed: this path is chosen by the operator through
     // SERVE_STATIC_DIR, not by the request, and a directory like ".local/public"

@@ -29,7 +29,7 @@ export const pharmaciesTable = pgTable("pharmacies", {
   mobileMoneyAccountName: text("mobile_money_account_name"),
   // When each line last changed. These are also the numbers online-payment
   // cash-outs go to, so a cash-out to a number changed in the last 48 hours
-  // waits (migration 0034).
+  // waits (migration 0035).
   orangeMoneyChangedAt: timestamp("orange_money_changed_at", { withTimezone: true }),
   afriMoneyChangedAt: timestamp("afri_money_changed_at", { withTimezone: true }),
 

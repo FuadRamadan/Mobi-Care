@@ -27,11 +27,12 @@ export interface PharmacyTokenPayload {
 }
 
 export function signAccessToken(payload: PharmacyTokenPayload): string {
-  return jwt.sign(payload, SECRET, { expiresIn: ACCESS_TOKEN_TTL });
+  return jwt.sign(payload, SECRET, { algorithm: "HS256", expiresIn: ACCESS_TOKEN_TTL });
 }
 
 export function verifyAccessToken(token: string): PharmacyTokenPayload {
-  return jwt.verify(token, SECRET) as unknown as PharmacyTokenPayload;
+  // Pinned, so a token can never choose how it is checked.
+  return jwt.verify(token, SECRET, { algorithms: ["HS256"] }) as unknown as PharmacyTokenPayload;
 }
 
 /** Generate a random opaque refresh token and its SHA-256 hash for storage */

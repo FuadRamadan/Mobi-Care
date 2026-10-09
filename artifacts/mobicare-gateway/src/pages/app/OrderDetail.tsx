@@ -98,7 +98,6 @@ export default function OrderDetail() {
     prescription?: { status: string; rejectReason?: string | null } | null;
     deliveryAddress?: string | null;
   };
-
   const steps = o.fulfillmentType === 'delivery' ? DELIVERY_STEPS : COLLECTION_STEPS;
   const statusIdx = STATUS_ORDER.indexOf(o.status);
   const cancelled = o.status === 'cancelled';

@@ -3340,6 +3340,53 @@ export const ResetPharmacyPasswordResponse = zod.object({
 
 
 /**
+ * For HQ staff who can manage integrations.
+ * @summary Security monitor - failed sign-ins, blocked attempts, blocked content, server errors and alerts
+ */
+export const GetHqSecurityActivityQueryParams = zod.object({
+  "days": zod.coerce.number().optional()
+})
+
+export const GetHqSecurityActivityResponse = zod.object({
+  "days": zod.number(),
+  "totals": zod.object({
+  "failedSignIns": zod.number(),
+  "signInsBlocked": zod.number(),
+  "contentBlocked": zod.number(),
+  "serverErrors": zod.number(),
+  "alerts": zod.number()
+}),
+  "alerts": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.string()
+})),
+  "topAccounts": zod.array(zod.object({
+  "identifier": zod.string(),
+  "role": zod.string().nullish(),
+  "count": zod.number(),
+  "lastAt": zod.string()
+})),
+  "topNetworks": zod.array(zod.object({
+  "ipAddress": zod.string(),
+  "count": zod.number(),
+  "lastAt": zod.string()
+})),
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['failed_sign_in', 'sign_in_blocked', 'csp_violation', 'server_error']),
+  "role": zod.string().nullish(),
+  "identifier": zod.string().nullish(),
+  "ipAddress": zod.string().nullish(),
+  "path": zod.string().nullish(),
+  "details": zod.record(zod.string(), zod.unknown()).nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
  * @summary Get the current pharmacy password policy
  */
 export const GetPasswordPolicyResponse = zod.object({

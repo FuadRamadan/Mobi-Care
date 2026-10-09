@@ -147,7 +147,9 @@ async function bootstrapHQ(): Promise<{ hqToken: string; hqId: string }> {
   const hash = await bcrypt.hash(HQ_PASSWORD, 10);
   const [created] = await db
     .insert(hqStaffTable)
-    .values({ username: HQ_USERNAME, name: HQ_NAME, passwordHash: hash })
+    // The flow adds a medicine to the catalogue, which needs this permission
+    // (migration 0029).
+    .values({ username: HQ_USERNAME, name: HQ_NAME, passwordHash: hash, canManageCatalogue: true })
     .returning({ id: hqStaffTable.id });
   await db.insert(auditLogTable).values({
     actorType: "system",
@@ -232,7 +234,7 @@ async function createTestDrug(hqToken: string): Promise<string> {
       unit: "tablets",
       commonStrengths: [TEST_STRENGTH],
       commonForms: [TEST_FORM],
-      primaryCategory: "pain_fever",
+      primaryCategory: "pain_inflammation",
       subcategory: "analgesics_antipyretics",
     },
   });
@@ -258,6 +260,7 @@ async function addInventory(
         .slice(0, 10),
       brand: "TestBrand",
       manufacturer: "Test Manufacturer",
+      countryOfOrigin: "Sierra Leone",
       priceLeones: 5000.25,
       stockQuantity: 3,
       availableForDelivery: true,
@@ -282,6 +285,9 @@ async function registerPatient(): Promise<{
       name: PATIENT_NAME,
       phone: PATIENT_PHONE,
       password: PATIENT_PASSWORD,
+      // Registration requires an adult date of birth and consent (migration 0025).
+      dateOfBirth: "1990-01-15",
+      acceptTermsAndPrivacy: true,
     },
   });
   const body = expect("Register patient", res, 201) as {
@@ -375,8 +381,9 @@ async function placeOrder(
     token,
     body: {
       pharmacyId,
-      fulfillmentType: "delivery",
-      deliveryAddress: "12 Test Avenue, Freetown",
+      // Collection: the test pharmacy has no map location, and delivery now
+      // needs both ends inside a delivery zone (covered by the zone tests).
+      fulfillmentType: "collection",
       prescriptionImageKey,
       items: [{ inventoryId, quantity }],
     },

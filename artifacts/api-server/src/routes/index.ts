@@ -11,11 +11,13 @@ import patientProfileImagesRouter from "./patientProfileImages.js";
 import teamRouter from "./team.js";
 import courierPhotosRouter from "./courierPhotos.js";
 import advertisementsRouter from "./advertisements.js";
+import securityReportsRouter from "./securityReports.js";
 import { pharmacy } from "../middlewares/auth.js";
 
 const router = safeRouter();
 
 router.use("/healthz", healthRouter);
+router.use("/security", securityReportsRouter);
 // Before /auth so its own paths are matched first.
 router.use("/auth/google", googleAuthRouter);
 router.use("/auth", authRouter);
