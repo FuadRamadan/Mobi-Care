@@ -262,6 +262,16 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   stopped. Next: step 7 (revoke the live token, remove `MONIME_ACCESS_TOKEN`
   from the development environment); the cash-out check needs a new
   short-lived token with Payout Admin when it is resumed.
+- 10 Oct 2026: resuming step 6 (cash-out). The local database was rebuilt
+  for the fake-Monime tests, so MobiCare no longer has a record of the
+  Le 4.75 release; the cash-out limit comes from those records, not from
+  Monime's balance. Plan: a fresh `--monime-live` run and a **new Le 11
+  collection order** (pharmacy share Le 10.45 ≥ Le 10 + 1% fee), then cash
+  out about Le 10.34 to Martha's Orange Money. The seed makes a new pharmacy
+  ID, so Monime gets a second "Live check" account; the earlier Le 4.75 stays
+  in the first one (`fac-k6ViXy8cSMyMntxbkZmcuMdqwYo`) until moved from the
+  Monime dashboard. Needs a new short token with all six roles (Payout
+  Admin) and a new session; Martha gives her Orange Money number in chat.
 - 9 Oct 2026: added **"Ask someone else to pay"** (Martha's request). On an
   unpaid order the patient can make a link to send to someone else by
   WhatsApp, copy or the phone's share menu. That link shows Monime one line,
