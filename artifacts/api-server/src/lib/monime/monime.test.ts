@@ -285,6 +285,38 @@ test("a 4xx is final and never retried; the token is not in the error", async ()
   assert.equal(calls.length, 1);
 });
 
+test("finding an account by reference pages through the list and matches the reference itself", async () => {
+  // Monime ignores ?reference=: it answers with every account, a page at a time.
+  const account = (id: string, reference: string) => ({ id, reference, name: id, currency: "SLE" });
+  const { impl, calls } = fakeFetch([
+    json(200, { success: true, result: [account("fac-main", ""), account("fac-holding", "mobicare-holding")], pagination: { count: 2, next: "fac-holding" } }),
+    json(200, { success: true, result: [account("fac-p1", "pharmacy-1"), account("fac-p2", "pharmacy-2")], pagination: { count: 2, next: null } }),
+  ]);
+  const client = createMonimeClient(clientConfig, { fetch: impl, sleep: async () => {} });
+  const { result } = await client.findFinancialAccountsByReference("pharmacy-2");
+  assert.deepEqual(result.map((a) => a.id), ["fac-p2"]);
+  assert.equal(calls.length, 2);
+  const second = new URL(calls[1]!.url);
+  assert.equal(second.searchParams.get("after"), "fac-holding");
+  assert.equal(second.searchParams.get("reference"), "pharmacy-2");
+});
+
+test("finding an account by reference stops at the first page that has it, and says none only at the end", async () => {
+  const account = (id: string, reference: string) => ({ id, reference, name: id, currency: "SLE" });
+  const found = fakeFetch([
+    json(200, { success: true, result: [account("fac-p1", "pharmacy-1")], pagination: { count: 1, next: "fac-p1" } }),
+  ]);
+  const client = createMonimeClient(clientConfig, { fetch: found.impl, sleep: async () => {} });
+  assert.deepEqual((await client.findFinancialAccountsByReference("pharmacy-1")).result.map((a) => a.id), ["fac-p1"]);
+  assert.equal(found.calls.length, 1);
+
+  const none = fakeFetch([
+    json(200, { success: true, result: [account("fac-p1", "pharmacy-1")], pagination: { count: 1, next: null } }),
+  ]);
+  const empty = createMonimeClient(clientConfig, { fetch: none.impl, sleep: async () => {} });
+  assert.deepEqual((await empty.findFinancialAccountsByReference("pharmacy-9")).result, []);
+});
+
 test("a POST without an idempotency key is never retried", async () => {
   const { impl, calls } = fakeFetch([json(500, {}), json(200, { result: {} })]);
   const client = createMonimeClient(clientConfig, { fetch: impl, sleep: async () => {} });

@@ -49,7 +49,21 @@ async function call(method, path, body, key) {
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`${method} ${path}: ${res.status} ${data?.error?.message ?? ""}`.trim());
-  return data?.result;
+  return data;
+}
+
+// Monime ignores ?reference= on this list (seen live, 9 Oct 2026), so page
+// through every account and match the reference here.
+async function findByReference(reference) {
+  let after = null;
+  for (let page = 0; page < 100; page += 1) {
+    const query = new URLSearchParams({ reference, limit: "50", ...(after ? { after } : {}) });
+    const data = await call("GET", `/v1/financial-accounts?${query}`);
+    const match = (data?.result ?? []).find((a) => a.reference === reference);
+    if (match || !data?.pagination?.next) return match ?? null;
+    after = data.pagination.next;
+  }
+  throw new Error("More than 5,000 financial accounts: cannot search them all");
 }
 
 const key = (name) => {
@@ -60,17 +74,18 @@ const key = (name) => {
 console.log(`Monime ${mode} space ${space}\n`);
 const lines = [];
 for (const account of ACCOUNTS) {
-  const found = (await call("GET", `/v1/financial-accounts?reference=${encodeURIComponent(account.reference)}&limit=5`)) ?? [];
-  let existing = found.find((a) => a.reference === account.reference);
+  let existing = await findByReference(account.reference);
   if (existing) {
     console.log(`Found   ${account.name}: ${existing.id}`);
   } else {
-    existing = await call(
-      "POST",
-      "/v1/financial-accounts",
-      { name: account.name, currency: "SLE", reference: account.reference, metadata: { mc_kind: "system_account", mc_env: mode } },
-      key(`system-account:${account.reference}`),
-    );
+    existing = (
+      await call(
+        "POST",
+        "/v1/financial-accounts",
+        { name: account.name, currency: "SLE", reference: account.reference, metadata: { mc_kind: "system_account", mc_env: mode } },
+        key(`system-account:${account.reference}`),
+      )
+    )?.result;
     console.log(`Created ${account.name}: ${existing.id}`);
   }
   lines.push(`${account.env}=${existing.id}`);

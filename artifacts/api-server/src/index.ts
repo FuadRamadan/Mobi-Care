@@ -188,6 +188,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "Monime shared payment links (migration 0036)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'monime_checkout_sessions'
+            AND column_name = 'shared'
+        ) AS exists
+      `,
+    },
+    {
       label: "Monime payouts (migration 0035)",
       query: sql`
         SELECT to_regclass(current_schema() || '.pharmacy_cashouts')

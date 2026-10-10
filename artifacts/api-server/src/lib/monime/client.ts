@@ -129,7 +129,13 @@ export interface MonimeResult<T> {
   requestId: string | null;
   /** True when Monime replayed an earlier identical request (header Monime-Cache: irc). */
   replayed: boolean;
+  /** For a list: the cursor of the next page (pass as `after`), null on the last page. */
+  next?: string | null;
 }
+
+/** Pages of 50 (Monime's most): 100 pages is 5,000 accounts. */
+const ACCOUNT_PAGE_SIZE = 50;
+const MAX_ACCOUNT_PAGES = 100;
 
 export class MonimeError extends Error {
   constructor(
@@ -227,6 +233,7 @@ export function createMonimeClient(config: MonimeConfig, deps: MonimeClientDeps 
           result: (parsed && "result" in parsed ? parsed.result : parsed) as T,
           requestId,
           replayed: response.headers.get("monime-cache") === "irc",
+          next: parsed?.pagination?.next ?? null,
         };
       }
 
@@ -266,8 +273,35 @@ export function createMonimeClient(config: MonimeConfig, deps: MonimeClientDeps 
     // Phase 2: pharmacy accounts, releasing money, cash-outs.
     createFinancialAccount: (body: CreateFinancialAccountBody, key: string) =>
       request<MonimeFinancialAccount>("POST", "/v1/financial-accounts", { body, idempotencyKey: key }),
-    findFinancialAccountsByReference: (reference: string) =>
-      request<MonimeFinancialAccount[]>("GET", "/v1/financial-accounts", { query: { reference, limit: "5" } }),
+    /**
+     * Accounts whose reference is exactly `reference`. Monime ignores the
+     * `reference` filter on this list (seen live, 9 Oct 2026: an existing
+     * reference came back as an empty list), so this pages through the
+     * accounts and matches here. The filter is still sent, in case Monime
+     * starts honouring it. Refuses rather than answer "none" if there are
+     * more accounts than it will read: a wrong "none" would create a second
+     * account.
+     */
+    findFinancialAccountsByReference: async (reference: string): Promise<MonimeResult<MonimeFinancialAccount[]>> => {
+      const matches: MonimeFinancialAccount[] = [];
+      let after: string | undefined;
+      for (let page = 0; page < MAX_ACCOUNT_PAGES; page += 1) {
+        const listed = await request<MonimeFinancialAccount[]>("GET", "/v1/financial-accounts", {
+          query: { reference, limit: String(ACCOUNT_PAGE_SIZE), after },
+        });
+        matches.push(...(listed.result ?? []).filter((account) => account.reference === reference));
+        if (matches.length > 0 || !listed.next) {
+          return { result: matches, requestId: listed.requestId, replayed: false, next: null };
+        }
+        after = listed.next;
+      }
+      throw new MonimeError(
+        `More than ${MAX_ACCOUNT_PAGES * ACCOUNT_PAGE_SIZE} financial accounts: cannot search them all by reference`,
+        0,
+        "too_many_accounts",
+        null,
+      );
+    },
     getFinancialAccount: (id: string, withBalance = false) =>
       request<MonimeFinancialAccount>("GET", `/v1/financial-accounts/${encodeURIComponent(id)}`, {
         query: withBalance ? { withBalance: "true" } : {},

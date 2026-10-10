@@ -13,7 +13,7 @@
  *   GET    /v1/payments?orderNumber=...    payments for a link
  *   GET    /v1/payments/:id                one payment
  *   POST   /v1/financial-accounts          create an account (reference unique)
- *   GET    /v1/financial-accounts?reference=...  find by reference
+ *   GET    /v1/financial-accounts          list, a page at a time (ignores ?reference=, as Monime does)
  *   GET    /v1/financial-accounts/:id[?withBalance=true]
  *   POST   /v1/internal-transfers          move money between accounts (no fee)
  *   GET    /v1/internal-transfers/:id
@@ -502,9 +502,16 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (path === "/v1/financial-accounts" && req.method === "GET") {
-      const reference = url.searchParams.get("reference");
-      const list = [...accounts.values()].filter((a) => !reference || a.reference === reference).map((a) => accountView(a, url.searchParams.get("withBalance") === "true"));
-      return send(res, 200, { success: true, messages: [], result: list, pagination: { count: list.length, next: null } });
+      // Like the real Monime (seen 9 Oct 2026): ?reference= is ignored, and the
+      // list comes a page at a time (limit, then `after` = the next cursor).
+      const all = [...accounts.values()];
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 10, 1), 50);
+      const after = url.searchParams.get("after");
+      const start = after ? all.findIndex((a) => a.id === after) + 1 : 0;
+      const page = all.slice(start, start + limit);
+      const next = start + limit < all.length ? page[page.length - 1].id : null;
+      const list = page.map((a) => accountView(a, url.searchParams.get("withBalance") === "true"));
+      return send(res, 200, { success: true, messages: [], result: list, pagination: { count: list.length, next } });
     }
     const account = path.match(/^\/v1\/financial-accounts\/([^/]+)$/);
     if (account && req.method === "GET") {

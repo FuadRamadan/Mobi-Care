@@ -202,7 +202,11 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     server uses the same lookup for pharmacy accounts (`payouts.ts`) only as a
     backup: it stores each account ID once created, so this does not cause
     duplicates in normal use. Follow-up: match the reference by listing the
-    accounts instead of relying on the filter.
+    accounts instead of relying on the filter. **Done 10 Oct 2026:** the
+    server and the setup script now page through the accounts (50 at a time)
+    and match the reference themselves, and refuse rather than answer "none"
+    past 5,000 accounts. The fake Monime now ignores the filter too, so local
+    runs take the same path.
 - 9 Oct 2026: Stage 7A step 4 done, step 5 started.
   - `run.sh --fresh --monime-live` started; the API logged "Payments: Monime
     (live mode)" and "Monime payments ready" (mode live). Pharmacy renamed to
@@ -336,7 +340,8 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   patient's order page. Still one live link per order: sharing retires the
   patient's own link first, and is refused (`PAYMENT_IN_PROGRESS`) if
   payment has already started on it; the patient's own Pay reuses a live
-  shared link. Migration `0036_monime_shared_payment_links.sql`. Tested with
+  shared link. Migration `0036_monime_shared_payment_links.sql` (in the
+  server's startup schema check since 10 Oct 2026). Tested with
   the fake Monime (18 checks) and unit tests; not yet tried on real Monime.
 - Sub-spaces: the account menu has **Spaces**. Current design uses one space;
   revisit only if Monime's sub-spaces bring a clear benefit (e.g. legal
