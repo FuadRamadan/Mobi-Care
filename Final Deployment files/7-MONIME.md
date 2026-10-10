@@ -318,6 +318,13 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     and `MobiCare - real `, removes `MONIME_ACCESS_TOKEN` from the
     development environment). Optional: move the Le 4.75 and Le 0.01 left in
     the two "Live check" accounts back to Holding from the dashboard.
+- 10 Oct 2026: **Stage 7A step 7 done** (Martha): live tokens `MobiCare -
+  online-2` and `MobiCare - real ` revoked in the Monime dashboard, and
+  `MONIME_ACCESS_TOKEN` removed from the development environment (a session
+  started afterwards has no token loaded). The development environment keeps
+  only non-secret settings (`MONIME_MODE`, `MONIME_SPACE_ID`,
+  `MONIME_HOLDING_ACCOUNT_ID`). Still in Monime: Le 4.75 and Le 0.01 in the two
+  "Live check" pharmacy accounts, Le 0.64 in Holding. Next: Stage 7B.
 - 10 Oct 2026: pharmacy portal **Cash out button** tested in a real browser
   (Chromium) against the fake Monime, 15 checks: the button stays disabled
   until a network and a valid amount are chosen (below Le 10 and above the
