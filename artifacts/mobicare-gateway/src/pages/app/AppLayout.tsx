@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
 import { Search, ShoppingBag, ClipboardList, Bell, User } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
@@ -24,6 +24,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     },
   });
   const unreadCount = unreadData?.unreadCount ?? 0;
+  const greeting = useFreetownGreeting();
 
   if (!user) return <Redirect to="/app" />;
 
@@ -54,12 +55,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </Link>
           {/* Alerts live in the bottom bar and Sign out in Profile, so the top
               bar greets the patient instead. */}
-          <div className="min-w-0 text-right leading-tight" data-testid="text-greeting">
-            <p className="font-display font-semibold text-[15px] truncate">
-              Hello, <span data-testid="text-patient-name">{firstName(user.name)}</span>
-            </p>
-            <p className="text-xs text-white/75 truncate">What medicine do you need today?</p>
-          </div>
+          <p
+            className="min-w-0 truncate text-right font-display font-semibold text-[15px]"
+            data-testid="text-greeting"
+          >
+            {greeting}, <span data-testid="text-patient-name">{firstName(user.name)}</span>
+          </p>
         </div>
       </header>
 
@@ -97,6 +98,28 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </nav>
     </div>
   );
+}
+
+/**
+ * "Good morning / afternoon / evening" by the time in Freetown, whatever the
+ * phone's own time zone. Checked every minute so an open app moves on.
+ */
+function useFreetownGreeting(): string {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return freetownGreeting(now);
+}
+
+function freetownGreeting(at: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Freetown', hour: '2-digit', hourCycle: 'h23' }).format(at),
+  );
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 /** "Aminata Kamara" → "Aminata"; a blank name still greets. */

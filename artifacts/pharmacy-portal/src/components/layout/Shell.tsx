@@ -111,7 +111,7 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <MobiCareLogo markClassName="h-8" textClassName="text-sm" />
+          <MobiCareLogo />
           <div className="min-w-0">
             <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
               Pharmacy Portal

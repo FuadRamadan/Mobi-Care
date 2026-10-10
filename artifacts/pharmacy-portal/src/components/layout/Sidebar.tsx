@@ -83,7 +83,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="w-60 max-w-full bg-sidebar text-sidebar-foreground h-[100dvh] flex flex-col border-r border-sidebar-border shadow-md z-10 relative">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4 flex flex-col items-start gap-2 border-b border-sidebar-border/40">
-        <MobiCareLogo onDark markClassName="h-7" textClassName="text-lg" />
+        <MobiCareLogo />
         <p className="pl-1 text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/60 leading-tight">
           Pharmacy Portal
         </p>
