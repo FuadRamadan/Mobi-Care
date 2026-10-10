@@ -285,6 +285,35 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     Le 0.55, pharmacy share Le 10.45). Checkout session
     `scs-k6VkTKj89Hzxq2esUfk9FqCziBp`: Monime reports SLE 1100 into Holding;
     link expires 18:55 UTC. Waiting on Martha's payment.
+  - Martha paid Le 11.00 with Orange Money (18:05 UTC). Monime payment
+    `spm-k6VkU4HcDfgiptuF1fC7qTGF8ZU`, completed, fee `Base` Le 0.11 (1%).
+    The container restarted between turns and stopped the local server;
+    restarted without `--fresh` (database kept), and the payment check
+    marked the order **paid** at once.
+  - Confirmed → ready → collected. New account "Pharmacy: Live check - City
+    Pharmacy, Lumley" `fac-k6VkUPvWdoKF4haPTxufUwukQY5`; internal transfer
+    `trn-k6VkUPxNMvsF4XwYCh1WFhduyeZ`, Le 10.45, completed, no fee. Portal:
+    available Le 10.45, max cash-out Le 10.34 after the 5-minute check.
+  - Payout number set to Martha's Orange Money in the local database only
+    (no change date). Cash-out Le 10.34 to Orange Money from the pharmacy
+    portal API: Monime payout `pyt-k6VkUmTbJa6rg3PrdNbHDzyXfXK`,
+    **completed** within seconds, Orange reference `CI261010.1814.A79155`,
+    fee `Base` **Le 0.10**. MobiCare marked it completed at the next check
+    (18:19 UTC) and replaced its fee estimate (Le 0.11, 1% rounded up) with
+    Monime's real Le 0.10.
+  - Balances afterwards: Holding Le 0.64 (Le 0.20 from 9 Oct + Le 0.44 from
+    this order); new pharmacy account Le 0.01 (the estimate was one cent
+    above the real fee); first pharmacy account Le 4.75, unchanged. Portal
+    and HQ Settlements: paid out Le 10.34, owed to pharmacies Le 0.01,
+    matching Monime. HQ shows MobiCare share Le 0.44 against Holding Le 0.64:
+    the Le 0.20 is 9 Oct's revenue, unknown to this rebuilt database.
+  - **Stage 7A step 6 done.** Real fees: collection 1%, internal transfer
+    free, payout Le 0.10 on Le 10.34 (about 1%; Monime appears to round
+    down, MobiCare's estimate rounds up, so pharmacies are never short).
+    Local server stopped. Next: step 7 (Martha revokes `MobiCare - online-2`
+    and `MobiCare - real `, removes `MONIME_ACCESS_TOKEN` from the
+    development environment). Optional: move the Le 4.75 and Le 0.01 left in
+    the two "Live check" accounts back to Holding from the dashboard.
 - 9 Oct 2026: added **"Ask someone else to pay"** (Martha's request). On an
   unpaid order the patient can make a link to send to someone else by
   WhatsApp, copy or the phone's share menu. That link shows Monime one line,
