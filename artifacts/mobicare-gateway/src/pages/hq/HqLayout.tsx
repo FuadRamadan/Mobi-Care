@@ -67,8 +67,10 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
   const { user, logout } = useHqAuth();
   const [location, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const newestNotificationId = useRef<string | null>(null);
-  const { data: notifications = [] } = useListHqNotifications({
+  // The newest notification already seen: undefined until the first list
+  // arrives, null when that list was empty.
+  const newestNotificationId = useRef<string | null | undefined>(undefined);
+  const { data: notifications = [], isSuccess: notificationsLoaded } = useListHqNotifications({
     query: {
       queryKey: getListHqNotificationsQueryKey(),
       enabled: !!user,
@@ -94,20 +96,19 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
   }, [title]);
 
   useEffect(() => {
+    if (!notificationsLoaded) return;
     const newest = notifications[0];
-    if (!newest) return;
-
-    if (
-      newestNotificationId.current &&
-      newestNotificationId.current !== newest.id &&
-      (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready')
-    ) {
+    const seen = newestNotificationId.current;
+    newestNotificationId.current = newest?.id ?? null;
+    // The first list is what was already there: pop up only what arrives
+    // after it, including the very first notification HQ ever gets.
+    if (seen === undefined || !newest || newest.id === seen) return;
+    if (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready') {
       toast.info(newest.title, {
         description: <span className="whitespace-pre-line break-words">{newest.body}</span>,
       });
     }
-    newestNotificationId.current = newest.id;
-  }, [notifications]);
+  }, [notifications, notificationsLoaded]);
 
   const refreshNotifications = () => {
     queryClient.invalidateQueries({ queryKey: getListHqNotificationsQueryKey() });

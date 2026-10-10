@@ -2,6 +2,8 @@ import { lazy, Suspense, type ReactNode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
+// HQ's notification pop-ups use sonner's toast(); the patient app uses useToast().
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
@@ -149,6 +151,7 @@ function App() {
           </PatientAuthProvider>
         </HqAuthProvider>
         <Toaster />
+        <SonnerToaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
