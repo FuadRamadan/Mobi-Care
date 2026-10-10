@@ -272,6 +272,19 @@ cash-out), and MobiCare's few Leones of commission in Holding.
   in the first one (`fac-k6ViXy8cSMyMntxbkZmcuMdqwYo`) until moved from the
   Monime dashboard. Needs a new short token with all six roles (Payout
   Admin) and a new session; Martha gives her Orange Money number in chat.
+- 10 Oct 2026: step 6 resumed.
+  - New token `MobiCare - online-2` (`pat-k6VkS67wLJnNbmA5irKCEBnBMZm`),
+    live, active until 10 Dec 2026. All five list calls answer 200, payouts
+    included, so it has Payout Admin. Revoke it in step 7.
+  - Balances before: Holding Le 0.20, first "Live check" account
+    (`fac-k6ViXy8cSMyMntxbkZmcuMdqwYo`) Le 4.75, as left on 9 Oct.
+  - `run.sh --fresh --monime-live` started ("Monime payments ready", live).
+    New pharmacy ID `ff4dfb32-677b-46d9-a72f-73b68a92c209`.
+  - Paracetamol (Generic) set to Le 11.00. Order
+    `b5847f09-4a04-4be8-b956-205ab9ecc9c4`, collection, Le 11.00 (commission
+    Le 0.55, pharmacy share Le 10.45). Checkout session
+    `scs-k6VkTKj89Hzxq2esUfk9FqCziBp`: Monime reports SLE 1100 into Holding;
+    link expires 18:55 UTC. Waiting on Martha's payment.
 - 9 Oct 2026: added **"Ask someone else to pay"** (Martha's request). On an
   unpaid order the patient can make a link to send to someone else by
   WhatsApp, copy or the phone's share menu. That link shows Monime one line,
