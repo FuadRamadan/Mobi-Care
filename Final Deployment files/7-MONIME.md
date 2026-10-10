@@ -314,6 +314,20 @@ cash-out), and MobiCare's few Leones of commission in Holding.
     and `MobiCare - real `, removes `MONIME_ACCESS_TOKEN` from the
     development environment). Optional: move the Le 4.75 and Le 0.01 left in
     the two "Live check" accounts back to Holding from the dashboard.
+- 10 Oct 2026: pharmacy portal **Cash out button** tested in a real browser
+  (Chromium) against the fake Monime, 15 checks: the button stays disabled
+  until a network and a valid amount are chosen (below Le 10 and above the
+  balance are refused with a message); the summary shows the 1% fee; the
+  click sends `{amountMinor: 2000, provider: "m17"}`; Monime (fake) pays the
+  registered Orange number; the history goes Sending → Sent within 10 s
+  without a reload; a refused payout shows "Did not go through" with the
+  reason, and the money is back in the balance.
+  - Found and fixed: the portal mounted one toast system while every page
+    used another (`sonner`), so **no pop-up message ever showed** in the
+    pharmacy portal: not the cash-out confirmation, not errors, not order or
+    stock saves. The portal now mounts sonner's toaster. HQ's notification
+    pop-ups had the same gap; the gateway now mounts both (the patient app
+    keeps its own).
 - 9 Oct 2026: added **"Ask someone else to pay"** (Martha's request). On an
   unpaid order the patient can make a link to send to someone else by
   WhatsApp, copy or the phone's share menu. That link shows Monime one line,
