@@ -49,7 +49,7 @@ export default function Login() {
           <div>
             <a
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
+              className="flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to MobiCare

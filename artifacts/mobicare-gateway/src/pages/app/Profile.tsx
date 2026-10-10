@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, User as UserIcon } from 'lucide-react';
+import { Camera, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { PrivacyPanel } from './PrivacyPanel';
 import { SignInMethods } from './SignInMethods';
 
 export default function PatientProfilePage() {
-  const { user, updateUserName } = usePatientAuth();
+  const { user, updateUserName, logout } = usePatientAuth();
   const { data: profile, isLoading } = useGetPatientProfile({
     query: {
       queryKey: getGetPatientProfileQueryKey(),
@@ -224,6 +224,17 @@ export default function PatientProfilePage() {
           <PrivacyPanel hasPassword={profile?.hasPassword !== false} />
         </div>
       </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full rounded-full h-12 text-md border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+        onClick={logout}
+        data-testid="button-logout"
+      >
+        <LogOut className="w-4 h-4" />
+        Sign out
+      </Button>
     </div>
   );
 }
