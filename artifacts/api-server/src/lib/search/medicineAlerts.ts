@@ -78,7 +78,8 @@ async function windows(now: Date): Promise<MedicineWindow[]> {
       coalesce(matched_drug_name, initcap(normalized_query)) AS medicine,
       coalesce(area_zone, area_district, 'Unknown') AS area
     FROM search_events
-    WHERE unavailable_reason IS NOT NULL AND normalized_query IS NOT NULL
+    WHERE unavailable_reason IS NOT NULL AND unavailable_reason <> 'misspelled'
+      AND normalized_query IS NOT NULL
       AND created_at >= ${earlierStart} AND created_at <= ${now}`;
   const [counts, reasons, areas] = await Promise.all([
     db.execute(sql`SELECT medicine,

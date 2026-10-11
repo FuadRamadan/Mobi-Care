@@ -99,7 +99,7 @@ export default function NotFoundReport({ start, end, reloadKey }: { start: strin
         <div className="max-w-2xl">
           <h2 className="text-lg font-semibold">Medicines not found</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            What patients searched for and could not get, why, and where. Spelling variants are counted as one medicine.
+            What patients searched for and could not get, why, and where. Spelling variants are counted as one medicine; a misspelling of a medicine that is in stock is not counted at all.
             Only searches from patients who leave "Help improve medicine access" on are counted.
           </p>
         </div>

@@ -11,6 +11,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
+      // Top right, below the page header: at the bottom they covered the
+      // buttons pharmacists press most (save, approve, next page).
+      position="top-right"
+      offset={72}
       className="toaster group"
       toastOptions={{
         classNames: {

@@ -539,6 +539,7 @@ CREATE TABLE "public"."delivery_zones" (
     "description" "text" DEFAULT ''::"text" NOT NULL,
     "boundary" "jsonb" NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
+    "deleted_at" timestamp with time zone,
     "updated_by_hq_staff_id" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
@@ -1105,6 +1106,8 @@ CREATE TABLE "public"."prescriptions" (
     "reject_note" "text",
     "reviewed_at" timestamp with time zone,
     "order_id" "uuid",
+    "downloaded_at" timestamp with time zone,
+    "file_deleted_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -2069,6 +2072,13 @@ CREATE INDEX "pharmacy_cashouts_status_idx" ON "public"."pharmacy_cashouts" USIN
 
 
 --
+-- Name: prescriptions_file_cleanup_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "prescriptions_file_cleanup_idx" ON "public"."prescriptions" USING "btree" ("downloaded_at") WHERE (("downloaded_at" IS NOT NULL) AND ("file_deleted_at" IS NULL));
+
+
+--
 -- Name: saved_api_request_execution_claims_actor_created_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2564,11 +2574,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-11 07:46:28.716131+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-11 17:30:01.626825+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-11 07:46:28.71892+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-11 17:30:01.630288+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-11 07:46:28.756946+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-11 17:30:01.695383+00')
 ON CONFLICT DO NOTHING;

@@ -6,6 +6,7 @@ import { startMonimeJobs, stopMonimeJobs } from "./lib/monime/service";
 import { reencryptStoredCredentials } from "./lib/secretRotation";
 import { startSecurityEventPruning } from "./lib/securityEvents";
 import { startMedicineAlerts, stopMedicineAlerts } from "./lib/search/medicineAlerts";
+import { startPrescriptionFileCleanup, stopPrescriptionFileCleanup } from "./lib/prescriptionFiles";
 import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -189,6 +190,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "prescription downloads and zone deletion (migration 0038)",
+      query: sql`
+        SELECT (
+          SELECT count(*) FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND ((table_name = 'prescriptions' AND column_name IN ('downloaded_at', 'file_deleted_at'))
+              OR (table_name = 'delivery_zones' AND column_name = 'deleted_at'))
+        ) = 3 AS exists
+      `,
+    },
+    {
       label: "search insights: area and why not found (migration 0037)",
       query: sql`
         SELECT EXISTS (
@@ -355,12 +367,14 @@ async function start(): Promise<void> {
     startMonimeJobs();
     startSecurityEventPruning();
     startMedicineAlerts();
+    startPrescriptionFileCleanup();
   });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Graceful shutdown started");
     stopMonimeJobs();
     stopMedicineAlerts();
+    stopPrescriptionFileCleanup();
     server.close(async (error) => {
       if (error) logger.error({ err: error }, "HTTP server close failed");
       await pool.end().catch((err) =>

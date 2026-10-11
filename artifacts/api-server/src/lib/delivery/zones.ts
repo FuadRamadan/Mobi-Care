@@ -6,7 +6,7 @@ import {
   type DeliveryZone,
   type DeliveryZoneFee,
 } from "@workspace/db/schema";
-import { asc } from "drizzle-orm";
+import { asc, isNull } from "drizzle-orm";
 import { boundariesOverlap, type Boundary, type Position } from "./geometry.js";
 import {
   feeInForce,
@@ -28,7 +28,8 @@ type Reader = Pick<typeof db, "select">;
 
 export async function loadZones(now = new Date(), reader: Reader = db): Promise<ZoneWithFees[]> {
   const [zones, fees] = await Promise.all([
-    reader.select().from(deliveryZonesTable).orderBy(asc(deliveryZonesTable.name)),
+    // Deleted zones are gone everywhere: HQ, pricing, overlap checks.
+    reader.select().from(deliveryZonesTable).where(isNull(deliveryZonesTable.deletedAt)).orderBy(asc(deliveryZonesTable.name)),
     reader.select().from(deliveryZoneFeesTable),
   ]);
   return zones.map((zone) => {

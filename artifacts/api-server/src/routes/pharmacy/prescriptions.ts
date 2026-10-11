@@ -11,6 +11,12 @@ import { AuthRequest } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { mintImageToken } from "../../lib/signedUrl.js";
 import { createPatientNotification } from "../../lib/patientNotifications.js";
+import {
+  fileState,
+  PrescriptionFileMissing,
+  readPrescriptionFile,
+} from "../../lib/prescriptionFiles.js";
+import { shortOrderNumber } from "../../lib/monime/checkout.js";
 
 const router = safeRouter();
 
@@ -57,6 +63,7 @@ router.get("/", async (req: AuthRequest, res) => {
   res.json(
     rows.map(({ imageKey: _k, ...r }) => ({
       ...r,
+      ...fileState(r),
       requestedItems: requested.filter((item) => item.orderId === r.orderId),
     })),
   );
@@ -94,7 +101,86 @@ router.get("/:id", async (req: AuthRequest, res) => {
         .where(eq(orderItemsTable.orderId, row.orderId))
     : [];
   const { imageKey: _k, ...safe } = row;
-  res.json({ ...safe, requestedItems });
+  res.json({ ...safe, ...fileState(row), requestedItems });
+});
+
+// ── The prescription image itself ─────────────────────────────────────────────
+// Sent with the pharmacy's own sign-in, so the portal can show it in the page
+// and save it, without opening a new window (which browsers block when the
+// link takes a moment to arrive).
+//
+// ?download=1 is the pharmacy saving its own copy. The first one starts the
+// clock: PRESCRIPTION_FILE_KEEP_MS later the file is deleted from storage.
+router.get("/:id/file", async (req: AuthRequest, res) => {
+  const pharmacyId = req.pharmacy!.sub;
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
+  const download = req.query.download === "1";
+
+  const [row] = await db
+    .select()
+    .from(prescriptionsTable)
+    .where(and(eq(prescriptionsTable.id, id.data), eq(prescriptionsTable.pharmacyId, pharmacyId)))
+    .limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Prescription not found" });
+    return;
+  }
+  if (row.fileDeletedAt) {
+    res.status(410).json({
+      error: "This prescription was removed from MobiCare after your pharmacy downloaded it. Use the copy saved on your computer.",
+      code: "PRESCRIPTION_FILE_REMOVED",
+      ...fileState(row),
+    });
+    return;
+  }
+
+  let file;
+  try {
+    file = await readPrescriptionFile(row.imageKey);
+  } catch (error) {
+    if (error instanceof PrescriptionFileMissing) {
+      req.log?.warn({ prescriptionId: row.id, reason: error.message }, "Prescription file missing");
+      res.status(404).json({
+        error: "The prescription image could not be found in storage. Ask the patient to upload it again.",
+        code: "PRESCRIPTION_FILE_MISSING",
+      });
+      return;
+    }
+    throw error;
+  }
+
+  if (download) {
+    // Only the first download sets the time, so downloading again (another
+    // computer, a lost file) never extends the 15 minutes.
+    const [marked] = await db
+      .update(prescriptionsTable)
+      .set({ downloadedAt: new Date() })
+      .where(and(eq(prescriptionsTable.id, row.id), isNull(prescriptionsTable.downloadedAt)))
+      .returning({ downloadedAt: prescriptionsTable.downloadedAt });
+    if (marked) {
+      await writeAudit({
+        actorType: "pharmacy",
+        actorId: pharmacyId,
+        actorName: req.pharmacy!.name,
+        action: "prescription.downloaded",
+        entityType: "prescription",
+        entityId: row.id,
+        details: { orderId: row.orderId, fileDeletedAfterMinutes: 15 },
+      });
+    }
+    const day = (row.createdAt ?? new Date()).toISOString().slice(0, 10);
+    const reference = row.orderId ? shortOrderNumber(row.orderId) : row.id.slice(0, 8).toUpperCase();
+    res.setHeader("Content-Disposition", `attachment; filename="MobiCare-prescription-${reference}-${day}.${file.extension}"`);
+  }
+
+  res.setHeader("Content-Type", file.contentType);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.send(file.bytes);
 });
 
 // ── Mint signed image URL ─────────────────────────────────────────────────────

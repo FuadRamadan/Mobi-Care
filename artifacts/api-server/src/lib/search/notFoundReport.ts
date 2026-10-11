@@ -205,7 +205,8 @@ export async function notFoundReport(start: Date, end: Date, shareable: boolean,
       matched_drug_id IS NOT NULL AS in_catalogue,
       coalesce(area_zone, area_district, 'Unknown') AS area
     FROM search_events
-    WHERE unavailable_reason IS NOT NULL AND normalized_query IS NOT NULL${areaFilter}`;
+    WHERE unavailable_reason IS NOT NULL AND unavailable_reason <> 'misspelled'
+      AND normalized_query IS NOT NULL${areaFilter}`;
   const inRange = sql`created_at >= ${start} AND created_at <= ${end}`;
   const [totals, medicines, reasons, areas, typed, weekly] = await Promise.all([
     db.execute(sql`SELECT

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, MapPin, Phone, Store } from 'lucide-react';
+import { AlertTriangle, Copy, MapPin, Phone, Store } from 'lucide-react';
 import {
   useListDispatchOrders,
   useListCouriers,
@@ -18,6 +18,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+
+/** The stages a delivery passes through in Dispatch, for the "Show" dropdown. */
+type Stage = 'action' | 'ready' | 'assigned' | 'picked_up' | 'delivering' | 'all';
+
+/** Waiting on HQ: a courier to assign, a pick-up to move on, or an unconfirmed delivery. */
+function needsAction(o: HqOrder): boolean {
+  return o.status === 'ready' || o.status === 'picked_up' || (o.status === 'delivering' && !o.deliveryConfirmedAt);
+}
+
+const STAGES: Array<{ value: Stage; label: string; matches: (o: HqOrder) => boolean }> = [
+  { value: 'action', label: 'Needs HQ action', matches: needsAction },
+  { value: 'ready', label: 'Waiting for a courier', matches: (o) => o.status === 'ready' },
+  { value: 'assigned', label: 'Courier assigned, not collected yet', matches: (o) => o.status === 'assigned' },
+  { value: 'picked_up', label: 'Collected from the pharmacy', matches: (o) => o.status === 'picked_up' },
+  { value: 'delivering', label: 'Out for delivery', matches: (o) => o.status === 'delivering' },
+  { value: 'all', label: 'All deliveries in progress', matches: () => true },
+];
 
 /** Google Maps link to the patient's delivery pin, when they dropped one. */
 function mapLink(o: HqOrder): string | null {
@@ -100,6 +117,10 @@ export default function HqDispatch() {
   const couriers = (couriersData ?? []).filter((c) => c.isActive);
 
   const [selection, setSelection] = useState<Record<string, string>>({});
+  const [stage, setStage] = useState<Stage>('action');
+  const stageInfo = STAGES.find((s) => s.value === stage)!;
+  const shown = orders.filter(stageInfo.matches);
+  const waitingForCourier = orders.filter((o) => o.status === 'ready').length;
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: getListDispatchOrdersQueryKey() });
@@ -133,13 +154,46 @@ export default function HqDispatch() {
       <p className="text-sm text-muted-foreground mb-4">
         Assign an active courier as soon as a pharmacy marks a delivery order as packaged.
       </p>
+      {waitingForCourier > 0 && (
+        <div
+          className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-900"
+          role="status"
+          data-testid="banner-waiting-for-courier"
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          {waitingForCourier === 1
+            ? '1 packed order is waiting for a courier.'
+            : `${waitingForCourier} packed orders are waiting for a courier.`}
+        </div>
+      )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Show</span>
+        <div className="w-72 max-w-full">
+          <Select value={stage} onValueChange={(v) => setStage(v as Stage)}>
+            <SelectTrigger data-testid="select-dispatch-stage">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label} ({orders.filter(s.matches).length})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : orders.length === 0 ? (
         <EmptyState>No delivery orders in the dispatch pipeline.</EmptyState>
+      ) : shown.length === 0 ? (
+        <EmptyState>
+          Nothing here. {stage === 'action' ? 'No delivery is waiting on HQ right now.' : 'Choose another stage above.'}
+        </EmptyState>
       ) : (
         <div className="grid gap-3">
-          {orders.map((o) => (
+          {shown.map((o) => (
             <Card key={o.id} data-testid={`card-dispatch-${o.id}`}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex flex-wrap items-center gap-4 justify-between">

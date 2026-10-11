@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { PrescriptionRejectReason } from './prescriptionRejectReason';
+import type { PrescriptionRequestedItemsItem } from './prescriptionRequestedItemsItem';
 import type { PrescriptionStatus } from './prescriptionStatus';
 
 export interface Prescription {
@@ -24,6 +25,23 @@ export interface Prescription {
   reviewedAt?: string | null;
   /** @nullable */
   orderId?: string | null;
+  /**
+     * When the pharmacy first downloaded the image to its computer.
+     * @nullable
+     */
+  downloadedAt?: string | null;
+  /**
+     * When the image is deleted from MobiCare (15 minutes after the first download).
+     * @nullable
+     */
+  fileDeletesAt?: string | null;
+  /**
+     * When the image was deleted from MobiCare. The prescription record stays.
+     * @nullable
+     */
+  fileDeletedAt?: string | null;
+  /** The medicines on the order this prescription came with. */
+  requestedItems?: PrescriptionRequestedItemsItem[];
   createdAt: string;
   updatedAt: string;
 }

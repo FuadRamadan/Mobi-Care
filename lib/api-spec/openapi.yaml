@@ -625,6 +625,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ImageUrlResponse"
 
+  /pharmacy/prescriptions/{id}/file:
+    get:
+      operationId: getPrescriptionFile
+      tags: [prescriptions]
+      summary: The prescription image, for showing in the portal or saving to the pharmacy's computer
+      description: >
+        With the query string download=1 the response is an attachment, and the first download
+        starts the clock: 15 minutes later the image is deleted from MobiCare
+        (the prescription record stays). Downloading again never extends it.
+        After deletion this answers 410 with code PRESCRIPTION_FILE_REMOVED.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The image
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "404":
+          description: No such prescription for this pharmacy, or its image is missing from storage
+        "410":
+          description: The image was deleted after the pharmacy downloaded it
+
   /pharmacy/analytics/online:
     get:
       operationId: getPharmacyOnlineAnalytics
@@ -3443,6 +3472,28 @@ paths:
           description: Overlaps an active zone, or the name is taken
         "422":
           description: The outline breaks a drawing rule
+    delete:
+      operationId: deleteDeliveryZone
+      tags: [hq]
+      summary: Delete a zone (immediately)
+      description: >
+        The zone stops pricing deliveries and leaves HQ and search areas. Past
+        orders keep their copy of the zone name and the fee they paid; the
+        row is kept, renamed, so they can still point at it. The name becomes
+        free for a new zone.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: No such zone, or already deleted
 
   /hq/delivery-zones/{id}/fee:
     put:
@@ -5661,6 +5712,28 @@ components:
         orderId:
           type: ["string", "null"]
 
+        downloadedAt:
+          type: ["string", "null"]
+          description: When the pharmacy first downloaded the image to its computer.
+        fileDeletesAt:
+          type: ["string", "null"]
+          description: When the image is deleted from MobiCare (15 minutes after the first download).
+        fileDeletedAt:
+          type: ["string", "null"]
+          description: When the image was deleted from MobiCare. The prescription record stays.
+
+        requestedItems:
+          type: array
+          description: The medicines on the order this prescription came with.
+          items:
+            type: object
+            required: [drugId, drugName, quantity]
+            properties:
+              orderId: { type: ["string", "null"] }
+              drugId: { type: string }
+              drugName: { type: string }
+              quantity: { type: number }
+
         createdAt:
           type: string
 
@@ -5912,6 +5985,11 @@ components:
               type: number
             unconfirmedDeliveries:
               type: number
+            dispatchAttention:
+              type: number
+              description: >
+                Delivery orders waiting on HQ in Dispatch: ready for a courier,
+                picked up, or out for delivery without the patient's confirmation.
             completedRevenueLeones:
               type: number
               description: Sum of orders in delivered or collected status with a completed_at timestamp.

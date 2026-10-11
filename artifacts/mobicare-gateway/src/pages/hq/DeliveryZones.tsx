@@ -6,13 +6,14 @@ import {
   useScheduleDeliveryZoneFee,
   useCancelScheduledDeliveryZoneFee,
   useSetDeliveryZoneStatus,
+  useDeleteDeliveryZone,
   usePreviewDeliveryZone,
   getListDeliveryZonesQueryKey,
   type DeliveryZone,
   type DeliveryZonePreview,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Clock, MapPinned, Pencil, Plus, Power, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, MapPinned, Pencil, Plus, Power, Trash2, Undo2, X } from 'lucide-react';
 import HqLayout from './HqLayout';
 import { EmptyState, formatLeones } from './shared';
 import { useHqAuth } from '@/hq/auth';
@@ -99,6 +100,8 @@ export default function HqDeliveryZones() {
   const scheduleFee = useScheduleDeliveryZoneFee();
   const cancelFee = useCancelScheduledDeliveryZoneFee();
   const setStatus = useSetDeliveryZoneStatus();
+  const deleteZone = useDeleteDeliveryZone();
+  const [deletingZone, setDeletingZone] = useState<DeliveryZone | null>(null);
   const previewZone = usePreviewDeliveryZone();
 
   const mapZones = useMemo(
@@ -254,6 +257,21 @@ export default function HqDeliveryZones() {
       await refresh();
     } catch (err) {
       setStatusZone(null);
+      onError(err);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deletingZone) return;
+    const zone = deletingZone;
+    try {
+      await deleteZone.mutateAsync({ id: zone.id });
+      toast({ title: 'Zone deleted', description: `${zone.name} no longer takes deliveries. Past orders keep its name and fee.` });
+      if (editing?.kind === 'edit' && editing.zone.id === zone.id) stopEditing();
+      setDeletingZone(null);
+      await refresh();
+    } catch (err) {
+      setDeletingZone(null);
       onError(err);
     }
   }
@@ -453,6 +471,15 @@ export default function HqDeliveryZones() {
                           <Button size="sm" variant="ghost" onClick={() => setStatusZone(zone)}>
                             <Power className="w-3.5 h-3.5" /> {zone.isActive ? 'Switch off' : 'Switch on'}
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeletingZone(zone)}
+                            data-testid={`button-delete-zone-${zone.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -530,6 +557,30 @@ export default function HqDeliveryZones() {
             <AlertDialogCancel>Keep as it is</AlertDialogCancel>
             <AlertDialogAction onClick={toggleStatus}>
               {statusZone?.isActive ? 'Switch off' : 'Switch on'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deletingZone} onOpenChange={(open) => !open && setDeletingZone(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deletingZone?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The zone disappears from this page and no delivery is priced in it from now. Past orders keep its
+              name and the fee they paid. This cannot be undone: to deliver there again, draw a new zone.
+              {deletingZone && (pharmaciesByZone.get(deletingZone.id) ?? []).length > 0 && (
+                <> These pharmacies become collection only unless another zone covers them: {(pharmaciesByZone.get(deletingZone.id) ?? []).join(', ')}.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep the zone</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-zone"
+            >
+              Delete zone
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

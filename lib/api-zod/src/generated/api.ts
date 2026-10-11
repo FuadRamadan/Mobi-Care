@@ -798,6 +798,15 @@ export const ListPrescriptionsResponseItem = zod.object({
   "rejectNote": zod.string().nullish(),
   "reviewedAt": zod.string().nullish(),
   "orderId": zod.string().nullish(),
+  "downloadedAt": zod.string().nullish().describe('When the pharmacy first downloaded the image to its computer.'),
+  "fileDeletesAt": zod.string().nullish().describe('When the image is deleted from MobiCare (15 minutes after the first download).'),
+  "fileDeletedAt": zod.string().nullish().describe('When the image was deleted from MobiCare. The prescription record stays.'),
+  "requestedItems": zod.array(zod.object({
+  "orderId": zod.string().nullish(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "quantity": zod.number()
+})).optional().describe('The medicines on the order this prescription came with.'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -822,6 +831,15 @@ export const GetPrescriptionResponse = zod.object({
   "rejectNote": zod.string().nullish(),
   "reviewedAt": zod.string().nullish(),
   "orderId": zod.string().nullish(),
+  "downloadedAt": zod.string().nullish().describe('When the pharmacy first downloaded the image to its computer.'),
+  "fileDeletesAt": zod.string().nullish().describe('When the image is deleted from MobiCare (15 minutes after the first download).'),
+  "fileDeletedAt": zod.string().nullish().describe('When the image was deleted from MobiCare. The prescription record stays.'),
+  "requestedItems": zod.array(zod.object({
+  "orderId": zod.string().nullish(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "quantity": zod.number()
+})).optional().describe('The medicines on the order this prescription came with.'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -852,6 +870,15 @@ export const ApprovePrescriptionResponse = zod.object({
   "rejectNote": zod.string().nullish(),
   "reviewedAt": zod.string().nullish(),
   "orderId": zod.string().nullish(),
+  "downloadedAt": zod.string().nullish().describe('When the pharmacy first downloaded the image to its computer.'),
+  "fileDeletesAt": zod.string().nullish().describe('When the image is deleted from MobiCare (15 minutes after the first download).'),
+  "fileDeletedAt": zod.string().nullish().describe('When the image was deleted from MobiCare. The prescription record stays.'),
+  "requestedItems": zod.array(zod.object({
+  "orderId": zod.string().nullish(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "quantity": zod.number()
+})).optional().describe('The medicines on the order this prescription came with.'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -880,6 +907,15 @@ export const RejectPrescriptionResponse = zod.object({
   "rejectNote": zod.string().nullish(),
   "reviewedAt": zod.string().nullish(),
   "orderId": zod.string().nullish(),
+  "downloadedAt": zod.string().nullish().describe('When the pharmacy first downloaded the image to its computer.'),
+  "fileDeletesAt": zod.string().nullish().describe('When the image is deleted from MobiCare (15 minutes after the first download).'),
+  "fileDeletedAt": zod.string().nullish().describe('When the image was deleted from MobiCare. The prescription record stays.'),
+  "requestedItems": zod.array(zod.object({
+  "orderId": zod.string().nullish(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "quantity": zod.number()
+})).optional().describe('The medicines on the order this prescription came with.'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -901,6 +937,17 @@ export const GetPrescriptionImageUrlResponse = zod.object({
   "expiresAt": zod.string(),
   "note": zod.string().nullish()
 })
+
+
+/**
+ * With the query string download=1 the response is an attachment, and the first download starts the clock: 15 minutes later the image is deleted from MobiCare (the prescription record stays). Downloading again never extends it. After deletion this answers 410 with code PRESCRIPTION_FILE_REMOVED.
+ * @summary The prescription image, for showing in the portal or saving to the pharmacy's computer
+ */
+export const GetPrescriptionFileParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetPrescriptionFileResponse = zod.unknown()
 
 
 /**
@@ -2539,6 +2586,7 @@ export const GetHqDashboardResponse = zod.object({
   "awaitingDispatch": zod.number(),
   "pendingPrescriptions": zod.number(),
   "unconfirmedDeliveries": zod.number(),
+  "dispatchAttention": zod.number().optional().describe('Delivery orders waiting on HQ in Dispatch: ready for a courier, picked up, or out for delivery without the patient\'s confirmation.\n'),
   "completedRevenueLeones": zod.number().describe('Sum of orders in delivered or collected status with a completed_at timestamp.')
 }),
   "ordersByStatus": zod.array(zod.object({
@@ -5010,6 +5058,17 @@ export const UpdateDeliveryZoneResponse = zod.object({
 }),zod.null()]),
   "updatedAt": zod.string()
 })
+
+
+/**
+ * The zone stops pricing deliveries and leaves HQ and search areas. Past orders keep their copy of the zone name and the fee they paid; the row is kept, renamed, so they can still point at it. The name becomes free for a new zone.
+ * @summary Delete a zone (immediately)
+ */
+export const DeleteDeliveryZoneParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteDeliveryZoneResponse = zod.void()
 
 
 /**

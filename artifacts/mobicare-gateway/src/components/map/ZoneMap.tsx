@@ -244,7 +244,9 @@ export function ZoneMap({
   return (
     <div
       style={{ height }}
-      className={`w-full rounded-xl border overflow-hidden bg-secondary/40 z-0 ${
+      // `relative isolate` keeps Leaflet's own layers (z-index 400 and up)
+      // inside the map, so dialogs open over it rather than under it.
+      className={`relative isolate w-full rounded-xl border overflow-hidden bg-secondary/40 z-0 ${
         draft ? '[&_.leaflet-container]:cursor-crosshair!' : ''
       }`}
     >

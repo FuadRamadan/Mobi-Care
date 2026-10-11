@@ -116,7 +116,7 @@ export function LocationPicker({
       <div
         ref={container}
         style={{ height }}
-        className="w-full rounded-2xl border overflow-hidden bg-secondary/40 z-0"
+        className="relative isolate w-full rounded-2xl border overflow-hidden bg-secondary/40 z-0"
         data-testid={testId}
       />
       <div className="flex flex-wrap items-center gap-2">

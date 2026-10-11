@@ -2198,6 +2198,84 @@ export const useGetPrescriptionImageUrl = <TError = ErrorType<unknown>,
       return useMutation(getGetPrescriptionImageUrlMutationOptions(options));
     }
 
+export const getGetPrescriptionFileUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/prescriptions/${id}/file`
+}
+
+/**
+ * With the query string download=1 the response is an attachment, and the first download starts the clock: 15 minutes later the image is deleted from MobiCare (the prescription record stays). Downloading again never extends it. After deletion this answers 410 with code PRESCRIPTION_FILE_REMOVED.
+ * @summary The prescription image, for showing in the portal or saving to the pharmacy's computer
+ */
+export const getPrescriptionFile = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetPrescriptionFileUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrescriptionFileQueryKey = (id: string,) => {
+    return [
+    `/api/pharmacy/prescriptions/${id}/file`
+    ] as const;
+    }
+
+
+export const getGetPrescriptionFileQueryOptions = <TData = Awaited<ReturnType<typeof getPrescriptionFile>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrescriptionFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrescriptionFileQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrescriptionFile>>> = ({ signal }) => getPrescriptionFile(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrescriptionFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrescriptionFileQueryResult = NonNullable<Awaited<ReturnType<typeof getPrescriptionFile>>>
+export type GetPrescriptionFileQueryError = ErrorType<void>
+
+
+/**
+ * @summary The prescription image, for showing in the portal or saving to the pharmacy's computer
+ */
+
+export function useGetPrescriptionFile<TData = Awaited<ReturnType<typeof getPrescriptionFile>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrescriptionFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrescriptionFileQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetPharmacyOnlineAnalyticsUrl = (params?: GetPharmacyOnlineAnalyticsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -12167,6 +12245,78 @@ export const useUpdateDeliveryZone = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateDeliveryZoneMutationOptions(options));
+    }
+
+export const getDeleteDeliveryZoneUrl = (id: string,) => {
+
+
+
+
+  return `/api/hq/delivery-zones/${id}`
+}
+
+/**
+ * The zone stops pricing deliveries and leaves HQ and search areas. Past orders keep their copy of the zone name and the fee they paid; the row is kept, renamed, so they can still point at it. The name becomes free for a new zone.
+ * @summary Delete a zone (immediately)
+ */
+export const deleteDeliveryZone = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteDeliveryZoneUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteDeliveryZoneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeliveryZone>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDeliveryZone>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteDeliveryZone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDeliveryZone>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDeliveryZone(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDeliveryZoneMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDeliveryZone>>>
+
+    export type DeleteDeliveryZoneMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a zone (immediately)
+ */
+export const useDeleteDeliveryZone = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeliveryZone>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDeliveryZone>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteDeliveryZoneMutationOptions(options));
     }
 
 export const getScheduleDeliveryZoneFeeUrl = (id: string,) => {

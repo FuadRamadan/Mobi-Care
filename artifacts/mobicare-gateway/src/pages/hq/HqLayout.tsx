@@ -44,11 +44,13 @@ const NAV: Array<{
   requiresIntegrations?: boolean;
   requiresSettlements?: boolean;
   requiresInsights?: boolean;
-  badge?: 'pendingPrescriptions' | 'unconfirmedDeliveries' | 'pendingSettlements';
+  badge?: 'pendingPrescriptions' | 'dispatchAttention' | 'pendingSettlements';
+  /** Shown in red and pulsing: work that is waiting on HQ right now. */
+  urgent?: boolean;
 }> = [
   { href: '/hq/dashboard', label: 'Command Centre', icon: LayoutDashboard },
   { href: '/hq/orders', label: 'All Orders', icon: Package, badge: 'pendingPrescriptions' },
-  { href: '/hq/dispatch', label: 'Dispatch', icon: Truck, badge: 'unconfirmedDeliveries' },
+  { href: '/hq/dispatch', label: 'Dispatch', icon: Truck, badge: 'dispatchAttention', urgent: true },
   { href: '/hq/pharmacies', label: 'Pharmacies', icon: Building2 },
   { href: '/hq/catalogue', label: 'Catalogue', icon: Pill },
   { href: '/hq/couriers', label: 'Couriers', icon: Bike },
@@ -151,7 +153,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
               (!item.requiresSettlements ||
                 user.canManageSettlements !== false) &&
                (!item.requiresInsights || user.canViewDataInsights === true),
-          ).map(({ href, label, icon: Icon, badge }) => (
+          ).map(({ href, label, icon: Icon, badge, urgent }) => (
             <Link
               key={href}
               href={href}
@@ -164,7 +166,17 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
             >
               <Icon className="w-4 h-4" />
                <span className="flex-1">{label}</span>
-               {badge && (queueCounts?.[badge] ?? 0) > 0 && <span className="min-w-5 rounded-full bg-amber-400 px-1.5 text-center text-[10px] font-bold text-dark-green">{queueCounts![badge] > 99 ? '99+' : queueCounts![badge]}</span>}
+               {badge && (queueCounts?.[badge] ?? 0) > 0 && (
+                 <span
+                   className={cn(
+                     'min-w-5 rounded-full px-1.5 text-center text-[10px] font-bold',
+                     urgent ? 'bg-red-500 text-white animate-pulse' : 'bg-amber-400 text-dark-green',
+                   )}
+                   data-testid={`badge-nav-${badge}`}
+                 >
+                   {queueCounts![badge]! > 99 ? '99+' : queueCounts![badge]}
+                 </span>
+               )}
             </Link>
           ))}
         </nav>
@@ -205,11 +217,15 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                 (!item.requiresSettlements ||
                    user.canManageSettlements !== false) &&
                 (!item.requiresInsights || user.canViewDataInsights === true),
-            ).map(({ href, label }) => (
-              <option key={href} value={href} className="text-foreground">
-                {label}
-              </option>
-            ))}
+            ).map(({ href, label, badge }) => {
+              // The phone menu has no room for badges, so the count goes in the name.
+              const waiting = badge ? queueCounts?.[badge] ?? 0 : 0;
+              return (
+                <option key={href} value={href} className="text-foreground">
+                  {waiting > 0 ? `${label} (${waiting})` : label}
+                </option>
+              );
+            })}
           </select>
           <button
             onClick={logout}

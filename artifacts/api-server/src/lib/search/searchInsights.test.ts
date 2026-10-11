@@ -47,9 +47,15 @@ test("a known medicine no pharmacy offers, and one in stock elsewhere", () => {
   assert.equal(classify({ returned: [], known: { drug: amox, listed: true, inStock: true }, closest: null }), null);
 });
 
-test("a misspelling of an available medicine is a search problem, not a supply one", () => {
-  const misspelled = classify({ returned: [], known: null, closest: { drug: amox, listed: true, inStock: true } });
-  assert.deepEqual(misspelled, { reason: "misspelled", drugId: "d-amox", drugName: "Amoxicillin" });
+test("a misspelling of an available medicine is not a medicine not found", () => {
+  // The patient is offered "Did you mean Amoxicillin?"; nothing is missing.
+  assert.equal(classify({ returned: [], known: null, closest: { drug: amox, listed: true, inStock: true } }), null);
+  // Misspelled AND unavailable is a real gap, counted under the real name.
+  assert.deepEqual(classify({ returned: [], known: null, closest: { drug: amox, listed: true, inStock: false } }), {
+    reason: "out_of_stock",
+    drugId: "d-amox",
+    drugName: "Amoxicillin",
+  });
   assert.equal(classify({ returned: [], known: null, closest: { drug: amox, listed: false, inStock: false } })?.reason, "not_listed");
 });
 

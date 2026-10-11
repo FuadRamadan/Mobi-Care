@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { 
   useListPrescriptions,
-  useGetPrescriptionImageUrl,
   useApprovePrescription,
   useRejectPrescription,
   Prescription,
@@ -11,11 +10,12 @@ import {
   getListPrescriptionsQueryKey,
   getGetAnalyticsOverviewQueryKey,
 } from "@workspace/api-client-react";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatTime } from "@/lib/format";
+import { fetchPrescriptionFile, PrescriptionFileError, saveToComputer } from "@/lib/prescriptionFile";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, FileImage, FileText, Search, CheckCircle, XCircle } from "lucide-react";
+import { Download, ExternalLink, FileImage, Search, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,11 +35,14 @@ import { Textarea } from "@/components/ui/textarea";
 export default function Prescriptions() {
   const [activeTab, setActiveTab] = useState("pending");
   const [search, setSearch] = useState("");
-  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: prescriptions, isLoading } = useListPrescriptions(undefined, {
     query: { queryKey: getListPrescriptionsQueryKey(), refetchInterval: 15_000 },
   });
+  // Looked up from the list on every refresh, so a download or the file's
+  // removal shows in the open review without closing it.
+  const selectedPrescription = prescriptions?.find((p) => p.id === selectedId) ?? null;
 
   const filteredPrescriptions = prescriptions?.filter(p => {
     if (search && !p.patientName.toLowerCase().includes(search.toLowerCase()) && 
@@ -114,7 +117,7 @@ export default function Prescriptions() {
                   <TableRow 
                     key={p.id} 
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setSelectedPrescription(p)}
+                    onClick={() => setSelectedId(p.id)}
                   >
                     <TableCell className="text-sm font-medium">{formatDateTime(p.createdAt)}</TableCell>
                     <TableCell className="text-sm">{p.patientName}</TableCell>
@@ -137,7 +140,7 @@ export default function Prescriptions() {
 
       <PrescriptionReviewSheet 
         prescription={selectedPrescription} 
-        onClose={() => setSelectedPrescription(null)} 
+        onClose={() => setSelectedId(null)} 
       />
     </div>
   );
@@ -145,7 +148,6 @@ export default function Prescriptions() {
 
 function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Prescription | null; onClose: () => void }) {
   const queryClient = useQueryClient();
-  const getImageUrl = useGetPrescriptionImageUrl();
   const approve = useApprovePrescription();
   const reject = useRejectPrescription();
   
@@ -166,15 +168,6 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
       setRejectReason("");
       setRejectNote("");
       onClose();
-    }
-  };
-
-  const handleViewImage = async () => {
-    try {
-      const res = await getImageUrl.mutateAsync({ id: prescription.id, data: { variant: "full" } });
-      window.open(res.url, "_blank");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to load image URL");
     }
   };
 
@@ -255,21 +248,7 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
 
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Document</h3>
-                <Button 
-                  variant="outline" 
-                  className="w-full h-24 border-dashed flex flex-col gap-2 hover:bg-muted/50 transition-colors"
-                  onClick={handleViewImage}
-                  disabled={getImageUrl.isPending}
-                >
-                  <FileImage className="w-6 h-6 text-muted-foreground" />
-                  <span className="font-medium text-primary flex items-center gap-1">
-                    {getImageUrl.isPending ? "Loading..." : "Open Secure Image Viewer"}
-                    <ExternalLink className="w-3 h-3" />
-                  </span>
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Image opens in a secure, signed URL that expires in 5 minutes.
-                </p>
+                <PrescriptionDocument prescription={prescription} />
               </section>
 
               {prescription.status === "rejected" && (
@@ -313,29 +292,12 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
                 </p>
               </div>
 
-              <div className="border rounded-md max-h-[300px] overflow-y-auto divide-y">
-                {inventory?.filter(i => i.isActive).map(item => (
-                  <div key={item.drugId} className="flex items-center gap-3 p-3 hover:bg-muted/30">
-                    <Checkbox 
-                      id={`drug-${item.drugId}`} 
-                      checked={selectedDrugs.has(item.drugId)}
-                      onCheckedChange={(checked) => {
-                        const newSet = new Set(selectedDrugs);
-                        if (checked) newSet.add(item.drugId);
-                        else newSet.delete(item.drugId);
-                        setSelectedDrugs(newSet);
-                      }}
-                    />
-                    <Label htmlFor={`drug-${item.drugId}`} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-sm">{item.drug.name}</div>
-                      <div className="text-xs text-muted-foreground">{item.drug.genericName || "—"}</div>
-                    </Label>
-                    {item.drug.tier === '1' && (
-                      <Badge variant="destructive" className="text-[10px]">Rx Only</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <ApprovedMedicinePicker
+                inventory={inventory ?? []}
+                requestedDrugIds={new Set((prescription.requestedItems ?? []).map((item) => item.drugId))}
+                selected={selectedDrugs}
+                onChange={setSelectedDrugs}
+              />
             </div>
           )}
 
@@ -411,5 +373,243 @@ function PrescriptionReviewSheet({ prescription, onClose }: { prescription: Pres
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * The prescription image, shown in the page, with a button to save it to this
+ * computer. MobiCare deletes its copy 15 minutes after the first download, so
+ * once it is gone the pharmacist is pointed to the saved copy.
+ */
+function PrescriptionDocument({ prescription }: { prescription: Prescription }) {
+  const queryClient = useQueryClient();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const removed = Boolean(prescription.fileDeletedAt);
+
+  useEffect(() => {
+    if (removed) return;
+    let cancelled = false;
+    let url: string | null = null;
+    setLoading(true);
+    setError(null);
+    fetchPrescriptionFile(prescription.id, false)
+      .then(({ blob }) => {
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setImageUrl(url);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof PrescriptionFileError ? e.message : "The prescription image could not be loaded. Try again.");
+        // Removed between the list loading and now: show that, not an error.
+        if (e instanceof PrescriptionFileError && e.code === "PRESCRIPTION_FILE_REMOVED") {
+          void queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey() });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+      setImageUrl(null);
+    };
+  }, [prescription.id, removed, queryClient]);
+
+  const handleDownload = async () => {
+    setSaving(true);
+    try {
+      const { blob, filename } = await fetchPrescriptionFile(prescription.id, true);
+      saveToComputer(blob, filename);
+      toast.success(
+        prescription.downloadedAt
+          ? "Saved to this computer again."
+          : "Saved to this computer. MobiCare deletes its copy in 15 minutes.",
+      );
+      await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey() });
+    } catch (e: unknown) {
+      toast.error(e instanceof PrescriptionFileError ? e.message : "Could not download the prescription. Try again.");
+      await queryClient.invalidateQueries({ queryKey: getListPrescriptionsQueryKey() });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (removed) {
+    return (
+      <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm space-y-1" data-testid="prescription-file-removed">
+        <p className="font-medium flex items-center gap-2">
+          <Trash2 className="w-4 h-4 text-muted-foreground" /> Removed from MobiCare
+        </p>
+        <p className="text-muted-foreground">
+          Downloaded {prescription.downloadedAt ? formatDateTime(prescription.downloadedAt) : "earlier"}, removed{" "}
+          {formatDateTime(prescription.fileDeletedAt!)}. Use the copy saved on your pharmacy's computer.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-muted/30 min-h-48 flex items-center justify-center overflow-hidden">
+        {loading ? (
+          <span className="text-sm text-muted-foreground">Loading the prescription…</span>
+        ) : error ? (
+          <div className="p-4 text-center space-y-2">
+            <p className="text-sm text-destructive" data-testid="prescription-file-error">{error}</p>
+          </div>
+        ) : imageUrl ? (
+          // A direct link to the image already in the page: opening it is
+          // part of the click, so no browser blocks it.
+          <a href={imageUrl} target="_blank" rel="noopener" title="Open full size" className="block w-full">
+            <img src={imageUrl} alt="Prescription uploaded by the patient" className="w-full max-h-[420px] object-contain bg-white" data-testid="prescription-image" />
+          </a>
+        ) : (
+          <FileImage className="w-8 h-8 text-muted-foreground/50" />
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={handleDownload} disabled={saving || Boolean(error && !imageUrl)} data-testid="button-download-prescription">
+          <Download className="w-4 h-4 mr-2" />
+          {saving ? "Saving…" : prescription.downloadedAt ? "Download again" : "Download to this computer"}
+        </Button>
+        {imageUrl && (
+          <Button variant="outline" asChild>
+            <a href={imageUrl} target="_blank" rel="noopener">
+              <ExternalLink className="w-4 h-4 mr-1" /> Full size
+            </a>
+          </Button>
+        )}
+      </div>
+
+      {prescription.downloadedAt && prescription.fileDeletesAt ? (
+        <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5" data-testid="prescription-file-countdown">
+          <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          Downloaded {formatTime(prescription.downloadedAt)}. MobiCare deletes its copy at {formatTime(prescription.fileDeletesAt)}; keep the downloaded file for your records.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Save a copy for your records. MobiCare deletes the image 15 minutes after the first download.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One medicine on the picker, with the brands this pharmacy stocks of it. */
+interface PickerMedicine {
+  drugId: string;
+  name: string;
+  genericName: string | null;
+  tier: string | null;
+  brands: string[];
+  requested: boolean;
+}
+
+/**
+ * The medicines a pharmacist can approve, with a search box: a pharmacy with
+ * hundreds of listings could not find one by scrolling. One row per medicine
+ * (approval is per medicine, whatever the brand); medicines on the patient's
+ * order come first.
+ */
+function ApprovedMedicinePicker({
+  inventory,
+  requestedDrugIds,
+  selected,
+  onChange,
+}: {
+  inventory: Array<{ drugId: string; isActive: boolean; brand?: string | null; drug: { name: string; genericName?: string | null; tier?: string | null } }>;
+  requestedDrugIds: Set<string>;
+  selected: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const medicines = useMemo(() => {
+    const byDrug = new Map<string, PickerMedicine>();
+    for (const item of inventory) {
+      if (!item.isActive) continue;
+      const entry = byDrug.get(item.drugId) ?? {
+        drugId: item.drugId,
+        name: item.drug.name,
+        genericName: item.drug.genericName ?? null,
+        tier: item.drug.tier ?? null,
+        brands: [],
+        requested: requestedDrugIds.has(item.drugId),
+      };
+      if (item.brand && !entry.brands.includes(item.brand)) entry.brands.push(item.brand);
+      byDrug.set(item.drugId, entry);
+    }
+    return [...byDrug.values()].sort(
+      (a, b) => Number(b.requested) - Number(a.requested) || a.name.localeCompare(b.name),
+    );
+    // requestedDrugIds is rebuilt on each render; its contents are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inventory, [...requestedDrugIds].join(",")]);
+
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = words.length
+    ? medicines.filter((m) => {
+        const text = [m.name, m.genericName ?? "", ...m.brands].join(" ").toLowerCase();
+        return words.every((w) => text.includes(w));
+      })
+    : medicines;
+
+  const toggle = (drugId: string, checked: boolean) => {
+    const next = new Set(selected);
+    if (checked) next.add(drugId);
+    else next.delete(drugId);
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          autoFocus
+          placeholder="Search your medicines by name, generic name or brand…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-8"
+          data-testid="input-search-approve-medicines"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {selected.size > 0 ? `${selected.size} selected · ` : ""}
+        {words.length ? `${shown.length} of ${medicines.length} medicines` : `${medicines.length} medicines`}
+      </p>
+      <div className="border rounded-md max-h-[340px] overflow-y-auto divide-y">
+        {shown.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground text-center">No medicine in your stock matches "{query.trim()}".</p>
+        ) : (
+          shown.map((m) => (
+            <div key={m.drugId} className="flex items-center gap-3 p-3 hover:bg-muted/30">
+              <Checkbox
+                id={`drug-${m.drugId}`}
+                checked={selected.has(m.drugId)}
+                onCheckedChange={(checked) => toggle(m.drugId, checked === true)}
+              />
+              <Label htmlFor={`drug-${m.drugId}`} className="flex-1 cursor-pointer">
+                <div className="font-medium text-sm">{m.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {[m.genericName, m.brands.length ? `Brands: ${m.brands.join(", ")}` : null].filter(Boolean).join(" · ") || "—"}
+                </div>
+              </Label>
+              {m.requested && (
+                <Badge variant="secondary" className="text-[10px]">On this order</Badge>
+              )}
+              {m.tier === "1" && (
+                <Badge variant="destructive" className="text-[10px]">Rx Only</Badge>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

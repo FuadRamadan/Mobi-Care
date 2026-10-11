@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, pgEnum, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { pharmaciesTable } from "./pharmacies";
 
 export const prescriptionStatusEnum = pgEnum("prescription_status", [
@@ -52,12 +53,22 @@ export const prescriptionsTable = pgTable("prescriptions", {
   // Optional link back to the order that triggered this prescription review
   orderId: uuid("order_id"),
 
+  // The pharmacy keeps its own copy: the first download is recorded here and
+  // the image is deleted from storage PRESCRIPTION_FILE_KEEP_MS later. The row
+  // stays; only the file goes.
+  downloadedAt: timestamp("downloaded_at", { withTimezone: true }),
+  fileDeletedAt: timestamp("file_deleted_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  index("prescriptions_file_cleanup_idx")
+    .on(table.downloadedAt)
+    .where(sql`${table.downloadedAt} IS NOT NULL AND ${table.fileDeletedAt} IS NULL`),
+]);
 
 export type Prescription = typeof prescriptionsTable.$inferSelect;

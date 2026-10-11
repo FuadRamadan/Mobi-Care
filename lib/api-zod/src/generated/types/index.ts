@@ -272,6 +272,7 @@ export * from './prescriptionApproval';
 export * from './prescriptionRejection';
 export * from './prescriptionRejectionReason';
 export * from './prescriptionRejectReason';
+export * from './prescriptionRequestedItemsItem';
 export * from './prescriptionStatus';
 export * from './prescriptionUploadInput';
 export * from './prescriptionUploadResponse';

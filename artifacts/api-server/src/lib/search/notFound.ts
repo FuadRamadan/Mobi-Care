@@ -7,12 +7,14 @@
  *
  *   out_of_stock      MobiCare pharmacies list it, but every one is out of it.
  *   not_listed        A medicine MobiCare knows, but no pharmacy offers it.
- *   misspelled        The words were close to a medicine that IS available:
- *                     a search problem, not a supply problem.
  *   not_in_catalogue  Nothing like it in MobiCare's catalogue at all.
  *
- * Misspellings are matched to the catalogue so "amoxicilin" and "amoxicillin"
- * are counted as one medicine.
+ * A misspelling of a medicine that IS in stock is not a medicine not found:
+ * the patient is offered "Did you mean …?" and the medicine is there. Since
+ * 12 Oct 2026 such searches are not recorded as not found at all ("misspelled"
+ * remains only on older rows, which the report and alerts leave out). A
+ * misspelling of a medicine nobody has in stock still counts, under the
+ * medicine's real name, so "amoxicilin" and "amoxicillin" are one medicine.
  */
 
 import { and, eq, gt } from "drizzle-orm";
@@ -109,8 +111,10 @@ export function classify(input: {
   }
   if (input.closest) {
     const { drug, listed, inStock } = input.closest;
+    // Only a spelling problem: the medicine is there to be found.
+    if (inStock) return null;
     return {
-      reason: inStock ? "misspelled" : listed ? "out_of_stock" : "not_listed",
+      reason: listed ? "out_of_stock" : "not_listed",
       drugId: drug.id,
       drugName: drug.name,
     };

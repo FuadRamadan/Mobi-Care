@@ -1697,6 +1697,14 @@ export const PrescriptionRejectReason = {
   null: 'null',
 } as const;
 
+export type PrescriptionRequestedItemsItem = {
+  /** @nullable */
+  orderId?: string | null;
+  drugId: string;
+  drugName: string;
+  quantity: number;
+};
+
 export interface Prescription {
   id: string;
   pharmacyId: string;
@@ -1713,6 +1721,23 @@ export interface Prescription {
   reviewedAt?: string | null;
   /** @nullable */
   orderId?: string | null;
+  /**
+     * When the pharmacy first downloaded the image to its computer.
+     * @nullable
+     */
+  downloadedAt?: string | null;
+  /**
+     * When the image is deleted from MobiCare (15 minutes after the first download).
+     * @nullable
+     */
+  fileDeletesAt?: string | null;
+  /**
+     * When the image was deleted from MobiCare. The prescription record stays.
+     * @nullable
+     */
+  fileDeletedAt?: string | null;
+  /** The medicines on the order this prescription came with. */
+  requestedItems?: PrescriptionRequestedItemsItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -1863,6 +1888,8 @@ export type HqDashboardTotals = {
   awaitingDispatch: number;
   pendingPrescriptions: number;
   unconfirmedDeliveries: number;
+  /** Delivery orders waiting on HQ in Dispatch: ready for a courier, picked up, or out for delivery without the patient's confirmation. */
+  dispatchAttention?: number;
   /** Sum of orders in delivered or collected status with a completed_at timestamp. */
   completedRevenueLeones: number;
 };

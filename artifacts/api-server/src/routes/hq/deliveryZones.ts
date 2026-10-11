@@ -2,7 +2,7 @@ import { safeRouter } from "../../lib/safeRouter.js";
 import { z } from "zod";
 import { db } from "@workspace/db";
 import { deliveryZoneFeesTable, deliveryZonesTable } from "@workspace/db/schema";
-import { and, eq, gt, ne, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { AuthRequest, requireManageSettlements } from "../../middlewares/auth.js";
 import { writeAudit } from "../../lib/audit.js";
 import { isLatitude, isLongitude } from "../../lib/geo.js";
@@ -411,7 +411,7 @@ router.delete("/:id/fee/scheduled", async (req: AuthRequest, res) => {
 });
 
 // ── POST /hq/delivery-zones/:id/status — switch a zone on or off ────────────
-// Takes effect immediately. Zones are never deleted: past orders point at them.
+// Takes effect immediately.
 router.post("/:id/status", async (req: AuthRequest, res) => {
   const id = z.string().uuid().safeParse(req.params.id);
   const body = z.object({ isActive: z.boolean() }).safeParse(req.body);
@@ -461,6 +461,59 @@ router.post("/:id/status", async (req: AuthRequest, res) => {
     details: { name: zone.name },
   });
   res.json(zoneJson(zone));
+});
+
+// ── DELETE /hq/delivery-zones/:id — remove a zone, e.g. after the pilot ─────
+// Takes effect immediately: no new delivery is priced in it, and it leaves
+// HQ, search areas and overlap checks, so its ground can be drawn again. The
+// row stays, renamed, because past orders point at it; each order also keeps
+// its own copy of the zone name and the fee it paid. Its name is free again.
+router.delete("/:id", async (req: AuthRequest, res) => {
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) {
+    res.status(400).json({ error: "Invalid zone id" });
+    return;
+  }
+
+  const deleted = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('delivery_zones'))`);
+    const [zone] = await tx
+      .select({ id: deliveryZonesTable.id, name: deliveryZonesTable.name, isActive: deliveryZonesTable.isActive })
+      .from(deliveryZonesTable)
+      .where(and(eq(deliveryZonesTable.id, id.data), isNull(deliveryZonesTable.deletedAt)))
+      .limit(1);
+    if (!zone) return null;
+    const now = new Date();
+    await tx
+      .update(deliveryZonesTable)
+      .set({
+        deletedAt: now,
+        isActive: false,
+        // Frees the name for a new zone; the original stays in the audit log.
+        name: `${zone.name} (deleted ${now.toISOString().slice(0, 10)} ${zone.id.slice(0, 8)})`,
+        updatedByHqStaffId: req.pharmacy!.sub,
+        updatedAt: now,
+      })
+      .where(eq(deliveryZonesTable.id, zone.id));
+    // A fee change waiting for midnight would never apply now.
+    await tx
+      .delete(deliveryZoneFeesTable)
+      .where(and(eq(deliveryZoneFeesTable.zoneId, zone.id), gt(deliveryZoneFeesTable.effectiveFrom, now)));
+    return zone;
+  });
+
+  if (!deleted) {
+    res.status(404).json({ error: "Zone not found" });
+    return;
+  }
+  await writeAudit({
+    ...actor(req),
+    action: "delivery_zone.delete",
+    entityType: "delivery_zone",
+    entityId: deleted.id,
+    details: { name: deleted.name, wasActive: deleted.isActive },
+  });
+  res.status(204).end();
 });
 
 export default router;

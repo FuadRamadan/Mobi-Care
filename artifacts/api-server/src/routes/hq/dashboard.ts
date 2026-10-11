@@ -153,6 +153,20 @@ router.get("/", async (_req, res) => {
       ),
     );
 
+  // Deliveries waiting on HQ in Dispatch: a courier to assign, a pick-up to
+  // move on, or a delivery nobody has confirmed. The Dispatch flag in HQ's
+  // menu shows this, so a packed order is never left sitting unnoticed.
+  const [dispatchAttention] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ordersTable)
+    .where(
+      and(
+        eq(ordersTable.fulfillmentType, "delivery"),
+        sql`(${ordersTable.status} IN ('ready', 'picked_up')
+          OR (${ordersTable.status} = 'delivering' AND ${ordersTable.deliveryConfirmedAt} IS NULL))`,
+      ),
+    );
+
   res.json({
     totals: {
       orders: orderCounts?.total ?? 0,
@@ -167,6 +181,7 @@ router.get("/", async (_req, res) => {
       awaitingDispatch: awaitingDispatch[0]?.count ?? 0,
       pendingPrescriptions: pendingPrescriptions?.count ?? 0,
       unconfirmedDeliveries: unconfirmedDeliveries?.count ?? 0,
+      dispatchAttention: dispatchAttention?.count ?? 0,
       // Platform revenue is only the stored 5% service fee, in minor units.
       completedCommissionMinor: revenue?.total ?? 0,
       // Compatibility field for existing clients; it now correctly represents

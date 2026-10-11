@@ -10,7 +10,7 @@
  * pin is used, then a district named in their address, then "Unknown".
  */
 
-import { desc, eq, isNotNull, and } from "drizzle-orm";
+import { desc, eq, isNotNull, and, isNull } from "drizzle-orm";
 import { db, deliveryZonesTable, ordersTable } from "@workspace/db";
 import { zoneContains, type Boundary, type Position } from "../delivery/geometry.js";
 import { SIERRA_LEONE_DISTRICTS } from "../geo/sierraLeoneDistricts.js";
@@ -101,12 +101,13 @@ export function areaFrom(input: {
 let zoneCache: { at: number; zones: NamedArea[] } | null = null;
 const ZONE_CACHE_MS = 60_000;
 
-/** Every drawn zone, switched on or off: a switched-off zone is still an area. */
+/** Every drawn zone, switched on or off (a switched-off zone is still an area), but not deleted ones. */
 async function namedZones(): Promise<NamedArea[]> {
   if (zoneCache && Date.now() - zoneCache.at < ZONE_CACHE_MS) return zoneCache.zones;
   const rows = await db
     .select({ name: deliveryZonesTable.name, boundary: deliveryZonesTable.boundary })
-    .from(deliveryZonesTable);
+    .from(deliveryZonesTable)
+    .where(isNull(deliveryZonesTable.deletedAt));
   const zones = rows.map((row) => ({ name: row.name, boundary: row.boundary as Boundary }));
   zoneCache = { at: Date.now(), zones };
   return zones;

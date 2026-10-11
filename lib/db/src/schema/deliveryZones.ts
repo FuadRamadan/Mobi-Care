@@ -27,8 +27,9 @@ export type ZoneBoundary =
  * here, so a fee can be scheduled for midnight and every price a zone ever had
  * stays on record.
  *
- * Zones are deactivated, never deleted: orders keep a reference to the zone
- * that priced them.
+ * Deleting a zone sets deleted_at rather than removing the row: orders keep a
+ * reference to the zone that priced them. A deleted zone is gone from HQ,
+ * pricing and search areas, and its name is free for a new zone.
  */
 export const deliveryZonesTable = pgTable("delivery_zones", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -36,6 +37,7 @@ export const deliveryZonesTable = pgTable("delivery_zones", {
   description: text("description").notNull().default(""),
   boundary: jsonb("boundary").$type<ZoneBoundary>().notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   updatedByHqStaffId: uuid("updated_by_hq_staff_id").references(
     () => hqStaffTable.id,
     { onDelete: "set null" },

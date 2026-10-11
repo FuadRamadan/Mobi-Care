@@ -19,6 +19,8 @@ export type HqDashboardTotals = {
   awaitingDispatch: number;
   pendingPrescriptions: number;
   unconfirmedDeliveries: number;
+  /** Delivery orders waiting on HQ in Dispatch: ready for a courier, picked up, or out for delivery without the patient's confirmation. */
+  dispatchAttention?: number;
   /** Sum of orders in delivered or collected status with a completed_at timestamp. */
   completedRevenueLeones: number;
 };
