@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link, Redirect, useLocation } from 'wouter';
-import { Search, ShoppingBag, ClipboardList, LogOut, Bell, User } from 'lucide-react';
+import { Search, ShoppingBag, ClipboardList, Bell, User } from 'lucide-react';
 import { usePatientAuth } from '@/patient/auth';
 import { useCart } from '@/patient/cart';
 import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
@@ -11,7 +11,7 @@ import { ConsentGate } from './ConsentGate';
  * Patient app shell — mobile-first (PWA style): sticky top bar + bottom nav.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { user, logout } = usePatientAuth();
+  const { user } = usePatientAuth();
   const { itemCount } = useCart();
   const [location] = useLocation();
 
@@ -24,6 +24,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     },
   });
   const unreadCount = unreadData?.unreadCount ?? 0;
+  const greeting = useFreetownGreeting();
 
   if (!user) return <Redirect to="/app" />;
 
@@ -52,34 +53,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <span className="text-[#2E9E77]">Care</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="opacity-80 hidden sm:inline" data-testid="text-patient-name">{user.name}</span>
-            {/* Notification bell shortcut */}
-            <Link
-              href="/app/notifications"
-              className="relative p-2 rounded-full hover:bg-white/10"
-              aria-label="Notifications"
-              data-testid="button-notifications"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full text-[9px] min-w-3.5 h-3.5 px-0.5 flex items-center justify-center font-bold leading-none"
-                  data-testid="badge-notification-count"
-                >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Link>
-            <button
-              onClick={logout}
-              className="p-2 rounded-full hover:bg-white/10"
-              aria-label="Sign out"
-              data-testid="button-logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Alerts live in the bottom bar and Sign out in Profile, so the top
+              bar greets the patient instead. */}
+          <p
+            className="min-w-0 truncate text-right font-display font-semibold text-[15px]"
+            data-testid="text-greeting"
+          >
+            {greeting}, <span data-testid="text-patient-name">{firstName(user.name)}</span>
+          </p>
         </div>
       </header>
 
@@ -117,4 +98,31 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </nav>
     </div>
   );
+}
+
+/**
+ * "Good morning / afternoon / evening" by the time in Freetown, whatever the
+ * phone's own time zone. Checked every minute so an open app moves on.
+ */
+function useFreetownGreeting(): string {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return freetownGreeting(now);
+}
+
+function freetownGreeting(at: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Freetown', hour: '2-digit', hourCycle: 'h23' }).format(at),
+  );
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/** "Aminata Kamara" → "Aminata"; a blank name still greets. */
+function firstName(name: string | null | undefined): string {
+  return name?.trim().split(/\s+/)[0] || 'there';
 }

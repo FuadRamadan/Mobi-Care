@@ -49,12 +49,12 @@ export default function Login() {
           <div>
             <a
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
+              className="flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to MobiCare
             </a>
-            <MobiCareLogo className="mb-8" markClassName="h-14" textClassName="text-3xl" />
+            <MobiCareLogo size="lg" className="mb-8" />
             <h2 className="text-3xl font-bold tracking-tight text-foreground">
               Pharmacy Portal
             </h2>

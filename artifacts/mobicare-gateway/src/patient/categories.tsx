@@ -22,7 +22,6 @@
  */
 
 import {
-  Apple,
   Baby,
   Brain,
   Bug,
@@ -37,8 +36,20 @@ import {
   Syringe,
   Thermometer,
   Wind,
+  createLucideIcon,
   type LucideIcon,
 } from "lucide-react";
+
+/**
+ * A stomach, drawn on the same 24px grid and stroke as the icons above
+ * (the set has none): the food pipe at the top, the J-shaped bag, and the
+ * exit to the gut on the right.
+ */
+const Stomach = createLucideIcon("stomach", [
+  ["path", { d: "M9 2v3C6 5.2 3.5 7.6 3.5 11.5c0 5 4 9 9 9 3.6 0 6.5-2 7.4-5", key: "outer" }],
+  ["path", { d: "M12.5 2v4c0 3 1.6 5.5 4 5.5 1.4 0 2.6.4 3.3 1.3", key: "inner" }],
+  ["path", { d: "M19.8 12.8h1.7M19.9 15.5h1.6", key: "exit" }],
+]);
 
 interface CategoryPresentation {
   icon: LucideIcon;
@@ -52,7 +63,7 @@ const PRESENTATION: Record<string, CategoryPresentation> = {
   // Malaria is named explicitly: it is the most searched-for treatment here,
   // and "Anti-infectives" is not what anyone types.
   anti_infectives: { icon: Bug, short: "Infections & malaria" },
-  gastrointestinal_nutrition: { icon: Apple, short: "Stomach & nutrition" },
+  gastrointestinal_nutrition: { icon: Stomach, short: "Gastro & nutrition" },
   endocrine_reproductive: { icon: Baby, short: "Diabetes & women's health" },
   respiratory_allergy: { icon: Wind, short: "Chest & allergy" },
   psychiatric_mental_health: { icon: Brain, short: "Mental health" },
