@@ -149,6 +149,47 @@ async function availability(drugId: string): Promise<{ listed: boolean; inStock:
   return { listed: rows.length > 0, inStock: rows.some((row) => row.stock > 0) };
 }
 
+let listedCache: { at: number; ids: Set<string> } | null = null;
+
+/** Catalogue medicines at least one active pharmacy currently lists. */
+async function listedMedicineIds(): Promise<Set<string>> {
+  if (listedCache && Date.now() - listedCache.at < CATALOGUE_CACHE_MS) return listedCache.ids;
+  const rows = await db
+    .selectDistinct({ drugId: pharmacyInventoryTable.drugId })
+    .from(pharmacyInventoryTable)
+    .innerJoin(pharmaciesTable, eq(pharmaciesTable.id, pharmacyInventoryTable.pharmacyId))
+    .where(
+      and(
+        eq(pharmacyInventoryTable.isActive, true),
+        eq(pharmacyInventoryTable.completionStatus, "complete"),
+        gt(pharmacyInventoryTable.expiryDate, new Date().toISOString().slice(0, 10)),
+        eq(pharmaciesTable.isActive, true),
+      ),
+    );
+  const ids = new Set(rows.map((row) => row.drugId).filter((id): id is string => Boolean(id)));
+  listedCache = { at: Date.now(), ids };
+  return ids;
+}
+
+/**
+ * "Did you mean …?" for a search that found nothing: the medicine the words
+ * were closest to, among those a pharmacy lists, so following the suggestion
+ * always leads somewhere. Null when nothing is close or the words already
+ * name a medicine (no pharmacy offering it is not a spelling problem).
+ */
+export async function suggestMedicine(query: string): Promise<{ drugId: string; name: string } | null> {
+  const typed = normaliseSearch(query);
+  if (typed.length < 4) return null;
+  const catalogue = await approvedCatalogue();
+  const named = catalogue.some(
+    (drug) => normaliseSearch(drug.name).includes(typed) || (drug.genericName ? normaliseSearch(drug.genericName).includes(typed) : false),
+  );
+  if (named) return null;
+  const listed = await listedMedicineIds();
+  const drug = closestMedicine(query, catalogue.filter((entry) => listed.has(entry.id)));
+  return drug ? { drugId: drug.id, name: drug.name } : null;
+}
+
 /** Why this search gave nothing the patient could get, or null when it did. */
 export async function whyUnavailable(query: string, returned: ReturnedDrug[]): Promise<Unavailable | null> {
   if (returned.some((drug) => drug.offers.some((offer) => offer.inStock))) return null;

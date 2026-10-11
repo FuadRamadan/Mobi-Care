@@ -158,3 +158,42 @@ test("shareable report: nothing under 5 people, and never what was typed", () =>
   assert.equal(report.summary.unavailableSearches, 20, "counts only what is shown");
   assert.equal(report.minimumPeople, 5);
 });
+
+// ── HQ alerts ───────────────────────────────────────────────────────────────
+
+import { MIN_PEOPLE, risingMedicines, type MedicineWindow } from "./medicineAlerts.js";
+
+const window = (over: Partial<MedicineWindow>): MedicineWindow => ({
+  medicine: "Amlodipine",
+  recentSearches: 12,
+  recentPeople: 10,
+  earlierSearches: 9, // 3 a week
+  reason: "out_of_stock",
+  areas: ["East End", "Central Freetown"],
+  ...over,
+});
+
+test("alert: a sharp rise seen by enough people", () => {
+  const [alert] = risingMedicines([window({})]);
+  assert.equal(alert?.title, "Hard to find: Amlodipine");
+  assert.match(alert!.body, /10 people could not get Amlodipine in the last 7 days \(12 searches\)/);
+  assert.match(alert!.body, /About 3 a week in the 3 weeks before/);
+  assert.match(alert!.body, /Mostly East End, Central Freetown/);
+  assert.match(alert!.body, /Reason: Out of stock everywhere\./);
+});
+
+test("alert: something new, with nothing before it", () => {
+  const [alert] = risingMedicines([window({ medicine: "Insulin", earlierSearches: 0, reason: "not_in_catalogue", recentPeople: 6 })]);
+  assert.match(alert!.body, /None in the 3 weeks before/);
+});
+
+test("no alert: too few people, no real rise, or only a misspelling", () => {
+  assert.deepEqual(risingMedicines([window({ recentPeople: MIN_PEOPLE - 1 })]), []);
+  assert.deepEqual(risingMedicines([window({ recentSearches: 5, earlierSearches: 12 })]), [], "5 against 4 a week is not a doubling");
+  assert.deepEqual(risingMedicines([window({ reason: "misspelled" })]), []);
+});
+
+test("alerts are ordered by how many people are affected", () => {
+  const alerts = risingMedicines([window({ medicine: "A", recentPeople: 6 }), window({ medicine: "B", recentPeople: 20 })]);
+  assert.deepEqual(alerts.map((a) => a.medicine), ["B", "A"]);
+});

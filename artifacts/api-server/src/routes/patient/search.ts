@@ -16,7 +16,7 @@ import {
 import { and, desc, eq, gt, ilike, or, sql, type SQL } from "drizzle-orm";
 import { isSameSearch, normaliseSearch } from "../../lib/search/searchEvents.js";
 import { resolveSearchArea } from "../../lib/search/searchArea.js";
-import { whyUnavailable } from "../../lib/search/notFound.js";
+import { suggestMedicine, whyUnavailable } from "../../lib/search/notFound.js";
 import type { AuthRequest } from "../../middlewares/auth.js";
 import {
   haversineDistanceKm,
@@ -33,6 +33,17 @@ function queryCoordinate(value: unknown): number | null {
 
 router.get("/categories", (_req, res) => {
   res.json(DRUG_CATEGORY_TAXONOMY);
+});
+
+/**
+ * GET /patient/search/suggest?q=amoxicilin
+ *
+ * "Did you mean Amoxicillin?" for a search that found nothing. Asked by the
+ * app only after an empty result, and records nothing.
+ */
+router.get("/suggest", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 100) : "";
+  res.json({ suggestion: q ? await suggestMedicine(q) : null });
 });
 
 /**

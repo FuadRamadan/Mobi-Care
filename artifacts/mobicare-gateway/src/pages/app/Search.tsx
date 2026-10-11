@@ -10,6 +10,8 @@ import {
 import {
   usePatientSearchDrugs,
   getPatientSearchDrugsQueryKey,
+  usePatientSuggestMedicine,
+  getPatientSuggestMedicineQueryKey,
   useListPatientDrugCategories,
   type DrugSearchResult,
   type DrugOffer,
@@ -87,6 +89,17 @@ export default function PatientSearch() {
       },
     },
   );
+
+  // "Did you mean …?": asked only once a typed search has come back empty.
+  const suggestParams = { q: q.trim() };
+  const { data: suggestionData } = usePatientSuggestMedicine(suggestParams, {
+    query: {
+      enabled: enabled && q.trim().length >= 4 && results?.length === 0,
+      queryKey: getPatientSuggestMedicineQueryKey(suggestParams),
+      staleTime: 60_000,
+    },
+  });
+  const suggestion = results?.length === 0 ? suggestionData?.suggestion ?? null : null;
 
   const activeCategory = categories?.find((group) => group.value === category);
 
@@ -237,9 +250,27 @@ export default function PatientSearch() {
       )}
       {enabled && isFetching && !results && <EmptyState>Searching…</EmptyState>}
       {enabled && results && results.length === 0 && (
-        <EmptyState>
-          No medicines matched your search. Try the generic name.
-        </EmptyState>
+        suggestion ? (
+          <EmptyState>
+            <span className="block">No medicines matched “{q.trim()}”.</span>
+            <span className="mt-2 block">
+              Did you mean{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary underline underline-offset-2"
+                onClick={() => setQuery(suggestion.name)}
+                data-testid="button-did-you-mean"
+              >
+                {suggestion.name}
+              </button>
+              ?
+            </span>
+          </EmptyState>
+        ) : (
+          <EmptyState>
+            No medicines matched your search. Try the generic name.
+          </EmptyState>
+        )
       )}
 
       <div className="space-y-4">

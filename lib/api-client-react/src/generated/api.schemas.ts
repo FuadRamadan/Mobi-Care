@@ -775,6 +775,15 @@ export interface DeliveryQuoteInput {
   longitude: number;
 }
 
+export type MedicineSuggestionSuggestion = {
+  drugId: string;
+  name: string;
+} | null;
+
+export interface MedicineSuggestion {
+  suggestion: MedicineSuggestionSuggestion;
+}
+
 export interface DeliveryQuote {
   available: boolean;
   /** @nullable */
@@ -3129,6 +3138,13 @@ pharmacyId?: string;
 q?: string;
 limit?: number;
 offset?: number;
+};
+
+export type PatientSuggestMedicineParams = {
+/**
+ * @maxLength 100
+ */
+q: string;
 };
 
 export type PatientSearchDrugsParams = {

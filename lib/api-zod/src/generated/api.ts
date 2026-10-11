@@ -1436,6 +1436,26 @@ export const DisconnectGoogleAccountResponse = zod.object({
 
 
 /**
+ * The listed medicine whose name is closest to the words typed, or null when nothing is close or the words already name a medicine. Records nothing.
+ * @summary "Did you mean …?" for a search that found nothing
+ */
+export const patientSuggestMedicineQueryQMax = 100;
+
+
+
+export const PatientSuggestMedicineQueryParams = zod.object({
+  "q": zod.coerce.string().max(patientSuggestMedicineQueryQMax)
+})
+
+export const PatientSuggestMedicineResponse = zod.object({
+  "suggestion": zod.union([zod.null(),zod.object({
+  "drugId": zod.string(),
+  "name": zod.string()
+})])
+})
+
+
+/**
  * @summary Search medicines across all pharmacies with price comparison
  */
 export const patientSearchDrugsQueryPatientLatitudeMin = -90;

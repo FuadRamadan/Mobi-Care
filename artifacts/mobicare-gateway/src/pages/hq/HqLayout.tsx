@@ -103,7 +103,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     // The first list is what was already there: pop up only what arrives
     // after it, including the very first notification HQ ever gets.
     if (seen === undefined || !newest || newest.id === seen) return;
-    if (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready' || newest.type === 'security_alert') {
+    if (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready' || newest.type === 'security_alert' || newest.type === 'medicine_alert') {
       toast.info(newest.title, {
         description: <span className="whitespace-pre-line break-words">{newest.body}</span>,
       });
@@ -272,7 +272,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                     notifications.slice(0, 8).map((notification) => (
                       <Link
                         key={notification.id}
-                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'security_alert' ? '/hq/settings#security' : notification.type === 'payout_issue' ? '/hq/settlements?tab=payouts' : '/hq/orders'}
+                        href={notification.type === 'delivery_ready' ? '/hq/dispatch' : notification.type === 'security_alert' ? '/hq/settings#security' : notification.type === 'medicine_alert' ? '/hq/insights' : notification.type === 'payout_issue' ? '/hq/settlements?tab=payouts' : '/hq/orders'}
                         className={cn(
                           'block px-4 py-3 transition-colors hover:bg-muted/60',
                           !notification.readAt && 'bg-primary/5',

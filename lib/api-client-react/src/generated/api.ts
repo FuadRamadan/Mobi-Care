@@ -114,6 +114,7 @@ import type {
   LocateDeliveryZoneParams,
   LoginInput,
   MarkReadInput,
+  MedicineSuggestion,
   MessageResponse,
   Notification,
   OrangeSmsConnection,
@@ -141,6 +142,7 @@ import type {
   PatientProfileUpdate,
   PatientRegisterInput,
   PatientSearchDrugsParams,
+  PatientSuggestMedicineParams,
   PaymentsConfig,
   PharmacyCashout,
   PharmacyOnboardInput,
@@ -3473,6 +3475,91 @@ export const useDisconnectGoogleAccount = <TError = ErrorType<void>,
       > => {
       return useMutation(getDisconnectGoogleAccountMutationOptions(options));
     }
+
+export const getPatientSuggestMedicineUrl = (params: PatientSuggestMedicineParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/patient/search/suggest?${stringifiedParams}` : `/api/patient/search/suggest`
+}
+
+/**
+ * The listed medicine whose name is closest to the words typed, or null when nothing is close or the words already name a medicine. Records nothing.
+ * @summary "Did you mean …?" for a search that found nothing
+ */
+export const patientSuggestMedicine = async (params: PatientSuggestMedicineParams, options?: Parameters<typeof customFetch>[1]): Promise<MedicineSuggestion> => {
+
+  return customFetch<MedicineSuggestion>(getPatientSuggestMedicineUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPatientSuggestMedicineQueryKey = (params?: PatientSuggestMedicineParams,) => {
+    return [
+    `/api/patient/search/suggest`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getPatientSuggestMedicineQueryOptions = <TData = Awaited<ReturnType<typeof patientSuggestMedicine>>, TError = ErrorType<unknown>>(params: PatientSuggestMedicineParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSuggestMedicine>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPatientSuggestMedicineQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof patientSuggestMedicine>>> = ({ signal }) => patientSuggestMedicine(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof patientSuggestMedicine>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PatientSuggestMedicineQueryResult = NonNullable<Awaited<ReturnType<typeof patientSuggestMedicine>>>
+export type PatientSuggestMedicineQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary "Did you mean …?" for a search that found nothing
+ */
+
+export function usePatientSuggestMedicine<TData = Awaited<ReturnType<typeof patientSuggestMedicine>>, TError = ErrorType<unknown>>(
+ params: PatientSuggestMedicineParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof patientSuggestMedicine>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPatientSuggestMedicineQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getPatientSearchDrugsUrl = (params?: PatientSearchDrugsParams,) => {
   const normalizedParams = new URLSearchParams();

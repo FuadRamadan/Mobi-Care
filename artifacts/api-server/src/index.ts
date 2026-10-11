@@ -5,6 +5,7 @@ import { monimeConfig } from "./lib/monime/config";
 import { startMonimeJobs, stopMonimeJobs } from "./lib/monime/service";
 import { reencryptStoredCredentials } from "./lib/secretRotation";
 import { startSecurityEventPruning } from "./lib/securityEvents";
+import { startMedicineAlerts, stopMedicineAlerts } from "./lib/search/medicineAlerts";
 import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -353,11 +354,13 @@ async function start(): Promise<void> {
     );
     startMonimeJobs();
     startSecurityEventPruning();
+    startMedicineAlerts();
   });
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Graceful shutdown started");
     stopMonimeJobs();
+    stopMedicineAlerts();
     server.close(async (error) => {
       if (error) logger.error({ err: error }, "HTTP server close failed");
       await pool.end().catch((err) =>
