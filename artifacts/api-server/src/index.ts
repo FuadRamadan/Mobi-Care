@@ -188,6 +188,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "search insights: area and why not found (migration 0037)",
+      query: sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'search_events'
+            AND column_name = 'unavailable_reason'
+        ) AS exists
+      `,
+    },
+    {
       label: "Monime shared payment links (migration 0036)",
       query: sql`
         SELECT EXISTS (

@@ -62,9 +62,12 @@ import type {
   DrugRemovalResult,
   DrugSearchResult,
   ExportHqInsightsCsvParams,
+  ExportHqNotFoundMedicinesCsvParams,
   FlagReviewInput,
   GetHqDashboardTrendsParams,
   GetHqInsightsParams,
+  GetHqNotFoundMedicines200,
+  GetHqNotFoundMedicinesParams,
   GetHqOnlinePaymentsParams,
   GetHqSalesHistoryParams,
   GetHqSalesTrendParams,
@@ -6840,6 +6843,175 @@ export function useExportHqInsightsCsv<TData = Awaited<ReturnType<typeof exportH
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getExportHqInsightsCsvQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHqNotFoundMedicinesUrl = (params?: GetHqNotFoundMedicinesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/insights/not-found?${stringifiedParams}` : `/api/hq/insights/not-found`
+}
+
+/**
+ * One row per medicine (spelling variants grouped under the catalogue name). shareable=1 leaves out medicines and areas searched by fewer than 5 different people and the words typed, for sharing outside MobiCare.
+ * @summary Medicines patients searched for and could not get, why, where and the weekly trend
+ */
+export const getHqNotFoundMedicines = async (params?: GetHqNotFoundMedicinesParams, options?: Parameters<typeof customFetch>[1]): Promise<GetHqNotFoundMedicines200> => {
+
+  return customFetch<GetHqNotFoundMedicines200>(getGetHqNotFoundMedicinesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHqNotFoundMedicinesQueryKey = (params?: GetHqNotFoundMedicinesParams,) => {
+    return [
+    `/api/hq/insights/not-found`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHqNotFoundMedicinesQueryOptions = <TData = Awaited<ReturnType<typeof getHqNotFoundMedicines>>, TError = ErrorType<void>>(params?: GetHqNotFoundMedicinesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqNotFoundMedicines>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHqNotFoundMedicinesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHqNotFoundMedicines>>> = ({ signal }) => getHqNotFoundMedicines(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHqNotFoundMedicines>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHqNotFoundMedicinesQueryResult = NonNullable<Awaited<ReturnType<typeof getHqNotFoundMedicines>>>
+export type GetHqNotFoundMedicinesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Medicines patients searched for and could not get, why, where and the weekly trend
+ */
+
+export function useGetHqNotFoundMedicines<TData = Awaited<ReturnType<typeof getHqNotFoundMedicines>>, TError = ErrorType<void>>(
+ params?: GetHqNotFoundMedicinesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHqNotFoundMedicines>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHqNotFoundMedicinesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportHqNotFoundMedicinesCsvUrl = (params?: ExportHqNotFoundMedicinesCsvParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/hq/insights/not-found.csv?${stringifiedParams}` : `/api/hq/insights/not-found.csv`
+}
+
+/**
+ * @summary The medicines-not-found report as CSV (HQ copy, or shareable=1)
+ */
+export const exportHqNotFoundMedicinesCsv = async (params?: ExportHqNotFoundMedicinesCsvParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportHqNotFoundMedicinesCsvUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportHqNotFoundMedicinesCsvQueryKey = (params?: ExportHqNotFoundMedicinesCsvParams,) => {
+    return [
+    `/api/hq/insights/not-found.csv`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportHqNotFoundMedicinesCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>, TError = ErrorType<unknown>>(params?: ExportHqNotFoundMedicinesCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportHqNotFoundMedicinesCsvQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>> = ({ signal }) => exportHqNotFoundMedicinesCsv(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportHqNotFoundMedicinesCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>>
+export type ExportHqNotFoundMedicinesCsvQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The medicines-not-found report as CSV (HQ copy, or shareable=1)
+ */
+
+export function useExportHqNotFoundMedicinesCsv<TData = Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>, TError = ErrorType<unknown>>(
+ params?: ExportHqNotFoundMedicinesCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportHqNotFoundMedicinesCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportHqNotFoundMedicinesCsvQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

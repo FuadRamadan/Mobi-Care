@@ -1961,6 +1961,50 @@ paths:
             text/csv:
               schema: { type: string }
 
+  /hq/insights/not-found:
+    get:
+      operationId: getHqNotFoundMedicines
+      tags: [hq]
+      summary: Medicines patients searched for and could not get, why, where and the weekly trend
+      description: >
+        One row per medicine (spelling variants grouped under the catalogue
+        name). shareable=1 leaves out medicines and areas searched by fewer than
+        5 different people and the words typed, for sharing outside MobiCare.
+      security:
+        - BearerAuth: []
+      parameters:
+        - { name: start, in: query, schema: { type: string, format: date } }
+        - { name: end, in: query, schema: { type: string, format: date } }
+        - { name: area, in: query, description: A delivery zone or district name, schema: { type: string } }
+        - { name: shareable, in: query, schema: { type: string, enum: ["0", "1"] } }
+      responses:
+        "200":
+          description: The report
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid dates }
+        "403": { description: Data & Insights permission required }
+
+  /hq/insights/not-found.csv:
+    get:
+      operationId: exportHqNotFoundMedicinesCsv
+      tags: [hq]
+      summary: The medicines-not-found report as CSV (HQ copy, or shareable=1)
+      security:
+        - BearerAuth: []
+      parameters:
+        - { name: start, in: query, schema: { type: string, format: date } }
+        - { name: end, in: query, schema: { type: string, format: date } }
+        - { name: area, in: query, schema: { type: string } }
+        - { name: shareable, in: query, schema: { type: string, enum: ["0", "1"] } }
+      responses:
+        "200":
+          description: CSV
+          content:
+            text/csv:
+              schema: { type: string }
+
   /hq/insights/reset:
     get:
       operationId: previewHqPilotReset

@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import type { AuthRequest } from "../../middlewares/auth.js";
 import { BUSINESS_TIMEZONE, businessDateNow } from "../../lib/businessTime.js";
 import { hqDailyFigures, validRange } from "../../lib/onlinePaymentFigures.js";
+import { notFoundCsv, notFoundReport } from "../../lib/search/notFoundReport.js";
 
 const router = safeRouter();
 // Reporting deliberately has no minimum cohort threshold. Small partners and
@@ -77,8 +78,8 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
     db.execute(sql`SELECT i.primary_category AS label, (sum(oi.base_unit_price_minor * oi.quantity) / 100.0)::float AS revenue, count(DISTINCT o.id)::int AS count FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN pharmacy_inventory i ON i.id = oi.inventory_id WHERE o.completed_at >= ${start} AND o.completed_at <= ${end} AND o.status IN (${values}) GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY revenue DESC`),
     db.execute(sql`SELECT i.primary_category AS label, count(DISTINCT o.id)::int AS count FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN pharmacy_inventory i ON i.id = oi.inventory_id WHERE o.created_at >= ${start} AND o.created_at <= ${end} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL AND result_count = 0 GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC LIMIT 10`),
-    db.execute(sql`SELECT area_district AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
-    db.execute(sql`SELECT primary_category AS category, area_district AS area, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY primary_category, area_district HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
+    db.execute(sql`SELECT coalesce(area_zone, area_district) AS label, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
+    db.execute(sql`SELECT primary_category AS category, coalesce(area_zone, area_district) AS area, count(*)::int AS count FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY 1, 2 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY count DESC`),
     // Commission earned so far today, independent of the selected range: the
     // Command Centre reports it as a live figure. It needs no nightly reset and
     // no ledger row — the business-day filter moves on by itself at midnight in
@@ -138,7 +139,7 @@ router.get("/", async (req: AuthRequest, res): Promise<void> => {
       drugValueByCategory: `Groups with fewer than ${MINIMUM_GROUP_SIZE} completed orders are omitted.`,
       demandByCategory: `Groups with fewer than ${MINIMUM_GROUP_SIZE} contributing orders are omitted.`,
       highSearchLowFulfillment: `Groups with fewer than ${MINIMUM_GROUP_SIZE} zero-result search events are omitted.`,
-      searchVolumeByArea: "Only a recognized coarse district derived from an existing profile address, or Unknown, is retained. Exact addresses and groups under 10 are never shown.",
+      searchVolumeByArea: "The delivery zone a search came from, else its district (from the phone's location, the last delivery pin or the address), else Unknown. Coordinates and addresses are never stored.",
       demandByCategoryArea: `Groups with fewer than ${MINIMUM_GROUP_SIZE} contributing search events are omitted.`,
     },
   });
@@ -161,8 +162,8 @@ router.get("/export.csv", async (req: AuthRequest, res): Promise<void> => {
     db.execute(sql`SELECT p.name AS label, (sum(o.medicine_commission_minor) / 100.0)::float AS value FROM orders o JOIN pharmacies p ON p.id=o.pharmacy_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY p.id,p.name HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT i.primary_category AS label, (sum(oi.base_unit_price_minor * oi.quantity) / 100.0)::float AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.status IN (${values}) AND o.completed_at >= ${start} AND o.completed_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT i.primary_category AS label, count(DISTINCT o.id)::int AS value FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN pharmacy_inventory i ON i.id=oi.inventory_id WHERE o.created_at >= ${start} AND o.created_at <= ${end}${pharmacyId ? sql` AND o.pharmacy_id = ${pharmacyId}` : sql``} GROUP BY i.primary_category HAVING count(DISTINCT o.id) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
-    db.execute(sql`SELECT area_district AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
-    db.execute(sql`SELECT primary_category || ' — ' || area_district AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY primary_category,area_district HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
+    db.execute(sql`SELECT coalesce(area_zone, area_district) AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
+    db.execute(sql`SELECT primary_category || ' — ' || coalesce(area_zone, area_district) AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND primary_category IS NOT NULL GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
     db.execute(sql`SELECT normalized_query AS label, count(*)::int AS value FROM search_events WHERE created_at >= ${start} AND created_at <= ${end} AND normalized_query IS NOT NULL AND result_count=0 GROUP BY 1 HAVING count(*) >= ${MINIMUM_GROUP_SIZE} ORDER BY value DESC`),
   ]);
   const search = searchResult.rows[0] ?? {};
@@ -178,6 +179,41 @@ router.get("/export.csv", async (req: AuthRequest, res): Promise<void> => {
   }
   await logAccess(req.pharmacy!.sub, req.pharmacy!.name, "data_insights.exported_csv", { start: start.toISOString(), end: end.toISOString(), interval: bucket });
   res.type("text/csv").attachment("mobicare-data-insights.csv").send(`${rows.join("\r\n")}\r\n`);
+});
+
+// ── Medicines not found ────────────────────────────────────────────────────
+// What patients searched for and could not get, why, where and how often.
+// shareable=1 gives the copy for the Ministry, partners and pharmacies: only
+// medicines and areas searched by at least 5 different people, without the
+// words typed.
+const notFoundQuery = z.object({
+  start: z.string().date().optional(),
+  end: z.string().date().optional(),
+  area: z.string().trim().min(1).max(120).optional(),
+  shareable: z.enum(["0", "1"]).optional(),
+});
+
+async function loadNotFound(req: AuthRequest) {
+  const parsed = notFoundQuery.safeParse(req.query);
+  if (!parsed.success) return null;
+  const { start, end } = getRange({ ...parsed.data, interval: "day" });
+  const shareable = parsed.data.shareable === "1";
+  return { report: await notFoundReport(start, end, shareable, parsed.data.area), start, end, shareable, area: parsed.data.area ?? null };
+}
+
+router.get("/not-found", async (req: AuthRequest, res): Promise<void> => {
+  const loaded = await loadNotFound(req);
+  if (!loaded) { res.status(400).json({ error: "start and end must be dates (YYYY-MM-DD)" }); return; }
+  await logAccess(req.pharmacy!.sub, req.pharmacy!.name, "data_insights.not_found_viewed", { start: loaded.start.toISOString(), end: loaded.end.toISOString(), shareable: loaded.shareable, area: loaded.area });
+  res.json(loaded.report);
+});
+
+router.get("/not-found.csv", async (req: AuthRequest, res): Promise<void> => {
+  const loaded = await loadNotFound(req);
+  if (!loaded) { res.status(400).json({ error: "start and end must be dates (YYYY-MM-DD)" }); return; }
+  await logAccess(req.pharmacy!.sub, req.pharmacy!.name, "data_insights.not_found_exported", { start: loaded.start.toISOString(), end: loaded.end.toISOString(), shareable: loaded.shareable, area: loaded.area });
+  const kind = loaded.shareable ? "shareable" : "hq";
+  res.type("text/csv").attachment(`mobicare-medicines-not-found-${loaded.report.range.start}-to-${loaded.report.range.end}-${kind}.csv`).send(notFoundCsv(loaded.report));
 });
 
 // ── GET /hq/insights/sales-trend: the Command Centre's trend chart ─────────

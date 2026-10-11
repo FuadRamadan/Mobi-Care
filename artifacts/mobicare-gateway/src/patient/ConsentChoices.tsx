@@ -7,8 +7,9 @@
  * costs nothing — which is the only thing that makes it consent rather than a
  * toll on the way in.
  *
- * The optional one is deliberately unticked. A pre-ticked box is not a decision
- * anybody made.
+ * The optional one starts ticked (decided 11 Oct 2026, policy 2026-10-11),
+ * with what it covers written beside it and an untick that costs nothing.
+ * Anyone who already said no is not ticked again: see ConsentGate.
  */
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +21,7 @@ export interface ConsentChoiceState {
 
 export const EMPTY_CONSENT: ConsentChoiceState = {
   termsAndPrivacy: false,
-  researchAnalytics: false,
+  researchAnalytics: true,
 };
 
 export function ConsentChoices({
@@ -71,10 +72,11 @@ export function ConsentChoices({
         <span className="text-xs leading-relaxed">
           <span className="font-medium">Help improve medicine access.</span>{" "}
           <span className="text-muted-foreground">
-            Optional. Lets your searches count towards the anonymous figures that
-            show where medicines are hard to find — never your name, prescriptions
-            or orders. Saying no changes nothing about your orders, and you can
-            change your mind later.
+            Optional. Counts your searches, including medicines you could not find
+            and your area (zone or district, never your exact location), in
+            combined figures shared with health authorities and partners. Never
+            your name, prescriptions or orders. Untick to say no; it changes
+            nothing about your orders, and you can change your mind later.
           </span>
         </span>
       </label>

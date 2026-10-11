@@ -18,7 +18,7 @@ export default function Privacy() {
           <li><strong>If you sign in with Google:</strong> your Google account ID, name and email address. Google never gives us your Google password.</li>
           <li><strong>Prescriptions:</strong> photos you upload, and the pharmacist's decision on each.</li>
           <li><strong>Orders:</strong> the medicines, the pharmacy, prices and fees, how you paid, and for delivery the location and directions you give.</li>
-          <li><strong>Searches:</strong> only if you agree to help improve medicine access. HQ sees them only as totals across many patients, never by name.</li>
+          <li><strong>Searches:</strong> if you leave "Help improve medicine access" on: what you searched for, whether it was found, and your area (your delivery zone or district, worked out from your phone's location if you allow it, never the exact location). HQ sees them only as totals across many patients, never by name.</li>
           <li><strong>Security records:</strong> which devices are signed in, and a log of important actions.</li>
         </ul>
       </LegalSection>
@@ -41,6 +41,7 @@ export default function Privacy() {
           <li><strong>MobiCare HQ staff:</strong> to oversee orders, pharmacies and payments. Their access is recorded.</li>
           <li><strong>Service providers</strong> that run parts of MobiCare for us: hosting and database, text messages and mobile money. They may store data outside Sierra Leone.</li>
           <li><strong>Google,</strong> only if you choose to sign in with Google.</li>
+          <li><strong>The Ministry of Health, health organisations and pharmacies:</strong> only combined figures across many patients, such as how often a medicine could not be found in an area. Never anything about you, and never a figure small enough to point to someone.</li>
           <li><strong>The Pharmacy Board or other authorities,</strong> only when the law requires it.</li>
         </ul>
       </LegalSection>

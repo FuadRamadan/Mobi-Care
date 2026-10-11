@@ -2595,6 +2595,33 @@ export const ExportHqInsightsCsvResponse = zod.unknown()
 
 
 /**
+ * One row per medicine (spelling variants grouped under the catalogue name). shareable=1 leaves out medicines and areas searched by fewer than 5 different people and the words typed, for sharing outside MobiCare.
+ * @summary Medicines patients searched for and could not get, why, where and the weekly trend
+ */
+export const GetHqNotFoundMedicinesQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional(),
+  "area": zod.coerce.string().optional().describe('A delivery zone or district name'),
+  "shareable": zod.enum(['0', '1']).optional()
+})
+
+export const GetHqNotFoundMedicinesResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary The medicines-not-found report as CSV (HQ copy, or shareable=1)
+ */
+export const ExportHqNotFoundMedicinesCsvQueryParams = zod.object({
+  "start": zod.date().optional(),
+  "end": zod.date().optional(),
+  "area": zod.coerce.string().optional(),
+  "shareable": zod.enum(['0', '1']).optional()
+})
+
+export const ExportHqNotFoundMedicinesCsvResponse = zod.unknown()
+
+
+/**
  * Read-only. Returns the confirmation phrase, per-table counts, and the list of data the reset preserves, so the confirmation dialog can show real numbers rather than a generic warning. Requires both the Data & Insights and settlement-management permissions.
  * @summary Row counts a pilot-data reset would remove, plus what it keeps
  */

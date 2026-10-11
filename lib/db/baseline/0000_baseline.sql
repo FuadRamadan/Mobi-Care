@@ -1192,6 +1192,11 @@ CREATE TABLE "public"."search_events" (
     "subcategory" "text",
     "area_district" "text" DEFAULT 'Unknown'::"text" NOT NULL,
     "result_count" integer NOT NULL,
+    "area_zone" "text",
+    "area_source" "text",
+    "unavailable_reason" "text",
+    "matched_drug_id" "uuid",
+    "matched_drug_name" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
@@ -2106,6 +2111,13 @@ CREATE INDEX "search_events_query_created_at_idx" ON "public"."search_events" US
 
 
 --
+-- Name: search_events_unavailable_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "search_events_unavailable_created_at_idx" ON "public"."search_events" USING "btree" ("created_at") WHERE ("unavailable_reason" IS NOT NULL);
+
+
+--
 -- Name: security_events_kind_created_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2552,11 +2564,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-09 16:08:52.821058+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-11 07:46:28.716131+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-09 16:08:52.825457+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-11 07:46:28.71892+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-09 16:08:52.875814+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-11 07:46:28.756946+00')
 ON CONFLICT DO NOTHING;

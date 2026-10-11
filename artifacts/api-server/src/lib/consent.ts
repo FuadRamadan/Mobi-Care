@@ -34,7 +34,7 @@ export type ConsentType = (typeof CONSENT_TYPES)[number];
  * because consent to the old text is not consent to the new one. Bumping it for
  * a typo fix costs every patient an interruption for nothing.
  */
-export const CURRENT_POLICY_VERSION = "2026-09-08";
+export const CURRENT_POLICY_VERSION = "2026-10-11";
 
 /** One row of the append-only consent record. */
 export interface ConsentRecord {
@@ -133,10 +133,13 @@ export const CONSENT_DESCRIPTIONS: Record<ConsentType, { title: string; body: st
   research_analytics: {
     title: "Help improve medicine access",
     body:
-      "Let MobiCare include your searches in the anonymous, combined figures " +
-      "used to show where medicines are hard to find. Never your name, phone " +
-      "number, prescriptions or orders — and never shared as individual " +
-      "records. You can say no now or change your mind later, and it will not " +
+      "Let MobiCare count your searches, including medicines you could not " +
+      "find and the area you searched from (your delivery zone or district, " +
+      "never your exact location), in combined figures that show where " +
+      "medicines are hard to find. These totals may be shared with the " +
+      "Ministry of Health, health organisations and pharmacies. Never your " +
+      "name, phone number, prescriptions or orders, and never as individual " +
+      "records. You can untick this now or turn it off later, and it will not " +
       "affect your orders in any way.",
     required: false,
   },

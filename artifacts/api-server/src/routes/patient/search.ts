@@ -15,6 +15,8 @@ import {
 } from "@workspace/db/schema";
 import { and, desc, eq, gt, ilike, or, sql, type SQL } from "drizzle-orm";
 import { isSameSearch, normaliseSearch } from "../../lib/search/searchEvents.js";
+import { resolveSearchArea } from "../../lib/search/searchArea.js";
+import { whyUnavailable } from "../../lib/search/notFound.js";
 import type { AuthRequest } from "../../middlewares/auth.js";
 import {
   haversineDistanceKm,
@@ -23,23 +25,6 @@ import {
 } from "../../lib/geo.js";
 
 const router = safeRouter();
-const DISTRICTS = [
-  "bo", "bombali", "bonthe", "falaba", "freetown", "kailahun", "kambia",
-  "kenema", "koinadugu", "kono", "moyamba", "port loko", "karene",
-  "pujehun", "tonkolili", "western area",
-];
-
-function coarseDistrict(address: string | null | undefined): string {
-  const normalized = address
-    ?.toLocaleLowerCase()
-    .replace(/[^a-z ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!normalized) return "Unknown";
-  const district = DISTRICTS.find((item) => normalized.includes(item));
-  return district ? district.replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Unknown";
-}
-
 function queryCoordinate(value: unknown): number | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
@@ -278,11 +263,6 @@ router.get("/", async (req: AuthRequest, res) => {
 
   // This handler is called only for a submitted search; filters and pagination
   // use the returned result set client-side and do not write additional events.
-  const [patient] = await db
-    .select({ address: patientsTable.address })
-    .from(patientsTable)
-    .where(eq(patientsTable.id, req.pharmacy!.sub))
-    .limit(1);
   // Only with the patient's consent. The optional analytics consent is only
   // meaningful if declining it actually stops the collection — recording the
   // search anyway and filtering it out later would make the choice cosmetic.
@@ -292,14 +272,32 @@ router.get("/", async (req: AuthRequest, res) => {
   // submission. This prevents page/filter activity from inflating search KPIs.
   if (q && consent.mayRecordAnalytics) {
     const patientId = req.pharmacy!.sub;
+    const [patient] = await db
+      .select({ address: patientsTable.address })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId))
+      .limit(1);
+    // The area by name only (zone, else district): the coordinates used to
+    // work it out are never stored.
+    const area = await resolveSearchArea({
+      patientId,
+      location: patientLatitude !== null && patientLongitude !== null ? [patientLongitude, patientLatitude] : null,
+      address: patient?.address,
+    });
+    const unavailable = await whyUnavailable(q, results);
     const event = {
       normalizedQuery: normaliseSearch(q),
       patientId,
       pharmacyId: pharmacyId || null,
       primaryCategory: category || null,
       subcategory: subcategory || null,
-      areaDistrict: coarseDistrict(patient?.address),
+      areaDistrict: area.district,
+      areaZone: area.zone,
+      areaSource: area.source,
       resultCount: results.length,
+      unavailableReason: unavailable?.reason ?? null,
+      matchedDrugId: unavailable?.drugId ?? null,
+      matchedDrugName: unavailable?.drugName ?? null,
     };
     await db.transaction(async (tx) => {
       // One patient's searches are recorded one at a time, so two requests

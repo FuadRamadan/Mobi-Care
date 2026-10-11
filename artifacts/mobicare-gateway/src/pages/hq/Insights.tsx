@@ -7,6 +7,7 @@ import { useHqAuth } from '@/hq/auth';
 import { HQ_ACCESS_KEY } from '@/lib/portalToken';
 import { apiUrl } from '@/lib/apiUrl';
 import ResetPilotData from './ResetPilotData';
+import NotFoundReport from './NotFoundReport';
 
 type Insights = {
   minimumGroupSize: number;
@@ -25,8 +26,11 @@ export default function HqInsights() {
   const [interval, setInterval] = useState<'day' | 'week' | 'month'>('day');
   const [data, setData] = useState<Insights | null>(null);
   const [error, setError] = useState('');
+  // Bumped by "Apply range" so the not-found report reloads with the page.
+  const [reloadKey, setReloadKey] = useState(0);
   const load = async () => {
     setError('');
+    setReloadKey((key) => key + 1);
     const response = await fetch(apiUrl(`/api/hq/insights?start=${start}&end=${end}&interval=${interval}`), { headers: { Authorization: `Bearer ${localStorage.getItem(HQ_ACCESS_KEY)}` } });
     if (!response.ok) { setError('Unable to load aggregate insights.'); return; }
     setData(await response.json() as Insights);
@@ -65,6 +69,7 @@ export default function HqInsights() {
         <Button variant="outline" onClick={() => window.print()}>Print / Save PDF</Button>
       </div>
       <p className="text-sm text-muted-foreground">Aggregate-only reporting. No patient identities or order-level records are displayed or exported.</p>
+      <NotFoundReport start={start} end={end} reloadKey={reloadKey} />
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-semibold">Current data exports</h2>
         <p className="mt-1 text-sm text-muted-foreground">Download a current, read-only CSV snapshot. Exporting never changes or removes the original records.</p>

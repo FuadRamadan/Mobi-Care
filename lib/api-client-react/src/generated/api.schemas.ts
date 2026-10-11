@@ -3175,6 +3175,41 @@ start?: string;
 end?: string;
 };
 
+export type GetHqNotFoundMedicinesParams = {
+start?: string;
+end?: string;
+/**
+ * A delivery zone or district name
+ */
+area?: string;
+shareable?: GetHqNotFoundMedicinesShareable;
+};
+
+export type GetHqNotFoundMedicinesShareable = typeof GetHqNotFoundMedicinesShareable[keyof typeof GetHqNotFoundMedicinesShareable];
+
+
+export const GetHqNotFoundMedicinesShareable = {
+  NUMBER_0: '0',
+  NUMBER_1: '1',
+} as const;
+
+export type GetHqNotFoundMedicines200 = { [key: string]: unknown };
+
+export type ExportHqNotFoundMedicinesCsvParams = {
+start?: string;
+end?: string;
+area?: string;
+shareable?: ExportHqNotFoundMedicinesCsvShareable;
+};
+
+export type ExportHqNotFoundMedicinesCsvShareable = typeof ExportHqNotFoundMedicinesCsvShareable[keyof typeof ExportHqNotFoundMedicinesCsvShareable];
+
+
+export const ExportHqNotFoundMedicinesCsvShareable = {
+  NUMBER_0: '0',
+  NUMBER_1: '1',
+} as const;
+
 export type ListHqOrdersParams = {
 status?: string;
 };

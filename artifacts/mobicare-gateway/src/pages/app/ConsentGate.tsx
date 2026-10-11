@@ -40,12 +40,18 @@ export function ConsentGate() {
           headers: { Authorization: `Bearer ${localStorage.getItem(PT_ACCESS_KEY)}` },
         });
         if (!response.ok) return;
-        const state = await response.json() as { needsConsent: boolean; mayRecordAnalytics: boolean };
+        const state = await response.json() as {
+          needsConsent: boolean;
+          mayRecordAnalytics: boolean;
+          researchAnalytics?: { granted: boolean; policyVersion: string | null };
+        };
         if (cancelled) return;
         setNeeded(state.needsConsent);
-        // Carry a previous "yes" forward as the starting position, but never a
-        // previous "no" into a tick — a decision to opt in is made once, here.
-        setChoices({ termsAndPrivacy: false, researchAnalytics: state.mayRecordAnalytics });
+        // The optional choice starts ticked, except for someone who has already
+        // said no: their "no" is carried forward, never turned into a tick.
+        const saidNo =
+          state.researchAnalytics?.policyVersion != null && state.researchAnalytics.granted === false;
+        setChoices({ termsAndPrivacy: false, researchAnalytics: !saidNo });
       } catch {
         // A failed check must not block the app. The server is the real gate.
       }

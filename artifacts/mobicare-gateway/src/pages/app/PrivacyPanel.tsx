@@ -156,9 +156,11 @@ export function PrivacyPanel({ hasPassword = true }: { hasPassword?: boolean }) 
         <span className="text-xs leading-relaxed">
           <span className="font-medium">Help improve medicine access.</span>{" "}
           <span className="text-muted-foreground">
-            Let your searches count towards the anonymous figures that show where
-            medicines are hard to find. Never your name, prescriptions or orders.
-            Turning this off stops the recording — it does not affect your orders.
+            Counts your searches, including medicines you could not find and your
+            area (zone or district, never your exact location), in combined figures
+            shared with health authorities and partners. Never your name,
+            prescriptions or orders. Turning this off stops the recording; it does
+            not affect your orders.
           </span>
         </span>
       </label>
