@@ -24,6 +24,7 @@ import {
   generateRefreshToken,
   hashRefreshToken,
   refreshTokenExpiresAt,
+  pharmacySessionExpiresAt,
 } from "../lib/jwt.js";
 import { requireAuth, AuthRequest } from "../middlewares/auth.js";
 import {
@@ -144,7 +145,7 @@ router.post("/login", async (req, res) => {
         pharmacyId: pharmacy.id,
         tokenHash: hash,
         sessionVersion: pharmacy.sessionVersion,
-        expiresAt: refreshTokenExpiresAt(),
+        expiresAt: pharmacySessionExpiresAt(),
       });
 
       const accessToken = signAccessToken({
@@ -738,7 +739,7 @@ router.post("/refresh", async (req, res) => {
       pharmacyId: pharmacy.id,
       tokenHash: newHash,
       sessionVersion: pharmacy.sessionVersion,
-      expiresAt: refreshTokenExpiresAt(),
+      expiresAt: pharmacySessionExpiresAt(),
     });
 
     const accessToken = signAccessToken({
@@ -1146,7 +1147,7 @@ router.post("/change-password", requireAuth, async (req: AuthRequest, res) => {
     pharmacyId: accountId,
     tokenHash: newTokenHash,
     sessionVersion: updatedCredential.sessionVersion,
-    expiresAt: refreshTokenExpiresAt(),
+    expiresAt: pharmacySessionExpiresAt(),
   });
 
   const accessToken = signAccessToken({

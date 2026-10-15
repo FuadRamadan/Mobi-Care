@@ -8,6 +8,13 @@ const SECRET: string = JWT_SECRET;
 
 export const ACCESS_TOKEN_TTL = "15m";
 export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/**
+ * Pharmacies stay signed in for 90 days without using the portal. The portal
+ * must stay open to receive orders, so a weekly sign-out cost them orders.
+ * Every use starts the 90 days again; signing out, a password change or an HQ
+ * reset still ends the session at once.
+ */
+export const PHARMACY_SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 export interface PharmacyTokenPayload {
   sub: string;       // pharmacy id, hq staff id, or patient id
@@ -48,4 +55,8 @@ export function hashRefreshToken(raw: string): string {
 
 export function refreshTokenExpiresAt(): Date {
   return new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+}
+
+export function pharmacySessionExpiresAt(): Date {
+  return new Date(Date.now() + PHARMACY_SESSION_TTL_MS);
 }

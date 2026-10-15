@@ -125,7 +125,7 @@ export default function HqSettings() {
                         value={form.maxPasswordAgeDays}
                         onChange={e => setForm({...form, maxPasswordAgeDays: parseInt(e.target.value) || 1})}
                       />
-                      <p className="text-[11px] text-muted-foreground">Force reset after this many days.</p>
+                      <p className="text-[11px] text-muted-foreground">Pharmacies must choose a new password after this many days. 90 days is 3 months.</p>
                     </div>
 
                     <div className="space-y-2">
