@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { usePatientAuth } from '@/patient/auth';
 import { PrivacyPanel } from './PrivacyPanel';
+import { SoundSetting } from '@/components/SoundToggle';
+import { PushSetting } from '@/components/PushSetting';
 import { SignInMethods } from './SignInMethods';
 
 export default function PatientProfilePage() {
@@ -213,6 +215,9 @@ export default function PatientProfilePage() {
             </Button>
           </div>
         </form>
+
+        <SoundSetting className="mt-6 rounded-2xl border bg-card p-4" />
+        <PushSetting className="mt-3 rounded-2xl border bg-card p-4" />
 
         {profile && (
           <div className="mt-6">

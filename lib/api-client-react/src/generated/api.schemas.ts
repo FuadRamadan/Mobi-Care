@@ -5,6 +5,159 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+export interface PrescriptionRequestInput {
+  imageKey: string;
+  /** The copy with the patient's name covered, shown to pharmacies before one accepts */
+  coveredImageKey?: string;
+  latitude: number;
+  longitude: number;
+  note?: string;
+}
+
+export type PrescriptionRequestStatus = typeof PrescriptionRequestStatus[keyof typeof PrescriptionRequestStatus];
+
+
+export const PrescriptionRequestStatus = {
+  searching: 'searching',
+  accepted: 'accepted',
+  ready: 'ready',
+  ordered: 'ordered',
+  expired: 'expired',
+  cancelled: 'cancelled',
+  rejected: 'rejected',
+} as const;
+
+export type PrescriptionRequestItemTier = typeof PrescriptionRequestItemTier[keyof typeof PrescriptionRequestItemTier];
+
+
+export const PrescriptionRequestItemTier = {
+  NUMBER_1: '1',
+  NUMBER_2: '2',
+  NUMBER_3: '3',
+} as const;
+
+export interface PrescriptionRequestItem {
+  inventoryId: string;
+  drugId: string;
+  drugName: string;
+  strength: string;
+  form: string;
+  unitOfSale: string;
+  tier: PrescriptionRequestItemTier;
+  priceLeones: number;
+  brand?: string | null;
+  manufacturer?: string | null;
+  countryOfOrigin?: string | null;
+  availableForDelivery: boolean;
+  availableForCollection: boolean;
+  prescriptionRequired: boolean;
+  collectionOnly: boolean;
+  maxQuantity: number;
+}
+
+/**
+ * One mobile money account a pharmacy accepts payment on. The provider is display-ready ("Orange Money", "AfriMoney"), never a raw enum value.
+ */
+export interface MobileMoneyLine {
+  provider: string;
+  number: string;
+}
+
+export interface PrescriptionRequestPharmacy {
+  id: string;
+  name: string;
+  address?: string | null;
+  mobileMoneyLines: MobileMoneyLine[];
+  mobileMoneyAccountName?: string | null;
+}
+
+export interface PatientPrescriptionRequest {
+  id: string;
+  status: PrescriptionRequestStatus;
+  round: number;
+  maxRounds: number;
+  roundEndsAt?: string | null;
+  areaName?: string | null;
+  note?: string | null;
+  pharmacy?: PrescriptionRequestPharmacy | null;
+  items: PrescriptionRequestItem[];
+  rejectReason?: string | null;
+  orderId?: string | null;
+  createdAt: string;
+}
+
+export interface PharmacyOpenPrescriptionRequest {
+  id: string;
+  areaName?: string | null;
+  distanceKm?: number | null;
+  hasCoveredPhoto: boolean;
+  round: number;
+  roundEndsAt?: string | null;
+  createdAt: string;
+}
+
+export interface PharmacyAcceptedPrescriptionRequest {
+  id: string;
+  status: PrescriptionRequestStatus;
+  areaName?: string | null;
+  note?: string | null;
+  patientName?: string | null;
+  patientPhone?: string | null;
+  acceptedAt?: string | null;
+  confirmBy?: string | null;
+  items: PrescriptionRequestItem[];
+  orderId?: string | null;
+}
+
+export interface PharmacyPrescriptionRequests {
+  open: PharmacyOpenPrescriptionRequest[];
+  mine: PharmacyAcceptedPrescriptionRequest[];
+}
+
+export type PrescriptionRequestConfirmationItemsItem = {
+  inventoryId: string;
+  maxQuantity: number;
+};
+
+export interface PrescriptionRequestConfirmation {
+  items: PrescriptionRequestConfirmationItemsItem[];
+}
+
+export interface WebPushPublicKey {
+  publicKey: string | null;
+}
+
+export type WebPushSubscriptionInputKeys = {
+  p256dh: string;
+  auth: string;
+};
+
+export interface WebPushSubscriptionInput {
+  endpoint: string;
+  keys: WebPushSubscriptionInputKeys;
+}
+
+export interface WebPushSubscriptionRemoval {
+  endpoint: string;
+}
+
+export type PrescriptionRequestRejectionReason = typeof PrescriptionRequestRejectionReason[keyof typeof PrescriptionRequestRejectionReason];
+
+
+export const PrescriptionRequestRejectionReason = {
+  illegible_image: 'illegible_image',
+  expired_prescription: 'expired_prescription',
+  invalid_prescription: 'invalid_prescription',
+  drug_unavailable: 'drug_unavailable',
+  controlled_substance_not_authorized: 'controlled_substance_not_authorized',
+  patient_mismatch: 'patient_mismatch',
+  quantity_exceeded: 'quantity_exceeded',
+} as const;
+
+export interface PrescriptionRequestRejection {
+  reason: PrescriptionRequestRejectionReason;
+}
+
 export type HqSecurityActivityTotals = {
   failedSignIns: number;
   signInsBlocked: number;
@@ -482,14 +635,6 @@ export interface PatientProfilePhotoInput {
   image: string;
 }
 
-/**
- * One mobile money account a pharmacy accepts payment on. The provider is display-ready ("Orange Money", "AfriMoney"), never a raw enum value.
- */
-export interface MobileMoneyLine {
-  provider: string;
-  number: string;
-}
-
 export interface DrugOffer {
   inventoryId: string;
   pharmacyId: string;
@@ -827,6 +972,8 @@ export interface PatientOrderInput {
   /** The delivery fee the patient was shown; a different current fee returns 409 */
   quotedDeliveryFeeMinor?: number;
   prescriptionImageKey?: string;
+  /** Order from a prescription request the pharmacist confirmed (no new upload or review) */
+  prescriptionRequestId?: string;
   items: PatientOrderItemInput[];
 }
 

@@ -137,6 +137,7 @@ import type {
   PatientPasswordResetConfirm,
   PatientPasswordResetRequest,
   PatientPasswordResetRequested,
+  PatientPrescriptionRequest,
   PatientProfile,
   PatientProfilePhotoInput,
   PatientProfileUpdate,
@@ -144,11 +145,13 @@ import type {
   PatientSearchDrugsParams,
   PatientSuggestMedicineParams,
   PaymentsConfig,
+  PharmacyAcceptedPrescriptionRequest,
   PharmacyCashout,
   PharmacyOnboardInput,
   PharmacyOnboardResponse,
   PharmacyOnlineAnalytics,
   PharmacyPayouts,
+  PharmacyPrescriptionRequests,
   PharmacyResetPasswordResponse,
   PilotResetPreview,
   PilotResetRequest,
@@ -156,6 +159,9 @@ import type {
   Prescription,
   PrescriptionApproval,
   PrescriptionRejection,
+  PrescriptionRequestConfirmation,
+  PrescriptionRequestInput,
+  PrescriptionRequestRejection,
   PrescriptionUploadInput,
   PrescriptionUploadResponse,
   PresignedUpload,
@@ -177,7 +183,10 @@ import type {
   TeamPhotoUploadResponse,
   TokenPair,
   TransferRetry,
-  UnreadCount
+  UnreadCount,
+  WebPushPublicKey,
+  WebPushSubscriptionInput,
+  WebPushSubscriptionRemoval
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -12617,4 +12626,1024 @@ export function useListAuditLog<TData = Awaited<ReturnType<typeof listAuditLog>>
 
 
 
+
+export const getCreatePrescriptionRequestUrl = () => {
+
+
+
+
+  return `/api/patient/prescription-requests`
+}
+
+/**
+ * @summary Send a prescription photo to the pharmacies nearby
+ */
+export const createPrescriptionRequest = async (prescriptionRequestInput: PrescriptionRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<PatientPrescriptionRequest> => {
+
+  return customFetch<PatientPrescriptionRequest>(getCreatePrescriptionRequestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(prescriptionRequestInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrescriptionRequest>>, TError,{data: BodyType<PrescriptionRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPrescriptionRequest>>, TError,{data: BodyType<PrescriptionRequestInput>}, TContext> => {
+
+const mutationKey = ['createPrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPrescriptionRequest>>, {data: BodyType<PrescriptionRequestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPrescriptionRequest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createPrescriptionRequest>>>
+    export type CreatePrescriptionRequestMutationBody = BodyType<PrescriptionRequestInput>
+    export type CreatePrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send a prescription photo to the pharmacies nearby
+ */
+export const useCreatePrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrescriptionRequest>>, TError,{data: BodyType<PrescriptionRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPrescriptionRequest>>,
+        TError,
+        {data: BodyType<PrescriptionRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePrescriptionRequestMutationOptions(options));
+    }
+
+export const getListPatientPrescriptionRequestsUrl = () => {
+
+
+
+
+  return `/api/patient/prescription-requests`
+}
+
+/**
+ * @summary The patient's prescription requests from the last 7 days
+ */
+export const listPatientPrescriptionRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<PatientPrescriptionRequest[]> => {
+
+  return customFetch<PatientPrescriptionRequest[]>(getListPatientPrescriptionRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPatientPrescriptionRequestsQueryKey = () => {
+    return [
+    `/api/patient/prescription-requests`
+    ] as const;
+    }
+
+
+export const getListPatientPrescriptionRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listPatientPrescriptionRequests>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientPrescriptionRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPatientPrescriptionRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPatientPrescriptionRequests>>> = ({ signal }) => listPatientPrescriptionRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPatientPrescriptionRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPatientPrescriptionRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listPatientPrescriptionRequests>>>
+export type ListPatientPrescriptionRequestsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The patient's prescription requests from the last 7 days
+ */
+
+export function useListPatientPrescriptionRequests<TData = Awaited<ReturnType<typeof listPatientPrescriptionRequests>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientPrescriptionRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPatientPrescriptionRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPatientPrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/prescription-requests/${id}`
+}
+
+/**
+ * @summary One prescription request
+ */
+export const getPatientPrescriptionRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PatientPrescriptionRequest> => {
+
+  return customFetch<PatientPrescriptionRequest>(getGetPatientPrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPatientPrescriptionRequestQueryKey = (id: string,) => {
+    return [
+    `/api/patient/prescription-requests/${id}`
+    ] as const;
+    }
+
+
+export const getGetPatientPrescriptionRequestQueryOptions = <TData = Awaited<ReturnType<typeof getPatientPrescriptionRequest>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientPrescriptionRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPatientPrescriptionRequestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPatientPrescriptionRequest>>> = ({ signal }) => getPatientPrescriptionRequest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPatientPrescriptionRequest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPatientPrescriptionRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getPatientPrescriptionRequest>>>
+export type GetPatientPrescriptionRequestQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary One prescription request
+ */
+
+export function useGetPatientPrescriptionRequest<TData = Awaited<ReturnType<typeof getPatientPrescriptionRequest>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPatientPrescriptionRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPatientPrescriptionRequestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCancelPrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/prescription-requests/${id}/cancel`
+}
+
+/**
+ * @summary Cancel a prescription request
+ */
+export const cancelPrescriptionRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PatientPrescriptionRequest> => {
+
+  return customFetch<PatientPrescriptionRequest>(getCancelPrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelPrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelPrescriptionRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cancelPrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelPrescriptionRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelPrescriptionRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelPrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof cancelPrescriptionRequest>>>
+
+    export type CancelPrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel a prescription request
+ */
+export const useCancelPrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelPrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelPrescriptionRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCancelPrescriptionRequestMutationOptions(options));
+    }
+
+export const getListPharmacyPrescriptionRequestsUrl = () => {
+
+
+
+
+  return `/api/pharmacy/prescription-requests`
+}
+
+/**
+ * @summary Open requests offered to this pharmacy, and the ones it accepted
+ */
+export const listPharmacyPrescriptionRequests = async ( options?: Parameters<typeof customFetch>[1]): Promise<PharmacyPrescriptionRequests> => {
+
+  return customFetch<PharmacyPrescriptionRequests>(getListPharmacyPrescriptionRequestsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPharmacyPrescriptionRequestsQueryKey = () => {
+    return [
+    `/api/pharmacy/prescription-requests`
+    ] as const;
+    }
+
+
+export const getListPharmacyPrescriptionRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPharmacyPrescriptionRequestsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>> = ({ signal }) => listPharmacyPrescriptionRequests({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPharmacyPrescriptionRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>>
+export type ListPharmacyPrescriptionRequestsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Open requests offered to this pharmacy, and the ones it accepted
+ */
+
+export function useListPharmacyPrescriptionRequests<TData = Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPharmacyPrescriptionRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPharmacyPrescriptionRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAcceptPrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/prescription-requests/${id}/accept`
+}
+
+/**
+ * @summary Accept a prescription request (first to accept wins)
+ */
+export const acceptPrescriptionRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyAcceptedPrescriptionRequest> => {
+
+  return customFetch<PharmacyAcceptedPrescriptionRequest>(getAcceptPrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAcceptPrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptPrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptPrescriptionRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['acceptPrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptPrescriptionRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  acceptPrescriptionRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptPrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof acceptPrescriptionRequest>>>
+
+    export type AcceptPrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Accept a prescription request (first to accept wins)
+ */
+export const useAcceptPrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptPrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acceptPrescriptionRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getAcceptPrescriptionRequestMutationOptions(options));
+    }
+
+export const getDeclinePrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/prescription-requests/${id}/decline`
+}
+
+/**
+ * @summary Decline a prescription request
+ */
+export const declinePrescriptionRequest = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeclinePrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeclinePrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declinePrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof declinePrescriptionRequest>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['declinePrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof declinePrescriptionRequest>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  declinePrescriptionRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeclinePrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof declinePrescriptionRequest>>>
+
+    export type DeclinePrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Decline a prescription request
+ */
+export const useDeclinePrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declinePrescriptionRequest>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof declinePrescriptionRequest>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeclinePrescriptionRequestMutationOptions(options));
+    }
+
+export const getConfirmPrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/prescription-requests/${id}/confirm`
+}
+
+/**
+ * @summary Confirm the medicines the pharmacy can supply
+ */
+export const confirmPrescriptionRequest = async (id: string,
+    prescriptionRequestConfirmation: PrescriptionRequestConfirmation, options?: Parameters<typeof customFetch>[1]): Promise<PharmacyAcceptedPrescriptionRequest> => {
+
+  return customFetch<PharmacyAcceptedPrescriptionRequest>(getConfirmPrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(prescriptionRequestConfirmation)
+  }
+);}
+
+
+
+
+
+export const getConfirmPrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestConfirmation>}, TContext> => {
+
+const mutationKey = ['confirmPrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmPrescriptionRequest>>, {id: string;data: BodyType<PrescriptionRequestConfirmation>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  confirmPrescriptionRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmPrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPrescriptionRequest>>>
+    export type ConfirmPrescriptionRequestMutationBody = BodyType<PrescriptionRequestConfirmation>
+    export type ConfirmPrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Confirm the medicines the pharmacy can supply
+ */
+export const useConfirmPrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmPrescriptionRequest>>,
+        TError,
+        {id: string;data: BodyType<PrescriptionRequestConfirmation>},
+        TContext
+      > => {
+      return useMutation(getConfirmPrescriptionRequestMutationOptions(options));
+    }
+
+export const getRejectPrescriptionRequestUrl = (id: string,) => {
+
+
+
+
+  return `/api/pharmacy/prescription-requests/${id}/reject`
+}
+
+/**
+ * @summary Reject an accepted prescription request
+ */
+export const rejectPrescriptionRequest = async (id: string,
+    prescriptionRequestRejection: PrescriptionRequestRejection, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRejectPrescriptionRequestUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(prescriptionRequestRejection)
+  }
+);}
+
+
+
+
+
+export const getRejectPrescriptionRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestRejection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestRejection>}, TContext> => {
+
+const mutationKey = ['rejectPrescriptionRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectPrescriptionRequest>>, {id: string;data: BodyType<PrescriptionRequestRejection>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rejectPrescriptionRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectPrescriptionRequestMutationResult = NonNullable<Awaited<ReturnType<typeof rejectPrescriptionRequest>>>
+    export type RejectPrescriptionRequestMutationBody = BodyType<PrescriptionRequestRejection>
+    export type RejectPrescriptionRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reject an accepted prescription request
+ */
+export const useRejectPrescriptionRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectPrescriptionRequest>>, TError,{id: string;data: BodyType<PrescriptionRequestRejection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectPrescriptionRequest>>,
+        TError,
+        {id: string;data: BodyType<PrescriptionRequestRejection>},
+        TContext
+      > => {
+      return useMutation(getRejectPrescriptionRequestMutationOptions(options));
+    }
+
+export const getGetWebPushPublicKeyUrl = () => {
+
+
+
+
+  return `/api/push/public-key`
+}
+
+/**
+ * @summary The key browsers subscribe to notifications with (null when notifications are off)
+ */
+export const getWebPushPublicKey = async ( options?: Parameters<typeof customFetch>[1]): Promise<WebPushPublicKey> => {
+
+  return customFetch<WebPushPublicKey>(getGetWebPushPublicKeyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWebPushPublicKeyQueryKey = () => {
+    return [
+    `/api/push/public-key`
+    ] as const;
+    }
+
+
+export const getGetWebPushPublicKeyQueryOptions = <TData = Awaited<ReturnType<typeof getWebPushPublicKey>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWebPushPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWebPushPublicKeyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWebPushPublicKey>>> = ({ signal }) => getWebPushPublicKey({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWebPushPublicKey>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWebPushPublicKeyQueryResult = NonNullable<Awaited<ReturnType<typeof getWebPushPublicKey>>>
+export type GetWebPushPublicKeyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The key browsers subscribe to notifications with (null when notifications are off)
+ */
+
+export function useGetWebPushPublicKey<TData = Awaited<ReturnType<typeof getWebPushPublicKey>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWebPushPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWebPushPublicKeyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSavePatientPushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/patient/push-subscriptions`
+}
+
+/**
+ * @summary Turn on notifications in this browser
+ */
+export const savePatientPushSubscription = async (webPushSubscriptionInput: WebPushSubscriptionInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getSavePatientPushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(webPushSubscriptionInput)
+  }
+);}
+
+
+
+
+
+export const getSavePatientPushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext> => {
+
+const mutationKey = ['savePatientPushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePatientPushSubscription>>, {data: BodyType<WebPushSubscriptionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  savePatientPushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePatientPushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof savePatientPushSubscription>>>
+    export type SavePatientPushSubscriptionMutationBody = BodyType<WebPushSubscriptionInput>
+    export type SavePatientPushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Turn on notifications in this browser
+ */
+export const useSavePatientPushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePatientPushSubscription>>,
+        TError,
+        {data: BodyType<WebPushSubscriptionInput>},
+        TContext
+      > => {
+      return useMutation(getSavePatientPushSubscriptionMutationOptions(options));
+    }
+
+export const getRemovePatientPushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/patient/push-subscriptions/remove`
+}
+
+/**
+ * @summary Turn off notifications in this browser
+ */
+export const removePatientPushSubscription = async (webPushSubscriptionRemoval: WebPushSubscriptionRemoval, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemovePatientPushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(webPushSubscriptionRemoval)
+  }
+);}
+
+
+
+
+
+export const getRemovePatientPushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext> => {
+
+const mutationKey = ['removePatientPushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removePatientPushSubscription>>, {data: BodyType<WebPushSubscriptionRemoval>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  removePatientPushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemovePatientPushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof removePatientPushSubscription>>>
+    export type RemovePatientPushSubscriptionMutationBody = BodyType<WebPushSubscriptionRemoval>
+    export type RemovePatientPushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Turn off notifications in this browser
+ */
+export const useRemovePatientPushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePatientPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removePatientPushSubscription>>,
+        TError,
+        {data: BodyType<WebPushSubscriptionRemoval>},
+        TContext
+      > => {
+      return useMutation(getRemovePatientPushSubscriptionMutationOptions(options));
+    }
+
+export const getSavePharmacyPushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/pharmacy/push-subscriptions`
+}
+
+/**
+ * @summary Turn on notifications in this browser
+ */
+export const savePharmacyPushSubscription = async (webPushSubscriptionInput: WebPushSubscriptionInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getSavePharmacyPushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(webPushSubscriptionInput)
+  }
+);}
+
+
+
+
+
+export const getSavePharmacyPushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext> => {
+
+const mutationKey = ['savePharmacyPushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePharmacyPushSubscription>>, {data: BodyType<WebPushSubscriptionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  savePharmacyPushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePharmacyPushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof savePharmacyPushSubscription>>>
+    export type SavePharmacyPushSubscriptionMutationBody = BodyType<WebPushSubscriptionInput>
+    export type SavePharmacyPushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Turn on notifications in this browser
+ */
+export const useSavePharmacyPushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePharmacyPushSubscription>>,
+        TError,
+        {data: BodyType<WebPushSubscriptionInput>},
+        TContext
+      > => {
+      return useMutation(getSavePharmacyPushSubscriptionMutationOptions(options));
+    }
+
+export const getRemovePharmacyPushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/pharmacy/push-subscriptions/remove`
+}
+
+/**
+ * @summary Turn off notifications in this browser
+ */
+export const removePharmacyPushSubscription = async (webPushSubscriptionRemoval: WebPushSubscriptionRemoval, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemovePharmacyPushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(webPushSubscriptionRemoval)
+  }
+);}
+
+
+
+
+
+export const getRemovePharmacyPushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext> => {
+
+const mutationKey = ['removePharmacyPushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removePharmacyPushSubscription>>, {data: BodyType<WebPushSubscriptionRemoval>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  removePharmacyPushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemovePharmacyPushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof removePharmacyPushSubscription>>>
+    export type RemovePharmacyPushSubscriptionMutationBody = BodyType<WebPushSubscriptionRemoval>
+    export type RemovePharmacyPushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Turn off notifications in this browser
+ */
+export const useRemovePharmacyPushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removePharmacyPushSubscription>>, TError,{data: BodyType<WebPushSubscriptionRemoval>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removePharmacyPushSubscription>>,
+        TError,
+        {data: BodyType<WebPushSubscriptionRemoval>},
+        TContext
+      > => {
+      return useMutation(getRemovePharmacyPushSubscriptionMutationOptions(options));
+    }
 

@@ -244,6 +244,21 @@ CREATE TYPE "public"."prescription_reject_reason" AS ENUM (
 
 
 --
+-- Name: prescription_request_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE "public"."prescription_request_status" AS ENUM (
+    'searching',
+    'accepted',
+    'ready',
+    'ordered',
+    'expired',
+    'cancelled',
+    'rejected'
+);
+
+
+--
 -- Name: prescription_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -930,6 +945,7 @@ CREATE TABLE "public"."pharmacies" (
     "password_last_changed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "temporary_password_expires_at" timestamp with time zone,
     "session_version" integer DEFAULT 1 NOT NULL,
+    "last_seen_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -1073,6 +1089,49 @@ CREATE TABLE "public"."pharmacy_password_policy" (
 CREATE TABLE "public"."platform_settings" (
     "key" "text" NOT NULL,
     "value" integer NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
+-- Name: prescription_request_offers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."prescription_request_offers" (
+    "request_id" "uuid" NOT NULL,
+    "pharmacy_id" "uuid" NOT NULL,
+    "round" integer NOT NULL,
+    "notified_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "declined_at" timestamp with time zone
+);
+
+
+--
+-- Name: prescription_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."prescription_requests" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "patient_id" "uuid" NOT NULL,
+    "image_key" "text" NOT NULL,
+    "covered_image_key" "text",
+    "latitude" double precision NOT NULL,
+    "longitude" double precision NOT NULL,
+    "zone_id" "uuid",
+    "area_name" "text",
+    "note" "text",
+    "status" "public"."prescription_request_status" DEFAULT 'searching'::"public"."prescription_request_status" NOT NULL,
+    "round" integer DEFAULT 0 NOT NULL,
+    "round_started_at" timestamp with time zone,
+    "accepted_pharmacy_id" "uuid",
+    "accepted_at" timestamp with time zone,
+    "ready_at" timestamp with time zone,
+    "items" "jsonb",
+    "reject_reason" "public"."prescription_reject_reason",
+    "order_id" "uuid",
+    "ended_at" timestamp with time zone,
+    "images_deleted_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
@@ -1293,6 +1352,24 @@ CREATE TABLE "public"."team_photo_uploads" (
     "expires_at" timestamp with time zone NOT NULL,
     "consumed_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+--
+-- Name: web_push_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."web_push_subscriptions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "patient_id" "uuid",
+    "pharmacy_id" "uuid",
+    "endpoint" "text" NOT NULL,
+    "p256dh" "text" NOT NULL,
+    "auth" "text" NOT NULL,
+    "user_agent" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "last_sent_at" timestamp with time zone,
+    CONSTRAINT "web_push_subscriptions_one_owner" CHECK ((("patient_id" IS NULL) <> ("pharmacy_id" IS NULL)))
 );
 
 
@@ -1784,6 +1861,22 @@ ALTER TABLE ONLY "public"."platform_settings"
 
 
 --
+-- Name: prescription_request_offers prescription_request_offers_request_id_pharmacy_id_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_request_offers"
+    ADD CONSTRAINT "prescription_request_offers_request_id_pharmacy_id_pk" PRIMARY KEY ("request_id", "pharmacy_id");
+
+
+--
+-- Name: prescription_requests prescription_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_requests"
+    ADD CONSTRAINT "prescription_requests_pkey" PRIMARY KEY ("id");
+
+
+--
 -- Name: prescription_uploads prescription_uploads_image_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1901,6 +1994,14 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 ALTER TABLE ONLY "public"."team_photo_uploads"
     ADD CONSTRAINT "team_photo_uploads_pkey" PRIMARY KEY ("id");
+
+
+--
+-- Name: web_push_subscriptions web_push_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."web_push_subscriptions"
+    ADD CONSTRAINT "web_push_subscriptions_pkey" PRIMARY KEY ("id");
 
 
 --
@@ -2072,6 +2173,27 @@ CREATE INDEX "pharmacy_cashouts_status_idx" ON "public"."pharmacy_cashouts" USIN
 
 
 --
+-- Name: prescription_request_offers_pharmacy_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "prescription_request_offers_pharmacy_idx" ON "public"."prescription_request_offers" USING "btree" ("pharmacy_id", "notified_at" DESC NULLS LAST);
+
+
+--
+-- Name: prescription_requests_open_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "prescription_requests_open_idx" ON "public"."prescription_requests" USING "btree" ("status", "round_started_at") WHERE ("status" = ANY (ARRAY['searching'::"public"."prescription_request_status", 'accepted'::"public"."prescription_request_status", 'ready'::"public"."prescription_request_status"]));
+
+
+--
+-- Name: prescription_requests_patient_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "prescription_requests_patient_idx" ON "public"."prescription_requests" USING "btree" ("patient_id", "created_at" DESC NULLS LAST);
+
+
+--
 -- Name: prescriptions_file_cleanup_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2146,6 +2268,27 @@ CREATE UNIQUE INDEX "settlements_pharmacy_period_uq" ON "public"."settlements" U
 --
 
 CREATE UNIQUE INDEX "uniq_active_pharmacy_listing" ON "public"."pharmacy_inventory" USING "btree" ("pharmacy_id", "drug_id", "strength", "form", "unit_of_sale", "lower"(("brand")::"text"), "lower"((COALESCE("manufacturer", ''::character varying))::"text")) WHERE ("is_active" = true);
+
+
+--
+-- Name: web_push_subscriptions_endpoint_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "web_push_subscriptions_endpoint_idx" ON "public"."web_push_subscriptions" USING "btree" ("endpoint");
+
+
+--
+-- Name: web_push_subscriptions_patient_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "web_push_subscriptions_patient_idx" ON "public"."web_push_subscriptions" USING "btree" ("patient_id") WHERE ("patient_id" IS NOT NULL);
+
+
+--
+-- Name: web_push_subscriptions_pharmacy_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "web_push_subscriptions_pharmacy_idx" ON "public"."web_push_subscriptions" USING "btree" ("pharmacy_id") WHERE ("pharmacy_id" IS NOT NULL);
 
 
 --
@@ -2468,6 +2611,54 @@ ALTER TABLE ONLY "public"."pharmacy_password_history"
 
 
 --
+-- Name: prescription_request_offers prescription_request_offers_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_request_offers"
+    ADD CONSTRAINT "prescription_request_offers_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE CASCADE;
+
+
+--
+-- Name: prescription_request_offers prescription_request_offers_request_id_prescription_requests_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_request_offers"
+    ADD CONSTRAINT "prescription_request_offers_request_id_prescription_requests_id" FOREIGN KEY ("request_id") REFERENCES "public"."prescription_requests"("id") ON DELETE CASCADE;
+
+
+--
+-- Name: prescription_requests prescription_requests_accepted_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_requests"
+    ADD CONSTRAINT "prescription_requests_accepted_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("accepted_pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE SET NULL;
+
+
+--
+-- Name: prescription_requests prescription_requests_order_id_orders_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_requests"
+    ADD CONSTRAINT "prescription_requests_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE SET NULL;
+
+
+--
+-- Name: prescription_requests prescription_requests_patient_id_patients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_requests"
+    ADD CONSTRAINT "prescription_requests_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id") ON DELETE CASCADE;
+
+
+--
+-- Name: prescription_requests prescription_requests_zone_id_delivery_zones_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."prescription_requests"
+    ADD CONSTRAINT "prescription_requests_zone_id_delivery_zones_id_fk" FOREIGN KEY ("zone_id") REFERENCES "public"."delivery_zones"("id") ON DELETE SET NULL;
+
+
+--
 -- Name: prescription_uploads prescription_uploads_patient_id_patients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2564,6 +2755,22 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 --
+-- Name: web_push_subscriptions web_push_subscriptions_patient_id_patients_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."web_push_subscriptions"
+    ADD CONSTRAINT "web_push_subscriptions_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id") ON DELETE CASCADE;
+
+
+--
+-- Name: web_push_subscriptions web_push_subscriptions_pharmacy_id_pharmacies_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."web_push_subscriptions"
+    ADD CONSTRAINT "web_push_subscriptions_pharmacy_id_pharmacies_id_fk" FOREIGN KEY ("pharmacy_id") REFERENCES "public"."pharmacies"("id") ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -2574,11 +2781,11 @@ ALTER TABLE ONLY "public"."team_photo_uploads"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-11 17:30:01.626825+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-15 15:46:15.01531+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-11 17:30:01.630288+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-15 15:46:15.017977+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-11 17:30:01.695383+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-15 15:46:15.06103+00')
 ON CONFLICT DO NOTHING;

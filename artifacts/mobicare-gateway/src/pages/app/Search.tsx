@@ -6,13 +6,18 @@ import {
   Truck,
   Store,
   X,
+  Camera,
+  ChevronRight,
 } from "lucide-react";
+import { Link } from "wouter";
 import {
   usePatientSearchDrugs,
   getPatientSearchDrugsQueryKey,
   usePatientSuggestMedicine,
   getPatientSuggestMedicineQueryKey,
   useListPatientDrugCategories,
+  useListPatientPrescriptionRequests,
+  getListPatientPrescriptionRequestsQueryKey,
   type DrugSearchResult,
   type DrugOffer,
   type DrugPrimaryCategory,
@@ -56,6 +61,10 @@ export default function PatientSearch() {
   const searching = query.trim().length > 0 || category !== "";
 
   const { data: categories } = useListPatientDrugCategories();
+  const { data: requests } = useListPatientPrescriptionRequests({
+    query: { queryKey: getListPatientPrescriptionRequestsQueryKey(), refetchInterval: 30_000 },
+  });
+  const activeRequest = requests?.find((r) => r.status === "searching" || r.status === "accepted" || r.status === "ready");
 
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
@@ -144,6 +153,46 @@ export default function PatientSearch() {
             </button>
           )}
         </div>
+
+        {!searching && (
+          activeRequest ? (
+            <Link
+              href={`/app/prescription/${activeRequest.id}`}
+              className={`flex items-center gap-3 rounded-2xl border p-3 text-sm ${
+                activeRequest.status === "ready" ? "border-primary bg-primary/10" : "bg-card"
+              }`}
+              data-testid="link-active-request"
+            >
+              <Camera className="w-5 h-5 text-primary shrink-0" />
+              <span className="flex-1 min-w-0">
+                <span className="font-medium block">
+                  {activeRequest.status === "ready"
+                    ? "Your medicines are ready to order"
+                    : activeRequest.status === "accepted"
+                      ? `${activeRequest.pharmacy?.name ?? "A pharmacy"} is checking your prescription`
+                      : "Looking for a pharmacy for your prescription"}
+                </span>
+                <span className="text-xs text-muted-foreground">Tap to see where it is</span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </Link>
+          ) : (
+            <Link
+              href="/app/prescription"
+              className="flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-card p-3 text-sm hover:border-primary transition-colors"
+              data-testid="link-send-prescription"
+            >
+              <span className="flex w-9 h-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <Camera className="w-5 h-5 text-primary" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="font-medium block">Upload prescription</span>
+                <span className="text-xs text-muted-foreground">Pharmacies near you check it and confirm your medicines</span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </Link>
+          )
+        )}
 
         {categories && categories.length > 0 && (
           <div className="space-y-2.5">

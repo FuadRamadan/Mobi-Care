@@ -341,9 +341,23 @@ SQL
   )
 fi
 
+# Keys for browser notifications (Web Push). Made once and kept with the local
+# data, so browsers that turned notifications on stay subscribed across runs.
+VAPID_FILE="$STATE/vapid.env"
+if [[ ! -f "$VAPID_FILE" ]]; then
+  node -e '
+    const { createECDH } = require("crypto");
+    const k = createECDH("prime256v1"); k.generateKeys();
+    console.log("VAPID_PUBLIC_KEY=" + k.getPublicKey().toString("base64url"));
+    console.log("VAPID_PRIVATE_KEY=" + k.getPrivateKey().toString("base64url"));
+  ' > "$VAPID_FILE"
+fi
+VAPID_ENV=($(cat "$VAPID_FILE"))
+
 check_port "$PORT" "MobiCare"
 echo "==> Starting MobiCare on port $PORT"
-env "${MONIME_ENV[@]}" \
+env "${MONIME_ENV[@]}" "${VAPID_ENV[@]}" \
+VAPID_SUBJECT=mailto:local-test@example.com \
 NODE_ENV=development \
 PORT="$PORT" \
 LOG_LEVEL=info \

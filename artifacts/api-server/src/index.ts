@@ -7,6 +7,7 @@ import { reencryptStoredCredentials } from "./lib/secretRotation";
 import { startSecurityEventPruning } from "./lib/securityEvents";
 import { startMedicineAlerts, stopMedicineAlerts } from "./lib/search/medicineAlerts";
 import { startPrescriptionFileCleanup, stopPrescriptionFileCleanup } from "./lib/prescriptionFiles";
+import { startPrescriptionRequestJobs, stopPrescriptionRequestJobs } from "./lib/prescriptionRequests";
 import { databaseDriver, db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -190,6 +191,17 @@ async function assertSchemaUpToDate(): Promise<void> {
       `,
     },
     {
+      label: "prescription requests (migration 0039)",
+      query: sql`
+        SELECT (
+          to_regclass('prescription_requests') IS NOT NULL
+          AND to_regclass('prescription_request_offers') IS NOT NULL
+          AND EXISTS (SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = 'pharmacies' AND column_name = 'last_seen_at')
+        ) AS exists
+      `,
+    },
+    {
       label: "prescription downloads and zone deletion (migration 0038)",
       query: sql`
         SELECT (
@@ -368,6 +380,7 @@ async function start(): Promise<void> {
     startSecurityEventPruning();
     startMedicineAlerts();
     startPrescriptionFileCleanup();
+    startPrescriptionRequestJobs();
   });
 
   const shutdown = async (signal: string) => {
@@ -375,6 +388,7 @@ async function start(): Promise<void> {
     stopMonimeJobs();
     stopMedicineAlerts();
     stopPrescriptionFileCleanup();
+    stopPrescriptionRequestJobs();
     server.close(async (error) => {
       if (error) logger.error({ err: error }, "HTTP server close failed");
       await pool.end().catch((err) =>

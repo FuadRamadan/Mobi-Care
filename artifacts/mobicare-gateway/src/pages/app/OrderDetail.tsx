@@ -1,5 +1,6 @@
 import { Link, useParams } from 'wouter';
-import { ArrowLeft, Check, Truck, Store, Phone, FileText, PackageCheck, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Check, Copy, Truck, Store, Phone, FileText, PackageCheck, XCircle } from 'lucide-react';
 import {
   usePatientGetOrder,
   useCancelPatientOrder,
@@ -14,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { formatLeones, formatDate, StatusBadge, EmptyState } from '@/pages/hq/shared';
 import { OrderPayment } from './OrderPayment';
+import { orderNumber } from '@/lib/orderNumber';
+import { PushPrompt } from '@/components/PushSetting';
 
 const DELIVERY_STEPS: { key: string; label: string; hint: string }[] = [
   { key: 'paid', label: 'Payment received', hint: 'Your payment is confirmed' },
@@ -101,6 +104,10 @@ export default function OrderDetail() {
   const steps = o.fulfillmentType === 'delivery' ? DELIVERY_STEPS : COLLECTION_STEPS;
   const statusIdx = STATUS_ORDER.indexOf(o.status);
   const cancelled = o.status === 'cancelled';
+  // The pharmacy, HQ or a rider has the next step, not the patient.
+  const waitingOnOthers =
+    ['paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering'].includes(o.status) ||
+    (o.status === 'awaiting_payment' && o.prescription?.status === 'pending');
   const canCancel =
     !o.courier &&
     ['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready'].includes(o.status);
@@ -112,13 +119,16 @@ export default function OrderDetail() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="min-w-0">
-          <h1 className="font-display font-bold text-xl text-dark-green truncate">
-            Order · {formatLeones(o.totalLeones)}
+          <h1 className="font-display font-bold text-xl text-dark-green truncate flex items-center gap-1.5">
+            Order <span className="font-mono tracking-wide" data-testid="text-order-number">#{orderNumber(o.id)}</span>
+            <CopyOrderNumber value={orderNumber(o.id)} />
           </h1>
-          <p className="text-xs text-muted-foreground">Placed {formatDate(o.createdAt)}</p>
+          <p className="text-xs text-muted-foreground">{formatLeones(o.totalLeones)} · Placed {formatDate(o.createdAt)}</p>
         </div>
         <div className="ml-auto"><StatusBadge status={o.status} /></div>
       </div>
+
+      {waitingOnOthers && <PushPrompt when="each time your order moves on" />}
 
       {/* Timeline */}
       <Card>
@@ -329,5 +339,27 @@ export default function OrderDetail() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Copies the order number, for quoting it to the pharmacy or MobiCare. */
+function CopyOrderNumber({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="p-1 rounded-md text-muted-foreground hover:text-foreground"
+      aria-label={copied ? 'Order number copied' : 'Copy order number'}
+      title={copied ? 'Copied' : 'Copy'}
+      onClick={() => {
+        void navigator.clipboard?.writeText(value).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      data-testid="button-copy-order-number"
+    >
+      {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
+    </button>
   );
 }

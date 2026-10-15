@@ -1710,6 +1710,7 @@ export const PatientCreateOrderBody = zod.object({
 }).optional(),
   "quotedDeliveryFeeMinor": zod.number().optional().describe('The delivery fee the patient was shown; a different current fee returns 409'),
   "prescriptionImageKey": zod.string().optional(),
+  "prescriptionRequestId": zod.string().optional().describe('Order from a prescription request the pharmacist confirmed (no new upload or review)'),
   "items": zod.array(zod.object({
   "inventoryId": zod.string(),
   "quantity": zod.number().min(1)
@@ -5178,5 +5179,410 @@ export const ListAuditLogResponseItem = zod.object({
   "createdAt": zod.string()
 })
 export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
+
+
+/**
+ * @summary Send a prescription photo to the pharmacies nearby
+ */
+export const CreatePrescriptionRequestBody = zod.object({
+  "imageKey": zod.string(),
+  "coveredImageKey": zod.string().optional().describe('The copy with the patient\'s name covered, shown to pharmacies before one accepts'),
+  "latitude": zod.number(),
+  "longitude": zod.number(),
+  "note": zod.string().optional()
+})
+
+export const CreatePrescriptionRequestResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "round": zod.number(),
+  "maxRounds": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "pharmacy": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')),
+  "mobileMoneyAccountName": zod.string().nullish()
+}).nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "rejectReason": zod.string().nullish(),
+  "orderId": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary The patient's prescription requests from the last 7 days
+ */
+export const ListPatientPrescriptionRequestsResponseItem = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "round": zod.number(),
+  "maxRounds": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "pharmacy": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')),
+  "mobileMoneyAccountName": zod.string().nullish()
+}).nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "rejectReason": zod.string().nullish(),
+  "orderId": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListPatientPrescriptionRequestsResponse = zod.array(ListPatientPrescriptionRequestsResponseItem)
+
+
+/**
+ * @summary One prescription request
+ */
+export const GetPatientPrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetPatientPrescriptionRequestResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "round": zod.number(),
+  "maxRounds": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "pharmacy": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')),
+  "mobileMoneyAccountName": zod.string().nullish()
+}).nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "rejectReason": zod.string().nullish(),
+  "orderId": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel a prescription request
+ */
+export const CancelPrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelPrescriptionRequestResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "round": zod.number(),
+  "maxRounds": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "pharmacy": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')),
+  "mobileMoneyAccountName": zod.string().nullish()
+}).nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "rejectReason": zod.string().nullish(),
+  "orderId": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Open requests offered to this pharmacy, and the ones it accepted
+ */
+export const ListPharmacyPrescriptionRequestsResponse = zod.object({
+  "open": zod.array(zod.object({
+  "id": zod.string(),
+  "areaName": zod.string().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "hasCoveredPhoto": zod.boolean(),
+  "round": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})),
+  "mine": zod.array(zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "patientName": zod.string().nullish(),
+  "patientPhone": zod.string().nullish(),
+  "acceptedAt": zod.string().nullish(),
+  "confirmBy": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "orderId": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Accept a prescription request (first to accept wins)
+ */
+export const AcceptPrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AcceptPrescriptionRequestResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "patientName": zod.string().nullish(),
+  "patientPhone": zod.string().nullish(),
+  "acceptedAt": zod.string().nullish(),
+  "confirmBy": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "orderId": zod.string().nullish()
+})
+
+
+/**
+ * @summary Decline a prescription request
+ */
+export const DeclinePrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeclinePrescriptionRequestResponse = zod.void()
+
+
+/**
+ * @summary Confirm the medicines the pharmacy can supply
+ */
+export const ConfirmPrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ConfirmPrescriptionRequestBody = zod.object({
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "maxQuantity": zod.number()
+}))
+})
+
+export const ConfirmPrescriptionRequestResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "patientName": zod.string().nullish(),
+  "patientPhone": zod.string().nullish(),
+  "acceptedAt": zod.string().nullish(),
+  "confirmBy": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "orderId": zod.string().nullish()
+})
+
+
+/**
+ * @summary Reject an accepted prescription request
+ */
+export const RejectPrescriptionRequestParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RejectPrescriptionRequestBody = zod.object({
+  "reason": zod.enum(['illegible_image', 'expired_prescription', 'invalid_prescription', 'drug_unavailable', 'controlled_substance_not_authorized', 'patient_mismatch', 'quantity_exceeded'])
+})
+
+export const RejectPrescriptionRequestResponse = zod.unknown()
+
+
+/**
+ * @summary The key browsers subscribe to notifications with (null when notifications are off)
+ */
+export const GetWebPushPublicKeyResponse = zod.object({
+  "publicKey": zod.string().nullable()
+})
+
+
+/**
+ * @summary Turn on notifications in this browser
+ */
+export const SavePatientPushSubscriptionBody = zod.object({
+  "endpoint": zod.string(),
+  "keys": zod.object({
+  "p256dh": zod.string(),
+  "auth": zod.string()
+})
+})
+
+export const SavePatientPushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Turn off notifications in this browser
+ */
+export const RemovePatientPushSubscriptionBody = zod.object({
+  "endpoint": zod.string()
+})
+
+export const RemovePatientPushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Turn on notifications in this browser
+ */
+export const SavePharmacyPushSubscriptionBody = zod.object({
+  "endpoint": zod.string(),
+  "keys": zod.object({
+  "p256dh": zod.string(),
+  "auth": zod.string()
+})
+})
+
+export const SavePharmacyPushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Turn off notifications in this browser
+ */
+export const RemovePharmacyPushSubscriptionBody = zod.object({
+  "endpoint": zod.string()
+})
+
+export const RemovePharmacyPushSubscriptionResponse = zod.void()
 
 

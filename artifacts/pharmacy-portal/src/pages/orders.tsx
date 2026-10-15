@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { orderNumber } from "@/lib/orderNumber";
 
 const STATUS_CONFIG: Record<string, { label: string, color: string, icon: any }> = {
   awaiting_payment: { label: "Awaiting Payment", color: "bg-muted text-muted-foreground", icon: Clock },
@@ -73,8 +74,10 @@ export default function Orders() {
 
   const filteredOrders = orders?.filter(order => {
     // Search filter
-    if (search && !order.id.toLowerCase().includes(search.toLowerCase()) && 
-        !order.patientName.toLowerCase().includes(search.toLowerCase())) {
+    // The order number can be typed with or without its #.
+    const q = search.trim().replace(/^#/, "").toLowerCase();
+    if (q && !orderNumber(order.id).toLowerCase().includes(q) && !order.id.toLowerCase().includes(q) &&
+        !order.patientName.toLowerCase().includes(q)) {
       return false;
     }
     // Date filter (from dashboard drill-down)
@@ -176,7 +179,7 @@ export default function Orders() {
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => setSelectedOrder(order)}
                     >
-                      <TableCell className="font-mono text-xs">{order.id.slice(0,8).toUpperCase()}</TableCell>
+                      <TableCell className="font-mono text-xs">#{orderNumber(order.id)}</TableCell>
                       <TableCell className="text-sm">{formatDateTime(order.createdAt)}</TableCell>
                       <TableCell className="font-medium text-sm">{order.patientName}</TableCell>
                       <TableCell>
@@ -275,7 +278,7 @@ function OrderDetailsSheet({
           <SheetHeader>
             <div className="flex items-center justify-between mb-2">
               <SheetTitle className="font-mono text-sm tracking-tight text-muted-foreground flex items-center gap-2">
-                ORDER #{order.id.slice(0, 8).toUpperCase()}
+                ORDER #{orderNumber(order.id)}
               </SheetTitle>
               <Badge variant="outline" className={`${statusInfo.color} font-medium border-0`}>
                 {statusInfo.label}

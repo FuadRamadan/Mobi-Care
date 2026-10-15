@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatLeones } from '@/pages/hq/shared';
 
 /** The order number Monime's page shows: the first 8 characters of the ID. */
-export const shortOrderNumber = (orderId: string) => orderId.replace(/-/g, '').slice(0, 8).toUpperCase();
+import { orderNumber as shortOrderNumber } from '@/lib/orderNumber';
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 

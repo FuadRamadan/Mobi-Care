@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Orders = lazy(() => import('@/pages/orders'));
 const Inventory = lazy(() => import('@/pages/inventory'));
 const Prescriptions = lazy(() => import('@/pages/prescriptions'));
+const PrescriptionRequests = lazy(() => import('@/pages/prescription-requests'));
 const Profile = lazy(() => import('@/pages/profile'));
 const Notifications = lazy(() => import('@/pages/notifications'));
 const Payouts = lazy(() => import('@/pages/payouts'));
@@ -94,6 +95,7 @@ function ProtectedRoutes() {
           <Route path="/orders" component={Orders} />
           <Route path="/inventory" component={Inventory} />
           <Route path="/prescriptions" component={Prescriptions} />
+          <Route path="/prescription-requests" component={PrescriptionRequests} />
           <Route path="/profile" component={Profile} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/payouts" component={Payouts} />

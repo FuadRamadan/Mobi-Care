@@ -26,6 +26,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareHeader } from '@/components/MobiCareHeader';
+import { orderNumber } from '@/lib/orderNumber';
 
 type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
 
@@ -255,7 +256,7 @@ export default function OrderDetailScreen() {
       <View style={s.orderHeader}>
         <View>
           <Text style={s.orderLabel}>Order</Text>
-          <Text style={s.orderId}>#{order.id.slice(-8).toUpperCase()}</Text>
+          <Text style={s.orderId}>#{orderNumber(order.id)}</Text>
         </View>
         <View>
           <Text style={[s.orderDate, { textAlign: 'right' }]}>{formatDate(order.createdAt)}</Text>

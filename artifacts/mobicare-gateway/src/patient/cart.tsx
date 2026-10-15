@@ -40,16 +40,25 @@ export interface CartState {
   mobileMoneyLines?: MobileMoneyLine[];
   mobileMoneyAccountName?: string | null;
   items: CartItem[];
+  /**
+   * Set when the cart came from a prescription request: the pharmacist has
+   * already checked the prescription, and the items and their limits are theirs.
+   */
+  prescriptionRequestId?: string;
 }
+
+type CartPharmacy = { id: string; name: string; address: string | null; mobileMoneyLines?: MobileMoneyLine[]; mobileMoneyAccountName?: string | null };
 
 interface CartValue {
   cart: CartState | null;
   /** Add (or bump) an item. Returns false when the cart belongs to another pharmacy. */
   addItem: (
-    pharmacy: { id: string; name: string; address: string | null; mobileMoneyLines?: MobileMoneyLine[]; mobileMoneyAccountName?: string | null },
+    pharmacy: CartPharmacy,
     item: Omit<CartItem, "quantity">,
     opts?: { replacePharmacy?: boolean },
   ) => boolean;
+  /** Replace the cart with the medicines a pharmacist confirmed for a prescription request. */
+  startFromRequest: (requestId: string, pharmacy: CartPharmacy, items: CartItem[]) => void;
   setQuantity: (inventoryId: string, quantity: number) => void;
   removeItem: (inventoryId: string) => void;
   clear: () => void;
@@ -90,9 +99,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback<CartValue["addItem"]>((pharmacy, item, opts) => {
     let ok = true;
     setCart((prev) => {
+      // A prescription request's cart holds only what the pharmacist confirmed.
       if (
         prev &&
-        prev.pharmacyId !== pharmacy.id &&
+        (prev.pharmacyId !== pharmacy.id || prev.prescriptionRequestId) &&
         prev.items.length > 0 &&
         !opts?.replacePharmacy
       ) {
@@ -100,7 +110,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return prev;
       }
       const base: CartState =
-        prev && prev.pharmacyId === pharmacy.id && !opts?.replacePharmacy
+        prev && prev.pharmacyId === pharmacy.id && !prev.prescriptionRequestId && !opts?.replacePharmacy
           ? prev
           : {
               pharmacyId: pharmacy.id,
@@ -126,6 +136,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return { ...base, items };
     });
     return ok;
+  }, []);
+
+  const startFromRequest = useCallback<CartValue["startFromRequest"]>((requestId, pharmacy, items) => {
+    setCart({
+      pharmacyId: pharmacy.id,
+      pharmacyName: pharmacy.name,
+      pharmacyAddress: pharmacy.address,
+      mobileMoneyLines: pharmacy.mobileMoneyLines,
+      mobileMoneyAccountName: pharmacy.mobileMoneyAccountName,
+      items,
+      prescriptionRequestId: requestId,
+    });
   }, []);
 
   const setQuantity = useCallback((inventoryId: string, quantity: number) => {
@@ -186,6 +208,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         cart,
         addItem,
+        startFromRequest,
         setQuantity,
         removeItem,
         clear,

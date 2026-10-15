@@ -13,6 +13,8 @@ import { patientNotificationsTable, patientsTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { sendSms } from "./configuredSms.js";
 import { sendExpoPush } from "./push.js";
+import { sendWebPush } from "./webPush.js";
+import { orderNumber } from "./orderNumber.js";
 
 export interface NotificationPayload {
   patientId: string;
@@ -43,12 +45,29 @@ export async function createPatientNotification(
     console.error("[patientNotifications] DB insert failed:", err);
   }
 
+  // Every notification except a prescription request is about an order: its
+  // number goes in the text so the patient can quote it.
+  const isOrder = Boolean(payload.referenceId) && payload.type !== "prescription_request";
+  const orderTag = isOrder ? `Order #${orderNumber(payload.referenceId!)}` : null;
+
   try {
-    await sendSms(payload.patientPhone, `MobiCare: ${payload.body}`);
+    await sendSms(payload.patientPhone, `MobiCare${orderTag ? ` ${orderTag}` : ""}: ${payload.body}`);
   } catch (err) {
     const code = err instanceof Error && "code" in err ? String(err.code) : "SMS_UNKNOWN_ERROR";
     console.error("[patientNotifications] SMS send failed", { code });
   }
+
+  // Drops down in the browser (patient web app), even when MobiCare is closed.
+  await sendWebPush({ patientId: payload.patientId }, {
+    title: payload.title,
+    body: orderTag ? `${orderTag} · ${payload.body}` : payload.body,
+    url: !payload.referenceId
+      ? "/app/notifications"
+      : payload.type === "prescription_request"
+        ? `/app/prescription/${payload.referenceId}`
+        : `/app/orders/${payload.referenceId}`,
+    tag: payload.referenceId ?? undefined,
+  });
 
   // Push notification (fire-and-forget; deep-links into the order detail screen)
   try {
@@ -62,8 +81,9 @@ export async function createPatientNotification(
       await sendExpoPush({
         to: expoPushToken,
         title: payload.title,
-        body: payload.body,
-        data: payload.referenceId ? { url: `/order/${payload.referenceId}` } : {},
+        body: orderTag ? `${orderTag} · ${payload.body}` : payload.body,
+        // The phone app has order screens only.
+        data: isOrder ? { url: `/order/${payload.referenceId}` } : {},
       }, {
         onDeviceNotRegistered: async () => {
           // Only clear the token that failed. A newer app registration must

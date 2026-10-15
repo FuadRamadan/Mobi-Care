@@ -1,7 +1,9 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, User, Phone } from "lucide-react";
+import { ShieldCheck, User, Phone, Bell } from "lucide-react";
+import { SoundSetting } from "@/components/SoundToggle";
+import { PushSetting } from "@/components/PushSetting";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -52,6 +54,19 @@ export default function Profile() {
               </Badge>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg border-card-border shadow-sm">
+        <CardHeader className="bg-muted/30 border-b border-card-border pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" />
+            Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <SoundSetting />
+          <PushSetting />
         </CardContent>
       </Card>
     </div>

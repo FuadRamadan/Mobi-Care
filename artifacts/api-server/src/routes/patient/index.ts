@@ -8,7 +8,10 @@ import profileRouter from "./profile.js";
 import privacyRouter from "./privacy.js";
 import deliveryRouter from "./delivery.js";
 import paymentsRouter from "./payments.js";
+import prescriptionRequestsRouter from "./prescriptionRequests.js";
 import { requireCurrentConsent } from "../../lib/patientConsent.js";
+import { pushSubscriptionsRouter } from "../pushSubscriptions.js";
+import type { AuthRequest } from "../../middlewares/auth.js";
 
 const router = safeRouter();
 
@@ -34,5 +37,7 @@ router.use("/payments", paymentsRouter);
 router.use("/uploads", uploadsRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/profile", profileRouter);
+router.use("/prescription-requests", prescriptionRequestsRouter);
+router.use("/push-subscriptions", pushSubscriptionsRouter((req: AuthRequest) => ({ patientId: req.pharmacy!.sub })));
 
 export default router;

@@ -3605,6 +3605,256 @@ paths:
                 items:
                   $ref: "#/components/schemas/AuditEntry"
 
+  /patient/prescription-requests:
+    post:
+      operationId: createPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Send a prescription photo to the pharmacies nearby
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionRequestInput"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientPrescriptionRequest"
+    get:
+      operationId: listPatientPrescriptionRequests
+      tags: [prescriptionRequests]
+      summary: The patient's prescription requests from the last 7 days
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientPrescriptionRequest"
+  /patient/prescription-requests/{id}:
+    get:
+      operationId: getPatientPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: One prescription request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientPrescriptionRequest"
+  /patient/prescription-requests/{id}/cancel:
+    post:
+      operationId: cancelPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Cancel a prescription request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientPrescriptionRequest"
+  /pharmacy/prescription-requests:
+    get:
+      operationId: listPharmacyPrescriptionRequests
+      tags: [prescriptionRequests]
+      summary: Open requests offered to this pharmacy, and the ones it accepted
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyPrescriptionRequests"
+  /pharmacy/prescription-requests/{id}/accept:
+    post:
+      operationId: acceptPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Accept a prescription request (first to accept wins)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyAcceptedPrescriptionRequest"
+  /pharmacy/prescription-requests/{id}/decline:
+    post:
+      operationId: declinePrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Decline a prescription request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: OK
+  /pharmacy/prescription-requests/{id}/confirm:
+    post:
+      operationId: confirmPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Confirm the medicines the pharmacy can supply
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionRequestConfirmation"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyAcceptedPrescriptionRequest"
+  /pharmacy/prescription-requests/{id}/reject:
+    post:
+      operationId: rejectPrescriptionRequest
+      tags: [prescriptionRequests]
+      summary: Reject an accepted prescription request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrescriptionRequestRejection"
+      responses:
+        "200":
+          description: OK
+
+  /push/public-key:
+    get:
+      operationId: getWebPushPublicKey
+      tags: [notifications]
+      summary: The key browsers subscribe to notifications with (null when notifications are off)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebPushPublicKey"
+  /patient/push-subscriptions:
+    post:
+      operationId: savePatientPushSubscription
+      tags: [notifications]
+      summary: Turn on notifications in this browser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebPushSubscriptionInput"
+      responses:
+        "204":
+          description: Saved
+  /patient/push-subscriptions/remove:
+    post:
+      operationId: removePatientPushSubscription
+      tags: [notifications]
+      summary: Turn off notifications in this browser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebPushSubscriptionRemoval"
+      responses:
+        "204":
+          description: Removed
+  /pharmacy/push-subscriptions:
+    post:
+      operationId: savePharmacyPushSubscription
+      tags: [notifications]
+      summary: Turn on notifications in this browser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebPushSubscriptionInput"
+      responses:
+        "204":
+          description: Saved
+  /pharmacy/push-subscriptions/remove:
+    post:
+      operationId: removePharmacyPushSubscription
+      tags: [notifications]
+      summary: Turn off notifications in this browser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebPushSubscriptionRemoval"
+      responses:
+        "204":
+          description: Removed
 components:
   securitySchemes:
     BearerAuth:
@@ -3613,6 +3863,166 @@ components:
       bearerFormat: JWT
 
   schemas:
+    PrescriptionRequestInput:
+      type: object
+      required: [imageKey, latitude, longitude]
+      properties:
+        imageKey:
+          type: string
+        coveredImageKey:
+          type: string
+          description: The copy with the patient's name covered, shown to pharmacies before one accepts
+        latitude:
+          type: number
+        longitude:
+          type: number
+        note:
+          type: string
+    PrescriptionRequestStatus:
+      type: string
+      enum: [searching, accepted, ready, ordered, expired, cancelled, rejected]
+    PrescriptionRequestItem:
+      type: object
+      required: [inventoryId, drugId, drugName, strength, form, unitOfSale, tier, priceLeones, availableForDelivery, availableForCollection, prescriptionRequired, collectionOnly, maxQuantity]
+      properties:
+        inventoryId: { type: string }
+        drugId: { type: string }
+        drugName: { type: string }
+        strength: { type: string }
+        form: { type: string }
+        unitOfSale: { type: string }
+        tier: { type: string, enum: ["1", "2", "3"] }
+        priceLeones: { type: number }
+        brand: { type: string, nullable: true }
+        manufacturer: { type: string, nullable: true }
+        countryOfOrigin: { type: string, nullable: true }
+        availableForDelivery: { type: boolean }
+        availableForCollection: { type: boolean }
+        prescriptionRequired: { type: boolean }
+        collectionOnly: { type: boolean }
+        maxQuantity: { type: number }
+    PrescriptionRequestPharmacy:
+      type: object
+      required: [id, name, mobileMoneyLines]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        mobileMoneyLines:
+          type: array
+          items:
+            $ref: "#/components/schemas/MobileMoneyLine"
+        mobileMoneyAccountName: { type: string, nullable: true }
+    PatientPrescriptionRequest:
+      type: object
+      required: [id, status, round, maxRounds, items, createdAt]
+      properties:
+        id: { type: string }
+        status:
+          $ref: "#/components/schemas/PrescriptionRequestStatus"
+        round: { type: number }
+        maxRounds: { type: number }
+        roundEndsAt: { type: string, nullable: true }
+        areaName: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        pharmacy:
+          allOf:
+            - $ref: "#/components/schemas/PrescriptionRequestPharmacy"
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrescriptionRequestItem"
+        rejectReason: { type: string, nullable: true }
+        orderId: { type: string, nullable: true }
+        createdAt: { type: string }
+    PharmacyOpenPrescriptionRequest:
+      type: object
+      required: [id, hasCoveredPhoto, round, createdAt]
+      properties:
+        id: { type: string }
+        areaName: { type: string, nullable: true }
+        distanceKm: { type: number, nullable: true }
+        hasCoveredPhoto: { type: boolean }
+        round: { type: number }
+        roundEndsAt: { type: string, nullable: true }
+        createdAt: { type: string }
+    PharmacyAcceptedPrescriptionRequest:
+      type: object
+      required: [id, status, items]
+      properties:
+        id: { type: string }
+        status:
+          $ref: "#/components/schemas/PrescriptionRequestStatus"
+        areaName: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        patientName: { type: string, nullable: true }
+        patientPhone: { type: string, nullable: true }
+        acceptedAt: { type: string, nullable: true }
+        confirmBy: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrescriptionRequestItem"
+        orderId: { type: string, nullable: true }
+    PharmacyPrescriptionRequests:
+      type: object
+      required: [open, mine]
+      properties:
+        open:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyOpenPrescriptionRequest"
+        mine:
+          type: array
+          items:
+            $ref: "#/components/schemas/PharmacyAcceptedPrescriptionRequest"
+    PrescriptionRequestConfirmation:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [inventoryId, maxQuantity]
+            properties:
+              inventoryId: { type: string }
+              maxQuantity: { type: number }
+    WebPushPublicKey:
+      type: object
+      required: [publicKey]
+      properties:
+        publicKey:
+          type: string
+          nullable: true
+    WebPushSubscriptionInput:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh:
+              type: string
+            auth:
+              type: string
+    WebPushSubscriptionRemoval:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+    PrescriptionRequestRejection:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          enum: [illegible_image, expired_prescription, invalid_prescription, drug_unavailable, controlled_substance_not_authorized, patient_mismatch, quantity_exceeded]
     HqSecurityActivity:
       type: object
       required: [days, totals, alerts, topAccounts, topNetworks, events]
@@ -4597,6 +5007,9 @@ components:
           description: The delivery fee the patient was shown; a different current fee returns 409
         prescriptionImageKey:
           type: string
+        prescriptionRequestId:
+          type: string
+          description: Order from a prescription request the pharmacist confirmed (no new upload or review)
         items:
           type: array
           items:

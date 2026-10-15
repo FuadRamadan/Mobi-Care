@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import clsx from "clsx";
 import { useLocation } from "wouter";
+import { SoundToggle } from "@/components/SoundToggle";
 
 function destinationForNotification(type: string | null | undefined) {
   if (type === "prescription_submitted") return "/prescriptions";
@@ -91,6 +92,7 @@ export default function Notifications() {
           <p className="text-muted-foreground mt-1 text-sm">Updates on orders, prescriptions, and system alerts.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <SoundToggle />
           {hasUnread && (
             <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={markRead.isPending}>
               <Check className="w-4 h-4 mr-2" /> Mark all as read

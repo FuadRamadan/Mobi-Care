@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCompleteGoogleSignUp, useLogin, useRegisterPatient, useSignInWithGoogle } from '@workspace/api-client-react';
+import { unlinkPushBeforeSignOut } from '@/lib/webPush';
 import {
   PT_ACCESS_KEY as ACCESS_KEY,
   PT_REFRESH_KEY as REFRESH_KEY,
@@ -179,6 +180,8 @@ export function PatientAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    // This phone stops getting the signed-out patient's notifications.
+    void unlinkPushBeforeSignOut();
     queryClient.clear();
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);

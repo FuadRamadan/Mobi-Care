@@ -7,6 +7,8 @@ import HqLayout from './HqLayout';
 import { StatusBadge, formatLeones, formatDate, EmptyState } from './shared';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { orderNumber } from '@/lib/orderNumber';
 
 const STATUSES = [
   'all', 'awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready',
@@ -25,11 +27,25 @@ export default function HqOrders() {
       },
     },
   );
-  const orders = data ?? [];
+  // Find an order from the number a patient or pharmacy quotes (with or
+  // without the #), or by the patient's name or phone.
+  const [search, setSearch] = useState('');
+  const q = search.trim().replace(/^#/, '').toLowerCase();
+  const orders = (data ?? []).filter((o) =>
+    !q || orderNumber(o.id).toLowerCase().includes(q) || o.patientName.toLowerCase().includes(q) || (o.patientPhone ?? '').includes(q),
+  );
 
   return (
     <HqLayout title="All Orders">
-      <div className="mb-4 w-56">
+      <div className="mb-4 flex flex-wrap gap-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Order number, patient or phone"
+          className="w-72"
+          data-testid="input-order-search"
+        />
+        <div className="w-56">
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger data-testid="select-order-status">
             <SelectValue />
@@ -42,17 +58,19 @@ export default function HqOrders() {
             ))}
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
       ) : orders.length === 0 ? (
-        <EmptyState>No orders match this filter.</EmptyState>
+        <EmptyState>No orders match{q ? ` “${search.trim()}”` : ' this filter'}.</EmptyState>
       ) : (
         <div className="border rounded-xl bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Order</TableHead>
                 <TableHead>Patient</TableHead>
                 <TableHead>Pharmacy</TableHead>
                 <TableHead>Items</TableHead>
@@ -66,6 +84,7 @@ export default function HqOrders() {
             <TableBody>
               {orders.map((o) => (
                 <TableRow key={o.id} data-testid={`row-order-${o.id}`}>
+                  <TableCell className="font-mono text-xs whitespace-nowrap">#{orderNumber(o.id)}</TableCell>
                   <TableCell>
                     <div className="font-medium">{o.patientName}</div>
                     <div className="text-xs text-muted-foreground">{o.patientPhone}</div>

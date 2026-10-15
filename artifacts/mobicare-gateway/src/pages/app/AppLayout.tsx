@@ -6,6 +6,8 @@ import { useCart } from '@/patient/cart';
 import { useGetPatientUnreadCount, getGetPatientUnreadCountQueryKey } from '@workspace/api-client-react';
 import { ProfileCompletionDialog } from './ProfileCompletionDialog';
 import { ConsentGate } from './ConsentGate';
+import { useChimeOnIncrease } from '@/lib/notificationSound';
+import { syncPushAfterSignIn } from '@/lib/webPush';
 
 /**
  * Patient app shell — mobile-first (PWA style): sticky top bar + bottom nav.
@@ -17,13 +19,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const { data: unreadData } = useGetPatientUnreadCount({
     query: {
-      refetchInterval: 30_000,
+      refetchInterval: 15_000,
       queryKey: getGetPatientUnreadCountQueryKey(),
       // Only fetch when a patient is logged in
       enabled: !!user,
     },
   });
   const unreadCount = unreadData?.unreadCount ?? 0;
+  useChimeOnIncrease(unreadData?.unreadCount);
+  // Phone notifications, if turned on here, follow whoever is signed in.
+  useEffect(() => {
+    if (user) void syncPushAfterSignIn();
+  }, [user?.id]);
   const greeting = useFreetownGreeting();
 
   if (!user) return <Redirect to="/app" />;

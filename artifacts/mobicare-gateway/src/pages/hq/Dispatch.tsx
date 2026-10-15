@@ -14,6 +14,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import HqLayout from './HqLayout';
 import { StatusBadge, formatLeones, formatDate, EmptyState } from './shared';
+import { orderNumber } from '@/lib/orderNumber';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,7 +49,7 @@ function mapLink(o: HqOrder): string | null {
 function courierBriefing(o: HqOrder): string {
   const map = mapLink(o);
   return [
-    `MobiCare delivery for ${o.patientName}`,
+    `MobiCare delivery, order #${orderNumber(o.id)}, for ${o.patientName}`,
     `Collect from: ${[o.pharmacyName, o.pharmacyAddress].filter(Boolean).join(', ') || '—'}${o.pharmacyPhone ? ` (${o.pharmacyPhone})` : ''}`,
     `Deliver to: ${o.deliveryAddress?.trim() || 'no directions given'}${o.deliveryZoneName ? ` — ${o.deliveryZoneName}` : ''}`,
     `Patient phone: ${o.patientPhone}`,
@@ -203,7 +204,7 @@ export default function HqDispatch() {
                     <span className="text-muted-foreground font-normal"> · {o.pharmacyName ?? '—'}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {formatLeones(o.totalLeones)} · {o.paymentMethod.replaceAll('_', ' ')} · {formatDate(o.createdAt)}
+                    <span className="font-mono">#{orderNumber(o.id)}</span> · {formatLeones(o.totalLeones)} · {o.paymentMethod.replaceAll('_', ' ')} · {formatDate(o.createdAt)}
                     {o.courier && <> · Courier: <span className="font-medium">{o.courier.name}</span></>}
                   </div>
                 </div>

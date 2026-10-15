@@ -12,6 +12,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { freshAccessToken, SESSION_EXPIRED_EVENT, tokenSecondsLeft } from "@/lib/session";
+import { unlinkPushBeforeSignOut } from "@/lib/webPush";
 
 interface AuthContextType {
   user: PharmacyUser | null;
@@ -115,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setLocation]);
 
   const handleLogout = useCallback(async () => {
+    // While still signed in: this computer stops getting the pharmacy's pop-ups.
+    await unlinkPushBeforeSignOut();
     const refresh = localStorage.getItem("mc_refresh");
     if (refresh) {
       try {

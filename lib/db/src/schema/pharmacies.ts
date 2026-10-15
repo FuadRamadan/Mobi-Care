@@ -65,6 +65,10 @@ export const pharmaciesTable = pgTable("pharmacies", {
   }),
   // Incremented on every credential reset; access tokens with a stale version are rejected
   sessionVersion: integer("session_version").notNull().default(1),
+  // Last time the pharmacy portal talked to the server (it polls every few
+  // seconds while open). Prescription requests go only to pharmacies seen in
+  // the last 2 minutes (migration 0039).
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

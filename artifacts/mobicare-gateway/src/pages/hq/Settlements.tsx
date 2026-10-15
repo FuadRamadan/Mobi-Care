@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { orderNumber } from '@/lib/orderNumber';
 
 const le = (minor: number) => formatLeones(minor / 100);
 const PROVIDERS: Record<string, string> = { m17: 'Orange Money', m18: 'AfriMoney' };
@@ -208,7 +209,7 @@ export default function HqSettlements() {
                   <TableBody>
                     {refundsToPay.map((r) => (
                       <TableRow key={r.orderId}>
-                        <TableCell className="font-mono text-xs">{r.orderId.slice(0, 8)}</TableCell>
+                        <TableCell className="font-mono text-xs">#{orderNumber(r.orderId)}</TableCell>
                         <TableCell>{r.patientName || '—'}</TableCell>
                         <TableCell>{r.pharmacyName ?? '—'}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatDate(r.paidAt)}</TableCell>

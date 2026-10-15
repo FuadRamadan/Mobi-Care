@@ -1,12 +1,14 @@
 import { db } from "@workspace/db";
 import { notificationsTable, type Order } from "@workspace/db/schema";
 import { logger } from "./logger.js";
+import { sendWebPush } from "./webPush.js";
+import { orderNumber } from "./orderNumber.js";
 
 interface PharmacyNotificationPayload {
   pharmacyId: string;
   title: string;
   body: string;
-  type: "new_order" | "order_paid" | "prescription_submitted" | "order_cancelled" | "drug_request_review" | "payout";
+  type: "new_order" | "order_paid" | "prescription_submitted" | "order_cancelled" | "drug_request_review" | "payout" | "prescription_request";
   referenceId?: string | null;
 }
 
@@ -31,13 +33,32 @@ export async function createPharmacyNotification(
       "Failed to create pharmacy incoming notification",
     );
   }
+  // Drops down on the pharmacy's computer or phone, even with the portal in
+  // the background.
+  await sendWebPush({ pharmacyId: payload.pharmacyId }, {
+    title: payload.title,
+    body: payload.body,
+    url: `/pharmacy-portal${PORTAL_PAGE[payload.type]}`,
+    tag: payload.referenceId ?? undefined,
+  });
 }
+
+/** Where a tap on each kind of notification opens the portal. */
+const PORTAL_PAGE: Record<PharmacyNotificationPayload["type"], string> = {
+  new_order: "/orders",
+  order_paid: "/orders",
+  order_cancelled: "/orders",
+  prescription_submitted: "/prescriptions",
+  prescription_request: "/prescription-requests",
+  drug_request_review: "/inventory",
+  payout: "/payouts",
+};
 
 export async function notifyPharmacyOfNewOrder(order: Order): Promise<void> {
   await createPharmacyNotification({
     pharmacyId: order.pharmacyId,
     title: "New incoming order",
-    body: `${order.patientName} placed a ${order.fulfillmentType} order. Payment is pending.`,
+    body: `Order #${orderNumber(order.id)}: ${order.patientName} placed a ${order.fulfillmentType} order. Payment is pending.`,
     type: "new_order",
     referenceId: order.id,
   });
@@ -47,7 +68,7 @@ export async function notifyPharmacyOfPaidOrder(order: Order): Promise<void> {
   await createPharmacyNotification({
     pharmacyId: order.pharmacyId,
     title: "Order ready to confirm",
-    body: `${order.patientName}'s payment is recorded. Review and confirm this order to begin fulfilment.`,
+    body: `Order #${orderNumber(order.id)}: ${order.patientName}'s payment is recorded. Review and confirm this order to begin fulfilment.`,
     type: "order_paid",
     referenceId: order.id,
   });

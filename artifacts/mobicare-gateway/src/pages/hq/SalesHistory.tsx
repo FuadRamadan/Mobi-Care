@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { orderNumber } from '@/lib/orderNumber';
 
 const le = (minor: number) => `${minor < 0 ? '−' : ''}${formatLeones(Math.abs(minor) / 100)}`;
 const PAGE = 50;
@@ -68,7 +69,7 @@ export function SalesHistory({ start, end }: { start: string; end: string }) {
       };
       const leones = (minor: number) => (minor / 100).toFixed(2);
       const lines = all.orders.map((o) => [
-        o.paidAt.slice(0, 16).replace('T', ' '), o.orderId.slice(0, 8).toUpperCase(), o.pharmacyName, o.patientName, o.fulfillmentType,
+        o.paidAt.slice(0, 16).replace('T', ' '), orderNumber(o.orderId), o.pharmacyName, o.patientName, o.fulfillmentType,
         leones(o.paidMinor), leones(o.salesMinor), leones(o.commissionMinor), leones(o.deliveryFeeMinor), leones(o.serviceFeeMinor),
         leones(o.monimeFeeMinor), leones(o.revenueMinor), leones(o.pharmacyReceivesMinor), STATE[o.state].label,
       ].map(cell).join(','));
@@ -162,7 +163,7 @@ export function SalesHistory({ start, end }: { start: string; end: string }) {
                 {data.orders.map((o) => (
                   <TableRow key={o.orderId}>
                     <TableCell className="whitespace-nowrap">{formatDate(o.paidAt)}</TableCell>
-                    <TableCell className="font-mono text-xs">#{o.orderId.slice(0, 8).toUpperCase()}</TableCell>
+                    <TableCell className="font-mono text-xs">#{orderNumber(o.orderId)}</TableCell>
                     <TableCell className="whitespace-nowrap">{o.pharmacyName}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {o.patientName || '—'}

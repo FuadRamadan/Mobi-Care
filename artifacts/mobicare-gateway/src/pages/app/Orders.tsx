@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatLeones, formatDate, StatusBadge, EmptyState } from '@/pages/hq/shared';
+import { orderNumber } from '@/lib/orderNumber';
 import { useToast } from '@/hooks/use-toast';
 
 const REMOVABLE_STATUSES = new Set(['delivered', 'collected', 'cancelled']);
@@ -73,6 +74,9 @@ export default function PatientOrders() {
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     <span className="font-bold text-foreground">{(order as any).pharmacy?.name ?? 'Pharmacy'}</span> · {formatDate(order.createdAt)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono" data-testid={`text-order-number-${order.id}`}>
+                    #{orderNumber(order.id)}
                   </div>
                 </div>
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">

@@ -36,6 +36,8 @@ import { useHqAuth } from '@/hq/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SoundToggle } from '@/components/SoundToggle';
+import { playNotificationSound } from '@/lib/notificationSound';
 
 const NAV: Array<{
   href: string;
@@ -105,6 +107,7 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
     // The first list is what was already there: pop up only what arrives
     // after it, including the very first notification HQ ever gets.
     if (seen === undefined || !newest || newest.id === seen) return;
+    playNotificationSound();
     if (newest.type === 'new_order' || newest.type === 'order_ready' || newest.type === 'delivery_ready' || newest.type === 'security_alert' || newest.type === 'medicine_alert') {
       toast.info(newest.title, {
         description: <span className="whitespace-pre-line break-words">{newest.body}</span>,
@@ -314,13 +317,14 @@ export default function HqLayout({ children, title }: { children: ReactNode; tit
                     ))
                   )}
                 </div>
-                {notifications.length > 0 && (
-                  <div className="border-t px-4 py-2.5">
+                <div className="border-t px-4 py-2.5 flex items-center justify-between gap-3">
+                  {notifications.length > 0 ? (
                     <Link href="/hq/orders" className="text-xs font-medium text-primary hover:underline">
                       View all orders
                     </Link>
-                  </div>
-                )}
+                  ) : <span />}
+                  <SoundToggle className="h-8 text-xs" />
+                </div>
               </PopoverContent>
             </Popover>
           </div>

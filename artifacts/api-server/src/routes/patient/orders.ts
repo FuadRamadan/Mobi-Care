@@ -12,6 +12,8 @@ import {
   couriersTable,
   patientsTable,
   prescriptionUploadsTable,
+  prescriptionRequestsTable,
+  type PrescriptionRequest,
 } from "@workspace/db/schema";
 import { and, eq, desc, inArray, sql, gte, gt, isNull } from "drizzle-orm";
 import { AuthRequest } from "../../middlewares/auth.js";
@@ -25,6 +27,7 @@ import {
   type DeliveryQuote,
 } from "../../lib/delivery/pricing.js";
 import { quoteForPharmacy } from "../../lib/delivery/zones.js";
+import { deleteImages as deleteRequestImages } from "../../lib/prescriptionRequests.js";
 import { deductOrderStock, PaymentClaimError } from "../../lib/orderPayment.js";
 import { checkOrderFlags } from "../../lib/flags.js";
 import { notifyHqOfNewOrder } from "../../lib/hqNotifications.js";
@@ -471,6 +474,9 @@ router.post("/", async (req: AuthRequest, res) => {
       // before they placed the order; the charge is always worked out here.
       quotedDeliveryFeeMinor: z.number().int().min(0).optional(),
       prescriptionImageKey: z.string().min(1).optional(),
+      // Ordering from a prescription request a pharmacist already checked
+      // (routes/patient/prescriptionRequests.ts): no new upload or review.
+      prescriptionRequestId: z.string().uuid().optional(),
       items: z
         .array(
           z.object({
@@ -709,7 +715,33 @@ router.post("/", async (req: AuthRequest, res) => {
   const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
   const total = minorToLeones(totalMinor);
 
-  if (prescriptionRequired && !input.prescriptionImageKey) {
+  // From a checked prescription request: only what the pharmacist confirmed,
+  // up to the quantities they allowed, from that pharmacy.
+  let fromRequest: PrescriptionRequest | null = null;
+  if (input.prescriptionRequestId) {
+    const [request] = await db
+      .select()
+      .from(prescriptionRequestsTable)
+      .where(and(eq(prescriptionRequestsTable.id, input.prescriptionRequestId), eq(prescriptionRequestsTable.patientId, patientId)))
+      .limit(1);
+    if (!request || request.status !== "ready" || request.acceptedPharmacyId !== input.pharmacyId) {
+      res.status(409).json({ error: "This prescription is no longer ready to order. Please send it again.", code: "PRESCRIPTION_REQUEST_NOT_READY" });
+      return;
+    }
+    const allowed = new Map((request.items ?? []).map((i) => [i.inventoryId, i.maxQuantity]));
+    const outside = input.items.find((item) => {
+      const max = allowed.get(item.inventoryId);
+      return max === undefined || item.quantity > max;
+    });
+    if (outside) {
+      res.status(409).json({ error: "Only the medicines and quantities the pharmacist confirmed can be ordered from this prescription.", code: "PRESCRIPTION_REQUEST_ITEMS" });
+      return;
+    }
+    fromRequest = request;
+  }
+  const prescriptionImageKey = fromRequest?.imageKey ?? input.prescriptionImageKey;
+
+  if (prescriptionRequired && !prescriptionImageKey) {
     res.status(400).json({
       error:
         "This order contains prescription medicines — a prescription upload is required",
@@ -743,7 +775,7 @@ router.post("/", async (req: AuthRequest, res) => {
           paymentProvider: "monime",
           // A prescription order can be paid only once the pharmacist has
           // approved it; its payment window starts then.
-          payableSince: prescriptionRequired ? null : new Date(),
+          payableSince: prescriptionRequired && !fromRequest ? null : new Date(),
           pricingModel: pricing.pricingModel,
           patientServiceFeeMinor: pricing.patientServiceFeeMinor,
           pharmacyCommissionMinor: pricing.pharmacyCommissionMinor,
@@ -759,7 +791,7 @@ router.post("/", async (req: AuthRequest, res) => {
         .returning();
 
       let prescriptionId: string | null = null;
-      if (prescriptionRequired && input.prescriptionImageKey) {
+      if (prescriptionRequired && prescriptionImageKey) {
         // Consume the upload record exactly once, and only if it belongs to
         // this patient — a forged or foreign key aborts the whole order.
         const consumed = await tx
@@ -767,7 +799,7 @@ router.post("/", async (req: AuthRequest, res) => {
           .set({ consumedAt: new Date() })
           .where(
             and(
-              eq(prescriptionUploadsTable.imageKey, input.prescriptionImageKey),
+              eq(prescriptionUploadsTable.imageKey, prescriptionImageKey),
               eq(prescriptionUploadsTable.patientId, patientId),
               isNull(prescriptionUploadsTable.consumedAt),
             ),
@@ -784,8 +816,16 @@ router.post("/", async (req: AuthRequest, res) => {
             pharmacyId: input.pharmacyId,
             patientName: patient.name,
             patientPhone: patient.phone,
-            imageKey: input.prescriptionImageKey,
+            imageKey: prescriptionImageKey,
             orderId: order!.id,
+            // Already checked by this pharmacy's pharmacist in the request.
+            ...(fromRequest
+              ? {
+                  status: "approved" as const,
+                  approvedDrugIds: [...new Set(input.items.map((i) => byInventory.get(i.inventoryId)!.drugId))],
+                  reviewedAt: fromRequest.readyAt ?? new Date(),
+                }
+              : {}),
           })
           .returning({ id: prescriptionsTable.id });
         prescriptionId = rx!.id;
@@ -820,9 +860,24 @@ router.post("/", async (req: AuthRequest, res) => {
         }),
       );
 
+      if (fromRequest) {
+        const done = await tx
+          .update(prescriptionRequestsTable)
+          .set({ status: "ordered", orderId: order!.id, endedAt: new Date(), updatedAt: new Date() })
+          .where(and(eq(prescriptionRequestsTable.id, fromRequest.id), eq(prescriptionRequestsTable.status, "ready")))
+          .returning({ id: prescriptionRequestsTable.id });
+        if (done.length === 0) {
+          throw Object.assign(new Error("PRESCRIPTION_REQUEST_NOT_READY"), { code: "PRESCRIPTION_REQUEST_NOT_READY" });
+        }
+      }
+
       return order!;
     });
   } catch (err: any) {
+    if (err?.code === "PRESCRIPTION_REQUEST_NOT_READY") {
+      res.status(409).json({ error: "This prescription is no longer ready to order. Please send it again.", code: "PRESCRIPTION_REQUEST_NOT_READY" });
+      return;
+    }
     if (err?.code === "INVALID_PRESCRIPTION_KEY") {
       res.status(400).json({
         error:
@@ -850,7 +905,8 @@ router.post("/", async (req: AuthRequest, res) => {
   await checkOrderFlags(createdOrder);
   await notifyHqOfNewOrder(createdOrder, pharmacy.name);
   void notifyPharmacyOfNewOrder(createdOrder);
-  if (createdOrder.prescriptionId) {
+  if (fromRequest) void deleteRequestImages(fromRequest.id);
+  if (createdOrder.prescriptionId && !fromRequest) {
     void notifyPharmacyOfSubmittedPrescription({
       pharmacyId: createdOrder.pharmacyId,
       prescriptionId: createdOrder.prescriptionId,

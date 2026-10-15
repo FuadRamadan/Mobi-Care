@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { orderNumber } from '@/lib/orderNumber';
 
 const le = (minor: number) => formatLeones(minor / 100);
 
@@ -167,7 +168,7 @@ export default function SettlementPayouts() {
               <TableBody className="tabular-nums">
                 {data.releaseProblems.map((r) => (
                   <TableRow key={r.transferId}>
-                    <TableCell className="font-mono text-xs">#{r.orderId.slice(0, 8).toUpperCase()}</TableCell>
+                    <TableCell className="font-mono text-xs">#{orderNumber(r.orderId)}</TableCell>
                     <TableCell>{r.pharmacyName}</TableCell>
                     <TableCell>{r.kind === 'pharmacy_share' ? "Pharmacy's share" : "MobiCare's share"}</TableCell>
                     <TableCell className="text-right font-semibold">{le(r.amountMinor)}</TableCell>

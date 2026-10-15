@@ -93,6 +93,10 @@ export default function Checkout() {
     );
   }
 
+  // A cart from a prescription request was already checked by its pharmacist:
+  // no photo to upload, and the order can be paid straight away.
+  const fromRequest = Boolean(cart.prescriptionRequestId);
+  const needsRxUpload = prescriptionRequired && !fromRequest;
   const effectiveFulfillment = collectionOnly ? "collection" : fulfillment;
   const deliveryBlocked =
     effectiveFulfillment === "delivery" &&
@@ -171,7 +175,7 @@ export default function Checkout() {
         });
         return;
       }
-      if (prescriptionRequired && !rxDataUrl) {
+      if (needsRxUpload && !rxDataUrl) {
         toast({
           title: "Prescription needed",
           description: "Upload a photo of your prescription to continue.",
@@ -181,7 +185,7 @@ export default function Checkout() {
       }
 
       let prescriptionImageKey: string | undefined;
-      if (prescriptionRequired && rxDataUrl) {
+      if (needsRxUpload && rxDataUrl) {
         const up = await uploadMutation.mutateAsync({
           data: { image: rxDataUrl },
         });
@@ -202,6 +206,7 @@ export default function Checkout() {
               }
             : {}),
           ...(prescriptionImageKey ? { prescriptionImageKey } : {}),
+          ...(cart!.prescriptionRequestId ? { prescriptionRequestId: cart!.prescriptionRequestId } : {}),
           items: cart!.items.map((i) => ({
             inventoryId: i.inventoryId,
             quantity: i.quantity,
@@ -213,7 +218,7 @@ export default function Checkout() {
       // made on the server from the saved order.
       clear();
       await queryClient.invalidateQueries();
-      if (prescriptionRequired) {
+      if (needsRxUpload) {
         toast({
           title: "Order placed",
           description: "A pharmacist will check your prescription first. We'll let you know when you can pay.",
@@ -303,6 +308,7 @@ export default function Checkout() {
                   {formatLeones(item.priceLeones)} per {item.unitOfSale}
                   {item.prescriptionRequired && " · prescription"}
                   {item.collectionOnly && " · collection + ID only"}
+                  {fromRequest && item.maxUnitsPerOrder != null && ` · up to ${item.maxUnitsPerOrder}`}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -473,7 +479,22 @@ export default function Checkout() {
         </div>
       )}
 
-      {prescriptionRequired && (
+      {fromRequest && (
+        <div
+          className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm flex items-start gap-3"
+          data-testid="text-prescription-checked"
+        >
+          <FileText className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <span>
+            <span className="font-medium block">Prescription checked by {cart.pharmacyName}</span>
+            <span className="text-xs text-muted-foreground">
+              Your photo is already with the pharmacist. You can lower a quantity, or raise it up to what they allowed.
+            </span>
+          </span>
+        </div>
+      )}
+
+      {needsRxUpload && (
         <div className="space-y-2">
           <Label>Prescription photo</Label>
           <input
@@ -558,7 +579,7 @@ export default function Checkout() {
           <div className="pt-2" data-testid="text-pay-online">
             <p className="text-sm font-medium mb-1">Pay securely online</p>
             <p className="text-xs text-muted-foreground">
-              {prescriptionRequired
+              {needsRxUpload
                 ? "A pharmacist checks your prescription first. Then you pay online with Orange Money, AfriMoney, a card or a bank account."
                 : "Next you'll pay on Monime's secure page with Orange Money, AfriMoney, a card or a bank account. Someone else can pay the link for you too."}
             </p>
@@ -576,7 +597,7 @@ export default function Checkout() {
           >
             {busy
               ? "Opening payment…"
-              : !prescriptionRequired ? `Place order and pay ${formatLeones(payableLeones)}` : "Place order"}
+              : !needsRxUpload ? `Place order and pay ${formatLeones(payableLeones)}` : "Place order"}
           </Button>
         </CardContent>
       </Card>

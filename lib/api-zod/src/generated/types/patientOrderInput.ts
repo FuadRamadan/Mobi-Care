@@ -18,5 +18,7 @@ export interface PatientOrderInput {
   /** The delivery fee the patient was shown; a different current fee returns 409 */
   quotedDeliveryFeeMinor?: number;
   prescriptionImageKey?: string;
+  /** Order from a prescription request the pharmacist confirmed (no new upload or review) */
+  prescriptionRequestId?: string;
   items: PatientOrderItemInput[];
 }

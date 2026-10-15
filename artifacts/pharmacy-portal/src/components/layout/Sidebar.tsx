@@ -6,11 +6,15 @@ import {
   getGetUnreadCountQueryKey,
   useGetAnalyticsOverview,
   getGetAnalyticsOverviewQueryKey,
+  useListPharmacyPrescriptionRequests,
+  getListPharmacyPrescriptionRequestsQueryKey,
 } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut, Wallet } from "lucide-react";
+import { useChimeOnIncrease } from "@/lib/notificationSound";
+import { LayoutDashboard, ShoppingBag, Package, FileText, User, Bell, LogOut, Wallet, Camera } from "lucide-react";
 import { MobiCareLogo } from "@/components/MobiCareLogo";
 import clsx from "clsx";
+import { syncPushAfterSignIn } from "@/lib/webPush";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -19,6 +23,7 @@ const navItems = [
 
 const incomingItems = [
   { href: "/orders", label: "Incoming Orders", icon: ShoppingBag },
+  { href: "/prescription-requests", label: "Prescription requests", icon: Camera },
   { href: "/prescriptions", label: "Prescriptions", icon: FileText },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
@@ -52,6 +57,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   });
 
   const unread = unreadData?.unreadCount ?? 0;
+  // Every new notification (orders, prescription requests, payouts…) chimes.
+  useChimeOnIncrease(unreadData?.unreadCount);
+  // Pop-up notifications, if turned on here, follow whichever pharmacy is signed in.
+  useEffect(() => {
+    if (user) void syncPushAfterSignIn();
+  }, [user?.id]);
 
   // A new notification usually means something changed elsewhere: HQ
   // approved a medicine, an order came in. Refresh whatever page is open so
@@ -66,6 +77,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     previousUnread.current = unread;
   }, [unread, unreadData, queryClient]);
   const pendingRx = analytics?.pendingPrescriptions ?? 0;
+  // New prescription requests nearby, plus ones this pharmacy accepted but has not answered.
+  const { data: rxRequests } = useListPharmacyPrescriptionRequests({
+    query: { queryKey: getListPharmacyPrescriptionRequestsQueryKey(), refetchInterval: 5_000, enabled: !!user },
+  });
+  const rxRequestCount = (rxRequests?.open.length ?? 0) + (rxRequests?.mine.filter((r) => r.status === "accepted").length ?? 0);
   const lowStock = analytics?.lowStockItems ?? 0;
 
   function getBadge(href: string): { label: string; kind: "warn" | "info" } | null {
@@ -73,6 +89,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       return { label: String(analytics.pendingOrders), kind: "info" };
     if (href === "/notifications" && unread > 0)
       return { label: String(unread), kind: "info" };
+    if (href === "/prescription-requests" && rxRequestCount > 0)
+      return { label: String(rxRequestCount), kind: "warn" };
     if (href === "/prescriptions" && pendingRx > 0)
       return { label: String(pendingRx), kind: "info" };
     if (href === "/inventory" && lowStock > 0)

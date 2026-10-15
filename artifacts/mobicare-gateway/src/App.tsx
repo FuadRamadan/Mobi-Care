@@ -30,6 +30,8 @@ const Checkout = lazy(() => import('@/pages/app/Checkout'));
 const PatientOrders = lazy(() => import('@/pages/app/Orders'));
 const OrderDetail = lazy(() => import('@/pages/app/OrderDetail'));
 const NotificationsPage = lazy(() => import('@/pages/app/Notifications'));
+const PrescriptionSend = lazy(() => import('@/pages/app/PrescriptionSend'));
+const PrescriptionStatus = lazy(() => import('@/pages/app/PrescriptionStatus'));
 const HqLogin = lazy(() => import('@/pages/hq/Login'));
 const HqDashboard = lazy(() => import('@/pages/hq/Dashboard'));
 const HqOrders = lazy(() => import('@/pages/hq/Orders'));
@@ -123,6 +125,12 @@ function Router() {
             </Route>
             <Route path="/app/orders/:id">
               <AppLayout><OrderDetail /></AppLayout>
+            </Route>
+            <Route path="/app/prescription">
+              <AppLayout><PrescriptionSend /></AppLayout>
+            </Route>
+            <Route path="/app/prescription/:id">
+              <AppLayout><PrescriptionStatus /></AppLayout>
             </Route>
             <Route path="/app/notifications">
               <AppLayout><NotificationsPage /></AppLayout>

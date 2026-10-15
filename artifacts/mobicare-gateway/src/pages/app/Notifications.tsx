@@ -1,4 +1,6 @@
 import { useLocation } from 'wouter';
+import { SoundToggle } from '@/components/SoundToggle';
+import { orderNumber } from '@/lib/orderNumber';
 import { Bell, ChevronRight, AlertTriangle, Trash2 } from 'lucide-react';
 import {
   useClearPatientNotifications,
@@ -95,17 +97,20 @@ export default function NotificationsPage() {
           <h1 className="font-display font-bold text-2xl text-dark-green mb-1">Notifications</h1>
           <p className="text-sm text-muted-foreground">Updates on your orders and prescriptions.</p>
         </div>
-        {!!notifications?.length && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void clearAll()}
-            disabled={clearNotifications.isPending}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Clear all
-          </Button>
-        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          <SoundToggle />
+          {!!notifications?.length && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void clearAll()}
+              disabled={clearNotifications.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear all
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading && <EmptyState>Loading notifications…</EmptyState>}
@@ -120,6 +125,9 @@ export default function NotificationsPage() {
         {notifications?.map((n) => {
           const isRejection = n.type === 'prescription_rejected';
           const isUnread = !n.readAt;
+          const target = n.type === 'prescription_request'
+            ? `/app/prescription/${n.referenceId}`
+            : `/app/orders/${n.referenceId}`;
 
           return (
             <div key={n.id}>
@@ -127,9 +135,9 @@ export default function NotificationsPage() {
                   <Card
                     role="button"
                     tabIndex={0}
-                    onClick={() => navigate(`/app/orders/${n.referenceId}`)}
+                    onClick={() => navigate(target)}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter') navigate(`/app/orders/${n.referenceId}`);
+                      if (event.key === 'Enter') navigate(target);
                     }}
                     className={`cursor-pointer hover:border-primary/50 transition-colors ${
                       isRejection ? 'border-destructive/50 bg-destructive/5' : ''
@@ -165,7 +173,12 @@ export default function NotificationsPage() {
                             Tap to view order details and next steps.
                           </p>
                         )}
-                        <p className="text-[10px] text-muted-foreground mt-1">{timeAgo(n.createdAt as unknown as string)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {timeAgo(n.createdAt as unknown as string)}
+                          {n.referenceId && n.type !== 'prescription_request' && (
+                            <span className="font-mono"> · Order #{orderNumber(n.referenceId)}</span>
+                          )}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"

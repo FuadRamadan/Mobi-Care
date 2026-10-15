@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { orderNumber } from "@/lib/orderNumber";
 
 const le = (minor: number) => formatLeones(minor / 100);
 
@@ -107,7 +108,7 @@ export default function Payouts() {
             <TableBody className="tabular-nums">
               {data.releases.map((r) => (
                 <TableRow key={r.orderId}>
-                  <TableCell className="font-mono text-xs">#{r.orderId.slice(0, 8).toUpperCase()}</TableCell>
+                  <TableCell className="font-mono text-xs">#{orderNumber(r.orderId)}</TableCell>
                   <TableCell className="text-right font-medium">{le(r.amountMinor)}</TableCell>
                   <TableCell>
                     <Pill tone={r.status === "released" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}>

@@ -16,6 +16,7 @@ import { PatientOrder, getPatientListOrdersQueryKey, usePatientListOrders, useRe
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareHeader } from '@/components/MobiCareHeader';
+import { orderNumber } from '@/lib/orderNumber';
 
 type StatusColor = { bg: string; text: string };
 
@@ -75,7 +76,9 @@ function OrderCard({
             size={16}
             color={colors.primary}
           />
-          <Text style={s.fulfillmentText}>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Collection'}</Text>
+          <Text style={s.fulfillmentText}>
+            {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Collection'} · #{orderNumber(order.id)}
+          </Text>
         </View>
         <View style={[s.statusBadge, { backgroundColor: st.bg }]}>
           <Text style={[s.statusText, { color: st.text }]}>{statusLabel(order.status)}</Text>
