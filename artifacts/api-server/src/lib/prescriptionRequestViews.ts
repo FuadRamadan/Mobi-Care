@@ -13,8 +13,29 @@ import {
   type PrescriptionRequest,
 } from "@workspace/db";
 import { mobileMoneyLines } from "./mobileMoney.js";
-import { MAX_ROUNDS, distanceKm, roundEndsAt, ACCEPT_HOLD_MS } from "./prescriptionRequests.js";
+import { lastRound, roundEndsAt, ACCEPT_HOLD_MS, WIDER_CHOICE_MS } from "./prescriptionRequests.js";
 import type { Position } from "./delivery/geometry.js";
+import { estimateKm } from "./delivery/roadDistance.js";
+import { DISTANCE_UNAVAILABLE, quoteByDistance } from "./delivery/distanceQuote.js";
+
+/**
+ * Delivery from the pharmacy that took the request to where the patient sent
+ * it from, so the patient knows the cost before ordering. Checkout prices it
+ * again from wherever they put the pin.
+ */
+async function deliveryFor(pharmacy: typeof pharmaciesTable.$inferSelect, request: PrescriptionRequest) {
+  const quote = await quoteByDistance(pharmacy, [request.longitude, request.latitude]);
+  if (quote.available) {
+    return { available: true, feeLeones: quote.feeMinor / 100, distanceKm: quote.km, distanceEstimated: quote.method === "estimate", message: null };
+  }
+  if (quote.reason === "too_far") {
+    return {
+      available: false, feeLeones: null, distanceKm: quote.km, distanceEstimated: true,
+      message: `${pharmacy.name} is about ${quote.km} km from you, beyond its ${quote.maxKm} km delivery range. You'll collect your medicines from the pharmacy.`,
+    };
+  }
+  return { available: false, feeLeones: null, distanceKm: null, distanceEstimated: true, message: DISTANCE_UNAVAILABLE.pharmacy_not_located };
+}
 
 /** A medicine the pharmacy confirmed, in the shape the patient app's cart uses. */
 export async function requestItems(request: PrescriptionRequest) {
@@ -70,16 +91,22 @@ export async function requestItems(request: PrescriptionRequest) {
 /** The patient's view of their request. */
 export async function patientView(request: PrescriptionRequest) {
   let pharmacy = null;
+  let delivery = null;
   if (request.acceptedPharmacyId && ["accepted", "ready", "ordered", "rejected"].includes(request.status)) {
     const [p] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, request.acceptedPharmacyId)).limit(1);
     if (p) pharmacy = { id: p.id, name: p.name, address: p.address, mobileMoneyLines: mobileMoneyLines(p), mobileMoneyAccountName: p.mobileMoneyAccountName };
+    if (p && (request.status === "accepted" || request.status === "ready")) delivery = await deliveryFor(p, request);
   }
   return {
     id: request.id,
     status: request.status,
     round: request.round,
-    maxRounds: MAX_ROUNDS,
+    maxRounds: lastRound(request),
     roundEndsAt: roundEndsAt(request)?.toISOString() ?? null,
+    collectionOnly: request.collectionOnly,
+    /** While out_of_range: when the choice to ask further away lapses. */
+    choiceEndsAt: request.status === "out_of_range" ? new Date(request.updatedAt.getTime() + WIDER_CHOICE_MS).toISOString() : null,
+    delivery,
     areaName: request.areaName,
     note: request.note,
     pharmacy,
@@ -92,11 +119,13 @@ export async function patientView(request: PrescriptionRequest) {
 
 /** A request offered to a pharmacy that has not accepted it: no patient details. */
 export function openOfferView(request: PrescriptionRequest, pharmacyPoint: Position | null) {
-  const km = pharmacyPoint ? distanceKm(pharmacyPoint, [request.longitude, request.latitude]) : null;
+  // By road, roughly: the same estimate the delivery limit is matched on.
+  const km = pharmacyPoint ? estimateKm(pharmacyPoint, [request.longitude, request.latitude]).km : null;
   return {
     id: request.id,
     areaName: request.areaName,
     distanceKm: km == null ? null : Math.max(0.5, Math.round(km * 2) / 2),
+    collectionOnly: request.collectionOnly,
     hasCoveredPhoto: !!request.coveredImageKey,
     round: request.round,
     roundEndsAt: roundEndsAt(request)?.toISOString() ?? null,
@@ -111,6 +140,7 @@ export async function acceptedView(request: PrescriptionRequest) {
     id: request.id,
     status: request.status,
     areaName: request.areaName,
+    collectionOnly: request.collectionOnly,
     note: request.note,
     patientName: patient?.name ?? null,
     patientPhone: patient?.phone ?? null,

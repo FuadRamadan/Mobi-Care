@@ -11,6 +11,7 @@ export type PrescriptionRequestStatus = typeof PrescriptionRequestStatus[keyof t
 
 export const PrescriptionRequestStatus = {
   searching: 'searching',
+  out_of_range: 'out_of_range',
   accepted: 'accepted',
   ready: 'ready',
   ordered: 'ordered',

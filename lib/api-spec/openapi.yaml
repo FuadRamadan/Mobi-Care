@@ -3660,6 +3660,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientPrescriptionRequest"
+  /patient/prescription-requests/{id}/further:
+    post:
+      operationId: askPrescriptionRequestFurther
+      tags: [prescriptionRequests]
+      summary: Ask pharmacies beyond delivery range too; the patient will collect
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientPrescriptionRequest"
   /patient/prescription-requests/{id}/cancel:
     post:
       operationId: cancelPrescriptionRequest
@@ -3855,6 +3875,87 @@ paths:
       responses:
         "204":
           description: Removed
+  /hq/delivery-pricing/preview:
+    post:
+      operationId: previewDeliveryPricing
+      tags: [hq]
+      summary: Price a trip by distance with the given settings (calculator only; nothing is saved)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryPricePreviewInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryPricePreview"
+  /pharmacy/me:
+    get:
+      operationId: getPharmacyMe
+      tags: [auth]
+      summary: The signed-in pharmacy's account details
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PharmacyUser"
+  /hq/delivery-pricing/settings:
+    get:
+      operationId: getDeliveryPricing
+      tags: [hq]
+      summary: The delivery pricing in force, and any change waiting for midnight
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryPricingState"
+    put:
+      operationId: scheduleDeliveryPricing
+      tags: [hq]
+      summary: New delivery pricing, from the next midnight
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KmPricingSettings"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryPricingState"
+  /hq/delivery-pricing/settings/scheduled:
+    delete:
+      operationId: cancelScheduledDeliveryPricing
+      tags: [hq]
+      summary: Cancel the pricing change waiting for midnight
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryPricingState"
 components:
   securitySchemes:
     BearerAuth:
@@ -3880,7 +3981,7 @@ components:
           type: string
     PrescriptionRequestStatus:
       type: string
-      enum: [searching, accepted, ready, ordered, expired, cancelled, rejected]
+      enum: [searching, out_of_range, accepted, ready, ordered, expired, cancelled, rejected]
     PrescriptionRequestItem:
       type: object
       required: [inventoryId, drugId, drugName, strength, form, unitOfSale, tier, priceLeones, availableForDelivery, availableForCollection, prescriptionRequired, collectionOnly, maxQuantity]
@@ -3923,6 +4024,17 @@ components:
         round: { type: number }
         maxRounds: { type: number }
         roundEndsAt: { type: string, nullable: true }
+        collectionOnly:
+          type: boolean
+          description: The patient chose pharmacies beyond delivery range and will collect
+        choiceEndsAt:
+          type: string
+          nullable: true
+          description: While out_of_range, when the choice to ask pharmacies further away lapses
+        delivery:
+          allOf:
+            - $ref: "#/components/schemas/PrescriptionRequestDelivery"
+          nullable: true
         areaName: { type: string, nullable: true }
         note: { type: string, nullable: true }
         pharmacy:
@@ -3936,6 +4048,16 @@ components:
         rejectReason: { type: string, nullable: true }
         orderId: { type: string, nullable: true }
         createdAt: { type: string }
+    PrescriptionRequestDelivery:
+      type: object
+      description: Delivery from the pharmacy that took the request to where the patient sent it from
+      required: [available, distanceEstimated]
+      properties:
+        available: { type: boolean }
+        feeLeones: { type: number, nullable: true }
+        distanceKm: { type: number, nullable: true }
+        distanceEstimated: { type: boolean }
+        message: { type: string, nullable: true }
     PharmacyOpenPrescriptionRequest:
       type: object
       required: [id, hasCoveredPhoto, round, createdAt]
@@ -3943,6 +4065,7 @@ components:
         id: { type: string }
         areaName: { type: string, nullable: true }
         distanceKm: { type: number, nullable: true }
+        collectionOnly: { type: boolean }
         hasCoveredPhoto: { type: boolean }
         round: { type: number }
         roundEndsAt: { type: string, nullable: true }
@@ -3955,6 +4078,7 @@ components:
         status:
           $ref: "#/components/schemas/PrescriptionRequestStatus"
         areaName: { type: string, nullable: true }
+        collectionOnly: { type: boolean }
         note: { type: string, nullable: true }
         patientName: { type: string, nullable: true }
         patientPhone: { type: string, nullable: true }
@@ -4016,6 +4140,109 @@ components:
       properties:
         endpoint:
           type: string
+    KmPricing:
+      type: object
+      properties:
+        fuelPricePerLitre: { type: number }
+        kmPerLitre: { type: number }
+        pickupLeones: { type: number }
+        serviceRatePerKm: { type: number }
+        riderSharePercent: { type: number }
+        roundToLeones: { type: number }
+        minimumFeeLeones: { type: number }
+        maxKm: { type: number, nullable: true }
+    KmPricingSettings:
+      type: object
+      required: [fuelPricePerLitre, kmPerLitre, pickupLeones, serviceRatePerKm, riderSharePercent, roundToLeones, minimumFeeLeones, maxKm]
+      properties:
+        fuelPricePerLitre: { type: number }
+        kmPerLitre: { type: number }
+        pickupLeones: { type: number }
+        serviceRatePerKm: { type: number }
+        riderSharePercent: { type: number }
+        roundToLeones: { type: number }
+        minimumFeeLeones: { type: number }
+        maxKm: { type: number, nullable: true }
+    KmQuote:
+      type: object
+      required: [available, km]
+      properties:
+        available: { type: boolean }
+        km: { type: number }
+        reason: { type: string, enum: [too_far] }
+        fuelLeones: { type: number }
+        fuelPerKmLeones: { type: number }
+        pickupLeones: { type: number }
+        distanceChargeLeones: { type: number }
+        serviceLeones: { type: number }
+        roundingLeones: { type: number }
+        feeLeones: { type: number }
+        riderLeones: { type: number }
+        riderKeepsLeones: { type: number }
+        mobicareLeones: { type: number }
+    RoadDistance:
+      type: object
+      required: [km, straightKm, method]
+      properties:
+        km: { type: number }
+        straightKm: { type: number }
+        method: { type: string, enum: [road, estimate] }
+    DeliveryPricePreviewInput:
+      type: object
+      properties:
+        from: { $ref: "#/components/schemas/DeliveryLocation" }
+        to: { $ref: "#/components/schemas/DeliveryLocation" }
+        pricing: { $ref: "#/components/schemas/KmPricing" }
+    DeliveryPricePreview:
+      type: object
+      required: [pricing, roadDistanceAvailable, distance, quote, table]
+      properties:
+        pricing: { $ref: "#/components/schemas/KmPricingSettings" }
+        roadDistanceAvailable: { type: boolean }
+        distance:
+          allOf: [{ $ref: "#/components/schemas/RoadDistance" }]
+          nullable: true
+        quote:
+          allOf: [{ $ref: "#/components/schemas/KmQuote" }]
+          nullable: true
+        table:
+          type: array
+          items: { $ref: "#/components/schemas/KmQuote" }
+    DeliveryPricingCurrent:
+      type: object
+      required: [fuelPricePerLitre, kmPerLitre, pickupLeones, serviceRatePerKm, riderSharePercent, roundToLeones, minimumFeeLeones, maxKm, effectiveFrom]
+      properties:
+        fuelPricePerLitre: { type: number }
+        kmPerLitre: { type: number }
+        pickupLeones: { type: number }
+        serviceRatePerKm: { type: number }
+        riderSharePercent: { type: number }
+        roundToLeones: { type: number }
+        minimumFeeLeones: { type: number }
+        maxKm: { type: number, nullable: true }
+        effectiveFrom: { type: string, nullable: true }
+    DeliveryPricingScheduled:
+      type: object
+      required: [fuelPricePerLitre, kmPerLitre, pickupLeones, serviceRatePerKm, riderSharePercent, roundToLeones, minimumFeeLeones, maxKm, effectiveFrom]
+      properties:
+        fuelPricePerLitre: { type: number }
+        kmPerLitre: { type: number }
+        pickupLeones: { type: number }
+        serviceRatePerKm: { type: number }
+        riderSharePercent: { type: number }
+        roundToLeones: { type: number }
+        minimumFeeLeones: { type: number }
+        maxKm: { type: number, nullable: true }
+        effectiveFrom: { type: string }
+    DeliveryPricingState:
+      type: object
+      required: [current, scheduled, changesTakeEffectAt]
+      properties:
+        current: { $ref: "#/components/schemas/DeliveryPricingCurrent" }
+        scheduled:
+          allOf: [{ $ref: "#/components/schemas/DeliveryPricingScheduled" }]
+          nullable: true
+        changesTakeEffectAt: { type: string }
     PrescriptionRequestRejection:
       type: object
       required: [reason]
@@ -4971,15 +5198,22 @@ components:
         deliveryFeeMinor: { type: ["number", "null"] }
         zoneName:
           type: ["string", "null"]
-          description: The zone the patient is in, where the order is delivered
+          description: The patient's area (a zone, else the district), where the order is delivered
         fromZoneName:
           type: ["string", "null"]
-          description: >-
-            The pharmacy's zone when it differs from the patient's; the fee is
-            then the higher of the two zones' fees
+          description: No longer used (zones do not set the fee); always null
         message:
           type: ["string", "null"]
           description: Why delivery is unavailable, in words for the patient
+        distanceKm:
+          type: ["number", "null"]
+          description: How far the rider goes from the pharmacy, in km
+        distanceEstimated:
+          type: boolean
+          description: True when the distance is the straight line × 1.3 rather than the road distance
+        maxKm:
+          type: ["number", "null"]
+          description: How far this delivery may be; beyond it, collection only
 
     DeliveryLocation:
       type: object
@@ -6494,6 +6728,12 @@ components:
           description: Longitude of the patient's delivery pin.
         deliveryZoneName:
           type: ["string", "null"]
+        deliveryDistanceKm:
+          type: ["string", "null"]
+          description: How far the rider goes from the pharmacy (distance pricing)
+        deliveryDistanceMethod:
+          type: ["string", "null"]
+          description: road, or estimate (the straight line × 1.3)
         status:
           type: string
           enum:
@@ -6596,6 +6836,12 @@ components:
       properties:
         id:
           type: string
+        signedIn:
+          type: boolean
+          description: Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders.
+        lastSeenAt:
+          type: ["string", "null"]
+          description: When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).
         name:
           type: string
         username:

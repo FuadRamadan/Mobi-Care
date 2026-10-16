@@ -124,6 +124,11 @@ function OpenCard({ request, onDone }: { request: PharmacyOpenPrescriptionReques
           </span>
           {left && <span className="flex items-center gap-1 text-amber-700 shrink-0 tabular-nums" title="Time left before pharmacies further away are asked too"><Clock className="w-4 h-4" />{left}</span>}
         </div>
+        {request.collectionOnly && (
+          <p className="text-xs rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-2.5 py-1.5" data-testid={`collection-only-${request.id}`}>
+            <strong>Collection only.</strong> The patient is beyond delivery range and will come to your pharmacy.
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">{request.hasCoveredPhoto ? "The patient covered their name. You'll see the full prescription and their details when you accept." : "Patient details are shown when you accept."}</p>
         <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
           <Button variant="outline" disabled={decline.isPending} onClick={async () => { await decline.mutateAsync({ id: request.id }).catch(() => {}); onDone(); }} data-testid={`button-decline-${request.id}`}>Not available</Button>
@@ -164,7 +169,7 @@ function AcceptedCard({ request, onDone }: { request: PharmacyAcceptedPrescripti
     <div className="rounded-xl border bg-card grid lg:grid-cols-[340px_1fr] overflow-hidden" data-testid={`card-mine-${request.id}`}>
       {request.status !== "ordered" ? <RequestPhoto id={request.id} version="original" className="w-full h-full min-h-72 border-r" /> : <div className="bg-muted/40 flex items-center justify-center text-sm text-muted-foreground p-6">The prescription is now with the order.</div>}
       <div className="p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">{statusBadge}<span className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-4 h-4" />{request.areaName}</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><span className="flex flex-wrap items-center gap-2">{statusBadge}{request.collectionOnly && <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">Collection only</Badge>}</span><span className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="w-4 h-4" />{request.areaName}</span></div>
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground" /><span className="font-medium">{request.patientName}</span></div>
           <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /><span>{request.patientPhone}</span></div>

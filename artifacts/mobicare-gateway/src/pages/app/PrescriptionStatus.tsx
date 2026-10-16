@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { CheckCircle2, Clock, FileX, Loader2, Store, ArrowLeft } from "lucide-react";
+import { Bike, CheckCircle2, Clock, FileX, Loader2, MapPinOff, Store, ArrowLeft } from "lucide-react";
 import {
   useGetPatientPrescriptionRequest,
   getGetPatientPrescriptionRequestQueryKey,
   useCancelPrescriptionRequest,
+  useAskPrescriptionRequestFurther,
   type PatientPrescriptionRequest,
+  type PrescriptionRequestDelivery,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,30 @@ function useCountdown(until: string | null | undefined): string | null {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/** What delivery from the pharmacy that took it costs, so the patient knows before ordering. */
+function DeliveryLine({ delivery }: { delivery: PrescriptionRequestDelivery | null | undefined }) {
+  if (!delivery) return null;
+  const km = delivery.distanceKm == null ? null : delivery.distanceEstimated ? `about ${delivery.distanceKm} km` : `${delivery.distanceKm} km by road`;
+  return (
+    <div className="rounded-2xl border bg-card p-4 flex gap-3 text-left" data-testid="request-delivery">
+      {delivery.available ? <Bike className="w-5 h-5 text-primary shrink-0 mt-0.5" /> : <MapPinOff className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />}
+      <div className="min-w-0">
+        {delivery.available ? (
+          <>
+            <p className="font-medium text-sm">Delivery {formatLeones(delivery.feeLeones ?? 0)}{km ? ` · ${km}` : ""}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">To where you sent your prescription from. Or collect it from the pharmacy at no delivery charge.</p>
+          </>
+        ) : (
+          <>
+            <p className="font-medium text-sm">Collection only</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{delivery.message}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Follow a prescription sent to the pharmacies nearby, and order once it is confirmed. */
 export default function PrescriptionStatus() {
   const [, params] = useRoute("/app/prescription/:id");
@@ -52,7 +78,7 @@ export default function PrescriptionStatus() {
       // Poll while a pharmacy may still act on it.
       refetchInterval: (q) => {
         const status = (q.state.data as PatientPrescriptionRequest | undefined)?.status;
-        return status === "searching" || status === "accepted" ? 5000 : false;
+        return status === "searching" || status === "accepted" ? 5000 : status === "out_of_range" ? 30_000 : false;
       },
     },
   });
@@ -86,8 +112,21 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const cancel = useCancelPrescriptionRequest();
+  const further = useAskPrescriptionRequestFurther();
   const { cart, startFromRequest, clear } = useCart();
   const left = useCountdown(request.status === "searching" ? request.roundEndsAt : null);
+  const choiceLeft = useCountdown(request.status === "out_of_range" ? request.choiceEndsAt : null);
+
+  async function onAskFurther() {
+    try {
+      await further.mutateAsync({ id: request.id });
+      await queryClient.invalidateQueries();
+    } catch (err) {
+      const e = err as { data?: { error?: string } | null };
+      toast({ title: "Not sent", description: e?.data?.error ?? "Try again.", variant: "destructive" });
+      await queryClient.invalidateQueries();
+    }
+  }
 
   async function onCancel() {
     try {
@@ -120,13 +159,15 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
               </div>
               <p className="font-display font-semibold text-lg">Looking for a pharmacy</p>
               <p className="text-sm text-muted-foreground">
-                {request.round <= 1
-                  ? `Pharmacies ${request.areaName ? `in ${request.areaName}` : "near you"} can see your prescription now.`
-                  : "No one nearby took it yet, so pharmacies further away can see it now."}
+                {request.collectionOnly
+                  ? "Pharmacies beyond delivery range can see your prescription now. You'll collect from the one that takes it."
+                  : request.round <= 1
+                    ? "The pharmacies nearest to you can see your prescription now."
+                    : "No one nearby took it yet, so pharmacies a little further away can see it now. All of them can deliver to you."}
               </p>
               <p className="text-xs text-muted-foreground">
-                Search {request.round} of {request.maxRounds}
-                {left ? ` · widening in ${left}` : ""}
+                {request.collectionOnly ? "Pharmacies further away" : `Search ${request.round} of ${request.maxRounds}`}
+                {left ? (request.round >= request.maxRounds ? ` · ends in ${left}` : ` · widening in ${left}`) : ""}
               </p>
             </CardContent>
           </Card>
@@ -134,6 +175,30 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
           <p className="text-xs text-muted-foreground text-center">
             We'll send you a notification when a pharmacy takes it. You can leave this page.
           </p>
+          {cancelButton}
+        </>
+      );
+
+    case "out_of_range":
+      return (
+        <>
+          <Card data-testid="status-out-of-range">
+            <CardContent className="p-6 text-center space-y-3">
+              <MapPinOff className="w-8 h-8 text-amber-600 mx-auto" />
+              <p className="font-display font-semibold text-lg">No pharmacy within delivery range took it</p>
+              <p className="text-sm text-muted-foreground">
+                Pharmacies further away are open and can be asked too. They can't deliver that far, so you would collect
+                your medicines from the one that takes it.
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <Button className="rounded-full" disabled={further.isPending} onClick={onAskFurther} data-testid="button-ask-further">
+                  Ask pharmacies further away · I'll collect
+                </Button>
+                <Button variant="outline" className="rounded-full" onClick={() => navigate("/app/search")}>Search medicines instead</Button>
+              </div>
+              {choiceLeft && <p className="text-xs text-muted-foreground">You have {choiceLeft} to choose. After that the request closes and the photo is deleted.</p>}
+            </CardContent>
+          </Card>
           {cancelButton}
         </>
       );
@@ -148,6 +213,7 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
               <p className="text-sm text-muted-foreground">They are choosing the medicines they have for you. This usually takes a few minutes.</p>
             </CardContent>
           </Card>
+          <DeliveryLine delivery={request.delivery} />
           <PushPrompt when={`as soon as ${request.pharmacy?.name ?? "the pharmacy"} confirms your medicines`} />
           {cancelButton}
         </>
@@ -180,6 +246,7 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
             availableForDelivery: i.availableForDelivery,
             availableForCollection: i.availableForCollection,
           })),
+          { collection: request.delivery?.available === false },
         );
         navigate("/app/checkout");
       };
@@ -217,13 +284,16 @@ function StatusBody({ request }: { request: PatientPrescriptionRequest }) {
               </CardContent>
             </Card>
           )}
+          {items.length > 0 && <DeliveryLine delivery={request.delivery} />}
           {items.length > 0 && (
             <Button className="w-full rounded-full h-12 text-base" onClick={goToCheckout} data-testid="button-request-checkout">
               Continue to checkout
             </Button>
           )}
           <p className="text-xs text-muted-foreground text-center">
-            At checkout you can lower a quantity, choose delivery or collection, and pay.
+            {request.delivery?.available === false
+              ? "At checkout you can lower a quantity and pay, then collect from the pharmacy."
+              : "At checkout you can lower a quantity, choose delivery or collection, and pay."}
           </p>
           {cancelButton}
         </>

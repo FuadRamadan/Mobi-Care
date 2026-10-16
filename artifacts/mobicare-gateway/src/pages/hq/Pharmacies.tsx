@@ -504,8 +504,15 @@ export default function HqPharmacies() {
                         onCheckedChange={(v) => update.mutate({ id: p.id, data: { isActive: v } })}
                         data-testid={`switch-active-${p.id}`}
                       />
-                      <Badge variant="secondary" className={p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
-                        {p.isActive ? 'online' : 'offline'}
+                      {/* The switch turns the account on or off (HQ). Online is the
+                          pharmacy's own doing: signed in on some device. */}
+                      <Badge
+                        variant="secondary"
+                        className={!p.isActive ? 'bg-gray-100 text-gray-600' : p.signedIn ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}
+                        title={p.isActive && !p.signedIn ? 'Signed out on every device: patients cannot see or order from this pharmacy until it signs in.' : undefined}
+                        data-testid={`badge-online-${p.id}`}
+                      >
+                        {!p.isActive ? 'switched off' : p.signedIn ? 'online' : 'signed out'}
                       </Badge>
                     </div>
                   </TableCell>

@@ -28,3 +28,4 @@ export * from "./monimePayments";
 export * from "./securityEvents";
 export * from "./prescriptionRequests";
 export * from "./webPush";
+export * from "./deliveryPricing";

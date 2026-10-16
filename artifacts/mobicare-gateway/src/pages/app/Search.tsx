@@ -64,7 +64,7 @@ export default function PatientSearch() {
   const { data: requests } = useListPatientPrescriptionRequests({
     query: { queryKey: getListPatientPrescriptionRequestsQueryKey(), refetchInterval: 30_000 },
   });
-  const activeRequest = requests?.find((r) => r.status === "searching" || r.status === "accepted" || r.status === "ready");
+  const activeRequest = requests?.find((r) => r.status === "searching" || r.status === "out_of_range" || r.status === "accepted" || r.status === "ready");
 
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
@@ -159,7 +159,7 @@ export default function PatientSearch() {
             <Link
               href={`/app/prescription/${activeRequest.id}`}
               className={`flex items-center gap-3 rounded-2xl border p-3 text-sm ${
-                activeRequest.status === "ready" ? "border-primary bg-primary/10" : "bg-card"
+                activeRequest.status === "ready" ? "border-primary bg-primary/10" : activeRequest.status === "out_of_range" ? "border-amber-300 bg-amber-50" : "bg-card"
               }`}
               data-testid="link-active-request"
             >
@@ -170,9 +170,11 @@ export default function PatientSearch() {
                     ? "Your medicines are ready to order"
                     : activeRequest.status === "accepted"
                       ? `${activeRequest.pharmacy?.name ?? "A pharmacy"} is checking your prescription`
-                      : "Looking for a pharmacy for your prescription"}
+                      : activeRequest.status === "out_of_range"
+                        ? "No pharmacy within delivery range took your prescription"
+                        : "Looking for a pharmacy for your prescription"}
                 </span>
-                <span className="text-xs text-muted-foreground">Tap to see where it is</span>
+                <span className="text-xs text-muted-foreground">{activeRequest.status === "out_of_range" ? "Tap to choose what to do next" : "Tap to see where it is"}</span>
               </span>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </Link>
@@ -322,6 +324,14 @@ export default function PatientSearch() {
         )
       )}
 
+      {enabled && results && results.length > 0 && (
+        <p className="text-xs text-muted-foreground" data-testid="text-result-order">
+          {location
+            ? "Nearest pharmacies first. You can order from any of them."
+            : "Allow location to see the nearest pharmacies first. Showing the cheapest first."}
+        </p>
+      )}
+
       <div className="space-y-4">
         {groupByMedicine(results ?? []).map((medicine) => (
           <MedicineCard key={medicine.drugId} medicine={medicine} />
@@ -390,8 +400,17 @@ function groupByMedicine(results: DrugSearchResult[]): Medicine[] {
         (a, b) => position(a.listing) - position(b.listing) || a.offer.priceLeones - b.offer.priceLeones,
       );
     }
-    // In order of price, as before: MobiCare does not steer a patient to a pharmacy.
-    medicine.pharmacies.sort((a, b) => cheapest(a) - cheapest(b));
+    // Nearest first: medicine is needed fast, and a nearer pharmacy delivers
+    // sooner and for less. Every pharmacy is still listed for the patient to
+    // choose from. Without the patient's location, cheapest first. Pharmacies
+    // not selling now (signed out) come last either way.
+    const away = (pharmacy: PharmacyOptions) => pharmacy.first.estimatedDistanceKm ?? Number.POSITIVE_INFINITY;
+    medicine.pharmacies.sort(
+      (a, b) =>
+        Number(a.first.online === false) - Number(b.first.online === false) ||
+        away(a) - away(b) ||
+        cheapest(a) - cheapest(b),
+    );
   }
   return [...medicines.values()];
 }
@@ -541,13 +560,19 @@ function MedicineCard({ medicine }: { medicine: Medicine }) {
             return (
               <div
                 key={pharmacyId}
-                className={`flex flex-col gap-3 p-3 ${!anyInStock ? "opacity-60 grayscale-[50%]" : ""}`}
+                className={`flex flex-col gap-3 p-3 ${!anyInStock || first.online === false ? "opacity-60 grayscale-[50%]" : ""}`}
                 data-testid={`pharmacy-${drug.drugId}-${pharmacyId}`}
               >
                 <div className="min-w-0">
                   <div className="font-bold text-base text-foreground flex items-center gap-2" data-testid="text-pharmacy-name">
                     {first.pharmacyName}
-                    <span className={`w-2 h-2 rounded-full ${first.online ? 'bg-green-500' : 'bg-gray-300'}`} title={first.online ? 'Online' : 'Offline'} />
+                    {first.online !== false ? (
+                      <span className="w-2 h-2 rounded-full bg-green-500" title="Selling now" />
+                    ) : (
+                      <Badge variant="secondary" className="bg-gray-200 text-gray-700 font-medium" data-testid={`badge-not-selling-${pharmacyId}`}>
+                        Not selling now
+                      </Badge>
+                    )}
                   </div>
                   {first.pharmacyAddress && (
                     <div className="text-xs text-muted-foreground mt-0.5">
@@ -607,6 +632,7 @@ function MedicineCard({ medicine }: { medicine: Medicine }) {
                         {options.map((option) => (
                           <OptionRow
                             key={option.offer.inventoryId}
+                            selling={first.online !== false}
                             offer={option.offer}
                             product={severalProducts ? productLabel(option.listing) : null}
                             onAdd={() => add(option)}
@@ -618,6 +644,7 @@ function MedicineCard({ medicine }: { medicine: Medicine }) {
                 ) : (
                   <div className="rounded-lg border bg-background/60">
                     <OptionRow
+                      selling={first.online !== false}
                       offer={options[0]!.offer}
                       product={severalProducts ? productLabel(options[0]!.listing) : null}
                       onAdd={() => add(options[0]!)}
@@ -661,8 +688,11 @@ function OptionRow({
   offer,
   product,
   onAdd,
+  selling,
 }: {
   offer: DrugOffer;
+  /** False when the pharmacy is signed out: listed, but not taking orders. */
+  selling: boolean;
   /** The strength and form, when the medicine comes in more than one. */
   product: string | null;
   onAdd: () => void;
@@ -691,11 +721,11 @@ function OptionRow({
           size="sm"
           className="rounded-full mt-2 w-full"
           onClick={onAdd}
-          disabled={!offer.inStock}
-          variant={offer.inStock ? "default" : "secondary"}
+          disabled={!offer.inStock || !selling}
+          variant={offer.inStock && selling ? "default" : "secondary"}
           data-testid={`button-add-${offer.inventoryId}`}
         >
-          {offer.inStock ? "Add to cart" : "Out of stock"}
+          {!selling ? "Not selling now" : offer.inStock ? "Add to cart" : "Out of stock"}
         </Button>
       </div>
     </div>

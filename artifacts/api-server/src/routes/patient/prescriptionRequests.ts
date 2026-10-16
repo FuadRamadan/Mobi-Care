@@ -17,6 +17,7 @@ import {
   deleteImages,
   locate,
   startRequest,
+  askFurtherAway,
 } from "../../lib/prescriptionRequests.js";
 import { patientView } from "../../lib/prescriptionRequestViews.js";
 
@@ -98,6 +99,17 @@ router.get("/:id", async (req: AuthRequest, res) => {
   const [r] = await db.select().from(prescriptionRequestsTable)
     .where(and(eq(prescriptionRequestsTable.id, req.params.id as string), eq(prescriptionRequestsTable.patientId, req.pharmacy!.sub))).limit(1);
   if (!r) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(await patientView(r));
+});
+
+// ── POST /patient/prescription-requests/:id/further ─────────────────────────
+// No pharmacy within delivery range took it: the patient asks pharmacies
+// further away, and will collect.
+router.post("/:id/further", async (req: AuthRequest, res) => {
+  if (!isId(req.params.id)) { res.status(404).json({ error: "Not found" }); return; }
+  const r = await askFurtherAway(req.params.id as string, req.pharmacy!.sub);
+  if (!r) { res.status(409).json({ error: "This request is no longer waiting for your choice." }); return; }
+  await writeAudit({ actorType: "patient", actorId: req.pharmacy!.sub, actorName: req.pharmacy!.name, action: "prescription_request.ask_further", entityType: "prescription_request", entityId: r.id, details: {} });
   res.json(await patientView(r));
 });
 

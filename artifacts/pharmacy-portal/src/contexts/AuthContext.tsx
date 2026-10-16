@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { PharmacyUser, PasswordChangeResult, PasswordPolicy, useLogin, useLogout } from "@workspace/api-client-react";
+import { PharmacyUser, PasswordChangeResult, PasswordPolicy, getPharmacyMe, useLogin, useLogout } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -223,6 +223,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return res;
   };
+
+  // A new tab knows the pharmacy only from its sign-in token, which has no
+  // username, phone or controlled-medicine status: load them once.
+  const userKey = user ? (user.id || (user as { sub?: string }).sub) : null;
+  useEffect(() => {
+    if (!userKey || user?.mustChangePassword) return;
+    let live = true;
+    getPharmacyMe()
+      .then((me) => {
+        if (!live) return;
+        setUser((current) => {
+          if (!current) return current;
+          const merged = { ...current, ...me };
+          sessionStorage.setItem("mc_user", JSON.stringify(merged));
+          return merged;
+        });
+      })
+      .catch(() => { /* the page still works with what the token says */ });
+    return () => { live = false; };
+  }, [userKey, user?.mustChangePassword]);
 
   const completePasswordChange = useCallback((res: PasswordChangeResult) => {
     if (res.accessToken && res.refreshToken && res.user) {

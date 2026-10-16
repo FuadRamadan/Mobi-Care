@@ -10,6 +10,7 @@ export interface PharmacyOpenPrescriptionRequest {
   id: string;
   areaName?: string | null;
   distanceKm?: number | null;
+  collectionOnly?: boolean;
   hasCoveredPhoto: boolean;
   round: number;
   roundEndsAt?: string | null;

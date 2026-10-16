@@ -8,6 +8,13 @@
 
 export interface HqPharmacy {
   id: string;
+  /** Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders. */
+  signedIn?: boolean;
+  /**
+     * When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).
+     * @nullable
+     */
+  lastSeenAt?: string | null;
   name: string;
   username: string;
   /** @nullable */

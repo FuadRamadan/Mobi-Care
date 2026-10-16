@@ -42,6 +42,16 @@ export interface HqOrder {
   deliveryLongitude?: string | null;
   /** @nullable */
   deliveryZoneName?: string | null;
+  /**
+     * How far the rider goes from the pharmacy (distance pricing)
+     * @nullable
+     */
+  deliveryDistanceKm?: string | null;
+  /**
+     * road, or estimate (the straight line × 1.3)
+     * @nullable
+     */
+  deliveryDistanceMethod?: string | null;
   status: HqOrderStatus;
   fulfillmentType: HqOrderFulfillmentType;
   idChecked: boolean;

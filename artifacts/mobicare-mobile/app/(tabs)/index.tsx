@@ -160,7 +160,7 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
                 },
               ]}
             >
-              {offer.online ? "Online" : "Offline"}
+              {offer.online ? "Selling now" : "Not selling now"}
             </Text>
           </View>
           <View style={[s.tag, { backgroundColor: colors.muted }]}>
@@ -182,7 +182,8 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
           {formatLeones(offer.priceLeones)}
           <Text style={s.offerUnitOfSale}> / {offer.unitOfSale}</Text>
         </Text>
-        {offer.inStock ? (
+        {/* A signed-out pharmacy is listed but not taking orders. */}
+        {offer.inStock && offer.online ? (
           <TouchableOpacity
             style={s.addBtn}
             onPress={() => onAdd(offer)}
@@ -193,7 +194,7 @@ function OfferRow({ offer, drug, onAdd, colors }: OfferRowProps) {
           </TouchableOpacity>
         ) : (
           <View style={s.outOfStockPlaceholder}>
-            <Text style={s.outOfStockText}>Unavailable</Text>
+            <Text style={s.outOfStockText}>{offer.online ? "Unavailable" : "Not selling"}</Text>
           </View>
         )}
       </View>

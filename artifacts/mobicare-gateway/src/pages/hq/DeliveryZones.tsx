@@ -3,8 +3,6 @@ import {
   useListDeliveryZones,
   useCreateDeliveryZone,
   useUpdateDeliveryZone,
-  useScheduleDeliveryZoneFee,
-  useCancelScheduledDeliveryZoneFee,
   useSetDeliveryZoneStatus,
   useDeleteDeliveryZone,
   usePreviewDeliveryZone,
@@ -13,9 +11,10 @@ import {
   type DeliveryZonePreview,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Clock, MapPinned, Pencil, Plus, Power, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, MapPinned, Pencil, Plus, Power, Trash2, Undo2, X } from 'lucide-react';
 import HqLayout from './HqLayout';
-import { EmptyState, formatLeones } from './shared';
+import { DeliveryPricingPanel } from './DeliveryPricingPanel';
+import { EmptyState } from './shared';
 import { useHqAuth } from '@/hq/auth';
 import { ZoneMap } from '@/components/map/ZoneMap';
 import { zoneColours, type Position, type ZoneOutline } from '@/components/map/mapConfig';
@@ -24,9 +23,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,9 +39,8 @@ type Editing =
   | { kind: 'new'; name: string; description: string; fee: string }
   | { kind: 'edit'; zone: DeliveryZone; name: string; description: string };
 
-const minorToLeones = (minor: number) => minor / 100;
+// Zones no longer carry a fee (distance prices delivery); new ones are saved with 0.
 const leonesToMinor = (text: string) => Math.round(Number(text) * 100);
-const validFee = (text: string) => text.trim() !== '' && Number.isFinite(Number(text)) && Number(text) >= 0;
 
 function apiError(err: unknown): string {
   const data = (err as { data?: { error?: unknown } | null })?.data;
@@ -62,17 +57,6 @@ function firstRing(boundary: ZoneOutline): Position[] {
   return corners;
 }
 
-function midnightLabel(iso: string): string {
-  return new Date(iso).toLocaleString('en-GB', {
-    timeZone: 'Africa/Freetown',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export default function HqDeliveryZones() {
   const { user } = useHqAuth();
   const canManage = user?.canManageSettlements === true;
@@ -86,8 +70,6 @@ export default function HqDeliveryZones() {
   const [corners, setCorners] = useState<Position[] | null>(null);
   const [history, setHistory] = useState<Position[][]>([]);
   const [preview, setPreview] = useState<DeliveryZonePreview | null>(null);
-  const [feeZone, setFeeZone] = useState<DeliveryZone | null>(null);
-  const [feeText, setFeeText] = useState('');
   const [statusZone, setStatusZone] = useState<DeliveryZone | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -97,8 +79,6 @@ export default function HqDeliveryZones() {
 
   const create = useCreateDeliveryZone();
   const update = useUpdateDeliveryZone();
-  const scheduleFee = useScheduleDeliveryZoneFee();
-  const cancelFee = useCancelScheduledDeliveryZoneFee();
   const setStatus = useSetDeliveryZoneStatus();
   const deleteZone = useDeleteDeliveryZone();
   const [deletingZone, setDeletingZone] = useState<DeliveryZone | null>(null);
@@ -111,7 +91,7 @@ export default function HqDeliveryZones() {
         name: zone.name,
         boundary: zone.boundary as unknown as ZoneOutline,
         isActive: zone.isActive,
-        feeLabel: zone.currentFeeMinor == null ? 'No fee' : formatLeones(minorToLeones(zone.currentFeeMinor)),
+        feeLabel: `${zone.areaSquareKm} km²`,
       })),
     [zones],
   );
@@ -123,7 +103,8 @@ export default function HqDeliveryZones() {
     }
     return counts;
   }, [pharmacies]);
-  const outside = pharmacies.filter((p) => p.isActive && !p.zoneId);
+  // Delivery needs the pharmacy's map position (the distance is measured from it).
+  const unplaced = pharmacies.filter((p) => p.isActive && p.latitude == null);
   const colours = useMemo(() => zoneColours(mapZones), [mapZones]);
 
   // Check the outline as it is drawn: valid, what it overlaps, who it moves.
@@ -164,7 +145,7 @@ export default function HqDeliveryZones() {
   }
 
   function startNew() {
-    setEditing({ kind: 'new', name: '', description: '', fee: '' });
+    setEditing({ kind: 'new', name: '', description: '', fee: '0' });
     setCorners([]);
     setHistory([]);
     setSelectedId(null);
@@ -197,7 +178,7 @@ export default function HqDeliveryZones() {
             feeMinor: leonesToMinor(editing.fee),
           },
         });
-        toast({ title: 'Zone created', description: `${editing.name.trim()} is live now.` });
+        toast({ title: 'Zone created', description: `New orders in this area are labelled ${editing.name.trim()}.` });
       } else {
         const outlineChanged =
           JSON.stringify(corners) !== JSON.stringify(firstRing(editing.zone.boundary as unknown as ZoneOutline));
@@ -209,34 +190,9 @@ export default function HqDeliveryZones() {
             ...(outlineChanged ? { boundary } : {}),
           },
         });
-        toast({ title: 'Zone saved', description: 'Deliveries are priced with the new outline from now.' });
+        toast({ title: 'Zone saved', description: 'New orders are labelled with the new outline from now.' });
       }
       stopEditing();
-      await refresh();
-    } catch (err) {
-      onError(err);
-    }
-  }
-
-  async function saveFee() {
-    if (!feeZone || !validFee(feeText)) return;
-    try {
-      const zone = await scheduleFee.mutateAsync({ id: feeZone.id, data: { feeMinor: leonesToMinor(feeText) } });
-      toast({
-        title: 'Fee change scheduled',
-        description: `${zone.name} becomes ${formatLeones(Number(feeText))} at ${midnightLabel(zone.scheduledFee!.effectiveFrom)}.`,
-      });
-      setFeeZone(null);
-      await refresh();
-    } catch (err) {
-      onError(err);
-    }
-  }
-
-  async function cancelScheduled(zone: DeliveryZone) {
-    try {
-      await cancelFee.mutateAsync({ id: zone.id });
-      toast({ title: 'Fee change cancelled', description: `${zone.name} keeps its current fee.` });
       await refresh();
     } catch (err) {
       onError(err);
@@ -250,8 +206,8 @@ export default function HqDeliveryZones() {
       toast({
         title: statusZone.isActive ? 'Zone switched off' : 'Zone switched on',
         description: statusZone.isActive
-          ? `No deliveries to or from ${statusZone.name} from now.`
-          : `${statusZone.name} is taking deliveries again.`,
+          ? `New orders are no longer labelled ${statusZone.name}.`
+          : `New orders in this area are labelled ${statusZone.name} again.`,
       });
       setStatusZone(null);
       await refresh();
@@ -266,7 +222,7 @@ export default function HqDeliveryZones() {
     const zone = deletingZone;
     try {
       await deleteZone.mutateAsync({ id: zone.id });
-      toast({ title: 'Zone deleted', description: `${zone.name} no longer takes deliveries. Past orders keep its name and fee.` });
+      toast({ title: 'Zone deleted', description: `${zone.name} is gone. Past orders keep its name.` });
       if (editing?.kind === 'edit' && editing.zone.id === zone.id) stopEditing();
       setDeletingZone(null);
       await refresh();
@@ -281,25 +237,24 @@ export default function HqDeliveryZones() {
     !!corners &&
     corners.length >= 3 &&
     preview?.valid === true &&
-    editing.name.trim().length >= 2 &&
-    (editing.kind === 'edit' || validFee(editing.fee));
+    editing.name.trim().length >= 2;
   const saving = create.isPending || update.isPending;
 
   return (
     <HqLayout title="Delivery Zones">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Areas MobiCare delivers to, and the fee for each. A delivery within one zone costs that zone&apos;s fee;
-            between two zones, the higher of the two. Places outside every zone get collection only.
-            {data && (
-              <>
-                {' '}Fee changes take effect at <span className="font-medium text-foreground">{midnightLabel(data.feeChangesTakeEffectAt)}</span> (midnight, Freetown time).
-              </>
-            )}
-          </p>
+        <DeliveryPricingPanel canManage={canManage} />
+
+        <div className="flex flex-wrap items-start justify-between gap-3 pt-2">
+          <div className="max-w-2xl">
+            <h2 className="font-display font-semibold text-lg text-dark-green">Named areas (optional)</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Zones no longer set the delivery fee or decide where MobiCare delivers: distance does. They only name the
+              area on orders, in Dispatch and in reports. Without a zone, the district name is used.
+            </p>
+          </div>
           {canManage && !editing && (
-            <Button onClick={startNew} className="rounded-full" data-testid="button-new-zone">
+            <Button onClick={startNew} variant="outline" className="rounded-full" data-testid="button-new-zone">
               <Plus className="w-4 h-4" /> New zone
             </Button>
           )}
@@ -320,7 +275,7 @@ export default function HqDeliveryZones() {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#0b3b2e] border-2 border-white shadow" /> Pharmacy in a zone
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#d97706] border-2 border-white shadow" /> Pharmacy outside every zone
+                <span className="w-2.5 h-2.5 rounded-full bg-[#d97706] border-2 border-white shadow" /> Pharmacy outside every zone (still delivers)
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-4 border-t-2 border-dashed border-[#8a948f]" /> Switched off
@@ -359,21 +314,6 @@ export default function HqDeliveryZones() {
                     placeholder="Roads or landmarks along the border"
                   />
                 </div>
-                {editing.kind === 'new' && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="zone-fee">Delivery fee (Le)</Label>
-                    <Input
-                      id="zone-fee"
-                      inputMode="decimal"
-                      value={editing.fee}
-                      onChange={(e) => setEditing({ ...editing, fee: e.target.value })}
-                      placeholder="e.g. 30"
-                      data-testid="input-zone-fee"
-                    />
-                    <p className="text-xs text-muted-foreground">A new zone&apos;s first fee applies as soon as it is saved.</p>
-                  </div>
-                )}
-
                 <div className="rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground flex items-center gap-1.5">
                     <MapPinned className="w-3.5 h-3.5" /> Drawing the outline
@@ -406,8 +346,7 @@ export default function HqDeliveryZones() {
               <EmptyState>Loading zones…</EmptyState>
             ) : zones.length === 0 ? (
               <EmptyState>
-                No delivery zones yet, so every order is collection only.
-                {canManage && ' Draw the first one with “New zone”.'}
+                No named areas yet. Orders are labelled with their district.
               </EmptyState>
             ) : (
               <>
@@ -432,41 +371,12 @@ export default function HqDeliveryZones() {
                             {zone.areaSquareKm} km² · {inZone.length} {inZone.length === 1 ? 'pharmacy' : 'pharmacies'}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-display font-bold text-dark-green tabular-nums">
-                            {zone.currentFeeMinor == null ? '—' : formatLeones(minorToLeones(zone.currentFeeMinor))}
-                          </div>
-                          {!zone.isActive && <Badge variant="secondary" className="mt-1">Switched off</Badge>}
-                        </div>
+                        {!zone.isActive && <Badge variant="secondary">Switched off</Badge>}
                       </div>
-                      {zone.scheduledFee && (
-                        <div className="flex items-center gap-2 text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5">
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                          <span className="flex-1">
-                            Becomes <strong>{formatLeones(minorToLeones(zone.scheduledFee.feeMinor))}</strong> at{' '}
-                            {midnightLabel(zone.scheduledFee.effectiveFrom)}
-                          </span>
-                          {canManage && (
-                            <button className="font-medium underline" onClick={() => cancelScheduled(zone)}>
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      )}
                       {canManage && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           <Button size="sm" variant="outline" onClick={() => startEdit(zone)}>
                             <Pencil className="w-3.5 h-3.5" /> Outline
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setFeeZone(zone);
-                              setFeeText(zone.scheduledFee ? String(minorToLeones(zone.scheduledFee.feeMinor)) : '');
-                            }}
-                          >
-                            Change fee
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setStatusZone(zone)}>
                             <Power className="w-3.5 h-3.5" /> {zone.isActive ? 'Switch off' : 'Switch on'}
@@ -485,19 +395,14 @@ export default function HqDeliveryZones() {
                     </div>
                   );
                 })}
-                {outside.length > 0 && (
+                {unplaced.length > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-1.5">
                     <div className="font-medium flex items-center gap-1.5">
                       <AlertTriangle className="w-4 h-4" /> Collection only
                     </div>
-                    <p className="text-xs">These pharmacies are outside every zone, so they cannot deliver:</p>
+                    <p className="text-xs">These pharmacies have no map position, so the delivery distance cannot be measured. Add it in Pharmacies:</p>
                     <ul className="text-xs list-disc pl-4">
-                      {outside.map((p) => (
-                        <li key={p.id}>
-                          {p.name}
-                          {p.latitude == null && ' — location not recorded'}
-                        </li>
-                      ))}
+                      {unplaced.map((p) => <li key={p.id}>{p.name}</li>)}
                     </ul>
                   </div>
                 )}
@@ -507,33 +412,6 @@ export default function HqDeliveryZones() {
         </div>
       </div>
 
-      <Dialog open={!!feeZone} onOpenChange={(open) => !open && setFeeZone(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change the fee for {feeZone?.name}</DialogTitle>
-            <DialogDescription>
-              Currently {feeZone?.currentFeeMinor == null ? 'no fee' : formatLeones(minorToLeones(feeZone.currentFeeMinor))}.
-              The new fee starts at {data ? midnightLabel(data.feeChangesTakeEffectAt) : 'midnight'}; orders placed before then keep today&apos;s fee.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="fee">New fee (Le)</Label>
-            <Input id="fee" inputMode="decimal" value={feeText} onChange={(e) => setFeeText(e.target.value)} autoFocus />
-            {feeZone?.scheduledFee && (
-              <p className="text-xs text-muted-foreground">
-                This replaces the change already waiting ({formatLeones(minorToLeones(feeZone.scheduledFee.feeMinor))}).
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFeeZone(null)}>Cancel</Button>
-            <Button onClick={saveFee} disabled={!validFee(feeText) || scheduleFee.isPending}>
-              Schedule for midnight
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={!!statusZone} onOpenChange={(open) => !open && setStatusZone(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -542,14 +420,9 @@ export default function HqDeliveryZones() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {statusZone?.isActive ? (
-                <>
-                  Deliveries to and from this area stop immediately. Orders already placed are not affected.
-                  {(pharmaciesByZone.get(statusZone.id) ?? []).length > 0 && (
-                    <> These pharmacies become collection only: {(pharmaciesByZone.get(statusZone.id) ?? []).join(', ')}.</>
-                  )}
-                </>
+                <>New orders here are labelled with the district instead. Delivery is not affected: distance decides it.</>
               ) : (
-                <>Deliveries in this area start again straight away, at its current fee.</>
+                <>New orders in this area are labelled with its name again.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -566,11 +439,8 @@ export default function HqDeliveryZones() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deletingZone?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              The zone disappears from this page and no delivery is priced in it from now. Past orders keep its
-              name and the fee they paid. This cannot be undone: to deliver there again, draw a new zone.
-              {deletingZone && (pharmaciesByZone.get(deletingZone.id) ?? []).length > 0 && (
-                <> These pharmacies become collection only unless another zone covers them: {(pharmaciesByZone.get(deletingZone.id) ?? []).join(', ')}.</>
-              )}
+              The area name disappears from this page and from new orders, which use the district instead. Past
+              orders keep its name. Delivery is not affected. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -614,7 +484,7 @@ function PreviewResult({ corners, preview }: { corners: number; preview: Deliver
               <li key={change.pharmacyId}>
                 {change.pharmacyName}: {change.fromZone ?? 'no zone'} → {' '}
                 <span className={change.toZone ? '' : 'text-amber-700 font-medium'}>
-                  {change.toZone ?? 'no zone (collection only)'}
+                  {change.toZone ?? 'no zone'}
                 </span>
               </li>
             ))}

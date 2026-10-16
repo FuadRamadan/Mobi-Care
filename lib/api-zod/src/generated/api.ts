@@ -1606,9 +1606,12 @@ export const PatientDeliveryQuoteBody = zod.object({
 export const PatientDeliveryQuoteResponse = zod.object({
   "available": zod.boolean(),
   "deliveryFeeMinor": zod.number().nullable(),
-  "zoneName": zod.string().nullable().describe('The zone the patient is in, where the order is delivered'),
-  "fromZoneName": zod.string().nullable().describe('The pharmacy\'s zone when it differs from the patient\'s; the fee is then the higher of the two zones\' fees'),
-  "message": zod.string().nullable().describe('Why delivery is unavailable, in words for the patient')
+  "zoneName": zod.string().nullable().describe('The patient\'s area (a zone, else the district), where the order is delivered'),
+  "fromZoneName": zod.string().nullable().describe('No longer used (zones do not set the fee); always null'),
+  "message": zod.string().nullable().describe('Why delivery is unavailable, in words for the patient'),
+  "distanceKm": zod.number().nullish().describe('How far the rider goes from the pharmacy, in km'),
+  "distanceEstimated": zod.boolean().optional().describe('True when the distance is the straight line × 1.3 rather than the road distance'),
+  "maxKm": zod.number().nullish().describe('How far this delivery may be; beyond it, collection only')
 })
 
 
@@ -2780,6 +2783,8 @@ export const ListHqOrdersResponseItem = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -2842,6 +2847,8 @@ export const ListDispatchOrdersResponseItem = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -2912,6 +2919,8 @@ export const AssignCourierResponse = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -2981,6 +2990,8 @@ export const UpdateCourierStatusResponse = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -3046,6 +3057,8 @@ export const ConfirmDeliveryByHqResponse = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -3111,6 +3124,8 @@ export const MarkCashCollectedResponse = zod.object({
   "deliveryLatitude": zod.string().nullish().describe('Latitude of the patient\'s delivery pin.'),
   "deliveryLongitude": zod.string().nullish().describe('Longitude of the patient\'s delivery pin.'),
   "deliveryZoneName": zod.string().nullish(),
+  "deliveryDistanceKm": zod.string().nullish().describe('How far the rider goes from the pharmacy (distance pricing)'),
+  "deliveryDistanceMethod": zod.string().nullish().describe('road, or estimate (the straight line × 1.3)'),
   "status": zod.enum(['awaiting_payment', 'paid', 'confirmed', 'packaging', 'ready', 'assigned', 'picked_up', 'delivering', 'delivered', 'collected', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'collection']),
   "idChecked": zod.boolean(),
@@ -3162,6 +3177,8 @@ export const MarkCashCollectedResponse = zod.object({
  */
 export const ListHqPharmaciesResponseItem = zod.object({
   "id": zod.string(),
+  "signedIn": zod.boolean().optional().describe('Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders.'),
+  "lastSeenAt": zod.string().nullish().describe('When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).'),
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
@@ -3224,6 +3241,8 @@ export const OnboardPharmacyBody = zod.object({
 export const OnboardPharmacyResponse = zod.object({
   "pharmacy": zod.object({
   "id": zod.string(),
+  "signedIn": zod.boolean().optional().describe('Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders.'),
+  "lastSeenAt": zod.string().nullish().describe('When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).'),
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
@@ -3289,6 +3308,8 @@ export const UpdateHqPharmacyBody = zod.object({
 
 export const UpdateHqPharmacyResponse = zod.object({
   "id": zod.string(),
+  "signedIn": zod.boolean().optional().describe('Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders.'),
+  "lastSeenAt": zod.string().nullish().describe('When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).'),
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
@@ -3428,6 +3449,8 @@ export const ResetPharmacyPasswordResponse = zod.object({
   "temporaryPasswordExpiresAt": zod.string().describe('ISO timestamp when the temporary password expires'),
   "pharmacy": zod.object({
   "id": zod.string(),
+  "signedIn": zod.boolean().optional().describe('Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders.'),
+  "lastSeenAt": zod.string().nullish().describe('When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).'),
   "name": zod.string(),
   "username": zod.string(),
   "phone": zod.string().nullish(),
@@ -5194,10 +5217,19 @@ export const CreatePrescriptionRequestBody = zod.object({
 
 export const CreatePrescriptionRequestResponse = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "round": zod.number(),
   "maxRounds": zod.number(),
   "roundEndsAt": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional().describe('The patient chose pharmacies beyond delivery range and will collect'),
+  "choiceEndsAt": zod.string().nullish().describe('While out_of_range, when the choice to ask pharmacies further away lapses'),
+  "delivery": zod.object({
+  "available": zod.boolean(),
+  "feeLeones": zod.number().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "distanceEstimated": zod.boolean(),
+  "message": zod.string().nullish()
+}).describe('Delivery from the pharmacy that took the request to where the patient sent it from').nullish(),
   "areaName": zod.string().nullish(),
   "note": zod.string().nullish(),
   "pharmacy": zod.object({
@@ -5239,10 +5271,19 @@ export const CreatePrescriptionRequestResponse = zod.object({
  */
 export const ListPatientPrescriptionRequestsResponseItem = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "round": zod.number(),
   "maxRounds": zod.number(),
   "roundEndsAt": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional().describe('The patient chose pharmacies beyond delivery range and will collect'),
+  "choiceEndsAt": zod.string().nullish().describe('While out_of_range, when the choice to ask pharmacies further away lapses'),
+  "delivery": zod.object({
+  "available": zod.boolean(),
+  "feeLeones": zod.number().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "distanceEstimated": zod.boolean(),
+  "message": zod.string().nullish()
+}).describe('Delivery from the pharmacy that took the request to where the patient sent it from').nullish(),
   "areaName": zod.string().nullish(),
   "note": zod.string().nullish(),
   "pharmacy": zod.object({
@@ -5289,10 +5330,77 @@ export const GetPatientPrescriptionRequestParams = zod.object({
 
 export const GetPatientPrescriptionRequestResponse = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "round": zod.number(),
   "maxRounds": zod.number(),
   "roundEndsAt": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional().describe('The patient chose pharmacies beyond delivery range and will collect'),
+  "choiceEndsAt": zod.string().nullish().describe('While out_of_range, when the choice to ask pharmacies further away lapses'),
+  "delivery": zod.object({
+  "available": zod.boolean(),
+  "feeLeones": zod.number().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "distanceEstimated": zod.boolean(),
+  "message": zod.string().nullish()
+}).describe('Delivery from the pharmacy that took the request to where the patient sent it from').nullish(),
+  "areaName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "pharmacy": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "mobileMoneyLines": zod.array(zod.object({
+  "provider": zod.string(),
+  "number": zod.string()
+}).describe('One mobile money account a pharmacy accepts payment on. The provider is display-ready (\"Orange Money\", \"AfriMoney\"), never a raw enum value.\n')),
+  "mobileMoneyAccountName": zod.string().nullish()
+}).nullish(),
+  "items": zod.array(zod.object({
+  "inventoryId": zod.string(),
+  "drugId": zod.string(),
+  "drugName": zod.string(),
+  "strength": zod.string(),
+  "form": zod.string(),
+  "unitOfSale": zod.string(),
+  "tier": zod.enum(['1', '2', '3']),
+  "priceLeones": zod.number(),
+  "brand": zod.string().nullish(),
+  "manufacturer": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "availableForDelivery": zod.boolean(),
+  "availableForCollection": zod.boolean(),
+  "prescriptionRequired": zod.boolean(),
+  "collectionOnly": zod.boolean(),
+  "maxQuantity": zod.number()
+})),
+  "rejectReason": zod.string().nullish(),
+  "orderId": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Ask pharmacies beyond delivery range too; the patient will collect
+ */
+export const AskPrescriptionRequestFurtherParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AskPrescriptionRequestFurtherResponse = zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "round": zod.number(),
+  "maxRounds": zod.number(),
+  "roundEndsAt": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional().describe('The patient chose pharmacies beyond delivery range and will collect'),
+  "choiceEndsAt": zod.string().nullish().describe('While out_of_range, when the choice to ask pharmacies further away lapses'),
+  "delivery": zod.object({
+  "available": zod.boolean(),
+  "feeLeones": zod.number().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "distanceEstimated": zod.boolean(),
+  "message": zod.string().nullish()
+}).describe('Delivery from the pharmacy that took the request to where the patient sent it from').nullish(),
   "areaName": zod.string().nullish(),
   "note": zod.string().nullish(),
   "pharmacy": zod.object({
@@ -5338,10 +5446,19 @@ export const CancelPrescriptionRequestParams = zod.object({
 
 export const CancelPrescriptionRequestResponse = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "round": zod.number(),
   "maxRounds": zod.number(),
   "roundEndsAt": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional().describe('The patient chose pharmacies beyond delivery range and will collect'),
+  "choiceEndsAt": zod.string().nullish().describe('While out_of_range, when the choice to ask pharmacies further away lapses'),
+  "delivery": zod.object({
+  "available": zod.boolean(),
+  "feeLeones": zod.number().nullish(),
+  "distanceKm": zod.number().nullish(),
+  "distanceEstimated": zod.boolean(),
+  "message": zod.string().nullish()
+}).describe('Delivery from the pharmacy that took the request to where the patient sent it from').nullish(),
   "areaName": zod.string().nullish(),
   "note": zod.string().nullish(),
   "pharmacy": zod.object({
@@ -5386,6 +5503,7 @@ export const ListPharmacyPrescriptionRequestsResponse = zod.object({
   "id": zod.string(),
   "areaName": zod.string().nullish(),
   "distanceKm": zod.number().nullish(),
+  "collectionOnly": zod.boolean().optional(),
   "hasCoveredPhoto": zod.boolean(),
   "round": zod.number(),
   "roundEndsAt": zod.string().nullish(),
@@ -5393,8 +5511,9 @@ export const ListPharmacyPrescriptionRequestsResponse = zod.object({
 })),
   "mine": zod.array(zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "areaName": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional(),
   "note": zod.string().nullish(),
   "patientName": zod.string().nullish(),
   "patientPhone": zod.string().nullish(),
@@ -5432,8 +5551,9 @@ export const AcceptPrescriptionRequestParams = zod.object({
 
 export const AcceptPrescriptionRequestResponse = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "areaName": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional(),
   "note": zod.string().nullish(),
   "patientName": zod.string().nullish(),
   "patientPhone": zod.string().nullish(),
@@ -5487,8 +5607,9 @@ export const ConfirmPrescriptionRequestBody = zod.object({
 
 export const ConfirmPrescriptionRequestResponse = zod.object({
   "id": zod.string(),
-  "status": zod.enum(['searching', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
+  "status": zod.enum(['searching', 'out_of_range', 'accepted', 'ready', 'ordered', 'expired', 'cancelled', 'rejected']),
   "areaName": zod.string().nullish(),
+  "collectionOnly": zod.boolean().optional(),
   "note": zod.string().nullish(),
   "patientName": zod.string().nullish(),
   "patientPhone": zod.string().nullish(),
@@ -5584,5 +5705,200 @@ export const RemovePharmacyPushSubscriptionBody = zod.object({
 })
 
 export const RemovePharmacyPushSubscriptionResponse = zod.void()
+
+
+/**
+ * @summary Price a trip by distance with the given settings (calculator only; nothing is saved)
+ */
+export const PreviewDeliveryPricingBody = zod.object({
+  "from": zod.object({
+  "latitude": zod.number(),
+  "longitude": zod.number()
+}).optional(),
+  "to": zod.object({
+  "latitude": zod.number(),
+  "longitude": zod.number()
+}).optional(),
+  "pricing": zod.object({
+  "fuelPricePerLitre": zod.number().optional(),
+  "kmPerLitre": zod.number().optional(),
+  "pickupLeones": zod.number().optional(),
+  "serviceRatePerKm": zod.number().optional(),
+  "riderSharePercent": zod.number().optional(),
+  "roundToLeones": zod.number().optional(),
+  "minimumFeeLeones": zod.number().optional(),
+  "maxKm": zod.number().nullish()
+}).optional()
+})
+
+export const PreviewDeliveryPricingResponse = zod.object({
+  "pricing": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable()
+}),
+  "roadDistanceAvailable": zod.boolean(),
+  "distance": zod.object({
+  "km": zod.number(),
+  "straightKm": zod.number(),
+  "method": zod.enum(['road', 'estimate'])
+}).nullable(),
+  "quote": zod.object({
+  "available": zod.boolean(),
+  "km": zod.number(),
+  "reason": zod.enum(['too_far']).optional(),
+  "fuelLeones": zod.number().optional(),
+  "fuelPerKmLeones": zod.number().optional(),
+  "pickupLeones": zod.number().optional(),
+  "distanceChargeLeones": zod.number().optional(),
+  "serviceLeones": zod.number().optional(),
+  "roundingLeones": zod.number().optional(),
+  "feeLeones": zod.number().optional(),
+  "riderLeones": zod.number().optional(),
+  "riderKeepsLeones": zod.number().optional(),
+  "mobicareLeones": zod.number().optional()
+}).nullable(),
+  "table": zod.array(zod.object({
+  "available": zod.boolean(),
+  "km": zod.number(),
+  "reason": zod.enum(['too_far']).optional(),
+  "fuelLeones": zod.number().optional(),
+  "fuelPerKmLeones": zod.number().optional(),
+  "pickupLeones": zod.number().optional(),
+  "distanceChargeLeones": zod.number().optional(),
+  "serviceLeones": zod.number().optional(),
+  "roundingLeones": zod.number().optional(),
+  "feeLeones": zod.number().optional(),
+  "riderLeones": zod.number().optional(),
+  "riderKeepsLeones": zod.number().optional(),
+  "mobicareLeones": zod.number().optional()
+}))
+})
+
+
+/**
+ * @summary The signed-in pharmacy's account details
+ */
+export const GetPharmacyMeResponse = zod.object({
+  "id": zod.string(),
+  "role": zod.enum(['pharmacy', 'hq', 'patient']),
+  "name": zod.string(),
+  "username": zod.string(),
+  "phone": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "controlledSubstanceAuthorized": zod.boolean().optional().describe('Present for pharmacy accounts only'),
+  "mustChangePassword": zod.boolean().optional().describe('Pharmacy accounts onboarded with a temp password must change it before using the portal API'),
+  "passwordLastChangedAt": zod.string().optional().describe('ISO timestamp of the pharmacy account\'s most recent password change'),
+  "canManageIntegrations": zod.boolean().optional(),
+  "canManageSettlements": zod.boolean().optional().describe('Present for HQ accounts; controls access to API connection management'),
+  "canViewDataInsights": zod.boolean().optional().describe('Present for HQ accounts; controls access to aggregate-only Data & Insights'),
+  "canManageCatalogue": zod.boolean().optional().describe('Present for HQ accounts; controls adding, changing, approving and importing catalogue medicines')
+})
+
+
+/**
+ * @summary The delivery pricing in force, and any change waiting for midnight
+ */
+export const GetDeliveryPricingResponse = zod.object({
+  "current": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string().nullable()
+}),
+  "scheduled": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string()
+}).nullable(),
+  "changesTakeEffectAt": zod.string()
+})
+
+
+/**
+ * @summary New delivery pricing, from the next midnight
+ */
+export const ScheduleDeliveryPricingBody = zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable()
+})
+
+export const ScheduleDeliveryPricingResponse = zod.object({
+  "current": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string().nullable()
+}),
+  "scheduled": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string()
+}).nullable(),
+  "changesTakeEffectAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel the pricing change waiting for midnight
+ */
+export const CancelScheduledDeliveryPricingResponse = zod.object({
+  "current": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string().nullable()
+}),
+  "scheduled": zod.object({
+  "fuelPricePerLitre": zod.number(),
+  "kmPerLitre": zod.number(),
+  "pickupLeones": zod.number(),
+  "serviceRatePerKm": zod.number(),
+  "riderSharePercent": zod.number(),
+  "roundToLeones": zod.number(),
+  "minimumFeeLeones": zod.number(),
+  "maxKm": zod.number().nullable(),
+  "effectiveFrom": zod.string()
+}).nullable(),
+  "changesTakeEffectAt": zod.string()
+})
 
 

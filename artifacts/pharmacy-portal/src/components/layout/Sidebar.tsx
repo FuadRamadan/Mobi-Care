@@ -227,9 +227,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <button
           onClick={() => {
+            // Signing out takes the pharmacy offline (unless it is signed in
+            // on another device): say so before it happens.
+            if (!window.confirm("Sign out and go offline?\n\nPatients will see your pharmacy as \u201cNot selling now\u201d and cannot order from you until you sign in again. To stay online, just close the window instead.")) return;
             onNavigate?.();
             logout();
           }}
+          data-testid="button-sign-out"
           className="flex items-center gap-2 w-full px-3 py-2 rounded-md border border-sidebar-border/60 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
         >
           <LogOut className="w-4 h-4" />

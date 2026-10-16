@@ -16,6 +16,7 @@ import {
   calculateTempPasswordExpiry,
   appendPasswordHistory,
 } from "../../lib/passwordPolicy.js";
+import { pharmacySignedIn } from "../../lib/pharmacyOnline.js";
 
 const router = safeRouter();
 const coordinateSchema = z.number().finite();
@@ -69,10 +70,10 @@ function sendPharmacyConflict(res: Parameters<Parameters<typeof router.post>[1]>
 // ── GET /hq/pharmacies ────────────────────────────────────────────────────────
 router.get("/", async (_req, res) => {
   const rows = await db
-    .select()
+    .select({ pharmacy: pharmaciesTable, signedIn: pharmacySignedIn })
     .from(pharmaciesTable)
     .orderBy(desc(pharmaciesTable.createdAt));
-  res.json(rows.map(publicPharmacy));
+  res.json(rows.map((r) => ({ ...publicPharmacy(r.pharmacy), signedIn: r.signedIn })));
 });
 
 // ── POST /hq/pharmacies — onboard a pharmacy, returns one-time temp password ──

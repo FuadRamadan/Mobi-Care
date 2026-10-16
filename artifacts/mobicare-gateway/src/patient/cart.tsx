@@ -45,6 +45,8 @@ export interface CartState {
    * already checked the prescription, and the items and their limits are theirs.
    */
   prescriptionRequestId?: string;
+  /** The pharmacy is beyond delivery range of the patient: checkout starts on collection. */
+  startsWithCollection?: boolean;
 }
 
 type CartPharmacy = { id: string; name: string; address: string | null; mobileMoneyLines?: MobileMoneyLine[]; mobileMoneyAccountName?: string | null };
@@ -58,7 +60,7 @@ interface CartValue {
     opts?: { replacePharmacy?: boolean },
   ) => boolean;
   /** Replace the cart with the medicines a pharmacist confirmed for a prescription request. */
-  startFromRequest: (requestId: string, pharmacy: CartPharmacy, items: CartItem[]) => void;
+  startFromRequest: (requestId: string, pharmacy: CartPharmacy, items: CartItem[], opts?: { collection?: boolean }) => void;
   setQuantity: (inventoryId: string, quantity: number) => void;
   removeItem: (inventoryId: string) => void;
   clear: () => void;
@@ -138,7 +140,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
-  const startFromRequest = useCallback<CartValue["startFromRequest"]>((requestId, pharmacy, items) => {
+  const startFromRequest = useCallback<CartValue["startFromRequest"]>((requestId, pharmacy, items, opts) => {
     setCart({
       pharmacyId: pharmacy.id,
       pharmacyName: pharmacy.name,
@@ -147,6 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       mobileMoneyAccountName: pharmacy.mobileMoneyAccountName,
       items,
       prescriptionRequestId: requestId,
+      startsWithCollection: opts?.collection,
     });
   }, []);
 

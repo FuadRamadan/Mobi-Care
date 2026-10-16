@@ -11,12 +11,12 @@ export interface DeliveryQuote {
   /** @nullable */
   deliveryFeeMinor: number | null;
   /**
-     * The zone the patient is in, where the order is delivered
+     * The patient's area (a zone, else the district), where the order is delivered
      * @nullable
      */
   zoneName: string | null;
   /**
-     * The pharmacy's zone when it differs from the patient's; the fee is then the higher of the two zones' fees
+     * No longer used (zones do not set the fee); always null
      * @nullable
      */
   fromZoneName: string | null;
@@ -25,4 +25,16 @@ export interface DeliveryQuote {
      * @nullable
      */
   message: string | null;
+  /**
+     * How far the rider goes from the pharmacy, in km
+     * @nullable
+     */
+  distanceKm?: number | null;
+  /** True when the distance is the straight line × 1.3 rather than the road distance */
+  distanceEstimated?: boolean;
+  /**
+     * How far this delivery may be; beyond it, collection only
+     * @nullable
+     */
+  maxKm?: number | null;
 }

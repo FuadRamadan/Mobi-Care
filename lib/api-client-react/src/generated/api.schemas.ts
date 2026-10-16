@@ -19,6 +19,7 @@ export type PrescriptionRequestStatus = typeof PrescriptionRequestStatus[keyof t
 
 export const PrescriptionRequestStatus = {
   searching: 'searching',
+  out_of_range: 'out_of_range',
   accepted: 'accepted',
   ready: 'ready',
   ordered: 'ordered',
@@ -71,12 +72,28 @@ export interface PrescriptionRequestPharmacy {
   mobileMoneyAccountName?: string | null;
 }
 
+/**
+ * Delivery from the pharmacy that took the request to where the patient sent it from
+ */
+export interface PrescriptionRequestDelivery {
+  available: boolean;
+  feeLeones?: number | null;
+  distanceKm?: number | null;
+  distanceEstimated: boolean;
+  message?: string | null;
+}
+
 export interface PatientPrescriptionRequest {
   id: string;
   status: PrescriptionRequestStatus;
   round: number;
   maxRounds: number;
   roundEndsAt?: string | null;
+  /** The patient chose pharmacies beyond delivery range and will collect */
+  collectionOnly?: boolean;
+  /** While out_of_range, when the choice to ask pharmacies further away lapses */
+  choiceEndsAt?: string | null;
+  delivery?: PrescriptionRequestDelivery | null;
   areaName?: string | null;
   note?: string | null;
   pharmacy?: PrescriptionRequestPharmacy | null;
@@ -90,6 +107,7 @@ export interface PharmacyOpenPrescriptionRequest {
   id: string;
   areaName?: string | null;
   distanceKm?: number | null;
+  collectionOnly?: boolean;
   hasCoveredPhoto: boolean;
   round: number;
   roundEndsAt?: string | null;
@@ -100,6 +118,7 @@ export interface PharmacyAcceptedPrescriptionRequest {
   id: string;
   status: PrescriptionRequestStatus;
   areaName?: string | null;
+  collectionOnly?: boolean;
   note?: string | null;
   patientName?: string | null;
   patientPhone?: string | null;
@@ -139,6 +158,114 @@ export interface WebPushSubscriptionInput {
 
 export interface WebPushSubscriptionRemoval {
   endpoint: string;
+}
+
+export interface KmPricing {
+  fuelPricePerLitre?: number;
+  kmPerLitre?: number;
+  pickupLeones?: number;
+  serviceRatePerKm?: number;
+  riderSharePercent?: number;
+  roundToLeones?: number;
+  minimumFeeLeones?: number;
+  maxKm?: number | null;
+}
+
+export interface KmPricingSettings {
+  fuelPricePerLitre: number;
+  kmPerLitre: number;
+  pickupLeones: number;
+  serviceRatePerKm: number;
+  riderSharePercent: number;
+  roundToLeones: number;
+  minimumFeeLeones: number;
+  maxKm: number | null;
+}
+
+export type KmQuoteReason = typeof KmQuoteReason[keyof typeof KmQuoteReason];
+
+
+export const KmQuoteReason = {
+  too_far: 'too_far',
+} as const;
+
+export interface KmQuote {
+  available: boolean;
+  km: number;
+  reason?: KmQuoteReason;
+  fuelLeones?: number;
+  fuelPerKmLeones?: number;
+  pickupLeones?: number;
+  distanceChargeLeones?: number;
+  serviceLeones?: number;
+  roundingLeones?: number;
+  feeLeones?: number;
+  riderLeones?: number;
+  riderKeepsLeones?: number;
+  mobicareLeones?: number;
+}
+
+export type RoadDistanceMethod = typeof RoadDistanceMethod[keyof typeof RoadDistanceMethod];
+
+
+export const RoadDistanceMethod = {
+  road: 'road',
+  estimate: 'estimate',
+} as const;
+
+export interface RoadDistance {
+  km: number;
+  straightKm: number;
+  method: RoadDistanceMethod;
+}
+
+export interface DeliveryLocation {
+  latitude: number;
+  longitude: number;
+}
+
+export interface DeliveryPricePreviewInput {
+  from?: DeliveryLocation;
+  to?: DeliveryLocation;
+  pricing?: KmPricing;
+}
+
+export interface DeliveryPricePreview {
+  pricing: KmPricingSettings;
+  roadDistanceAvailable: boolean;
+  distance: RoadDistance | null;
+  quote: KmQuote | null;
+  table: KmQuote[];
+}
+
+export interface DeliveryPricingCurrent {
+  fuelPricePerLitre: number;
+  kmPerLitre: number;
+  pickupLeones: number;
+  serviceRatePerKm: number;
+  riderSharePercent: number;
+  roundToLeones: number;
+  minimumFeeLeones: number;
+  maxKm: number | null;
+  effectiveFrom: string | null;
+}
+
+export interface DeliveryPricingScheduled {
+  fuelPricePerLitre: number;
+  kmPerLitre: number;
+  pickupLeones: number;
+  serviceRatePerKm: number;
+  riderSharePercent: number;
+  roundToLeones: number;
+  minimumFeeLeones: number;
+  maxKm: number | null;
+  effectiveFrom: string;
+}
+
+export interface DeliveryPricingState {
+  current: DeliveryPricingCurrent;
+  scheduled: DeliveryPricingScheduled | null;
+  changesTakeEffectAt: string;
 }
 
 export type PrescriptionRequestRejectionReason = typeof PrescriptionRequestRejectionReason[keyof typeof PrescriptionRequestRejectionReason];
@@ -934,12 +1061,12 @@ export interface DeliveryQuote {
   /** @nullable */
   deliveryFeeMinor: number | null;
   /**
-     * The zone the patient is in, where the order is delivered
+     * The patient's area (a zone, else the district), where the order is delivered
      * @nullable
      */
   zoneName: string | null;
   /**
-     * The pharmacy's zone when it differs from the patient's; the fee is then the higher of the two zones' fees
+     * No longer used (zones do not set the fee); always null
      * @nullable
      */
   fromZoneName: string | null;
@@ -948,11 +1075,18 @@ export interface DeliveryQuote {
      * @nullable
      */
   message: string | null;
-}
-
-export interface DeliveryLocation {
-  latitude: number;
-  longitude: number;
+  /**
+     * How far the rider goes from the pharmacy, in km
+     * @nullable
+     */
+  distanceKm?: number | null;
+  /** True when the distance is the straight line × 1.3 rather than the road distance */
+  distanceEstimated?: boolean;
+  /**
+     * How far this delivery may be; beyond it, collection only
+     * @nullable
+     */
+  maxKm?: number | null;
 }
 
 export type PatientOrderInputFulfillmentType = typeof PatientOrderInputFulfillmentType[keyof typeof PatientOrderInputFulfillmentType];
@@ -2136,6 +2270,16 @@ export interface HqOrder {
   deliveryLongitude?: string | null;
   /** @nullable */
   deliveryZoneName?: string | null;
+  /**
+     * How far the rider goes from the pharmacy (distance pricing)
+     * @nullable
+     */
+  deliveryDistanceKm?: string | null;
+  /**
+     * road, or estimate (the straight line × 1.3)
+     * @nullable
+     */
+  deliveryDistanceMethod?: string | null;
   status: HqOrderStatus;
   fulfillmentType: HqOrderFulfillmentType;
   idChecked: boolean;
@@ -2186,6 +2330,13 @@ export interface CourierStatusUpdate {
 
 export interface HqPharmacy {
   id: string;
+  /** Signed in to the portal on at least one device. Signed out everywhere = offline, not taking orders. */
+  signedIn?: boolean;
+  /**
+     * When the portal was last open (prescription requests go only to pharmacies seen in the last 2 minutes).
+     * @nullable
+     */
+  lastSeenAt?: string | null;
   name: string;
   username: string;
   /** @nullable */

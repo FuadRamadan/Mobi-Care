@@ -45,6 +45,9 @@ import type {
   DailyOrderStat,
   DeletionResult,
   DeliveryCoverageZone,
+  DeliveryPricePreview,
+  DeliveryPricePreviewInput,
+  DeliveryPricingState,
   DeliveryQuote,
   DeliveryQuoteInput,
   DeliveryZone,
@@ -105,6 +108,7 @@ import type {
   InventoryInput,
   InventoryItem,
   InventoryUpdate,
+  KmPricingSettings,
   ListAuditLogParams,
   ListFlagsParams,
   ListHqDrugsParams,
@@ -153,6 +157,7 @@ import type {
   PharmacyPayouts,
   PharmacyPrescriptionRequests,
   PharmacyResetPasswordResponse,
+  PharmacyUser,
   PilotResetPreview,
   PilotResetRequest,
   PilotResetResult,
@@ -12852,6 +12857,77 @@ export function useGetPatientPrescriptionRequest<TData = Awaited<ReturnType<type
 
 
 
+export const getAskPrescriptionRequestFurtherUrl = (id: string,) => {
+
+
+
+
+  return `/api/patient/prescription-requests/${id}/further`
+}
+
+/**
+ * @summary Ask pharmacies beyond delivery range too; the patient will collect
+ */
+export const askPrescriptionRequestFurther = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PatientPrescriptionRequest> => {
+
+  return customFetch<PatientPrescriptionRequest>(getAskPrescriptionRequestFurtherUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAskPrescriptionRequestFurtherMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askPrescriptionRequestFurther>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askPrescriptionRequestFurther>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['askPrescriptionRequestFurther'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askPrescriptionRequestFurther>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  askPrescriptionRequestFurther(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskPrescriptionRequestFurtherMutationResult = NonNullable<Awaited<ReturnType<typeof askPrescriptionRequestFurther>>>
+
+    export type AskPrescriptionRequestFurtherMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ask pharmacies beyond delivery range too; the patient will collect
+ */
+export const useAskPrescriptionRequestFurther = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askPrescriptionRequestFurther>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askPrescriptionRequestFurther>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getAskPrescriptionRequestFurtherMutationOptions(options));
+    }
+
 export const getCancelPrescriptionRequestUrl = (id: string,) => {
 
 
@@ -13645,5 +13721,372 @@ export const useRemovePharmacyPushSubscription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRemovePharmacyPushSubscriptionMutationOptions(options));
+    }
+
+export const getPreviewDeliveryPricingUrl = () => {
+
+
+
+
+  return `/api/hq/delivery-pricing/preview`
+}
+
+/**
+ * @summary Price a trip by distance with the given settings (calculator only; nothing is saved)
+ */
+export const previewDeliveryPricing = async (deliveryPricePreviewInput: DeliveryPricePreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<DeliveryPricePreview> => {
+
+  return customFetch<DeliveryPricePreview>(getPreviewDeliveryPricingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(deliveryPricePreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewDeliveryPricingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeliveryPricing>>, TError,{data: BodyType<DeliveryPricePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewDeliveryPricing>>, TError,{data: BodyType<DeliveryPricePreviewInput>}, TContext> => {
+
+const mutationKey = ['previewDeliveryPricing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewDeliveryPricing>>, {data: BodyType<DeliveryPricePreviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewDeliveryPricing(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewDeliveryPricingMutationResult = NonNullable<Awaited<ReturnType<typeof previewDeliveryPricing>>>
+    export type PreviewDeliveryPricingMutationBody = BodyType<DeliveryPricePreviewInput>
+    export type PreviewDeliveryPricingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Price a trip by distance with the given settings (calculator only; nothing is saved)
+ */
+export const usePreviewDeliveryPricing = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeliveryPricing>>, TError,{data: BodyType<DeliveryPricePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewDeliveryPricing>>,
+        TError,
+        {data: BodyType<DeliveryPricePreviewInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewDeliveryPricingMutationOptions(options));
+    }
+
+export const getGetPharmacyMeUrl = () => {
+
+
+
+
+  return `/api/pharmacy/me`
+}
+
+/**
+ * @summary The signed-in pharmacy's account details
+ */
+export const getPharmacyMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<PharmacyUser> => {
+
+  return customFetch<PharmacyUser>(getGetPharmacyMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPharmacyMeQueryKey = () => {
+    return [
+    `/api/pharmacy/me`
+    ] as const;
+    }
+
+
+export const getGetPharmacyMeQueryOptions = <TData = Awaited<ReturnType<typeof getPharmacyMe>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPharmacyMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPharmacyMe>>> = ({ signal }) => getPharmacyMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPharmacyMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPharmacyMeQueryResult = NonNullable<Awaited<ReturnType<typeof getPharmacyMe>>>
+export type GetPharmacyMeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The signed-in pharmacy's account details
+ */
+
+export function useGetPharmacyMe<TData = Awaited<ReturnType<typeof getPharmacyMe>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPharmacyMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPharmacyMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDeliveryPricingUrl = () => {
+
+
+
+
+  return `/api/hq/delivery-pricing/settings`
+}
+
+/**
+ * @summary The delivery pricing in force, and any change waiting for midnight
+ */
+export const getDeliveryPricing = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeliveryPricingState> => {
+
+  return customFetch<DeliveryPricingState>(getGetDeliveryPricingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeliveryPricingQueryKey = () => {
+    return [
+    `/api/hq/delivery-pricing/settings`
+    ] as const;
+    }
+
+
+export const getGetDeliveryPricingQueryOptions = <TData = Awaited<ReturnType<typeof getDeliveryPricing>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeliveryPricing>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeliveryPricingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeliveryPricing>>> = ({ signal }) => getDeliveryPricing({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeliveryPricing>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeliveryPricingQueryResult = NonNullable<Awaited<ReturnType<typeof getDeliveryPricing>>>
+export type GetDeliveryPricingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The delivery pricing in force, and any change waiting for midnight
+ */
+
+export function useGetDeliveryPricing<TData = Awaited<ReturnType<typeof getDeliveryPricing>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeliveryPricing>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeliveryPricingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getScheduleDeliveryPricingUrl = () => {
+
+
+
+
+  return `/api/hq/delivery-pricing/settings`
+}
+
+/**
+ * @summary New delivery pricing, from the next midnight
+ */
+export const scheduleDeliveryPricing = async (kmPricingSettings: KmPricingSettings, options?: Parameters<typeof customFetch>[1]): Promise<DeliveryPricingState> => {
+
+  return customFetch<DeliveryPricingState>(getScheduleDeliveryPricingUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kmPricingSettings)
+  }
+);}
+
+
+
+
+
+export const getScheduleDeliveryPricingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleDeliveryPricing>>, TError,{data: BodyType<KmPricingSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scheduleDeliveryPricing>>, TError,{data: BodyType<KmPricingSettings>}, TContext> => {
+
+const mutationKey = ['scheduleDeliveryPricing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scheduleDeliveryPricing>>, {data: BodyType<KmPricingSettings>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  scheduleDeliveryPricing(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScheduleDeliveryPricingMutationResult = NonNullable<Awaited<ReturnType<typeof scheduleDeliveryPricing>>>
+    export type ScheduleDeliveryPricingMutationBody = BodyType<KmPricingSettings>
+    export type ScheduleDeliveryPricingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary New delivery pricing, from the next midnight
+ */
+export const useScheduleDeliveryPricing = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleDeliveryPricing>>, TError,{data: BodyType<KmPricingSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scheduleDeliveryPricing>>,
+        TError,
+        {data: BodyType<KmPricingSettings>},
+        TContext
+      > => {
+      return useMutation(getScheduleDeliveryPricingMutationOptions(options));
+    }
+
+export const getCancelScheduledDeliveryPricingUrl = () => {
+
+
+
+
+  return `/api/hq/delivery-pricing/settings/scheduled`
+}
+
+/**
+ * @summary Cancel the pricing change waiting for midnight
+ */
+export const cancelScheduledDeliveryPricing = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeliveryPricingState> => {
+
+  return customFetch<DeliveryPricingState>(getCancelScheduledDeliveryPricingUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelScheduledDeliveryPricingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>, TError,void, TContext> => {
+
+const mutationKey = ['cancelScheduledDeliveryPricing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>, void> = () => {
+
+
+          return  cancelScheduledDeliveryPricing(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelScheduledDeliveryPricingMutationResult = NonNullable<Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>>
+
+    export type CancelScheduledDeliveryPricingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel the pricing change waiting for midnight
+ */
+export const useCancelScheduledDeliveryPricing = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelScheduledDeliveryPricing>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelScheduledDeliveryPricingMutationOptions(options));
     }
 

@@ -54,11 +54,20 @@ function courierBriefing(o: HqOrder): string {
     `Deliver to: ${o.deliveryAddress?.trim() || 'no directions given'}${o.deliveryZoneName ? ` — ${o.deliveryZoneName}` : ''}`,
     `Patient phone: ${o.patientPhone}`,
     map ? `Map: ${map}` : null,
+    tripLine(o),
   ].filter(Boolean).join('\n');
+}
+
+/** The trip and the rider's pay, when the order was priced by distance. */
+function tripLine(o: HqOrder): string | null {
+  if (o.deliveryDistanceKm == null) return null;
+  const km = `${o.deliveryDistanceMethod === 'estimate' ? 'about ' : ''}${Number(o.deliveryDistanceKm)} km`;
+  return `Trip: ${km} · Rider pay: ${formatLeones((o.courierPayoutMinor ?? 0) / 100)}`;
 }
 
 function DeliveryDetails({ order: o, onCopy }: { order: HqOrder; onCopy: () => void }) {
   const map = mapLink(o);
+  const trip = tripLine(o);
   return (
     <div className="grid gap-3 rounded-lg bg-muted/50 p-3 text-sm sm:grid-cols-2" data-testid={`delivery-details-${o.id}`}>
       <div className="space-y-1 min-w-0">
@@ -78,6 +87,11 @@ function DeliveryDetails({ order: o, onCopy }: { order: HqOrder; onCopy: () => v
           <a href={map} target="_blank" rel="noreferrer" className="inline-block text-primary font-medium hover:underline" data-testid={`link-map-${o.id}`}>
             Open the patient's pin in Google Maps
           </a>
+        )}
+        {trip && (
+          <p className="text-xs rounded-md bg-background/70 border px-2 py-1 inline-block" data-testid={`text-trip-${o.id}`}>
+            {trip.replace('Trip: ', '')} · delivery fee {formatLeones((o.deliveryFeeMinor ?? 0) / 100)}
+          </p>
         )}
       </div>
       <div className="space-y-1 min-w-0">

@@ -5,6 +5,7 @@
  * MobiCare Pharmacy Portal API
  * OpenAPI spec version: 0.2.0
  */
+import type { PrescriptionRequestDelivery } from './prescriptionRequestDelivery';
 import type { PrescriptionRequestItem } from './prescriptionRequestItem';
 import type { PrescriptionRequestPharmacy } from './prescriptionRequestPharmacy';
 import type { PrescriptionRequestStatus } from './prescriptionRequestStatus';
@@ -15,6 +16,11 @@ export interface PatientPrescriptionRequest {
   round: number;
   maxRounds: number;
   roundEndsAt?: string | null;
+  /** The patient chose pharmacies beyond delivery range and will collect */
+  collectionOnly?: boolean;
+  /** While out_of_range, when the choice to ask pharmacies further away lapses */
+  choiceEndsAt?: string | null;
+  delivery?: PrescriptionRequestDelivery | null;
   areaName?: string | null;
   note?: string | null;
   pharmacy?: PrescriptionRequestPharmacy | null;

@@ -12,6 +12,7 @@ export interface PharmacyAcceptedPrescriptionRequest {
   id: string;
   status: PrescriptionRequestStatus;
   areaName?: string | null;
+  collectionOnly?: boolean;
   note?: string | null;
   patientName?: string | null;
   patientPhone?: string | null;

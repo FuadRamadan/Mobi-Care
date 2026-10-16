@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { pharmaciesTable } from "./pharmacies";
 
 export const refreshTokensTable = pgTable("refresh_tokens", {
@@ -15,6 +16,9 @@ export const refreshTokensTable = pgTable("refresh_tokens", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [
+  // "Is this pharmacy signed in anywhere?" (lib/pharmacyOnline.ts), asked by every search.
+  index("refresh_tokens_pharmacy_active_idx").on(t.pharmacyId, t.expiresAt).where(sql`${t.revokedAt} IS NULL`),
+]);
 
 export type RefreshToken = typeof refreshTokensTable.$inferSelect;

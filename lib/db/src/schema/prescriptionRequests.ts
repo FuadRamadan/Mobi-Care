@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum, integer, doublePrecision, jsonb, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, pgEnum, integer, doublePrecision, jsonb, index, primaryKey, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { pharmaciesTable } from "./pharmacies";
 import { patientsTable } from "./patients";
@@ -12,6 +12,7 @@ import { prescriptionRejectReasonEnum } from "./prescriptions";
  */
 export const prescriptionRequestStatusEnum = pgEnum("prescription_request_status", [
   "searching", // being offered to pharmacies
+  "out_of_range", // no one within delivery range took it; the patient may ask further away (migration 0044)
   "accepted", // a pharmacy took it and is choosing the medicines
   "ready", // the pharmacy confirmed what it can supply; the patient can order
   "ordered", // the patient placed the order
@@ -41,6 +42,8 @@ export const prescriptionRequestsTable = pgTable("prescription_requests", {
   note: text("note"),
   status: prescriptionRequestStatusEnum("status").notNull().default("searching"),
   round: integer("round").notNull().default(0),
+  /** The patient chose pharmacies beyond delivery range and will collect (migration 0044). */
+  collectionOnly: boolean("collection_only").notNull().default(false),
   roundStartedAt: timestamp("round_started_at", { withTimezone: true }),
   acceptedPharmacyId: uuid("accepted_pharmacy_id").references(() => pharmaciesTable.id, { onDelete: "set null" }),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),

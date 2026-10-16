@@ -86,6 +86,10 @@ export const ordersTable = pgTable("orders", {
   ),
   deliveryZoneName: text("delivery_zone_name"),
   deliveryPricing: text("delivery_pricing"),
+  // Distance pricing ("distance-v1", migration 0043): how far the rider goes,
+  // and whether that is the road distance or the straight-line estimate.
+  deliveryDistanceKm: numeric("delivery_distance_km", { precision: 8, scale: 1 }),
+  deliveryDistanceMethod: text("delivery_distance_method"),
 
   status: orderStatusEnum("status").notNull().default("awaiting_payment"),
   fulfillmentType: fulfillmentTypeEnum("fulfillment_type").notNull(),

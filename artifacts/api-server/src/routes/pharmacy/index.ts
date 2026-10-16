@@ -1,4 +1,6 @@
 import { safeRouter } from "../../lib/safeRouter.js";
+import { eq } from "drizzle-orm";
+import { db, pharmaciesTable } from "@workspace/db";
 import { pharmacy } from "../../middlewares/auth.js";
 import ordersRouter from "./orders.js";
 import inventoryRouter from "./inventory.js";
@@ -24,6 +26,23 @@ router.use(...pharmacy);
 router.use((req: AuthRequest, _res, next) => {
   if (req.pharmacy?.sub) void touchPharmacy(req.pharmacy.sub).catch(() => {});
   next();
+});
+
+// GET /pharmacy/me: the account details the portal shows (Profile, the
+// sidebar). A new tab has only the sign-in token, which does not carry them.
+router.get("/me", async (req: AuthRequest, res) => {
+  const [p] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, req.pharmacy!.sub)).limit(1);
+  if (!p) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({
+    id: p.id,
+    role: "pharmacy",
+    name: p.name,
+    username: p.username,
+    phone: p.phone,
+    controlledSubstanceAuthorized: p.controlledSubstanceAuthorized,
+    mustChangePassword: p.mustChangePassword,
+    passwordLastChangedAt: p.passwordLastChangedAt.toISOString(),
+  });
 });
 
 router.use("/orders", ordersRouter);

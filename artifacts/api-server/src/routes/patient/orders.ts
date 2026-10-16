@@ -26,7 +26,7 @@ import {
   UNAVAILABLE_MESSAGES,
   type DeliveryQuote,
 } from "../../lib/delivery/pricing.js";
-import { quoteForPharmacy } from "../../lib/delivery/zones.js";
+import { DISTANCE_UNAVAILABLE, quoteByDistance, type DistanceQuote } from "../../lib/delivery/distanceQuote.js";
 import { deleteImages as deleteRequestImages } from "../../lib/prescriptionRequests.js";
 import { deductOrderStock, PaymentClaimError } from "../../lib/orderPayment.js";
 import { checkOrderFlags } from "../../lib/flags.js";
@@ -54,6 +54,7 @@ import {
   startCheckout,
 } from "../../lib/monime/service.js";
 import { notifyHqOfPaymentIssue } from "../../lib/hqNotifications.js";
+import { isPharmacySignedIn } from "../../lib/pharmacyOnline.js";
 
 const router = safeRouter();
 
@@ -543,18 +544,25 @@ router.post("/", async (req: AuthRequest, res) => {
     res.status(404).json({ error: "Pharmacy not found or inactive" });
     return;
   }
+  if (!(await isPharmacySignedIn(pharmacy.id))) {
+    res.status(409).json({
+      error: `${pharmacy.name} has gone offline and is not taking orders right now. Please choose another pharmacy.`,
+      code: "PHARMACY_OFFLINE",
+    });
+    return;
+  }
 
-  let deliveryQuote: Extract<DeliveryQuote, { available: true }> | null = null;
+  let deliveryQuote: Extract<DistanceQuote, { available: true }> | null = null;
   let deliveryPoint: Position | null = null;
   if (input.fulfillmentType === "delivery" && input.deliveryLocation) {
     deliveryPoint = [
       roundCoordinate(input.deliveryLocation.longitude),
       roundCoordinate(input.deliveryLocation.latitude),
     ];
-    const quote = await quoteForPharmacy(pharmacy, deliveryPoint);
+    const quote = await quoteByDistance(pharmacy, deliveryPoint);
     if (!quote.available) {
       res.status(422).json({
-        error: UNAVAILABLE_MESSAGES[quote.reason],
+        error: quote.reason === "too_far" ? DISTANCE_UNAVAILABLE.too_far(quote.km, quote.maxKm) : DISTANCE_UNAVAILABLE.pharmacy_not_located,
         code: "DELIVERY_UNAVAILABLE",
         reason: quote.reason,
       });
@@ -710,8 +718,11 @@ router.post("/", async (req: AuthRequest, res) => {
   // change never alters what this patient was quoted. The whole fee is
   // MobiCare's: its own riders deliver, so there is no separate courier payout.
   const deliveryFeeMinor = deliveryQuote?.feeMinor ?? 0;
-  const courierPayoutMinor = 0;
-  const deliveryCommissionMinor = deliveryFeeMinor;
+  // The rider's share (all the fuel and their percentage of the rest); MobiCare
+  // keeps the remainder. Bookkeeping only: the whole fee is paid to MobiCare,
+  // which pays the rider.
+  const courierPayoutMinor = deliveryQuote?.riderMinor ?? 0;
+  const deliveryCommissionMinor = deliveryFeeMinor - courierPayoutMinor;
   const totalMinor = patientMedicineTotalMinor + deliveryFeeMinor;
   const total = minorToLeones(totalMinor);
 
@@ -768,8 +779,10 @@ router.post("/", async (req: AuthRequest, res) => {
           deliveryLatitude: deliveryPoint ? String(deliveryPoint[1]) : null,
           deliveryLongitude: deliveryPoint ? String(deliveryPoint[0]) : null,
           deliveryZoneId: deliveryQuote?.zoneId ?? null,
-          deliveryZoneName: deliveryQuote?.zoneName ?? null,
-          deliveryPricing: deliveryQuote?.pricing ?? null,
+          deliveryZoneName: deliveryQuote?.areaName ?? null,
+          deliveryPricing: deliveryQuote ? "distance-v1" : null,
+          deliveryDistanceKm: deliveryQuote ? String(deliveryQuote.km) : null,
+          deliveryDistanceMethod: deliveryQuote?.method ?? null,
           status: "awaiting_payment",
           paymentMethod: "monime",
           paymentProvider: "monime",

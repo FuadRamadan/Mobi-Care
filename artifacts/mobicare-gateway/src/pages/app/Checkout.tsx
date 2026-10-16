@@ -54,7 +54,7 @@ export default function Checkout() {
   const queryClient = useQueryClient();
 
   const [fulfillment, setFulfillment] = useState<"delivery" | "collection">(
-    collectionOnly ? "collection" : "delivery",
+    collectionOnly || cart?.startsWithCollection ? "collection" : "delivery",
   );
   const [address, setAddress] = useState("");
   const [pin, setPin] = useState<LatLng | null>(null);
@@ -441,15 +441,13 @@ export default function Checkout() {
                 {quoteMutation.isPending || !quote ? (
                   <span className="text-muted-foreground">Working out the delivery fee…</span>
                 ) : quote.available ? (
-                  <span>
-                    Delivery to <span className="font-medium">{quote.zoneName}</span>
-                    {quote.fromZoneName && <> from {quote.fromZoneName}</>}:{" "}
+                  <span data-testid="text-delivery-distance">
+                    Delivery{quote.zoneName ? <> to <span className="font-medium">{quote.zoneName}</span></> : null}
+                    {quote.distanceKm != null && <> · {quote.distanceEstimated ? "about " : ""}{quote.distanceKm} km</>}:{" "}
                     <span className="font-medium">{formatLeones(deliveryFeeLeones)}</span>
-                    {quote.fromZoneName && (
-                      <span className="block text-xs text-muted-foreground mt-0.5">
-                        The pharmacy is in another zone, so the higher of the two zones' fees applies.
-                      </span>
-                    )}
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Priced by the distance from {cart.pharmacyName}. Move the pin and the fee updates.
+                    </span>
                   </span>
                 ) : (
                   <span>
@@ -559,7 +557,7 @@ export default function Checkout() {
             {isDelivery && (
               <div className="flex justify-between text-sm" data-testid="text-delivery-fee">
                 <span className="text-muted-foreground">
-                  Delivery{quote?.available && quote.zoneName ? ` · ${quote.zoneName}` : ""}
+                  Delivery{quote?.available && quote.distanceKm != null ? ` · ${quote.distanceKm} km` : ""}
                 </span>
                 <span>
                   {quote?.available ? formatLeones(deliveryFeeLeones) : "—"}

@@ -3,9 +3,15 @@
  * the pharmacies around them are asked, round by round, whether they can fill
  * it. The first pharmacy to accept gets it (migration 0039).
  *
- *   Round 1  pharmacies in the patient's delivery zone (or within 3 km)
+ *   Round 1  pharmacies within 3 km
  *   Round 2  within 8 km
- *   Round 3  within 25 km
+ *   Round 3  as far as a rider delivers (HQ's maximum distance)
+ *
+ * Every pharmacy in rounds 1 to 3 can deliver. If none of them takes it and
+ * there are pharmacies further away, the patient is asked ("out_of_range")
+ * whether to try those too, knowing they would collect it themselves:
+ *
+ *   Round 4  beyond the delivery limit, up to 25 km (collection only)
  *
  * Each round lasts ROUND_MS. Only pharmacies whose portal is open (seen in the
  * last ONLINE_WINDOW_MS) are asked, and nobody is asked twice. A round with
@@ -33,17 +39,23 @@ import {
   type PrescriptionRequest,
 } from "@workspace/db";
 import { logger } from "./logger.js";
-import { loadZones } from "./delivery/zones.js";
-import { zoneContains, type Boundary, type Position } from "./delivery/geometry.js";
-import { districtAt } from "./search/searchArea.js";
+import type { Position } from "./delivery/geometry.js";
+import { ROAD_FACTOR } from "./delivery/roadDistance.js";
+import { loadPricing } from "./delivery/distanceQuote.js";
 import { createPharmacyNotification } from "./pharmacyNotifications.js";
 import { createPatientNotification } from "./patientNotifications.js";
 import { deletePrescriptionFile } from "./prescriptionFiles.js";
 
 export const ROUND_MS = 5 * 60_000;
+/** Rounds 1 to 3 stay within delivery range; round 4 is the patient's choice. */
 export const MAX_ROUNDS = 3;
-/** Round 1 uses the patient's zone; without one, this radius. Then rounds 2 and 3. */
-export const ROUND_RADIUS_KM = [3, 8, 25] as const;
+export const COLLECTION_ROUND = 4;
+/** Straight-line reach of rounds 1 and 2 (also capped at the delivery limit). */
+export const ROUND_RADIUS_KM = [3, 8] as const;
+/** The furthest anyone is asked: round 3 without a delivery limit, and round 4. */
+export const WIDEST_KM = 25;
+/** How long the patient has to choose "ask pharmacies further away". */
+export const WIDER_CHOICE_MS = 30 * 60_000;
 export const ONLINE_WINDOW_MS = 2 * 60_000;
 export const ACCEPT_HOLD_MS = 15 * 60_000;
 /** A ready request the patient has not ordered from expires after this. */
@@ -52,7 +64,7 @@ export const MAX_OPEN_PER_PATIENT = 2;
 export const MAX_PER_HOUR_PER_PATIENT = 5;
 const TICK_MS = 15_000;
 
-export const OPEN_STATUSES = ["searching", "accepted", "ready"] as const;
+export const OPEN_STATUSES = ["searching", "accepted", "ready", "out_of_range"] as const;
 
 // ── Pure rules (unit-tested) ────────────────────────────────────────────────
 
@@ -67,28 +79,39 @@ export function distanceKm(a: Position, b: Position): number {
 export interface CandidatePharmacy {
   id: string;
   point: Position | null;
-  zoneId: string | null;
   online: boolean;
+}
+
+/**
+ * Who a round may reach, in straight-line km. The delivery limit is road km,
+ * so it is matched against the same road estimate checkout falls back on.
+ */
+function reaches(round: number, km: number, maxKm: number | null): boolean {
+  const deliverable = maxKm == null || km * ROAD_FACTOR <= maxKm;
+  if (round === 1 || round === 2) return deliverable && km <= ROUND_RADIUS_KM[round - 1]!;
+  if (round === 3) return maxKm == null ? km <= WIDEST_KM : deliverable;
+  if (round === COLLECTION_ROUND) return km <= WIDEST_KM;
+  return false;
 }
 
 /** The pharmacies to ask in a round, nearest first. Never someone already asked. */
 export function pharmaciesForRound(
   round: number,
-  patient: { point: Position; zoneId: string | null },
+  patientPoint: Position,
   pharmacies: CandidatePharmacy[],
   alreadyAsked: ReadonlySet<string>,
+  maxKm: number | null,
 ): string[] {
-  const radius = ROUND_RADIUS_KM[round - 1];
-  if (radius === undefined) return [];
   return pharmacies
     .filter((p) => p.online && p.point && !alreadyAsked.has(p.id))
-    .map((p) => ({ p, km: distanceKm(patient.point, p.point!) }))
-    .filter(({ p, km }) =>
-      round === 1 && patient.zoneId ? p.zoneId === patient.zoneId : km <= radius,
-    )
+    .map((p) => ({ p, km: distanceKm(patientPoint, p.point!) }))
+    .filter(({ km }) => reaches(round, km, maxKm))
     .sort((a, b) => a.km - b.km)
     .map(({ p }) => p.id);
 }
+
+/** The last round a request can reach: 3, or 4 once the patient chose collection. */
+export const lastRound = (r: Pick<PrescriptionRequest, "collectionOnly">) => (r.collectionOnly ? COLLECTION_ROUND : MAX_ROUNDS);
 
 /** Is a pharmacy's portal open? */
 export const isOnline = (lastSeenAt: Date | null, now: Date) =>
@@ -115,41 +138,32 @@ const pharmacyPoint = (p: { latitude: string | null; longitude: string | null; l
   return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0) ? [lng, lat] : null;
 };
 
-/** The delivery zone and a readable area name for a point. */
-export async function locate(point: Position): Promise<{ zoneId: string | null; areaName: string | null }> {
-  const zones = (await loadZones()).filter((z) => z.isActive);
-  const zone = zones.find((z) => zoneContains(z.boundary as Boundary, point));
-  return { zoneId: zone?.id ?? null, areaName: zone?.name ?? districtAt(point) };
-}
+export { locate } from "./delivery/area.js";
 
 // ── Rounds ───────────────────────────────────────────────────────────────────
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+type RoundResult = { notified: string[]; expired: boolean; offerWider?: boolean };
+
 /**
- * Start the next round that has someone to ask, or expire the request.
+ * Start the next round that has someone to ask. When the delivery rounds are
+ * used up, offer the patient pharmacies further away, or expire the request.
  * Call inside a transaction holding the request row.
  */
-async function openNextRound(tx: Tx, request: PrescriptionRequest, now: Date): Promise<{ notified: string[]; expired: boolean }> {
+async function openNextRound(tx: Tx, request: PrescriptionRequest, now: Date): Promise<RoundResult> {
   const asked = new Set(
     (await tx.select({ id: prescriptionRequestOffersTable.pharmacyId }).from(prescriptionRequestOffersTable)
       .where(eq(prescriptionRequestOffersTable.requestId, request.id))).map((r) => r.id),
   );
   if (request.acceptedPharmacyId) asked.add(request.acceptedPharmacyId);
   const rows = await tx.select().from(pharmaciesTable).where(eq(pharmaciesTable.isActive, true));
-  const zones = (await loadZones(now, tx)).filter((z) => z.isActive);
-  const candidates: CandidatePharmacy[] = rows.map((p) => {
-    const point = pharmacyPoint(p);
-    return {
-      id: p.id,
-      point,
-      zoneId: point ? zones.find((z) => zoneContains(z.boundary as Boundary, point))?.id ?? null : null,
-      online: isOnline(p.lastSeenAt, now),
-    };
-  });
-  const patient = { point: [request.longitude, request.latitude] as Position, zoneId: request.zoneId };
-  for (let round = request.round + 1; round <= MAX_ROUNDS; round++) {
-    const ids = pharmaciesForRound(round, patient, candidates, asked);
+  const { current } = await loadPricing(now, tx);
+  const candidates: CandidatePharmacy[] = rows.map((p) => ({ id: p.id, point: pharmacyPoint(p), online: isOnline(p.lastSeenAt, now) }));
+  const patientPoint: Position = [request.longitude, request.latitude];
+  const last = lastRound(request);
+  for (let round = request.round + 1; round <= last; round++) {
+    const ids = pharmaciesForRound(round, patientPoint, candidates, asked, current.maxKm);
     if (ids.length === 0) continue;
     await tx.insert(prescriptionRequestOffersTable).values(ids.map((pharmacyId) => ({ requestId: request.id, pharmacyId, round, notifiedAt: now })));
     await tx.update(prescriptionRequestsTable)
@@ -160,7 +174,7 @@ async function openNextRound(tx: Tx, request: PrescriptionRequest, now: Date): P
   // No one new to ask. While a pharmacy already asked has not said no, keep
   // the request open for another round rather than ending the patient's wait
   // early; pharmacies that come online meanwhile are asked on the next tick.
-  if (request.round < MAX_ROUNDS) {
+  if (request.round < last) {
     const [waiting] = await tx.select({ id: prescriptionRequestOffersTable.pharmacyId }).from(prescriptionRequestOffersTable)
       .where(and(eq(prescriptionRequestOffersTable.requestId, request.id), isNull(prescriptionRequestOffersTable.declinedAt))).limit(1);
     if (waiting) {
@@ -170,21 +184,35 @@ async function openNextRound(tx: Tx, request: PrescriptionRequest, now: Date): P
       return { notified: [], expired: false };
     }
   }
+  // Nobody within delivery range took it. If pharmacies further away are
+  // open, let the patient decide whether to try them and collect.
+  if (!request.collectionOnly && pharmaciesForRound(COLLECTION_ROUND, patientPoint, candidates, asked, current.maxKm).length > 0) {
+    await tx.update(prescriptionRequestsTable)
+      .set({ status: "out_of_range", round: MAX_ROUNDS, roundStartedAt: null, acceptedPharmacyId: null, acceptedAt: null, updatedAt: now })
+      .where(eq(prescriptionRequestsTable.id, request.id));
+    return { notified: [], expired: false, offerWider: true };
+  }
   await tx.update(prescriptionRequestsTable)
-    .set({ status: "expired", round: MAX_ROUNDS, roundStartedAt: null, acceptedPharmacyId: null, endedAt: now, updatedAt: now })
+    .set({ status: "expired", round: last, roundStartedAt: null, acceptedPharmacyId: null, endedAt: now, updatedAt: now })
     .where(eq(prescriptionRequestsTable.id, request.id));
   return { notified: [], expired: true };
 }
 
-async function announce(request: PrescriptionRequest, result: { notified: string[]; expired: boolean }) {
+async function announce(request: PrescriptionRequest, result: RoundResult) {
   for (const pharmacyId of result.notified) {
     void createPharmacyNotification({
       pharmacyId,
-      title: "New prescription request",
-      body: `A patient in ${request.areaName ?? "your area"} sent a prescription. Accept it in Prescription requests if you can fill it.`,
+      title: request.collectionOnly ? "New prescription request · collection" : "New prescription request",
+      body: request.collectionOnly
+        ? `A patient in ${request.areaName ?? "another area"} sent a prescription. They are too far for delivery and will collect from you. Accept it in Prescription requests if you can fill it.`
+        : `A patient in ${request.areaName ?? "your area"} sent a prescription. Accept it in Prescription requests if you can fill it.`,
       type: "prescription_request",
       referenceId: request.id,
     });
+  }
+  if (result.offerWider) {
+    await notifyPatient(request, "No pharmacy within delivery range took your prescription",
+      "Pharmacies further away can be asked, but you would collect from them yourself. Open your prescription in MobiCare to choose.");
   }
   if (result.expired) {
     await notifyPatient(request, "No pharmacy could take your prescription",
@@ -206,6 +234,25 @@ export async function startRequest(requestId: string, now = new Date()): Promise
     const result = await openNextRound(tx, request!, now);
     return { request: request!, result };
   });
+  await announce(outcome.request, outcome.result);
+  const [fresh] = await db.select().from(prescriptionRequestsTable).where(eq(prescriptionRequestsTable.id, requestId));
+  return fresh!;
+}
+
+/**
+ * The patient chose to ask pharmacies beyond delivery range, and collect.
+ * Returns null when the request is no longer waiting for that choice.
+ */
+export async function askFurtherAway(requestId: string, patientId: string, now = new Date()): Promise<PrescriptionRequest | null> {
+  const outcome = await db.transaction(async (tx) => {
+    const [request] = await tx.select().from(prescriptionRequestsTable)
+      .where(and(eq(prescriptionRequestsTable.id, requestId), eq(prescriptionRequestsTable.patientId, patientId))).for("update");
+    if (!request || request.status !== "out_of_range") return null;
+    await tx.update(prescriptionRequestsTable).set({ collectionOnly: true, updatedAt: now }).where(eq(prescriptionRequestsTable.id, requestId));
+    const widened = { ...request, collectionOnly: true, round: MAX_ROUNDS };
+    return { request: widened, result: await openNextRound(tx, widened, now) };
+  });
+  if (!outcome) return null;
   await announce(outcome.request, outcome.result);
   const [fresh] = await db.select().from(prescriptionRequestsTable).where(eq(prescriptionRequestsTable.id, requestId));
   return fresh!;
@@ -250,10 +297,12 @@ export async function runPrescriptionRequestTick(now = new Date()): Promise<void
   const roundCutoff = new Date(now.getTime() - ROUND_MS);
   const acceptCutoff = new Date(now.getTime() - ACCEPT_HOLD_MS);
   const readyCutoff = new Date(now.getTime() - READY_HOLD_MS);
+  const choiceCutoff = new Date(now.getTime() - WIDER_CHOICE_MS);
   const due = await db.select({ id: prescriptionRequestsTable.id }).from(prescriptionRequestsTable).where(
     sql`(${prescriptionRequestsTable.status} = 'searching' AND ${prescriptionRequestsTable.roundStartedAt} <= ${roundCutoff})
       OR (${prescriptionRequestsTable.status} = 'accepted' AND ${prescriptionRequestsTable.acceptedAt} <= ${acceptCutoff})
-      OR (${prescriptionRequestsTable.status} = 'ready' AND ${prescriptionRequestsTable.readyAt} <= ${readyCutoff})`,
+      OR (${prescriptionRequestsTable.status} = 'ready' AND ${prescriptionRequestsTable.readyAt} <= ${readyCutoff})
+      OR (${prescriptionRequestsTable.status} = 'out_of_range' AND ${prescriptionRequestsTable.updatedAt} <= ${choiceCutoff})`,
   ).limit(100);
   for (const { id } of due) {
     try {
@@ -271,6 +320,11 @@ export async function runPrescriptionRequestTick(now = new Date()): Promise<void
           }
           const reopened = { ...r, round: r.round - 1 }; // the current round's radius again, then onwards
           return { request: r, result: await openNextRound(tx, reopened, now), released: r.acceptedPharmacyId, readyExpired: false };
+        }
+        if (r.status === "out_of_range" && r.updatedAt <= choiceCutoff) {
+          // The patient did not choose to ask further away.
+          await tx.update(prescriptionRequestsTable).set({ status: "expired", endedAt: now, updatedAt: now }).where(eq(prescriptionRequestsTable.id, r.id));
+          return { request: r, result: { notified: [], expired: false }, released: null, readyExpired: true };
         }
         if (r.status === "ready" && r.readyAt && r.readyAt <= readyCutoff) {
           await tx.update(prescriptionRequestsTable).set({ status: "expired", endedAt: now, updatedAt: now }).where(eq(prescriptionRequestsTable.id, r.id));

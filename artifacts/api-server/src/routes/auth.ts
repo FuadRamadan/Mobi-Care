@@ -1191,10 +1191,16 @@ router.post("/logout", async (req, res) => {
   const hash = hashRefreshToken(body.data.refreshToken);
   const now = new Date();
 
-  await db
+  const [signedOut] = await db
     .update(refreshTokensTable)
     .set({ revokedAt: now })
-    .where(eq(refreshTokensTable.tokenHash, hash));
+    .where(eq(refreshTokensTable.tokenHash, hash))
+    .returning({ pharmacyId: refreshTokensTable.pharmacyId });
+  // A pharmacy that signs out stops getting prescription requests at once
+  // rather than after the 2 minutes it takes to look away.
+  if (signedOut) {
+    await db.update(pharmaciesTable).set({ lastSeenAt: null }).where(eq(pharmaciesTable.id, signedOut.pharmacyId));
+  }
 
   await db
     .update(hqRefreshTokensTable)

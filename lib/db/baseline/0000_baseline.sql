@@ -249,6 +249,7 @@ CREATE TYPE "public"."prescription_reject_reason" AS ENUM (
 
 CREATE TYPE "public"."prescription_request_status" AS ENUM (
     'searching',
+    'out_of_range',
     'accepted',
     'ready',
     'ordered',
@@ -530,6 +531,28 @@ CREATE TABLE "public"."couriers" (
 
 
 --
+-- Name: delivery_pricing; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE "public"."delivery_pricing" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "fuel_price_per_litre" numeric(12,2) NOT NULL,
+    "km_per_litre" numeric(8,2) NOT NULL,
+    "pickup_leones" numeric(12,2) NOT NULL,
+    "service_rate_per_km" numeric(12,2) NOT NULL,
+    "rider_share_percent" numeric(5,2) NOT NULL,
+    "round_to_leones" numeric(12,2) NOT NULL,
+    "minimum_fee_leones" numeric(12,2) NOT NULL,
+    "max_km" numeric(8,1),
+    "effective_from" timestamp with time zone NOT NULL,
+    "created_by_hq_staff_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "delivery_pricing_km_per_litre_positive" CHECK (("km_per_litre" > (0)::numeric)),
+    CONSTRAINT "delivery_pricing_rider_share_range" CHECK ((("rider_share_percent" >= (0)::numeric) AND ("rider_share_percent" <= (100)::numeric)))
+);
+
+
+--
 -- Name: delivery_zone_fees; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -793,6 +816,8 @@ CREATE TABLE "public"."orders" (
     "delivery_zone_id" "uuid",
     "delivery_zone_name" "text",
     "delivery_pricing" "text",
+    "delivery_distance_km" numeric(8,1),
+    "delivery_distance_method" "text",
     "status" "public"."order_status" DEFAULT 'awaiting_payment'::"public"."order_status" NOT NULL,
     "fulfillment_type" "public"."fulfillment_type" NOT NULL,
     "id_checked" boolean DEFAULT false NOT NULL,
@@ -1122,6 +1147,7 @@ CREATE TABLE "public"."prescription_requests" (
     "note" "text",
     "status" "public"."prescription_request_status" DEFAULT 'searching'::"public"."prescription_request_status" NOT NULL,
     "round" integer DEFAULT 0 NOT NULL,
+    "collection_only" boolean DEFAULT false NOT NULL,
     "round_started_at" timestamp with time zone,
     "accepted_pharmacy_id" "uuid",
     "accepted_at" timestamp with time zone,
@@ -1506,6 +1532,14 @@ ALTER TABLE ONLY "public"."couriers"
 
 ALTER TABLE ONLY "public"."couriers"
     ADD CONSTRAINT "couriers_pkey" PRIMARY KEY ("id");
+
+
+--
+-- Name: delivery_pricing delivery_pricing_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_pricing"
+    ADD CONSTRAINT "delivery_pricing_pkey" PRIMARY KEY ("id");
 
 
 --
@@ -2082,6 +2116,13 @@ CREATE UNIQUE INDEX "courier_settlements_courier_period_uq" ON "public"."courier
 
 
 --
+-- Name: delivery_pricing_effective_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "delivery_pricing_effective_idx" ON "public"."delivery_pricing" USING "btree" ("effective_from");
+
+
+--
 -- Name: delivery_zone_fees_effective_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2198,6 +2239,13 @@ CREATE INDEX "prescription_requests_patient_idx" ON "public"."prescription_reque
 --
 
 CREATE INDEX "prescriptions_file_cleanup_idx" ON "public"."prescriptions" USING "btree" ("downloaded_at") WHERE (("downloaded_at" IS NOT NULL) AND ("file_deleted_at" IS NULL));
+
+
+--
+-- Name: refresh_tokens_pharmacy_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX "refresh_tokens_pharmacy_active_idx" ON "public"."refresh_tokens" USING "btree" ("pharmacy_id", "expires_at") WHERE ("revoked_at" IS NULL);
 
 
 --
@@ -2392,6 +2440,14 @@ ALTER TABLE ONLY "public"."courier_photo_uploads"
 
 ALTER TABLE ONLY "public"."courier_settlements"
     ADD CONSTRAINT "courier_settlements_courier_id_couriers_id_fk" FOREIGN KEY ("courier_id") REFERENCES "public"."couriers"("id") ON DELETE RESTRICT;
+
+
+--
+-- Name: delivery_pricing delivery_pricing_created_by_hq_staff_id_hq_staff_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY "public"."delivery_pricing"
+    ADD CONSTRAINT "delivery_pricing_created_by_hq_staff_id_hq_staff_id_fk" FOREIGN KEY ("created_by_hq_staff_id") REFERENCES "public"."hq_staff"("id") ON DELETE SET NULL;
 
 
 --
@@ -2781,11 +2837,11 @@ ALTER TABLE ONLY "public"."web_push_subscriptions"
 
 
 -- platform_settings
-INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-15 15:46:15.01531+00')
+INSERT INTO "public"."platform_settings" VALUES ('medicine_markup_basis_points', 500, '2026-10-16 16:47:37.278476+00')
 ON CONFLICT DO NOTHING;
 
 -- financial_migration_state
-INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-15 15:46:15.017977+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('financial_snapshots_introduced', '2026-10-16 16:47:37.280591+00')
 ON CONFLICT DO NOTHING;
-INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-15 15:46:15.06103+00')
+INSERT INTO "public"."financial_migration_state" VALUES ('legacy_courier_payout_reconciled', '2026-10-16 16:47:37.317751+00')
 ON CONFLICT DO NOTHING;

@@ -23,6 +23,7 @@ import {
   isLatitude,
   isLongitude,
 } from "../../lib/geo.js";
+import { pharmacySignedIn } from "../../lib/pharmacyOnline.js";
 
 const router = safeRouter();
 function queryCoordinate(value: unknown): number | null {
@@ -182,7 +183,13 @@ router.get("/", async (req: AuthRequest, res) => {
       mobileMoneyAccountName: pharmaciesTable.mobileMoneyAccountName,
       pharmacyLatitude: pharmaciesTable.latitude,
       pharmacyLongitude: pharmaciesTable.longitude,
-      pharmacyOnline: pharmaciesTable.isActive,
+      // Older pharmacy records keep the map position here instead.
+      pharmacyLocationLat: pharmaciesTable.locationLat,
+      pharmacyLocationLng: pharmaciesTable.locationLng,
+      // Signed out on every device = offline: still listed, so patients
+      // know where a medicine is, but shown as not selling now and not
+      // orderable (POST /patient/orders refuses it).
+      pharmacyOnline: pharmacySignedIn,
       controlledSubstanceAuthorized:
         pharmaciesTable.controlledSubstanceAuthorized,
     })
@@ -228,6 +235,8 @@ router.get("/", async (req: AuthRequest, res) => {
       byDrug.set(listingKey, entry);
     }
     const paymentLines = mobileMoneyLines(r);
+    const pharmacyLat = r.pharmacyLatitude ?? r.pharmacyLocationLat;
+    const pharmacyLng = r.pharmacyLongitude ?? r.pharmacyLocationLng;
     entry.offers.push({
       inventoryId: r.inventoryId,
       pharmacyId: r.pharmacyId,
@@ -244,15 +253,15 @@ router.get("/", async (req: AuthRequest, res) => {
       estimatedDistanceKm:
         patientLatitude !== null &&
         patientLongitude !== null &&
-        r.pharmacyLatitude !== null &&
-        r.pharmacyLongitude !== null &&
-        isLatitude(Number(r.pharmacyLatitude)) &&
-        isLongitude(Number(r.pharmacyLongitude))
+        pharmacyLat !== null &&
+        pharmacyLng !== null &&
+        isLatitude(Number(pharmacyLat)) &&
+        isLongitude(Number(pharmacyLng))
           ? haversineDistanceKm(
               patientLatitude,
               patientLongitude,
-              Number(r.pharmacyLatitude),
-              Number(r.pharmacyLongitude),
+              Number(pharmacyLat),
+              Number(pharmacyLng),
             )
           : null,
       brand: r.brand,
@@ -267,9 +276,18 @@ router.get("/", async (req: AuthRequest, res) => {
     });
   }
 
+  // Nearest first when the patient's location is known (medicine is needed
+  // fast), then cheapest; pharmacies not selling now last. Every offer is
+  // still listed for the patient to choose from.
+  const away = (o: any) => o.estimatedDistanceKm ?? Number.POSITIVE_INFINITY;
   const results = [...byDrug.values()].map((d) => ({
     ...d,
-    offers: d.offers.sort((a: any, b: any) => a.priceLeones - b.priceLeones),
+    offers: d.offers.sort(
+      (a: any, b: any) =>
+        Number(a.online === false) - Number(b.online === false) ||
+        away(a) - away(b) ||
+        a.priceLeones - b.priceLeones,
+    ),
   }));
 
   // This handler is called only for a submitted search; filters and pagination
