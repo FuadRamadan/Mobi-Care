@@ -1,0 +1,242 @@
+{
+  "voice": "af_heart",
+  "speed": 0.92,
+  "videos": {
+    "01-the-problem": {
+      "title": "Getting Medicines Shouldn't Be This Difficult",
+      "music": "reflective",
+      "scenes": [
+        {
+          "id": "hook",
+          "min": 5.5,
+          "lead": 0.8,
+          "text": "The prescription is in your hand. But the clinic has just run out.",
+          "onscreen": "The clinic has run out."
+        },
+        {
+          "id": "walk",
+          "min": 7.5,
+          "lead": 0.4,
+          "text": "So you start walking. One pharmacy. Then another. Then another.",
+          "onscreen": "One pharmacy. Then another."
+        },
+        {
+          "id": "time",
+          "min": 8.0,
+          "lead": 0.4,
+          "text": "Hours pass. Transport money runs low. And nobody can tell you where the medicine is, or what it will cost.",
+          "onscreen": "Hours pass."
+        },
+        {
+          "id": "call",
+          "min": 6.0,
+          "lead": 0.4,
+          "text": "You ask around. You call a friend. Nobody is quite sure.",
+          "onscreen": "Nobody is quite sure."
+        },
+        {
+          "id": "wait",
+          "min": 6.5,
+          "lead": 0.4,
+          "text": "Meanwhile, someone you love is waiting at home.",
+          "onscreen": "Someone is waiting."
+        },
+        {
+          "id": "insight",
+          "min": 8.0,
+          "lead": 0.6,
+          "text": "Sometimes the medicine is just across town. What is missing is the information.",
+          "onscreen": "The medicine may be close. The information isn't."
+        },
+        {
+          "id": "turn",
+          "min": 6.0,
+          "lead": 0.4,
+          "text": "What if finding it was as simple as a search on your phone?",
+          "onscreen": "What if it was one search away?"
+        },
+        {
+          "id": "end",
+          "min": 7.0,
+          "lead": 0.6,
+          "text": "MobiCare. A simpler way to find medicines.",
+          "onscreen": "A simpler way to find medicines."
+        }
+      ]
+    },
+    "02-meet-mobicare": {
+      "title": "Meet MobiCare",
+      "music": "confident",
+      "scenes": [
+        {
+          "id": "hook",
+          "min": 3.6,
+          "lead": 0.5,
+          "text": "Meet MobiCare. Licensed pharmacies near you, in one place.",
+          "onscreen": "Meet MobiCare"
+        },
+        {
+          "id": "open",
+          "min": 4.0,
+          "lead": 0.3,
+          "text": "Open it on your phone's browser at mobicaresl.com.",
+          "onscreen": "Open mobicaresl.com",
+          "shot": "v-home"
+        },
+        {
+          "id": "search",
+          "min": 4.0,
+          "lead": 0.3,
+          "text": "Search for the medicine you need.",
+          "onscreen": "Search",
+          "shot": "type"
+        },
+        {
+          "id": "results",
+          "min": 5.0,
+          "lead": 0.3,
+          "text": "Licensed pharmacies that stock it appear, nearest first, with the price and how many are in stock.",
+          "onscreen": "Nearest pharmacies first",
+          "shot": "v-results"
+        },
+        {
+          "id": "options",
+          "min": 4.5,
+          "lead": 0.3,
+          "text": "Compare brands, makers and where each was made, then add one to your cart.",
+          "onscreen": "Compare and add to cart",
+          "shot": "v-options"
+        },
+        {
+          "id": "cart",
+          "min": 4.0,
+          "lead": 0.3,
+          "text": "Choose delivery by a MobiCare rider, or collect it from the pharmacy.",
+          "onscreen": "Delivery or collection",
+          "shot": "v-cart"
+        },
+        {
+          "id": "fee",
+          "min": 4.0,
+          "lead": 0.3,
+          "text": "The delivery fee is shown before you pay, based on distance.",
+          "onscreen": "Fee shown before you pay",
+          "shot": "v-cart-delivery"
+        },
+        {
+          "id": "pay",
+          "min": 4.5,
+          "lead": 0.3,
+          "text": "Then pay securely with Orange Money, AfriMoney, a card or a bank account.",
+          "onscreen": "Mobile money, card or bank",
+          "shot": "v-cart-pay"
+        },
+        {
+          "id": "track",
+          "min": 5.0,
+          "lead": 0.3,
+          "text": "And follow your order, from payment to the pharmacy preparing it.",
+          "onscreen": "Follow every step",
+          "shot": "track"
+        },
+        {
+          "id": "rx",
+          "min": 5.0,
+          "lead": 0.4,
+          "text": "Have a prescription? Take a photo and send it to pharmacies near you.",
+          "onscreen": "Upload a prescription",
+          "shot": "rx"
+        },
+        {
+          "id": "rxready",
+          "min": 5.0,
+          "lead": 0.3,
+          "text": "A pharmacist checks it and confirms what they have. You choose the quantities, then pay.",
+          "onscreen": "Checked by a pharmacist",
+          "shot": "v-rx-ready"
+        },
+        {
+          "id": "end",
+          "min": 5.5,
+          "lead": 0.5,
+          "text": "MobiCare. Search, order and follow your medicines. Discover it at mobicaresl.com.",
+          "onscreen": "Discover MobiCare"
+        }
+      ]
+    },
+    "03-the-solution": {
+      "title": "Medicine Access, Made Simpler",
+      "music": "warm",
+      "scenes": [
+        {
+          "id": "story",
+          "min": 7.5,
+          "lead": 0.8,
+          "text": "Fatmata's son is unwell. The clinic has written a prescription, but it doesn't have the medicine.",
+          "onscreen": "Fatmata's son is unwell."
+        },
+        {
+          "id": "phone",
+          "min": 5.5,
+          "lead": 0.4,
+          "text": "This time, she doesn't start walking. She opens MobiCare.",
+          "onscreen": "This time, she opens MobiCare.",
+          "shot": "v-rx-start"
+        },
+        {
+          "id": "photo",
+          "min": 6.5,
+          "lead": 0.3,
+          "text": "She photographs the prescription, and can cover her personal details before sending it.",
+          "onscreen": "Photo, privately",
+          "shot": "v-rx-photo"
+        },
+        {
+          "id": "send",
+          "min": 5.0,
+          "lead": 0.3,
+          "text": "It goes to licensed pharmacies near her.",
+          "onscreen": "Sent to pharmacies nearby",
+          "shot": "v-rx-searching"
+        },
+        {
+          "id": "ready",
+          "min": 7.0,
+          "lead": 0.3,
+          "text": "A nearby pharmacist checks it and confirms what they have, with the prices and the delivery fee.",
+          "onscreen": "Confirmed by a pharmacist",
+          "shot": "v-rx-ready"
+        },
+        {
+          "id": "order",
+          "min": 6.5,
+          "lead": 0.3,
+          "text": "She chooses delivery or collection, pays with mobile money, and follows each step.",
+          "onscreen": "Delivery or collection",
+          "shot": "v-order-confirmed"
+        },
+        {
+          "id": "relief",
+          "min": 6.5,
+          "lead": 0.5,
+          "text": "Less searching. Less guessing. More time for the people who matter.",
+          "onscreen": "Less searching. More caring."
+        },
+        {
+          "id": "values",
+          "min": 6.5,
+          "lead": 0.3,
+          "text": "Licensed pharmacies. Prescriptions checked by pharmacists. Prices you can see.",
+          "onscreen": "Licensed · Checked · Clear prices"
+        },
+        {
+          "id": "end",
+          "min": 7.5,
+          "lead": 0.5,
+          "text": "Find your way to medicines with MobiCare. Explore it today at mobicaresl.com.",
+          "onscreen": "Find your way to medicines"
+        }
+      ]
+    }
+  }
+}

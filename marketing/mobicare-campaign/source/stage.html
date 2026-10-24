@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MobiCare campaign stage</title>
+<style>
+  @font-face { font-family: "Outfit"; font-weight: 100 900; src: url(../assets/brand/outfit.woff2) format("woff2"); }
+  @font-face { font-family: "DM Sans"; font-weight: 100 1000; src: url(../assets/brand/dmsans.woff2) format("woff2"); }
+  :root { --deep: #0B3D2E; --green: #1A8F6E; --mint: #8FD9BF; --mist: #EEF7F3; --coral: #D7613A; --cream: #FBF7F0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: #06231A; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: "DM Sans", sans-serif; color: #fff; }
+  .layer { position: absolute; inset: 0; }
+  .headline { position: absolute; left: 90px; right: 90px; top: 168px; text-align: center; font-family: Outfit, sans-serif; font-weight: 800; font-size: 68px; line-height: 1.08; letter-spacing: -0.5px; text-wrap: balance; }
+  .headline span { display: inline-block; white-space: pre; }
+  .eyebrow { position: absolute; left: 0; right: 0; top: 120px; text-align: center; font-family: Outfit, sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 6px; text-transform: uppercase; color: var(--mint); }
+  .cap { position: absolute; left: 70px; right: 70px; top: 1392px; display: flex; justify-content: center; }
+  .cap div { background: rgba(4, 22, 16, 0.78); border-radius: 22px; padding: 18px 30px; font-weight: 600; font-size: 44px; line-height: 1.22; text-align: center; color: #fff; max-width: 940px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .phone { position: absolute; transform-origin: 0 0; }
+  .bezel { position: absolute; border-radius: 74px; background: linear-gradient(145deg, #2a3431, #0b100e 40%, #1b2320); box-shadow: 0 40px 90px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.08); }
+  .screen { position: absolute; overflow: hidden; border-radius: 58px; background: #fff; }
+  .screen img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .island { position: absolute; width: 128px; height: 36px; border-radius: 20px; background: #050807; }
+  .tap { position: absolute; border-radius: 50%; border: 6px solid rgba(26,143,110,.95); background: rgba(143,217,191,.25); }
+  .callout { position: absolute; transform: translate(-50%, -100%); background: var(--coral); color: #fff; font-family: Outfit; font-weight: 700; font-size: 30px; padding: 12px 22px; border-radius: 999px; white-space: nowrap; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .callout:after { content: ""; position: absolute; left: 50%; bottom: -12px; margin-left: -12px; border: 12px solid transparent; border-bottom: 0; border-top-color: var(--coral); }
+  .tag { position: absolute; left: 0; right: 0; text-align: center; font-size: 24px; letter-spacing: 1px; color: rgba(205,229,219,.75); }
+  .endlogo { position: absolute; left: 50%; transform: translateX(-50%); }
+  .url { position: absolute; left: 50%; transform: translateX(-50%); font-family: Outfit; font-weight: 700; font-size: 46px; color: var(--deep); background: var(--mint); padding: 18px 46px; border-radius: 999px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eo = (k) => 1 - Math.pow(1 - clamp(k), 3);          // ease out
+const eio = (k) => { k = clamp(k); return k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+const pr = (u, a, b) => clamp((u - a) / (b - a));
+let CFG = null, SHOTS = {}, LOGO_W = "", LOGO_C = "", PIN = "";
+
+function words(text, u, start = 0, stagger = 0.07, color = "#fff") {
+  return text.split(" ").map((w, i) => {
+    const k = eo(pr(u, start + i * stagger, start + i * stagger + 0.5));
+    return `<span style="opacity:${k};transform:translateY(${(1 - k) * 40}px);color:${color}">${w} </span>`;
+  }).join("");
+}
+function headline(text, u, opts = {}) {
+  const out = opts.out ? 1 - pr(u, opts.out, opts.out + 0.35) : 1;
+  return `<div class="headline" style="opacity:${out};top:${opts.top || 168}px;font-size:${opts.size || 68}px">${words(text, u, opts.delay ?? 0.45, 0.07, opts.color)}</div>`;
+}
+
+// ---------- the phone mockup with a real app screen ----------
+const SW = 480, SH = Math.round(480 * 2532 / 1170), PAD = 16;
+function phone(sc, u, sh, opts = {}) {
+  const W = SW + 2 * PAD, H = SH + 2 * PAD, left = (1080 - W) / 2, top = opts.top || 336;
+  // which frame (cross-fade 0.25 s)
+  const fr = sh.frames; let i = 0; while (i + 1 < fr.length && u >= fr[i + 1][0]) i++;
+  const fade = i > 0 ? pr(u, fr[i][0], fr[i][0] + 0.25) : 1;
+  const img = (name, o) => `<img src="../assets/app/${name}.png" style="opacity:${o}">`;
+  const imgs = (i > 0 && fade < 1 ? img(fr[i - 1][1], 1) : "") + img(fr[i][1], fade);
+  // zoom keyframes [u, scale, x, y]
+  const z = sh.zoom || [[0, 1, .5, .5]]; let j = 0; while (j + 1 < z.length && u >= z[j + 1][0]) j++;
+  let s = z[j][1], fx = z[j][2], fy = z[j][3];
+  if (j + 1 < z.length) { const k = eio(pr(u, z[j][0], z[j + 1][0])); s = lerp(z[j][1], z[j + 1][1], k); fx = lerp(z[j][2], z[j + 1][2], k); fy = lerp(z[j][3], z[j + 1][3], k); }
+  const px = left + PAD + fx * SW, py = top + PAD + fy * SH;
+  const kz = clamp((s - 1) / 0.45);
+  const tx = lerp(px, 540, kz) - px * s, ty = lerp(py, 860, kz) - py * s;
+  // entrance
+  const ent = opts.enter ? eo(pr(u, 0, 0.7)) : 1;
+  const enterY = (1 - ent) * 260;
+  let extras = "";
+  for (const [tu, x, y] of sh.taps || []) {
+    const k = pr(u, tu - 0.15, tu + 0.55); if (k <= 0 || k >= 1) continue;
+    const r = 30 + 70 * eo(k), o = k < .25 ? k / .25 : 1 - (k - .25) / .75;
+    extras += `<div class="tap" style="left:${PAD + x * SW - r}px;top:${PAD + y * SH - r}px;width:${2 * r}px;height:${2 * r}px;opacity:${o}"></div>`;
+    if (k < .5) extras += `<div class="tap" style="left:${PAD + x * SW - 22}px;top:${PAD + y * SH - 22}px;width:44px;height:44px;background:rgba(26,143,110,.55);border:0;opacity:${1 - k * 2}"></div>`;
+  }
+  for (const [cu, x, y, label] of sh.callouts || []) {
+    const k = eo(pr(u, cu, cu + 0.35)) * (1 - pr(u, cu + 1.05, cu + 1.25)); if (k <= 0) continue;
+    extras += `<div class="callout" style="left:${PAD + x * SW}px;top:${PAD + y * SH - 18}px;opacity:${k};transform:translate(-50%,-100%) scale(${(0.7 + 0.3 * k) / s})">${label}</div>`;
+  }
+  return `<div style="position:absolute;left:0;top:322px;width:1080px;height:1088px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 36px, #000 1040px, transparent 1088px)"><div style="position:absolute;left:0;top:-322px;width:1080px;height:1920px"><div class="phone" style="left:0;top:0;transform:translate(${tx}px,${ty + enterY}px) scale(${s});opacity:${ent}">
+    <div style="position:absolute;left:${left}px;top:${top}px;width:${W}px;height:${H}px">
+      <div class="bezel" style="left:0;top:0;width:${W}px;height:${H}px"></div>
+      <div class="screen" style="left:${PAD}px;top:${PAD}px;width:${SW}px;height:${SH}px">${imgs}</div>
+      <div class="island" style="left:${W / 2 - 64}px;top:${PAD + 14}px;opacity:0"></div>
+      ${extras}
+    </div></div></div></div>`;
+}
+const demoTag = (o = 1) => `<div class="tag" style="top:1590px;opacity:${o}">Real MobiCare screens · demonstration data</div>`;
+
+// ---------- backgrounds ----------
+function bgBrand(t, warm = false) {
+  const a = 30 + 10 * Math.sin(t * 0.3), b = 60 + 8 * Math.cos(t * 0.25);
+  const glow = warm ? "rgba(240,170,110,.30)" : "rgba(143,217,191,.22)";
+  return `<div class="layer" style="background:radial-gradient(1100px 900px at ${a}% ${b - 30}%, ${glow}, transparent 60%), radial-gradient(900px 900px at ${100 - a}% 95%, rgba(26,143,110,.45), transparent 60%), linear-gradient(180deg, #0B3D2E 0%, #072A20 55%, #041A13 100%)"></div>`;
+}
+function bgNight(t) {
+  return `<div class="layer" style="background:radial-gradient(900px 700px at 70% 18%, rgba(120,140,170,.18), transparent 60%), linear-gradient(180deg, #0E1A24 0%, #0B1D1B 60%, #08130F 100%)"></div>`;
+}
+
+// ---------- illustration kit (flat, stylised; illustrative, not footage) ----------
+const SKIN = ["#5B3420", "#6E4126", "#4A2A18"];
+function person(x, y, s, o = {}) {
+  // x,y = feet centre; s = scale (1 ~ 300px tall)
+  const ph = o.phase || 0, swing = o.walk ? Math.sin(ph) * 16 : 0, bob = o.walk ? Math.abs(Math.sin(ph)) * -5 : 0;
+  const skin = o.skin || SKIN[0], top = o.top || "#C9553A", bottom = o.bottom || "#2E4A6B", wrap = o.wrap;
+  return `<g transform="translate(${x},${y + bob}) scale(${s})">
+    <ellipse cx="0" cy="2" rx="46" ry="9" fill="rgba(0,0,0,.25)"/>
+    <path d="M-12,-118 L${-16 + swing},-4 L${-4 + swing},-4 Z" fill="${o.legs || skin}"/>
+    <path d="M12,-118 L${16 - swing},-4 L${4 - swing},-4 Z" fill="${o.legs || skin}"/>
+    <path d="M-36,-196 Q-40,-140 ${o.dress ? -48 : -30},${o.dress ? -70 : -112} L${o.dress ? 48 : 30},${o.dress ? -70 : -112} Q40,-140 36,-196 Q0,-212 -36,-196 Z" fill="${o.dress ? top : top}"/>
+    ${o.dress ? "" : `<rect x="-30" y="-120" width="60" height="18" rx="6" fill="${bottom}"/>`}
+    <path d="M-34,-190 Q${-52 - swing * 0.6},-150 ${-44 - swing},-108" stroke="${skin}" stroke-width="13" fill="none" stroke-linecap="round"/>
+    ${o.hold ? `<path d="M34,-190 Q52,-160 30,-140" stroke="${skin}" stroke-width="13" fill="none" stroke-linecap="round"/>${o.hold}` : `<path d="M34,-190 Q${52 + swing * 0.6},-150 ${44 + swing},-108" stroke="${skin}" stroke-width="13" fill="none" stroke-linecap="round"/>`}
+    <rect x="-9" y="-214" width="18" height="18" fill="${skin}"/>
+    <ellipse cx="0" cy="-238" rx="25" ry="29" fill="${skin}"/>
+    ${wrap ? `<path d="M-28,-246 Q-30,-284 0,-286 Q34,-286 30,-246 Q14,-262 -28,-246 Z" fill="${wrap}"/><circle cx="20" cy="-272" r="11" fill="${wrap}"/>` : `<path d="M-26,-244 Q-24,-272 0,-270 Q24,-272 26,-244 Q12,-258 -26,-244 Z" fill="#1A120C"/>`}
+  </g>`;
+}
+function house(x, y, w, h, c, roof = "#7A3B2A") {
+  const win = (wx) => `<rect x="${wx}" y="${y - h + h * 0.28}" width="${w * 0.2}" height="${h * 0.24}" rx="4" fill="#F3D99B" opacity=".85"/>`;
+  return `<g><rect x="${x}" y="${y - h}" width="${w}" height="${h}" fill="${c}"/>
+    <path d="M${x - 12},${y - h} L${x + w / 2},${y - h - h * 0.38} L${x + w + 12},${y - h} Z" fill="${roof}"/>
+    ${win(x + w * 0.12)}${win(x + w * 0.68)}
+    <rect x="${x + w * 0.4}" y="${y - h * 0.45}" width="${w * 0.2}" height="${h * 0.45}" fill="#3B2418"/></g>`;
+}
+function pharmacy(x, y, w, h, sign = "PHARMACY", lit = true) {
+  return `<g><rect x="${x}" y="${y - h}" width="${w}" height="${h}" fill="#E9E2D3"/>
+    <rect x="${x}" y="${y - h}" width="${w}" height="${h * 0.22}" fill="#1A8F6E"/>
+    <text x="${x + w / 2}" y="${y - h + h * 0.15}" text-anchor="middle" font-family="Outfit" font-weight="800" font-size="${h * 0.11}" fill="#fff" letter-spacing="2">${sign}</text>
+    ${Array.from({ length: 6 }, (_, i) => `<rect x="${x + i * w / 6}" y="${y - h + h * 0.22}" width="${w / 12}" height="${h * 0.1}" fill="${i % 2 ? '#fff' : '#1A8F6E'}"/>`).join("")}
+    <rect x="${x + w * 0.08}" y="${y - h * 0.62}" width="${w * 0.5}" height="${h * 0.38}" fill="${lit ? '#FFF1C9' : '#B8C3BF'}" opacity=".9"/>
+    ${[0, 1, 2].map(r => `<rect x="${x + w * 0.1}" y="${y - h * 0.58 + r * h * 0.11}" width="${w * 0.46}" height="4" fill="#9A8B6E"/>`).join("")}
+    <rect x="${x + w * 0.66}" y="${y - h * 0.62}" width="${w * 0.24}" height="${h * 0.62}" fill="#2D3B36"/>
+    <g transform="translate(${x + w - 6},${y - h - 26})"><circle r="30" fill="#fff"/><rect x="-8" y="-22" width="16" height="44" rx="4" fill="#1A8F6E"/><rect x="-22" y="-8" width="44" height="16" rx="4" fill="#1A8F6E"/></g></g>`;
+}
+function hills(y, c1, c2) {
+  return `<path d="M0,${y} L0,${y - 160} Q120,${y - 330} 260,${y - 250} Q360,${y - 420} 520,${y - 300} Q640,${y - 380} 760,${y - 260} Q900,${y - 360} 1080,${y - 220} L1080,${y} Z" fill="${c1}"/>
+    <path d="M0,${y} L0,${y - 90} Q160,${y - 200} 330,${y - 130} Q480,${y - 230} 640,${y - 140} Q820,${y - 210} 1080,${y - 110} L1080,${y} Z" fill="${c2}"/>`;
+}
+function palm(x, y, s = 1) {
+  return `<g transform="translate(${x},${y}) scale(${s})"><path d="M0,0 Q10,-110 -6,-220" stroke="#3B2A1C" stroke-width="12" fill="none"/>
+    ${[-150, -110, -60, -20, 30].map(a => `<path d="M-6,-220 q${Math.cos(a * Math.PI / 180) * 90},${Math.sin(a * Math.PI / 180) * 40 - 10} ${Math.cos(a * Math.PI / 180) * 150},${Math.sin(a * Math.PI / 180) * 70 + 30}" stroke="#1E5A43" stroke-width="16" fill="none" stroke-linecap="round"/>`).join("")}</g>`;
+}
+function bubble(x, y, text, k, dark = false) {
+  const w = text.length * 19 + 60;
+  return `<g transform="translate(${x},${y + (1 - k) * 30}) scale(${0.85 + 0.15 * k})" opacity="${k}">
+    <rect x="${-w / 2}" y="-44" width="${w}" height="76" rx="30" fill="${dark ? '#D7613A' : '#FFFFFF'}"/>
+    <path d="M${-w / 2 + 40},28 l-10,26 l34,-26 Z" fill="${dark ? '#D7613A' : '#FFFFFF'}"/>
+    <text x="0" y="4" text-anchor="middle" font-family="DM Sans" font-weight="700" font-size="34" fill="${dark ? '#fff' : '#0B3D2E'}">${text}</text></g>`;
+}
+function rxPaper(x, y, s, rot = 0) {
+  return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+    <rect x="-150" y="-200" width="300" height="400" rx="10" fill="#FBF7F0"/><rect x="-150" y="-200" width="300" height="60" rx="10" fill="#E4EFEA"/>
+    <text x="-120" y="-160" font-family="Outfit" font-weight="800" font-size="26" fill="#0B3D2E">CLINIC</text>
+    <text x="-120" y="-60" font-family="Georgia" font-style="italic" font-weight="700" font-size="64" fill="#0B3D2E">Rx</text>
+    ${[0, 1, 2, 3, 4].map(i => `<rect x="-120" y="${-20 + i * 42}" width="${200 - (i % 2) * 60}" height="10" rx="5" fill="#B9C7C1"/>`).join("")}
+    <path d="M40,160 q20,-30 40,0 t40,0" stroke="#0B3D2E" stroke-width="5" fill="none"/></g>`;
+}
+function svgWrap(inner, top = 300, h = 1080) { return `<svg class="layer" style="top:${top}px;height:${h}px" viewBox="0 0 1080 ${h}" width="1080" height="${h}">${inner}</svg>`; }
+
+// Stylised Freetown peninsula outline (illustrative)
+const PENINSULA = "M120,520 Q150,420 260,380 Q360,330 470,350 Q560,300 660,330 Q760,300 860,360 Q960,420 950,520 Q930,640 860,720 Q760,820 640,840 Q520,880 420,830 Q300,800 220,720 Q120,640 120,520 Z";
+
+// ---------- end card ----------
+function endCard(u, tagline, url, extra = "") {
+  const k = eo(pr(u, 0.1, 0.9)), k2 = eo(pr(u, 0.6, 1.3)), k3 = eo(pr(u, 1.1, 1.8));
+  return bgBrand(u) + `<div class="layer" style="background:radial-gradient(700px 500px at 50% 42%, rgba(143,217,191,.20), transparent 70%)"></div>
+    <div class="endlogo" style="top:${600 - (1 - k) * 40}px;opacity:${k};width:700px">${LOGO_W}</div>
+    <div class="headline" style="top:${905 + (1 - k2) * 30}px;opacity:${k2};font-size:62px">${tagline}</div>
+    ${url ? `<div class="url" style="top:${1120 + (1 - k3) * 30}px;opacity:${k3}">${url}</div>` : ""}${extra}`;
+}
+
+// ---------- scenes ----------
+const SCENES = {
+  // ===== Video 1: the problem =====
+  "01-the-problem": {
+    hook(u, d) {
+      const k = eo(pr(u, 0, 1.0)), shelf = 1 - pr(u, 0, 0.3) * 0;
+      let shelves = "";
+      for (let r = 0; r < 4; r++) { shelves += `<rect x="140" y="${180 + r * 170}" width="800" height="14" fill="#5E6B66"/>`;
+        for (let i = 0; i < 7; i++) { const empty = (r * 7 + i) % 3 !== 0; shelves += empty ? `<rect x="${170 + i * 110}" y="${110 + r * 170}" width="70" height="70" rx="6" fill="none" stroke="#3E4A46" stroke-width="3" stroke-dasharray="8 8"/>` : `<rect x="${170 + i * 110}" y="${100 + r * 170}" width="70" height="80" rx="8" fill="#7E8C86"/>`; } }
+      const paper = rxPaper(540, 820 - 240 * k, 1.25, -6 + 4 * k);
+      return bgNight(u) + svgWrap(`<g opacity=".55">${shelves}</g>
+        <g transform="translate(0,0)">${paper}</g>
+        <g opacity="${eo(pr(u, 1.1, 1.6))}" transform="translate(540,740) rotate(-8)"><rect x="-230" y="-48" width="460" height="96" rx="16" fill="none" stroke="#D7613A" stroke-width="8"/><text x="0" y="18" text-anchor="middle" font-family="Outfit" font-weight="800" font-size="52" fill="#D7613A" letter-spacing="4">OUT OF STOCK</text></g>`)
+        + headline("The clinic has run out.", u, { delay: 0.3 });
+    },
+    walk(u, d) {
+      const pan = u * 42, ph = u * 5.2;
+      const ground = 900;
+      const shops = [[80, "PHARMACY"], [620, "PHARMACY"], [1160, "PHARMACY"]];
+      let row = "";
+      [[-140, "#E0B04F"], [300, "#4F8FB8"], [460, "#C9553A"], [840, "#7FB069"], [1000, "#E07A5F"], [1380, "#5B8FB0"]].forEach(([x, c]) => { row += house(x, ground, 150, 210, c); });
+      shops.forEach(([x, s]) => { row += pharmacy(x, ground, 260, 300, s); });
+      const tags = [["Not today", 1.6], ["Try the next one", 3.6], ["Out of stock", 5.6]];
+      let bub = ""; tags.forEach(([t, at], i) => { const k = eo(pr(u, at, at + 0.4)) * (1 - pr(u, at + 1.7, at + 2.1)); if (k > 0) bub += bubble(560, 470, t, k, false); });
+      return bgNight(u) + svgWrap(`<rect width="1080" height="1080" fill="#162A30"/>
+        <circle cx="820" cy="170" r="70" fill="#F4E3B5" opacity=".9"/>
+        <g transform="translate(${-pan * 0.3},0)">${hills(760, "#1C3A3A", "#204540")}</g>
+        <g transform="translate(${-pan},0)">${row}${palm(560, ground, 0.9)}${palm(1120, ground, 1)}</g>
+        <rect y="${ground}" width="1080" height="180" fill="#3A332B"/><rect y="${ground + 60}" width="1080" height="10" fill="#4D453B"/>
+        ${person(560, ground + 70, 1.15, { walk: true, phase: ph, wrap: "#E0A23B", top: "#C9553A", dress: true, hold: `<g transform="translate(34,-150) rotate(-10)"><rect x="-4" y="-34" width="34" height="46" rx="3" fill="#FBF7F0"/></g>` })}
+        ${bub}`) + headline("One pharmacy. Then another.", u);
+    },
+    time(u, d) {
+      const turns = u * 1.6;
+      const hour = turns * 30, min = turns * 360;
+      const sun = 1 - pr(u, 0, d);
+      return `<div class="layer" style="background:linear-gradient(180deg, hsl(${lerp(28, 220, 1 - sun)},35%,${lerp(30, 12, 1 - sun)}%) 0%, #0B1D1B 100%)"></div>` + svgWrap(`
+        <circle cx="${lerp(840, 240, 1 - sun)}" cy="${lerp(160, 520, 1 - sun)}" r="64" fill="#F4C27A" opacity="${0.4 + 0.5 * sun}"/>
+        <g transform="translate(540,520)"><circle r="300" fill="#F6F2E8"/><circle r="300" fill="none" stroke="#1A8F6E" stroke-width="18"/>
+        ${Array.from({ length: 12 }, (_, i) => `<rect x="-5" y="-280" width="10" height="${i % 3 ? 26 : 46}" rx="4" fill="#0B3D2E" transform="rotate(${i * 30})"/>`).join("")}
+        <rect x="-9" y="-170" width="18" height="190" rx="9" fill="#0B3D2E" transform="rotate(${hour})"/>
+        <rect x="-6" y="-245" width="12" height="265" rx="6" fill="#D7613A" transform="rotate(${min})"/>
+        <circle r="18" fill="#0B3D2E"/></g>
+        ${["Transport fare", "Another hour", "Still searching"].map((t, i) => { const k = eo(pr(u, 1 + i * 1.6, 1.4 + i * 1.6)) * (1 - pr(u, 2.6 + i * 1.6, 3 + i * 1.6)); return k > 0 ? bubble(540, 930, t, k, true) : ""; }).join("")}`) + headline("Hours pass.", u);
+    },
+    call(u, d) {
+      const msgs = [["Do you know where to find it?", 0.4, 300, false], ["Not sure…", 1.6, 470, true], ["Maybe try Lumley?", 2.8, 640, true], ["Still nothing.", 4.0, 810, false]];
+      let b = ""; msgs.forEach(([t, at, y, other]) => { const k = eo(pr(u, at, at + 0.45)); if (k > 0) b += bubble(other ? 640 : 440, y, t, k, other); });
+      return bgNight(u) + svgWrap(`${person(200, 1040, 1.25, { wrap: "#E0A23B", top: "#C9553A", dress: true, hold: `<g transform="translate(26,-240)"><rect x="-6" y="-40" width="30" height="58" rx="6" fill="#111"/></g>` })}${b}`) + headline("Nobody is quite sure.", u);
+    },
+    wait(u, d) {
+      const glow = 0.6 + 0.1 * Math.sin(u * 2);
+      return `<div class="layer" style="background:linear-gradient(180deg,#1B2A2A,#0F1A18)"></div>` + svgWrap(`
+        <rect x="120" y="140" width="380" height="420" rx="16" fill="#203845"/><rect x="120" y="140" width="380" height="420" rx="16" fill="none" stroke="#3B5560" stroke-width="16"/>
+        <path d="M310,140 V560 M120,350 H500" stroke="#3B5560" stroke-width="12"/><circle cx="420" cy="230" r="36" fill="#F4E3B5" opacity=".8"/>
+        <circle cx="830" cy="340" r="${170 * glow}" fill="#F3C77A" opacity=".18"/><path d="M790,240 h80 l30,90 h-140 Z" fill="#E9B85E"/><rect x="826" y="330" width="8" height="180" fill="#6B5A43"/>
+        <rect x="140" y="760" width="760" height="70" rx="20" fill="#5C4334"/><rect x="160" y="690" width="720" height="90" rx="30" fill="#E7DCC8"/>
+        <path d="M300,700 Q520,620 860,700 L860,770 L300,770 Z" fill="#4F7FA0"/>
+        <ellipse cx="230" cy="690" rx="70" ry="44" fill="#F5EFE4"/><ellipse cx="240" cy="668" rx="34" ry="38" fill="${SKIN[2]}"/>
+        ${person(940, 1030, 1.05, { wrap: "#7FB069", top: "#4F8FB8", dress: true })}`) + headline("Someone is waiting.", u);
+    },
+    insight(u, d) {
+      const draw = pr(u, 0, 2.0);
+      const pins = [[300, 520], [420, 430], [560, 470], [690, 420], [790, 560], [610, 700]];
+      let p = ""; pins.forEach(([x, y], i) => { const at = 1.0 + i * 0.35, k = eo(pr(u, at, at + 0.35)); if (k <= 0) return; const hot = i === 5 && u > 3.6;
+        p += `<g transform="translate(${x},${y}) scale(${k})">${hot ? `<circle r="${60 + 10 * Math.sin(u * 5)}" fill="#8FD9BF" opacity=".35"/>` : ""}<path d="M0,0 C-26,-30 -30,-48 -30,-60 A30,30 0 1 1 30,-60 C30,-48 26,-30 0,0 Z" fill="${hot ? '#8FD9BF' : '#5E6B66'}"/><circle cy="-60" r="11" fill="#0E1A24"/></g>`; });
+      const trail = `M170,640 C260,600 300,560 300,520 S360,450 420,430 S520,500 560,470 S650,400 690,420 S800,520 790,560`;
+      return bgNight(u) + svgWrap(`<path d="${PENINSULA}" fill="#13302B" stroke="#2C5A4E" stroke-width="6"/>
+        <path d="M200,560 L860,520 M300,760 L760,360 M420,830 L520,350" stroke="#1E4038" stroke-width="10" opacity=".7"/>
+        <path d="${trail}" fill="none" stroke="#D7613A" stroke-width="8" stroke-dasharray="20 16" stroke-linecap="round" pathLength="1" style="stroke-dasharray:${draw} 1"/>
+        ${p}
+        ${u > 3.6 ? `<g opacity="${eo(pr(u, 3.6, 4.1))}">${bubble(610, 560, "It was here", eo(pr(u, 3.6, 4.1)), true)}</g>` : ""}`) + headline("The medicine may be close.", u, { out: 3.4 }) + (u > 3.6 ? headline("The information isn't.", u - 3.6, { color: "#8FD9BF" }) : "");
+    },
+    turn(u, d) {
+      const k = eo(pr(u, 0.2, 1.6));
+      const pins = [[300, 520], [420, 430], [560, 470], [690, 420], [790, 560], [610, 700]];
+      let p = ""; pins.forEach(([x, y]) => { const X = lerp(x, 540, k), Y = lerp(y, 560, k); p += `<g transform="translate(${X},${Y}) scale(${1 - 0.6 * k})"><path d="M0,0 C-26,-30 -30,-48 -30,-60 A30,30 0 1 1 30,-60 C30,-48 26,-30 0,0 Z" fill="#8FD9BF"/></g>`; });
+      const ph = eo(pr(u, 1.2, 2.2));
+      return bgBrand(u) + svgWrap(`<g opacity="${1 - k}"><path d="${PENINSULA}" fill="#13302B" stroke="#2C5A4E" stroke-width="6"/></g>
+        <g opacity="${ph}" transform="translate(540,560) scale(${0.8 + 0.2 * ph})"><rect x="-170" y="-340" width="340" height="680" rx="48" fill="#0B100E"/><rect x="-154" y="-324" width="308" height="648" rx="36" fill="#EEF7F3"/>
+        <g transform="translate(0,-20) scale(0.75) translate(-150,-186)">${PIN}</g></g>${p}`) + headline("What if it was one search away?", u);
+    },
+    end(u, d) { return endCard(u, "A simpler way to find medicines.", "mobicaresl.com"); },
+  },
+
+  // ===== Video 2: meet MobiCare (real app screens) =====
+  "02-meet-mobicare": {
+    hook(u, d) {
+      const k = eo(pr(u, 0.1, 0.9));
+      return bgBrand(u) + `<div class="endlogo" style="top:${640 - 30 * k}px;opacity:${k};width:640px">${LOGO_W}</div>` +
+        headline("Licensed pharmacies near you, in one place.", u, { top: 900, delay: 0.7, size: 64 }) +
+        `<div class="eyebrow" style="top:820px;opacity:${eo(pr(u, 0.5, 1.1))}">Meet MobiCare</div>`;
+    },
+    ...Object.fromEntries(["open", "search", "results", "options", "cart", "fee", "pay", "track", "rx", "rxready"].map((id) => [id, (u, d, sc) =>
+      bgBrand(u + sc.start) + headline(sc.onscreen, u, { size: 62 }) + phone(sc, u, SHOTS[id], { enter: id === "open" }) + demoTag()])),
+    end(u, d) { return endCard(u, "Search, order and follow your medicines.", "mobicaresl.com", `<div class="eyebrow" style="top:520px;opacity:${eo(pr(u, 0.2, 0.8))}">Discover MobiCare</div>`); },
+  },
+
+  // ===== Video 3: the solution =====
+  "03-the-solution": {
+    story(u, d) {
+      const k = eo(pr(u, 0, 1.2));
+      return `<div class="layer" style="background:linear-gradient(180deg,#F6E8D6 0%, #EBD3B8 100%)"></div>` + svgWrap(`
+        <rect x="80" y="120" width="360" height="380" rx="16" fill="#CFE6EC"/><path d="M260,120 V500 M80,310 H440" stroke="#FFFFFF" stroke-width="14"/>
+        <circle cx="370" cy="210" r="40" fill="#F9C66B" opacity=".9"/>
+        <rect x="560" y="700" width="420" height="40" rx="12" fill="#9C6B48"/><rect x="600" y="740" width="22" height="200" fill="#7E5236"/><rect x="920" y="740" width="22" height="200" fill="#7E5236"/>
+        <g transform="translate(760,690) rotate(-8)">${rxPaper(0, -40, 0.4, 0)}</g>
+        ${person(330, 1050, 1.75, { wrap: "#1A8F6E", top: "#D7613A", dress: true, skin: SKIN[1] })}
+        <g transform="translate(520,1050) scale(1.15)">${person(0, 0, 1, { top: "#4F8FB8", bottom: "#2E4A6B", skin: SKIN[2] })}</g>
+        <g opacity="${eo(pr(u, 1.4, 1.9))}">${bubble(690, 330, "Fever since this morning", eo(pr(u, 1.4, 1.9)), true)}</g>`) +
+        `<div class="layer" style="opacity:${1 - k * 0}"></div>` + headline("Fatmata’s son is unwell.", u, { color: "#0B3D2E" });
+    },
+    ...Object.fromEntries(["phone", "photo", "send", "ready", "order"].map((id) => [id, (u, d, sc) =>
+      bgBrand(u + sc.start, true) + headline(sc.onscreen, u, { size: 62 }) + phone(sc, u, SHOTS[id], { enter: id === "phone" }) + demoTag()])),
+    relief(u, d) {
+      const k = eo(pr(u, 0, 1.2)), sway = Math.sin(u * 2.4) * 6;
+      return `<div class="layer" style="background:linear-gradient(180deg,#FFF3DF 0%, #F3D9B5 100%)"></div>` + svgWrap(`
+        <circle cx="820" cy="200" r="${120 + 6 * Math.sin(u)}" fill="#FFD27A" opacity=".55"/>
+        <rect x="80" y="120" width="360" height="380" rx="16" fill="#CFE6EC"/><path d="M260,120 V500 M80,310 H440" stroke="#FFFFFF" stroke-width="14"/>
+        <rect x="560" y="760" width="420" height="40" rx="12" fill="#9C6B48"/>
+        <g transform="translate(700,700)"><rect x="-50" y="0" width="100" height="60" rx="8" fill="#1A8F6E"/><rect x="-14" y="10" width="28" height="40" rx="4" fill="#fff"/><rect x="-24" y="22" width="48" height="16" rx="4" fill="#fff"/></g>
+        ${person(330, 1050, 1.75, { wrap: "#1A8F6E", top: "#D7613A", dress: true, skin: SKIN[1] })}
+        <g transform="translate(${540 + sway},1050) scale(1.15)">${person(0, 0, 1, { top: "#7FB069", bottom: "#2E4A6B", skin: SKIN[2] })}</g>
+        <circle cx="${600 + sway}" cy="800" r="26" fill="#E0A23B"/>`) + headline("Less searching. More caring.", u, { color: "#0B3D2E" });
+    },
+    values(u, d) {
+      const items = [["Licensed pharmacies", "Verified by MobiCare", "M0,0 l22,22 l44,-50"], ["Prescriptions checked", "By a pharmacist, before you pay", "M0,0 l22,22 l44,-50"], ["Prices you can see", "Before you order", "M0,0 l22,22 l44,-50"]];
+      let h = ""; items.forEach(([a, b], i) => { const k = eo(pr(u, 0.3 + i * 0.9, 0.9 + i * 0.9)); h += `<div style="position:absolute;left:110px;right:110px;top:${520 + i * 250 + (1 - k) * 40}px;height:200px;opacity:${k};background:rgba(255,255,255,.08);border:2px solid rgba(143,217,191,.35);border-radius:32px;display:flex;align-items:center;gap:36px;padding:0 44px">
+        <div style="width:110px;height:110px;border-radius:50%;background:#8FD9BF;display:flex;align-items:center;justify-content:center"><svg width="60" height="60" viewBox="-6 -40 80 80"><path d="M0,0 l22,22 l44,-50" stroke="#0B3D2E" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div style="font-family:Outfit;font-weight:800;font-size:52px">${a}</div><div style="font-size:34px;color:#CDE5DB;margin-top:6px">${b}</div></div></div>`; });
+      return bgBrand(u, true) + `<div class="eyebrow" style="top:250px">Why MobiCare</div>` + h;
+    },
+    end(u, d) { return endCard(u, "Find your way to medicines.", "mobicaresl.com", `<div class="tag" style="top:1240px;font-size:26px;opacity:${eo(pr(u, 1.4, 2))}">Explore MobiCare today · It does not replace advice from your doctor or pharmacist.</div>`); },
+  },
+};
+
+// ---------- frame ----------
+function captionAt(t) {
+  for (const sc of CFG.scenes) for (const c of sc.captions) if (t >= c.start - 0.05 && t < c.end + 0.15) {
+    const k = Math.min(pr(t, c.start - 0.05, c.start + 0.1), 1 - pr(t, c.end + 0.02, c.end + 0.15));
+    return `<div class="cap" style="opacity:${k}"><div>${c.text}</div></div>`;
+  }
+  return "";
+}
+function sceneHtml(sc, t) {
+  const fn = SCENES[CFG.id][sc.id], u = t - sc.start, d = sc.end - sc.start;
+  // a slow push-in on every scene, so nothing ever sits still
+  return `<div class="layer" style="transform:scale(${1 + 0.035 * clamp(u / d)});transform-origin:50% 45%">${fn(u, d, sc)}</div>`;
+}
+window.setup = (cfg, shots, logoW, logoC, pin) => { CFG = cfg; SHOTS = shots || {}; LOGO_W = logoW; LOGO_C = logoC; PIN = pin; };
+window.renderFrame = (t) => {
+  const S = CFG.scenes; let i = S.findIndex((s) => t >= s.start && t < s.end); if (i < 0) i = S.length - 1;
+  const cur = S[i]; const XF = 0.45;
+  let html = "";
+  if (i > 0 && t - cur.start < XF) {
+    const k = eio((t - cur.start) / XF);
+    html += `<div class="layer" style="opacity:1">${sceneHtml(S[i - 1], t)}</div><div class="layer" style="opacity:${k};transform:scale(${1.04 - 0.04 * k})">${sceneHtml(cur, t)}</div>`;
+  } else html += `<div class="layer">${sceneHtml(cur, t)}</div>`;
+  // fade in at the very start, fade out at the very end
+  const total = CFG.duration, fi = clamp(t / 0.5), fo = clamp((total - t) / 0.6);
+  html += captionAt(t);
+  html += `<div class="layer" style="background:#000;opacity:${1 - Math.min(fi, fo)};pointer-events:none"></div>`;
+  document.getElementById("stage").innerHTML = html;
+};
+</script>
+</body>
+</html>
