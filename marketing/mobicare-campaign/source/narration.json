@@ -143,17 +143,41 @@
           "id": "rx",
           "min": 5.0,
           "lead": 0.4,
-          "text": "Have a prescription? Take a photo and send it to pharmacies near you.",
+          "text": "Have a prescription? Tap Upload prescription.",
           "onscreen": "Upload a prescription",
           "shot": "rx"
         },
         {
-          "id": "rxready",
-          "min": 5.0,
+          "id": "rxcover",
+          "min": 5.5,
           "lead": 0.3,
-          "text": "A pharmacist checks it and confirms what they have. You choose the quantities, then pay.",
+          "text": "Take a photo, then drag a box over your name, phone number and address.",
+          "onscreen": "Cover your details",
+          "shot": "rxcover"
+        },
+        {
+          "id": "rxsend",
+          "min": 5.5,
+          "lead": 0.3,
+          "text": "Send it to pharmacies near you. Only the pharmacy that takes it sees the full photo.",
+          "onscreen": "Sent to pharmacies nearby",
+          "shot": "rxsend"
+        },
+        {
+          "id": "rxcheck",
+          "min": 5.5,
+          "lead": 0.3,
+          "text": "A pharmacist checks it and confirms the medicines they have, with the prices.",
           "onscreen": "Checked by a pharmacist",
-          "shot": "v-rx-ready"
+          "shot": "rxcheck"
+        },
+        {
+          "id": "rxpay",
+          "min": 5.5,
+          "lead": 0.3,
+          "text": "Then choose delivery or collection, and pay. Nothing is paid until a pharmacist confirms.",
+          "onscreen": "Pay after it's confirmed",
+          "shot": "rxpay"
         },
         {
           "id": "end",
@@ -181,7 +205,7 @@
           "lead": 0.4,
           "text": "This time, she doesn't start walking. She opens MobiCare.",
           "onscreen": "This time, she opens MobiCare.",
-          "shot": "v-rx-start"
+          "shot": "r-start"
         },
         {
           "id": "photo",
@@ -189,7 +213,7 @@
           "lead": 0.3,
           "text": "She photographs the prescription, and can cover her personal details before sending it.",
           "onscreen": "Photo, privately",
-          "shot": "v-rx-photo"
+          "shot": "r-covered"
         },
         {
           "id": "send",
@@ -197,7 +221,7 @@
           "lead": 0.3,
           "text": "It goes to licensed pharmacies near her.",
           "onscreen": "Sent to pharmacies nearby",
-          "shot": "v-rx-searching"
+          "shot": "r-searching"
         },
         {
           "id": "ready",
@@ -205,7 +229,7 @@
           "lead": 0.3,
           "text": "A nearby pharmacist checks it and confirms what they have, with the prices and the delivery fee.",
           "onscreen": "Confirmed by a pharmacist",
-          "shot": "v-rx-ready"
+          "shot": "r-ready"
         },
         {
           "id": "order",
@@ -213,7 +237,7 @@
           "lead": 0.3,
           "text": "She chooses delivery or collection, pays with mobile money, and follows each step.",
           "onscreen": "Delivery or collection",
-          "shot": "v-order-confirmed"
+          "shot": "r-order-confirmed"
         },
         {
           "id": "relief",

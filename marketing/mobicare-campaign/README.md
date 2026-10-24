@@ -3,25 +3,25 @@
 | File | Title | Length | Status |
 |---|---|---|---|
 | `01-the-problem.mp4` | Getting Medicines Shouldn't Be This Difficult | 54.5 s | Rendered and quality-checked |
-| `02-meet-mobicare.mp4` | Meet MobiCare | 66.0 s | Rendered and quality-checked |
+| `02-meet-mobicare.mp4` | Meet MobiCare | 83.8 s | Rendered and quality-checked |
 | `03-the-solution.mp4` | Medicine Access, Made Simpler | 58.5 s | Rendered and quality-checked |
 
 **Export:** 1080 × 1920 (9:16), 30 fps, H.264 High profile (CRF 18), AAC 192 kbps 48 kHz, loudness normalised to −14 LUFS, captions burned in, `faststart` for social sharing.
-File sizes: 01-the-problem.mp4 10.4 MB · 02-meet-mobicare.mp4 32.5 MB · 03-the-solution.mp4 22.1 MB
+File sizes: 01-the-problem.mp4 10.4 MB · 02-meet-mobicare.mp4 41.6 MB · 03-the-solution.mp4 21.8 MB
 
 ## The campaign
 
 Three connected videos for Instagram and Facebook Reels, TikTok and WhatsApp:
 
 1. **The problem**: when a clinic runs out, a family searches from pharmacy to pharmacy, losing time and money, while someone waits at home. The medicine may be close; the information isn't. Ends on *A simpler way to find medicines.*
-2. **The product**: the real MobiCare patient app, step by step: search, nearest licensed pharmacies with price and stock, brands and origin, delivery or collection, the delivery fee shown before paying, mobile-money payment, order tracking, and prescription upload checked by a pharmacist.
+2. **The product**: the real MobiCare patient app, step by step: search, nearest licensed pharmacies with price and stock, brands and origin, delivery or collection, the delivery fee shown before paying, mobile-money payment and order tracking; then a full **prescription upload** demonstration: tap *Upload prescription*, take the photo, drag a box over the name, phone and address, send it to nearby pharmacies, the pharmacist checks it and confirms the medicines and prices, then delivery or collection and payment.
 3. **The benefit**: Fatmata's son is unwell; instead of walking, she sends the prescription through MobiCare; a pharmacist confirms; she pays and follows the order. Ends on *Find your way to medicines with MobiCare.*
 
 Exact narration and scene-by-scene plans are in `scripts/`; storyboard sheets are in `storyboards/`.
 
 ## What is real and what is illustrative
 
-- **App footage is genuine.** Every phone screen is a capture of the real MobiCare patient app (repository `FuadRamadan/Mobi-Care`, branch `update-2026-10-16-delivery-by-distance`), run locally with the project's own `deploy/local/run.sh` and the seeded **test data**: the patient "Aminata", the pharmacy "City Pharmacy, Lumley" and the sample prescription are demonstration data, and every app scene says so on screen ("Real MobiCare screens · demonstration data"). No screen was edited or invented.
+- **App footage is genuine.** Every phone screen is a capture of the real MobiCare patient app from the most recent branch, `update-2026-10-16-delivery-by-distance` (commit `b2b7693`, which already contains the 15 October prescription-requests and pharmacy sign-in branches), **rebuilt from source on 24 October 2026** and run locally with the project's own `deploy/local/run.sh` and the seeded **test data**: the patient "Aminata", the pharmacy "City Pharmacy, Lumley" and the sample prescription are demonstration data, and every app scene says so on screen ("Real MobiCare screens · demonstration data"). No screen was edited or invented.
 - **The payment page is not shown.** In local runs payment goes through a test stand-in for Monime, so the videos show MobiCare's own checkout ("Pay securely online… Orange Money, AfriMoney, a card or a bank account") and the order page after payment, not the stand-in.
 - **Two local test-data adjustments:** the seeded delivery zones were renamed from "West Freetown (demo)" to "West Freetown" in the *local* database only, and the map tiles could not load offline, so the checkout map is framed out by the camera moves. No application code was changed.
 - **B-roll is illustration, not footage.** Licensed stock-footage sites (Pexels, Pixabay, Unsplash, Wikimedia) and AI video tools were not reachable from the production environment, so the human scenes are original flat illustrations (Freetown street with the Lion Mountains, a clinic shelf, a home, a stylised map of the peninsula). They are clearly illustrative and do not imitate footage of real people or real pharmacies.
@@ -38,7 +38,8 @@ Every functional statement is supported by the running app:
 | Delivery fee shown before paying, based on distance | Checkout: "Delivery to … about 2.5 km: Le 35 · Priced by the distance…" |
 | Orange Money, AfriMoney, card or bank | Checkout: "Next you'll pay on Monime's secure page with Orange Money, AfriMoney, a card or a bank account" |
 | Follow the order | Order page steps: Payment received → Pharmacy confirmed → Being prepared → … |
-| Photo of a prescription, cover personal details, sent to nearby pharmacies | Upload prescription: Photo / Cover name / Send; "Pharmacies near you see it…" |
+| Photo of a prescription, cover personal details, sent to nearby pharmacies | Upload prescription: Photo / Cover name / Send; "Drag a box over your name, phone number and address. Pharmacies nearby see the covered copy; only the one that takes your prescription sees the full photo." |
+| Nothing is paid until a pharmacist confirms | Upload screen: "Nothing is paid yet. You choose quantities and pay after a pharmacist confirms your medicines."; checkout: "Prescription checked by City Pharmacy, Lumley" |
 | A pharmacist checks it; you choose quantities, then pay | "The pharmacist checked your prescription"; "At checkout you can lower a quantity, choose delivery or collection, and pay" |
 | Open in the phone's browser at mobicaresl.com; no download needed | The patient app is a web app at `/app`; `mobicaresl.com` is the configured public URL (`artifacts/api-server/src/lib/monime/config.ts`) |
 
@@ -106,4 +107,5 @@ All three videos were rendered and checked on 24 October 2026:
   - The checkout map shows as a light-grey panel, because map tiles could not load offline. It is mostly framed out, but briefly visible in the "fee" and "cart" shots.
   - The voice is a synthetic voice (Kokoro), not a human artist.
   - The illustrations are flat motion graphics, not live-action B-roll.
+- **Prescription demonstration (24 Oct revision):** video 2 now includes a 29-second, five-step prescription segment (upload, cover details, send, pharmacist check, pay) and video 3 uses the same real screens, including the box drawn over the patient's details and the prescription order's own page ("Prescription review: Approved"). Video 2 is 83.8 s, within the 90-second limit. Both re-rendered and re-checked: no black frames, no freezes ≥ 2 s, about −15.7 LUFS, peak −4.4 dBFS.
 - **Not produced:** 16:9 versions (a secondary deliverable). They can be made by rendering `stage.html` at 1920 × 1080 with a side-by-side layout. Ask if you want them.

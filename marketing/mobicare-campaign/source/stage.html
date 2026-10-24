@@ -267,7 +267,7 @@ const SCENES = {
         headline("Licensed pharmacies near you, in one place.", u, { top: 900, delay: 0.7, size: 64 }) +
         `<div class="eyebrow" style="top:820px;opacity:${eo(pr(u, 0.5, 1.1))}">Meet MobiCare</div>`;
     },
-    ...Object.fromEntries(["open", "search", "results", "options", "cart", "fee", "pay", "track", "rx", "rxready"].map((id) => [id, (u, d, sc) =>
+    ...Object.fromEntries(["open", "search", "results", "options", "cart", "fee", "pay", "track", "rx", "rxcover", "rxsend", "rxcheck", "rxpay"].map((id) => [id, (u, d, sc) =>
       bgBrand(u + sc.start) + headline(sc.onscreen, u, { size: 62 }) + phone(sc, u, SHOTS[id], { enter: id === "open" }) + demoTag()])),
     end(u, d) { return endCard(u, "Search, order and follow your medicines.", "mobicaresl.com", `<div class="eyebrow" style="top:520px;opacity:${eo(pr(u, 0.2, 0.8))}">Discover MobiCare</div>`); },
   },
