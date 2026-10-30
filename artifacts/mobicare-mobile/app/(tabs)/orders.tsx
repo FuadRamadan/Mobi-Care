@@ -116,7 +116,8 @@ export default function OrdersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
-  const topPad = isWeb ? insets.top + 67 : insets.top;
+  // MobiCareHeader reaches under the status bar itself.
+  const topPad = 0;
   const queryClient = useQueryClient();
 
   const { data: orders, isFetching, isError, refetch } = usePatientListOrders({

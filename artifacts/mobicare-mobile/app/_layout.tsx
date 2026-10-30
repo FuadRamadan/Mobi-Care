@@ -82,6 +82,8 @@ function RootLayoutNav() {
           presentation: 'card',
         }}
       />
+      <Stack.Screen name="prescription/index" options={{ headerShown: false }} />
+      <Stack.Screen name="prescription/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }

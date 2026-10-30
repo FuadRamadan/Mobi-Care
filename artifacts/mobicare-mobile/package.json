@@ -57,9 +57,15 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@react-native-google-signin/google-signin": "^16.2.0",
     "expo-device": "~8.0.10",
+    "expo-file-system": "~19.0.24",
+    "expo-image-manipulator": "~14.0.8",
     "expo-notifications": "~0.32.17",
     "expo-secure-store": "~15.0.8",
-    "expo-video": "~3.0.16"
+    "expo-sharing": "~14.0.8",
+    "expo-video": "~3.0.16",
+    "react-native-view-shot": "4.0.3",
+    "react-native-webview": "13.15.0"
   }
 }

@@ -82,8 +82,12 @@ export async function createPatientNotification(
         to: expoPushToken,
         title: payload.title,
         body: orderTag ? `${orderTag} · ${payload.body}` : payload.body,
-        // The phone app has order screens only.
-        data: isOrder ? { url: `/order/${payload.referenceId}` } : {},
+        // Opens the matching screen in the phone app when tapped.
+        data: !payload.referenceId
+          ? {}
+          : isOrder
+            ? { url: `/order/${payload.referenceId}` }
+            : { url: `/prescription/${payload.referenceId}` },
       }, {
         onDeviceNotRegistered: async () => {
           // Only clear the token that failed. A newer app registration must

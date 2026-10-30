@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,12 +17,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareLogo } from '@/components/MobiCareLogo';
+import { ConsentChoices, EMPTY_CONSENT, type ConsentChoiceState } from '@/components/ConsentChoices';
+import { GoogleButton, GoogleDivider } from '@/components/GoogleButton';
+import { GoogleCancelled, googleIdToken } from '@/lib/googleAuth';
+import { notify } from '@/lib/dialogs';
 import {
   confirmPatientPasswordReset,
   requestPatientPasswordReset,
 } from '@workspace/api-client-react';
 
-type Mode = 'login' | 'register' | 'recover';
+// 'google' = signed in with Google for the first time: phone and date of birth next.
+type Mode = 'login' | 'register' | 'recover' | 'google';
 
 function calculateAge(dateOfBirth: string, now = new Date()): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
@@ -51,15 +55,17 @@ function calculateAge(dateOfBirth: string, now = new Date()): number | null {
 }
 
 export default function LoginScreen() {
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, signInWithGoogle, completeGoogleSignUp, isAuthenticated } = useAuth();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  // Both start unticked. A pre-ticked box is not a decision anybody made.
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptAnalytics, setAcceptAnalytics] = useState(false);
+  // As on the web app: the terms start unticked; the optional choice starts
+  // ticked (policy 2026-10-11) with what it covers written beside it.
+  const [consent, setConsent] = useState<ConsentChoiceState>(EMPTY_CONSENT);
+  const acceptTerms = consent.termsAndPrivacy;
+  const acceptAnalytics = consent.researchAnalytics;
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,6 +74,8 @@ export default function LoginScreen() {
   const [code, setCode] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [retryAfter, setRetryAfter] = useState(0);
+  const [googleSignup, setGoogleSignup] = useState<{ signupToken: string; email: string | null } | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const phoneRef = useRef<TextInput>(null);
   const dateOfBirthRef = useRef<TextInput>(null);
@@ -93,30 +101,44 @@ export default function LoginScreen() {
       if (password !== confirmPassword) return 'The passwords do not match.';
       return null;
     }
-    if (mode === 'register' && name.trim().length < 2) return 'Name must be at least 2 characters.';
-    if (mode === 'register') {
+    if ((mode === 'register' || mode === 'google') && name.trim().length < 2) return 'Name must be at least 2 characters.';
+    if (mode === 'register' || mode === 'google') {
       const calculatedAge = calculateAge(dateOfBirth);
       if (calculatedAge === null) return 'Enter your date of birth as YYYY-MM-DD.';
       if (calculatedAge < 18) return 'You must be 18 or older to register for MobiCare.';
     }
     if (phone.trim().length < 5) return 'Enter a valid phone number.';
+    if (mode === 'google') return null;
     if (password.length < 8) return 'Password must be at least 8 characters.';
     return null;
   };
 
   const handleSubmit = async () => {
     const err = validate();
-    if (err) { Alert.alert('Invalid Input', err); return; }
+    if (err) { notify('Invalid Input', err); return; }
     setLoading(true);
     try {
       if (mode === 'login') {
         await login(phone.trim(), password);
+      } else if (mode === 'google') {
+        if (!googleSignup) return;
+        if (!acceptTerms) {
+          throw new Error('Please accept the terms and privacy notice to create an account.');
+        }
+        await completeGoogleSignUp({
+          signupToken: googleSignup.signupToken,
+          name: name.trim(),
+          phone: phone.trim(),
+          dateOfBirth,
+          acceptTermsAndPrivacy: true,
+          acceptResearchAnalytics: acceptAnalytics,
+        });
       } else if (mode === 'recover') {
         if (!requestId) {
           const result = await requestPatientPasswordReset({ phone: phone.trim() });
           setRequestId(result.requestId);
           setRetryAfter(Math.ceil(result.retryAfterSeconds));
-          Alert.alert(
+          notify(
             'Check your messages',
             'If this number belongs to an active patient account, we sent a six-digit SMS code.',
           );
@@ -134,7 +156,7 @@ export default function LoginScreen() {
           // offer to save/update it. It is never written to app-managed storage.
           setPassword(resetPassword);
           setConfirmPassword('');
-          Alert.alert('Password reset', 'Sign in with your new password.');
+          notify('Password reset', 'Sign in with your new password.');
         }
       } else {
         // Guarded here as well as by the disabled button: the required consent
@@ -156,8 +178,8 @@ export default function LoginScreen() {
         : msg.includes('409') || msg.includes('already')
         ? 'That phone number is already registered.'
         : msg;
-      Alert.alert(
-        mode === 'login' ? 'Login Failed' : mode === 'register' ? 'Registration Failed' : 'Password Reset Failed',
+      notify(
+        mode === 'login' ? 'Login Failed' : mode === 'register' || mode === 'google' ? 'Registration Failed' : 'Password Reset Failed',
         friendly,
       );
     } finally {
@@ -165,7 +187,29 @@ export default function LoginScreen() {
     }
   };
 
+  /** Google's account picker, then MobiCare's server checks the token. */
+  const onGoogle = async (clientId: string) => {
+    setGoogleBusy(true);
+    try {
+      const outcome = await signInWithGoogle(await googleIdToken(clientId));
+      if (outcome.status === 'needs_profile') {
+        setGoogleSignup({ signupToken: outcome.signupToken, email: outcome.email });
+        setName(outcome.name ?? '');
+        setDateOfBirth('');
+        setPhone('');
+        setMode('google');
+      }
+    } catch (e) {
+      if (!(e instanceof GoogleCancelled)) {
+        notify('Google sign-in', e instanceof Error ? e.message : 'Google sign-in did not work. Try again.');
+      }
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
   const switchMode = (m: Mode) => {
+    setGoogleSignup(null);
     setMode(m);
     setName('');
     setDateOfBirth('');
@@ -193,7 +237,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Tab toggle */}
-        {mode !== 'recover' && <View style={s.toggleRow}>
+        {(mode === 'login' || mode === 'register') && <View style={s.toggleRow}>
           {(['login', 'register'] as Mode[]).map((m) => (
             <Pressable key={m} style={[s.toggleBtn, mode === m && s.toggleBtnActive]} onPress={() => switchMode(m)}>
               <Text style={[s.toggleText, mode === m && s.toggleTextActive]}>
@@ -205,7 +249,26 @@ export default function LoginScreen() {
 
         {/* Form card */}
         <View style={s.card}>
-          {mode === 'register' && (
+          {mode === 'google' && (
+            <View style={s.field}>
+              <Text style={s.googleTitle}>Finish creating your account</Text>
+              <Text style={s.fieldHint}>
+                Signed in with Google{googleSignup?.email ? ` as ${googleSignup.email}` : ''}. Add your phone number so the
+                pharmacy and rider can reach you.
+              </Text>
+            </View>
+          )}
+          {(mode === 'login' || mode === 'register') && (
+            <>
+              <GoogleButton
+                label={mode === 'register' ? 'Sign up with Google' : 'Continue with Google'}
+                onPress={(clientId) => void onGoogle(clientId)}
+                busy={googleBusy}
+              />
+              <GoogleDivider />
+            </>
+          )}
+          {(mode === 'register' || mode === 'google') && (
             <View style={s.field}>
               <Text style={s.label}>Full Name</Text>
               <TextInput
@@ -221,7 +284,7 @@ export default function LoginScreen() {
               />
             </View>
           )}
-          {mode === 'register' && (
+          {(mode === 'register' || mode === 'google') && (
             <View style={s.field}>
               <Text style={s.label}>Date of Birth</Text>
               <TextInput
@@ -281,7 +344,7 @@ export default function LoginScreen() {
               />
             </View>
           )}
-          {(mode !== 'recover' || requestId) && <View style={s.field}>
+          {(mode === 'login' || mode === 'register' || (mode === 'recover' && requestId)) && <View style={s.field}>
             <Text style={s.label}>{mode === 'recover' ? 'New Password' : 'Password'}</Text>
             <View style={s.passwordRow}>
               <TextInput
@@ -322,59 +385,33 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {mode === 'register' && (
+          {(mode === 'register' || mode === 'google') && (
             <View style={s.consentBlock}>
-              <Pressable
-                style={s.consentRow}
-                onPress={() => setAcceptTerms((v) => !v)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: acceptTerms }}
-              >
-                <View style={[s.checkbox, acceptTerms && s.checkboxOn]}>
-                  {acceptTerms && <Text style={s.checkboxTick}>✓</Text>}
-                </View>
-                <Text style={s.consentText}>
-                  <Text style={s.consentStrong}>I agree to the terms and privacy notice.</Text>{' '}
-                  MobiCare holds your details, prescriptions and orders. A pharmacy
-                  you order from sees what it needs to dispense your medicine.
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={s.consentRow}
-                onPress={() => setAcceptAnalytics((v) => !v)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: acceptAnalytics }}
-              >
-                <View style={[s.checkbox, acceptAnalytics && s.checkboxOn]}>
-                  {acceptAnalytics && <Text style={s.checkboxTick}>✓</Text>}
-                </View>
-                <Text style={s.consentText}>
-                  <Text style={s.consentStrong}>Help improve medicine access.</Text>{' '}
-                  Optional. Lets your searches count towards the anonymous figures
-                  showing where medicines are hard to find — never your name,
-                  prescriptions or orders. Saying no changes nothing about your orders.
-                </Text>
-              </Pressable>
+              <ConsentChoices value={consent} onChange={setConsent} disabled={loading} />
             </View>
           )}
 
           <TouchableOpacity
             style={[
               s.submitBtn,
-              (loading || (mode === 'register' && !acceptTerms)) && s.submitBtnDisabled,
+              (loading || ((mode === 'register' || mode === 'google') && !acceptTerms)) && s.submitBtnDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={loading || (mode === 'register' && !acceptTerms)}
+            disabled={loading || ((mode === 'register' || mode === 'google') && !acceptTerms)}
             activeOpacity={0.85}
           >
             <Text style={s.submitText}>
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : requestId ? 'Reset Password' : 'Send Verification Code'}
+              {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : mode === 'register' || mode === 'google' ? 'Create Account' : requestId ? 'Reset Password' : 'Send Verification Code'}
             </Text>
           </TouchableOpacity>
           {mode === 'login' && (
             <Pressable style={s.linkButton} onPress={() => switchMode('recover')}>
               <Text style={s.linkText}>Forgot password?</Text>
+            </Pressable>
+          )}
+          {mode === 'google' && (
+            <Pressable style={s.linkButton} onPress={() => switchMode('login')}>
+              <Text style={s.linkText}>Back to sign in</Text>
             </Pressable>
           )}
           {mode === 'recover' && (
@@ -393,7 +430,7 @@ export default function LoginScreen() {
                       setCode('');
                       setRetryAfter(Math.ceil(result.retryAfterSeconds));
                     } catch (error) {
-                      Alert.alert(
+                      notify(
                         'Could not resend code',
                         error instanceof Error ? error.message : 'Please try again later.',
                       );
@@ -463,15 +500,7 @@ function makeStyles(colors: ReturnType<typeof import('@/hooks/useColors').useCol
     passwordInput: { paddingRight: 46 },
     eyeBtn: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 4 },
     consentBlock: { gap: 12, marginBottom: 18 },
-  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  checkbox: {
-    width: 20, height: 20, borderRadius: 5, borderWidth: 1.5,
-    borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginTop: 2,
-  },
-  checkboxOn: { backgroundColor: '#0B3D2E', borderColor: '#0B3D2E' },
-  checkboxTick: { color: '#FFFFFF', fontSize: 13, lineHeight: 16, fontWeight: '700' },
-  consentText: { flex: 1, fontSize: 12, lineHeight: 17, color: '#6B7280' },
-  consentStrong: { color: '#111827', fontWeight: '600' },
+    googleTitle: { fontSize: 17, fontWeight: '700', color: '#0B3D2E', marginBottom: 4 },
   submitBtn: {
       backgroundColor: colors.primary,
       borderRadius: colors.radius,

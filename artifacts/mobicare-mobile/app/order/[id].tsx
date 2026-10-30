@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Platform,
@@ -27,10 +26,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { MobiCareHeader } from '@/components/MobiCareHeader';
 import { orderNumber } from '@/lib/orderNumber';
+import { OrderPayment } from '@/components/OrderPayment';
+import { confirmAction, notify } from '@/lib/dialogs';
+import { formatLeones } from '@/lib/format';
 
 type Colors = ReturnType<typeof import('@/hooks/useColors').useColors>;
 
-function formatLeones(n: number) { return `Le ${n.toLocaleString()}`; }
 function imageUrl(path: string) {
   return path.startsWith("http") ? path : `https://${process.env.EXPO_PUBLIC_DOMAIN}${path}`;
 }
@@ -157,7 +158,8 @@ function PrescriptionBlock({ order, colors }: { order: PatientOrder; colors: Col
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function OrderDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // payment=return: back from Monime's page, so check the payment straight away.
+  const { id, payment } = useLocalSearchParams<{ id: string; payment?: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
@@ -172,10 +174,10 @@ export default function OrderDetailScreen() {
       onSuccess: (updated) => {
         queryClient.setQueryData(getPatientGetOrderQueryKey(id ?? ''), updated);
         queryClient.invalidateQueries({ queryKey: getPatientListOrdersQueryKey() });
-        Alert.alert('Receipt confirmed', 'Your order is now marked as delivered.');
+        notify('Receipt confirmed', 'Your order is now marked as delivered.');
       },
       onError: (error) => {
-        Alert.alert(
+        notify(
           'Could not confirm receipt',
           error instanceof Error ? error.message : 'Please refresh and try again.',
         );
@@ -190,11 +192,11 @@ export default function OrderDetailScreen() {
           getPatientListOrdersQueryKey(),
           (orders) => orders?.map((item) => item.id === updated.id ? updated : item),
         );
-        Alert.alert('Order cancelled', 'Your order has been cancelled.');
+        notify('Order cancelled', 'The pharmacy and HQ have been notified.');
       },
       onError: (error) => {
         queryClient.invalidateQueries({ queryKey: getPatientGetOrderQueryKey(id ?? '') });
-        Alert.alert(
+        notify(
           'Could not cancel order',
           error instanceof Error ? error.message : 'Please refresh and try again.',
         );
@@ -203,7 +205,8 @@ export default function OrderDetailScreen() {
   });
 
   const s = makeStyles(colors, insets);
-  const topPad = isWeb ? insets.top + 67 : insets.top;
+  // MobiCareHeader reaches under the status bar itself.
+  const topPad = 0;
 
   if (isLoading) {
     return (
@@ -274,6 +277,8 @@ export default function OrderDetailScreen() {
       {/* Timeline */}
       <Timeline order={order} colors={colors} />
 
+      {order.paymentProvider === 'monime' && <OrderPayment order={order} returning={payment === 'return'} />}
+
       {(canCancel || cancellationLocked) && (
         <View style={s.section} testID="card-cancel-order">
           <Text style={s.sectionTitle}>Order Cancellation</Text>
@@ -289,20 +294,17 @@ export default function OrderDetailScreen() {
             ]}
             disabled={!canCancel || cancelOrder.isPending}
             testID="button-cancel-order"
-            onPress={() =>
-              Alert.alert(
-                'Cancel this order?',
-                'This action cannot be undone.',
-                [
-                  { text: 'Keep Order', style: 'cancel' },
-                  {
-                    text: 'Cancel Order',
-                    style: 'destructive',
-                    onPress: () => cancelOrder.mutate({ id: order.id }),
-                  },
-                ],
-              )
-            }
+            onPress={async () => {
+              const paidOnline = order.paymentProvider === 'monime' && Boolean(order.paidAt);
+              const yes = await confirmAction(
+                paidOnline ? 'Cancel this paid order?' : 'Cancel this order?',
+                paidOnline
+                  ? "MobiCare will refund your payment; Monime's fees (about 2%) are not refunded. This cannot be undone."
+                  : 'This action cannot be undone.',
+                { confirmText: 'Cancel Order', cancelText: 'Keep Order', destructive: true },
+              );
+              if (yes) cancelOrder.mutate({ id: order.id });
+            }}
           >
             {cancelOrder.isPending ? (
               <ActivityIndicator size="small" color={colors.destructive} />
@@ -330,19 +332,14 @@ export default function OrderDetailScreen() {
             style={[s.confirmButton, confirmReceipt.isPending && { opacity: 0.6 }]}
             disabled={confirmReceipt.isPending}
             testID="button-confirm-receipt"
-            onPress={() =>
-              Alert.alert(
+            onPress={async () => {
+              const yes = await confirmAction(
                 'Confirm receipt?',
                 'Only continue if you have received the medicines in this order.',
-                [
-                  { text: 'Not yet', style: 'cancel' },
-                  {
-                    text: 'Yes, I received it',
-                    onPress: () => confirmReceipt.mutate({ id: order.id }),
-                  },
-                ],
-              )
-            }
+                { confirmText: 'Yes, I received it', cancelText: 'Not yet' },
+              );
+              if (yes) confirmReceipt.mutate({ id: order.id });
+            }}
           >
             {confirmReceipt.isPending ? (
               <ActivityIndicator size="small" color="#FFF" />
@@ -361,15 +358,34 @@ export default function OrderDetailScreen() {
         <Text style={s.sectionTitle}>Items</Text>
         {order.items.map((item) => (
           <View key={item.id} style={s.itemRow}>
-            <Text style={s.itemName} numberOfLines={2}>{item.drugName}</Text>
-            <View style={s.itemRight}>
-              <Text style={s.itemQty}>×{item.quantity}</Text>
-              <Text style={s.itemPrice}>{formatLeones(item.unitPriceLeones * item.quantity)}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.itemName} numberOfLines={2}>{item.drugName}</Text>
+              {item.brand ? (
+                <Text style={s.itemMeta}>{[item.brand, item.manufacturer, item.countryOfOrigin].filter(Boolean).join(' · ')}</Text>
+              ) : null}
+              <Text style={s.itemMeta}>{item.quantity} × {formatLeones(item.unitPriceLeones)}</Text>
             </View>
+            <Text style={s.itemPrice}>{formatLeones(item.unitPriceLeones * item.quantity)}</Text>
           </View>
         ))}
+        {(order.patientServiceFeeMinor ?? 0) > 0 && (
+          <View style={s.itemRow} testID="text-order-service-fee">
+            <Text style={[s.itemName, { color: colors.mutedForeground }]}>
+              Service fee ({(order.medicineMarkupBasisPoints ?? 500) / 100}%)
+            </Text>
+            <Text style={s.itemPrice}>{formatLeones((order.patientServiceFeeMinor ?? 0) / 100)}</Text>
+          </View>
+        )}
+        {order.fulfillmentType === 'delivery' && (order.deliveryFeeMinor ?? 0) > 0 && (
+          <View style={s.itemRow} testID="text-order-delivery-fee">
+            <Text style={[s.itemName, { color: colors.mutedForeground }]}>
+              Delivery{order.deliveryZoneName ? ` · ${order.deliveryZoneName}` : ''}
+            </Text>
+            <Text style={s.itemPrice}>{formatLeones((order.deliveryFeeMinor ?? 0) / 100)}</Text>
+          </View>
+        )}
         <View style={s.totalRow}>
-          <Text style={s.totalLabel}>Total</Text>
+          <Text style={s.totalLabel}>{order.status === 'awaiting_payment' && !order.paidAt ? 'Total to pay' : 'Total paid'}</Text>
           <Text style={s.totalValue}>{formatLeones(order.totalLeones)}</Text>
         </View>
       </View>
@@ -495,6 +511,7 @@ function makeStyles(colors: Colors, insets: { top: number; bottom: number }) {
     itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
     itemName: { flex: 1, fontSize: 14, color: colors.foreground },
     itemRight: { alignItems: 'flex-end', gap: 2 },
+    itemMeta: { fontSize: 12, color: colors.mutedForeground, marginTop: 2 },
     itemQty: { fontSize: 12, color: colors.mutedForeground },
     itemPrice: { fontSize: 14, fontWeight: '600', color: colors.foreground },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 4 },

@@ -1,34 +1,25 @@
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 type MobiCareLogoProps = {
   compact?: boolean;
+  /** On a dark background: the logo sits in a white pill, as on the web app. */
   inverse?: boolean;
 };
 
+/** The same pin and wordmark as the web app (public/mobicare-pin.png). */
 export function MobiCareLogo({ compact = false, inverse = false }: MobiCareLogoProps) {
-  const markSize = compact ? 38 : 58;
+  const pinHeight = compact ? 28 : 52;
   return (
     <View
-      style={[
-        styles.container,
-        inverse && styles.inverseSurface,
-      ]}
+      style={[styles.container, compact && styles.compactGap, inverse && styles.inverseSurface]}
       accessibilityRole="image"
       accessibilityLabel="MobiCare"
     >
-      <View style={{ width: markSize, height: markSize }}>
-        <Ionicons name="location" size={markSize} color="#249B79" />
-        <Ionicons
-          name="medical"
-          size={compact ? 12 : 17}
-          color="#FFFFFF"
-          style={[
-            styles.cross,
-            compact ? styles.compactCross : styles.largeCross,
-          ]}
-        />
-      </View>
+      <Image
+        source={require("@/assets/images/mobicare-pin.png")}
+        style={{ height: pinHeight, width: (pinHeight * 300) / 370 }}
+        resizeMode="contain"
+      />
       <Text style={[styles.wordmark, compact && styles.compactWordmark]}>
         <Text style={styles.mobi}>Mobi</Text>
         <Text style={styles.care}>Care</Text>
@@ -41,24 +32,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 8,
   },
+  compactGap: { gap: 6 },
   inverseSurface: {
     backgroundColor: "#FFFFFF",
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  cross: {
-    position: "absolute",
-  },
-  compactCross: {
-    left: 13,
-    top: 8,
-  },
-  largeCross: {
-    left: 20,
-    top: 12,
+    paddingVertical: 4,
   },
   wordmark: {
     fontSize: 30,
@@ -66,7 +47,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   compactWordmark: {
-    fontSize: 21,
+    fontSize: 18,
+    letterSpacing: -0.3,
   },
   mobi: {
     color: "#0B3D2E",

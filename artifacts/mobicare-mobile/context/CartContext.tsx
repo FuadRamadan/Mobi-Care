@@ -1,57 +1,77 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-
-/** The patient service fee: 0% during the pilot and launch. */
-const PATIENT_SERVICE_FEE_BASIS_POINTS = 0;
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePatientPaymentsConfig } from '@workspace/api-client-react';
 
 /** Cart key is scoped per user so switching accounts never leaks a previous patient's cart. */
 function cartKey(userId: string | null | undefined) {
-  return userId ? `mc_mobile_cart_${userId}` : 'mc_mobile_cart_anon';
+  return userId ? `mc_mobile_cart_v2_${userId}` : 'mc_mobile_cart_v2_anon';
 }
 
+/** One line in the cart, as on the web app. An order is always for a single pharmacy. */
 export interface CartItem {
+  inventoryId: string;
   drugId: string;
   drugName: string;
-  inventoryId: string;
-  quantity: number;
-  maxQuantity: number;
+  strength: string;
+  form: string;
+  unitOfSale: string;
+  tier: '1' | '2' | '3';
+  maxUnitsPerOrder: number | null;
+  prescriptionRequired: boolean;
+  collectionOnly: boolean;
   priceLeones: number;
-  requiresPrescription: boolean;
+  /** The version chosen, when a pharmacy stocks several. */
+  brand?: string | null;
+  manufacturer?: string | null;
+  countryOfOrigin?: string | null;
+  quantity: number;
+  availableForDelivery: boolean;
+  availableForCollection: boolean;
+}
+
+export interface CartState {
+  pharmacyId: string;
+  pharmacyName: string;
+  pharmacyAddress: string | null;
+  items: CartItem[];
+  /**
+   * Set when the cart came from a prescription request: the pharmacist has
+   * already checked the prescription, and the items and their limits are theirs.
+   */
+  prescriptionRequestId?: string;
+  /** The pharmacy is beyond delivery range of the patient: checkout starts on collection. */
+  startsWithCollection?: boolean;
+}
+
+export type CartPharmacy = { id: string; name: string; address: string | null };
+
+interface CartContextValue {
+  cart: CartState | null;
+  /** Add (or bump) an item. Returns false when the cart belongs to another pharmacy. */
+  addItem: (pharmacy: CartPharmacy, item: Omit<CartItem, 'quantity'>, opts?: { replacePharmacy?: boolean }) => boolean;
+  /** Replace the cart with the medicines a pharmacist confirmed for a prescription request. */
+  startFromRequest: (requestId: string, pharmacy: CartPharmacy, items: CartItem[], opts?: { collection?: boolean }) => void;
+  setQuantity: (inventoryId: string, quantity: number) => void;
+  removeItem: (inventoryId: string) => void;
+  clear: () => void;
+  subtotalLeones: number;
+  serviceFeeLeones: number;
+  /** The patient service fee rate from the server: 0 during the pilot. */
+  serviceFeeBasisPoints: number;
+  /** False while Monime can't be reached: orders can't be paid online. */
+  paymentsAvailable: boolean;
+  totalLeones: number;
+  itemCount: number;
+  prescriptionRequired: boolean;
   collectionOnly: boolean;
 }
 
-export interface PharmacyPaymentDetails {
-  number?: string | null;
-  provider?: string | null;
-  accountName?: string | null;
-}
-
-interface CartState {
-  pharmacyId: string | null;
-  pharmacyName: string | null;
-  pharmacyPayment?: PharmacyPaymentDetails;
-  items: CartItem[];
-}
-
-const EMPTY_CART: CartState = { pharmacyId: null, pharmacyName: null, items: [] };
-
-interface CartContextValue {
-  cart: CartState;
-  itemCount: number;
-  totalLeones: number;
-  requiresPrescription: boolean;
-  requiresCollection: boolean;
-  serviceFeeLeones: number;
-  amountPayableLeones: number;
-  /** Returns false if adding would mix pharmacies; caller should prompt user */
-  addItem: (pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => boolean;
-  replaceCart: (pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => void;
-  removeItem: (inventoryId: string) => void;
-  updateQty: (inventoryId: string, delta: number) => void;
-  clearCart: () => void;
-}
-
 const CartContext = createContext<CartContextValue | null>(null);
+
+function isCart(value: unknown): value is CartState {
+  const cart = value as CartState | null;
+  return Boolean(cart && typeof cart.pharmacyId === 'string' && Array.isArray(cart.items) && cart.items.every((i) => typeof i.unitOfSale === 'string'));
+}
 
 /**
  * CartProvider scopes the cart to the current user ID.
@@ -59,102 +79,127 @@ const CartContext = createContext<CartContextValue | null>(null);
  * one patient's cart from appearing for a subsequent account on the same device.
  */
 export function CartProvider({ userId, children }: { userId?: string | null; children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartState>(EMPTY_CART);
+  const [cart, setCart] = useState<CartState | null>(null);
   const userIdRef = useRef(userId);
+  const loadedFor = useRef<string | null | undefined>(undefined);
 
-  // When userId changes, load that user's persisted cart
   useEffect(() => {
     userIdRef.current = userId;
-    setCart(EMPTY_CART); // clear immediately to avoid flash of previous cart
+    loadedFor.current = undefined;
+    setCart(null); // clear immediately to avoid a flash of the previous cart
     AsyncStorage.getItem(cartKey(userId)).then((raw) => {
-      if (raw) {
-        try { setCart(JSON.parse(raw)); } catch { /* ignore corrupt data */ }
+      if (userIdRef.current !== userId) return;
+      try {
+        const parsed = raw ? JSON.parse(raw) : null;
+        setCart(isCart(parsed) && parsed.items.length > 0 ? parsed : null);
+      } catch {
+        setCart(null);
       }
+      loadedFor.current = userId;
     });
   }, [userId]);
 
-  const persist = useCallback((next: CartState) => {
-    setCart(next);
-    AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
-  }, []);
+  // Saved whenever it changes, once this user's saved cart has been read.
+  useEffect(() => {
+    if (loadedFor.current !== userIdRef.current) return;
+    const key = cartKey(userIdRef.current);
+    if (cart && cart.items.length > 0) AsyncStorage.setItem(key, JSON.stringify(cart)).catch(() => {});
+    else AsyncStorage.removeItem(key).catch(() => {});
+  }, [cart]);
 
-  const addItem = useCallback((pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>): boolean => {
-    let result = true;
+  const addItem = useCallback<CartContextValue['addItem']>((pharmacy, item, opts) => {
+    let ok = true;
     setCart((prev) => {
-      if (prev.pharmacyId && prev.pharmacyId !== pharmacyId) {
-        result = false;
-        return prev; // caller must confirm replacement
+      // A prescription request's cart holds only what the pharmacist confirmed.
+      if (
+        prev &&
+        (prev.pharmacyId !== pharmacy.id || prev.prescriptionRequestId) &&
+        prev.items.length > 0 &&
+        !opts?.replacePharmacy
+      ) {
+        ok = false;
+        return prev;
       }
-      const idx = prev.items.findIndex((i) => i.inventoryId === item.inventoryId);
-      let items: CartItem[];
-      if (idx >= 0) {
-        items = prev.items.map((i, n) =>
-          n === idx
-            ? { ...i, quantity: Math.min(i.quantity + 1, i.maxQuantity || 999) }
-            : i
-        );
-      } else {
-        items = [...prev.items, { ...item, quantity: 1 }];
-      }
-      const next = { pharmacyId, pharmacyName, pharmacyPayment: payment, items };
-      AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
-      return next;
+      const base: CartState =
+        prev && prev.pharmacyId === pharmacy.id && !prev.prescriptionRequestId && !opts?.replacePharmacy
+          ? prev
+          : { pharmacyId: pharmacy.id, pharmacyName: pharmacy.name, pharmacyAddress: pharmacy.address, items: [] };
+      const existing = base.items.find((i) => i.inventoryId === item.inventoryId);
+      const items = existing
+        ? base.items.map((i) =>
+            i.inventoryId === item.inventoryId
+              ? { ...i, quantity: Math.min(i.quantity + 1, i.maxUnitsPerOrder ?? 999) }
+              : i,
+          )
+        : [...base.items, { ...item, quantity: 1 }];
+      return { ...base, items };
     });
-    return result;
+    return ok;
   }, []);
 
-  const replaceCart = useCallback((pharmacyId: string, pharmacyName: string, payment: PharmacyPaymentDetails, item: Omit<CartItem, 'quantity'>) => {
-    const next: CartState = { pharmacyId, pharmacyName, pharmacyPayment: payment, items: [{ ...item, quantity: 1 }] };
-    persist(next);
-  }, [persist]);
+  const startFromRequest = useCallback<CartContextValue['startFromRequest']>((requestId, pharmacy, items, opts) => {
+    setCart({
+      pharmacyId: pharmacy.id,
+      pharmacyName: pharmacy.name,
+      pharmacyAddress: pharmacy.address,
+      items,
+      prescriptionRequestId: requestId,
+      startsWithCollection: opts?.collection,
+    });
+  }, []);
+
+  const setQuantity = useCallback((inventoryId: string, quantity: number) => {
+    setCart((prev) => {
+      if (!prev) return prev;
+      const items = prev.items.map((i) =>
+        i.inventoryId === inventoryId
+          ? { ...i, quantity: Math.max(1, Math.min(quantity, i.maxUnitsPerOrder ?? 999)) }
+          : i,
+      );
+      return { ...prev, items };
+    });
+  }, []);
 
   const removeItem = useCallback((inventoryId: string) => {
     setCart((prev) => {
+      if (!prev) return prev;
       const items = prev.items.filter((i) => i.inventoryId !== inventoryId);
-      const next: CartState = items.length === 0 ? EMPTY_CART : { ...prev, items };
-      AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
-      return next;
+      return items.length === 0 ? null : { ...prev, items };
     });
   }, []);
 
-  const updateQty = useCallback((inventoryId: string, delta: number) => {
-    setCart((prev) => {
-      const items: CartItem[] = [];
-      for (const item of prev.items) {
-        if (item.inventoryId !== inventoryId) { items.push(item); continue; }
-        const next = item.quantity + delta;
-        if (next >= 1) items.push({ ...item, quantity: Math.min(next, item.maxQuantity || 999) });
-        // next < 1 → item removed from cart
-      }
-      const next: CartState = items.length === 0 ? EMPTY_CART : { ...prev, items };
-      AsyncStorage.setItem(cartKey(userIdRef.current), JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
+  const clear = useCallback(() => setCart(null), []);
 
-  const clearCart = useCallback(() => {
-    persist(EMPTY_CART);
-  }, [persist]);
-
-  const itemCount = cart.items.reduce((s, i) => s + i.quantity, 0);
-  const subtotalMinor = cart.items.reduce(
-    (sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity,
-    0,
-  );
-  // Pilot pricing (6 Oct 2026): patients pay no service fee. The server prices
-  // every order; this only keeps the cart's estimate in step with it.
-  const serviceFeeMinor = Math.round((subtotalMinor * PATIENT_SERVICE_FEE_BASIS_POINTS) / 10_000);
-  const totalLeones = subtotalMinor / 100;
-  const serviceFeeLeones = serviceFeeMinor / 100;
-  const amountPayableLeones = (subtotalMinor + serviceFeeMinor) / 100;
-  const requiresPrescription = cart.items.some((i) => i.requiresPrescription);
-  const requiresCollection = cart.items.some((i) => i.collectionOnly);
+  const items = cart?.items ?? [];
+  const subtotalMinor = items.reduce((sum, item) => sum + Math.round(item.priceLeones * 100) * item.quantity, 0);
+  // The server prices every order; the rate comes from it so the cart shows the
+  // same figure in advance (0% during the pilot: patients pay no service fee).
+  const { data: payments } = usePatientPaymentsConfig({
+    query: { enabled: Boolean(userId), staleTime: 5 * 60_000, retry: false } as never,
+  });
+  const serviceFeeBasisPoints = payments?.serviceFeeBasisPoints ?? 0;
+  const paymentsAvailable = payments?.available ?? true;
+  const serviceFeeMinor = Math.round((subtotalMinor * serviceFeeBasisPoints) / 10_000);
 
   return (
-    <CartContext.Provider value={{
-      cart, itemCount, totalLeones, serviceFeeLeones, amountPayableLeones, requiresPrescription, requiresCollection,
-      addItem, replaceCart, removeItem, updateQty, clearCart,
-    }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addItem,
+        startFromRequest,
+        setQuantity,
+        removeItem,
+        clear,
+        subtotalLeones: subtotalMinor / 100,
+        serviceFeeLeones: serviceFeeMinor / 100,
+        serviceFeeBasisPoints,
+        paymentsAvailable,
+        totalLeones: (subtotalMinor + serviceFeeMinor) / 100,
+        itemCount: items.reduce((s, i) => s + i.quantity, 0),
+        prescriptionRequired: items.some((i) => i.prescriptionRequired),
+        collectionOnly: items.some((i) => i.collectionOnly),
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

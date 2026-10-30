@@ -15,6 +15,7 @@ import {
 } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 import { CompleteRegistrationModal } from '@/components/CompleteRegistrationModal';
+import { ConsentGate } from '@/components/ConsentGate';
 
 // Expo packages currently ship React declarations from slightly different
 // patch versions in this workspace. These aliases preserve the runtime
@@ -185,6 +186,7 @@ export default function TabLayout() {
         <ClassicTabLayout itemCount={itemCount} unreadCount={unreadCount} />
       )}
       <CompleteRegistrationModal />
+      <ConsentGate />
     </>
   );
 }

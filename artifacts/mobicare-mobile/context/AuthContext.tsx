@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useQueryClient } from '@tanstack/react-query';
-import { login as apiLogin, logout as apiLogout, refreshToken as apiRefreshToken, registerPatient as apiRegisterPatient, setAuthTokenGetter, updatePatientPushToken } from '@workspace/api-client-react';
+import { completeGoogleSignUp as apiCompleteGoogleSignUp, login as apiLogin, logout as apiLogout, refreshToken as apiRefreshToken, registerPatient as apiRegisterPatient, setAuthTokenGetter, signInWithGoogle as apiSignInWithGoogle, updatePatientPushToken } from '@workspace/api-client-react';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
 
 /** Tokens go in platform-backed secure storage; display data goes in AsyncStorage. */
@@ -30,9 +30,32 @@ interface AuthContextValue {
     dateOfBirth: string,
     consent: { acceptTermsAndPrivacy: true; acceptResearchAnalytics: boolean },
   ) => Promise<void>;
+  /**
+   * Sign in with a Google ID token. A Google account MobiCare has not seen
+   * before comes back as `needs_profile`: the phone number and date of birth come next.
+   */
+  signInWithGoogle: (credential: string) => Promise<GoogleOutcome>;
+  completeGoogleSignUp: (details: {
+    signupToken: string;
+    name: string;
+    phone: string;
+    dateOfBirth: string;
+    acceptTermsAndPrivacy: true;
+    acceptResearchAnalytics: boolean;
+  }) => Promise<void>;
   updateUser: (updates: Pick<PatientUser, 'name'>) => Promise<void>;
   dismissProfileCompletion: () => Promise<void>;
   logout: () => Promise<void>;
+}
+
+export type GoogleOutcome =
+  | { status: 'signed_in' }
+  | { status: 'needs_profile'; signupToken: string; name: string | null; email: string | null };
+
+/** The server's own words where it gave some, otherwise the fallback. */
+function serverMessage(err: unknown, fallback: string): string {
+  const data = (err as { data?: { error?: unknown } } | null)?.data;
+  return typeof data?.error === 'string' ? data.error : fallback;
 }
 
 function getJwtExp(token: string): number | null {
@@ -231,6 +254,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncPushToken();
   }, [applyTokens, syncPushToken]);
 
+  const signInWithGoogle = useCallback(async (credential: string): Promise<GoogleOutcome> => {
+    const result = await apiSignInWithGoogle({ credential }).catch((err: unknown) => {
+      throw new Error(serverMessage(err, 'Google sign-in did not work. Try again, or use your phone number.'));
+    });
+    if (result.status === 'needs_profile') {
+      return { status: 'needs_profile', signupToken: result.signupToken!, name: result.name ?? null, email: result.email ?? null };
+    }
+    if (result.user!.role !== 'patient') {
+      throw new Error('This app is for patients only. Pharmacy staff use a separate portal.');
+    }
+    await applyTokens(result.accessToken!, result.refreshToken!, {
+      id: result.user!.id,
+      name: result.user!.name,
+      phone: result.user!.phone ?? null,
+      role: result.user!.role,
+      profileCompletionPending: true,
+    });
+    syncPushToken();
+    return { status: 'signed_in' };
+  }, [applyTokens, syncPushToken]);
+
+  const completeGoogleSignUp = useCallback<AuthContextValue['completeGoogleSignUp']>(async (details) => {
+    const result = await apiCompleteGoogleSignUp(details).catch((err: unknown) => {
+      throw new Error(serverMessage(err, 'Could not create your account. Check your details and try again.'));
+    });
+    await applyTokens(result.accessToken!, result.refreshToken!, {
+      id: result.user!.id,
+      name: result.user!.name,
+      phone: result.user!.phone ?? null,
+      role: result.user!.role,
+      profileCompletionPending: true,
+    });
+    syncPushToken();
+  }, [applyTokens, syncPushToken]);
+
   const updateUser = useCallback(async (updates: Pick<PatientUser, 'name'>) => {
     if (!user) return;
     const next = { ...user, ...updates };
@@ -250,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, updateUser, dismissProfileCompletion, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, signInWithGoogle, completeGoogleSignUp, updateUser, dismissProfileCompletion, logout }}>
       {children}
     </AuthContext.Provider>
   );

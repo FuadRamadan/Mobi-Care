@@ -60,7 +60,10 @@ function NotifCard({
   const isUnread = !notif.readAt;
 
   const handlePress = () => {
-    if (notif.referenceId) router.push(`/order/${notif.referenceId}`);
+    if (!notif.referenceId) return;
+    router.push(
+      notif.type === 'prescription_request' ? `/prescription/${notif.referenceId}` : `/order/${notif.referenceId}`,
+    );
   };
 
   return (
@@ -103,7 +106,8 @@ export default function NotificationsScreen() {
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const isWeb = Platform.OS === 'web';
-  const topPad = isWeb ? insets.top + 67 : insets.top;
+  // MobiCareHeader reaches under the status bar itself.
+  const topPad = 0;
   const canQuery = !isAuthLoading && isAuthenticated;
 
   const { data: notifications, isFetching, refetch } = useListPatientNotifications({

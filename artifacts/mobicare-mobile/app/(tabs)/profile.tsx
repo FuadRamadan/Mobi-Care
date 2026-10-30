@@ -25,6 +25,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { MobiCareHeader } from "@/components/MobiCareHeader";
+import { PrivacyPanel } from "@/components/PrivacyPanel";
+import { SignInMethods } from "@/components/SignInMethods";
 
 type Colors = ReturnType<typeof import("@/hooks/useColors").useColors>;
 
@@ -46,7 +48,8 @@ export default function ProfileScreen() {
   const [nationalityDraft, setNationalityDraft] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? insets.top + 67 : insets.top;
+  // MobiCareHeader reaches under the status bar itself.
+  const topPad = 0;
 
   const { data: profile, isLoading, isError, refetch } = useGetPatientProfile({
     query: { queryKey: getGetPatientProfileQueryKey() },
@@ -333,6 +336,16 @@ export default function ProfileScreen() {
                   </>
                 )}
               </Pressable>
+            </View>
+
+            {profile ? (
+              <View style={{ marginTop: 20 }}>
+                <SignInMethods profile={profile} />
+              </View>
+            ) : null}
+
+            <View style={{ marginTop: 20 }}>
+              <PrivacyPanel hasPassword={profile?.hasPassword !== false} />
             </View>
 
             <View style={s.sessionSection}>
